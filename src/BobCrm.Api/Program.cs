@@ -291,8 +291,9 @@ static async Task<(string accessToken, string refreshToken)> IssueTokensAsync(IC
     return (access, refresh);
 }
 
-class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
+class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor accessor) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
 {
+    private readonly IHttpContextAccessor _http = accessor;
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
     public DbSet<Customer> Customers => Set<Customer>();
@@ -306,6 +307,19 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<I
     {
         base.OnModelCreating(b);
         b.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        // shadow audit properties
+        void Audit<T>() where T : class
+        {
+            b.Entity<T>().Property<DateTime>("CreatedAt");
+            b.Entity<T>().Property<DateTime>("UpdatedAt");
+            b.Entity<T>().Property<string>("CreatedBy").HasMaxLength(128);
+            b.Entity<T>().Property<string>("UpdatedBy").HasMaxLength(128);
+        }
+        Audit<Customer>();
+        Audit<FieldDefinition>();
+        Audit<FieldValue>();
+        Audit<UserLayout>();
+
         var isNpgsql = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
         if (isNpgsql)
         {
@@ -317,6 +331,37 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<I
             });
             b.Entity<FieldValue>(e => e.Property(x => x.Value).HasColumnType("jsonb"));
             b.Entity<UserLayout>(e => e.Property(x => x.LayoutJson).HasColumnType("jsonb"));
+        }
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ApplyAudit();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyAudit();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ApplyAudit()
+    {
+        var uid = _http.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var now = DateTime.UtcNow;
+        foreach (var e in ChangeTracker.Entries())
+        {
+            if (e.State == EntityState.Added)
+            {
+                if (e.Metadata.FindProperty("CreatedAt") != null) e.Property("CreatedAt").CurrentValue = now;
+                if (e.Metadata.FindProperty("CreatedBy") != null) e.Property("CreatedBy").CurrentValue = uid;
+            }
+            if (e.State == EntityState.Added || e.State == EntityState.Modified)
+            {
+                if (e.Metadata.FindProperty("UpdatedAt") != null) e.Property("UpdatedAt").CurrentValue = now;
+                if (e.Metadata.FindProperty("UpdatedBy") != null) e.Property("UpdatedBy").CurrentValue = uid;
+            }
         }
     }
 }
