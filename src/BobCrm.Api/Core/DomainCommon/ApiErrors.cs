@@ -12,5 +12,7 @@ public static class ApiErrors
 
     public static IResult Persistence(string message, params ValidationError[] details)
         => Results.Json(new { code = "PersistenceError", message, details }, statusCode: 500);
-}
 
+    public static IResult Concurrency(string message = "version mismatch")
+        => Results.Json(new { code = "ConcurrencyConflict", message, details = new[] { new ValidationError("version", "Mismatch", message) } }, statusCode: 409);
+}

@@ -200,6 +200,8 @@ app.MapGet("/api/customers/{id:int}", (int id, IRepository<Customer> repoCustome
 {
     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
+
+    // no concurrency check on GET
     var defs = repoDef.Query().ToList();
     var values = repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
     var fields = defs.Select(d => new
@@ -357,7 +359,7 @@ record RegisterDto(string username, string password, string email);
 record LoginDto(string username, string password);
 record RefreshDto(string refreshToken);
 record LogoutDto(string refreshToken);
-record UpdateCustomerDto(List<FieldDto> fields);
+record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
 record FieldDto(string key, object value);
 
 class RefreshToken
