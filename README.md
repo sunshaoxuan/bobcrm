@@ -130,11 +130,31 @@
   - 通过可配置 Provider（`postgres`/`sqlite`）与连接串自适应；后续提供“数据库连接配置”管理页（仅管理员）。
   - 按层次实现：持久化层（EF Core 多 Provider）、通用业务实体层、商用业务实体层；支持动态字段的 JSON/反射式持久化与查询（PostgreSQL 优先）。
 
+**分层实体与职责（落地路线）**
+- 目标：把实体按职能分三层，界定依赖和边界，所有 CRUD 仅通过持久化层进行。
+- 层次划分：
+  - 通用持久化实体层（Persistence）：MDD 映射、仓储接口/实现、UoW、多 Provider 屏蔽；唯一直接接触数据库。
+  - 公共业务实体层（Domain.Common）：在持久化实体之上，提供通用属性与行为（审计、版本、并发标记、软删等），仅调用持久化层公共接口做 CRUD。
+  - 业务实体层（Domain.Business）：面向业务的实体与行为（Customer/FieldDefinition/...），不关心存储细节，仅依赖 Domain.Common 能力与持久化接口。
+- 设计约束：
+  - API 不直接依赖 EF DbContext；通过仓储/查询接口访问数据。
+  - 动态字段采用 JSONB（Postgres）+ 反射/映射策略统一在持久化层实现。
+  - 审计/版本由 Domain.Common 提供可叠加的特性（CreatedAt/UpdatedAt/CreatedBy/Version/ConcurrencyStamp）。
+- 推进阶段（D3.x）：
+  - D3.1 分层脚手架与契约：抽出 Persistence 与 Domain.Common（接口与基础抽象），API 通过接口访问；保留现有实现做适配器。
+  - D3.2 读路径迁移：列表/详情查询改由仓储与查询器完成；增加 JSONB 路径查询与索引策略。
+  - D3.3 写路径迁移：PUT/POST 等改由 UoW+仓储提交；落地版本与并发控制；补齐审计字段。
+  - D3.4 清理直连：移除 API 对 DbContext 的直接引用，仅保留持久化接口；完善测试与文档。
+
 **里程碑更新（重点新增）**
 - D0 设计冻结与接口对齐：本 README、设计文档、接口文档三者一致。
 - D1 最小可运行外壳（已完成）→ 在此基础上逐步替换。
 - D2 认证与邮件：Identity + JWT、注册/激活、刷新令牌、会话重连。
 - D3 数据库切换：抽象持久化层，新增 PostgreSQL Provider；配置 UI（管理员）。
+- D3.1 分层脚手架与契约（Persistence/Domain.Common/Domain.Business），API 走仓储接口。
+- D3.2 查询迁移与 JSONB 查询/索引（读路径）。
+- D3.3 写路径迁移、UoW、审计与版本能力落地。
+- D3.4 移除直连清理与回归测试。
 - D4 表单设计器 v1：拖拽/工具栏、自由布局/流式布局基础、布局保存与渲染。
 - D5 客户与字段：对齐 PostgreSQL JSONB 查询与版本；完善字段动作。
 - D6 国际化与权限：`CustomerAccess` 生效、`LocalizationResource` 接入。
