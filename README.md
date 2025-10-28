@@ -146,6 +146,22 @@
   - D3.3 写路径迁移：PUT/POST 等改由 UoW+仓储提交；落地版本与并发控制；补齐审计字段。
   - D3.4 清理直连：移除 API 对 DbContext 的直接引用，仅保留持久化接口；完善测试与文档。
 
+**层级校验与状态机（全面分层）**
+- 校验分层：
+  - 业务层（Domain.Business）：领域不变式与业务规则（跨字段/跨实体）；失败则短路，给出业务错误。
+  - 通用层（Domain.Common）：通用约束（必填/长度/版本/并发/软删等）。
+  - 持久化层（Persistence）：存储约束（唯一性、存在性、外键、Provider 限制）。
+- 流程次序：Business → Common → Persistence，任一失败即停止并返回统一错误格式。
+- 状态机与事件：
+  - 每个业务实体可声明状态与可达迁移（如 Draft/Active/Disabled）；
+  - 迁移钩子：Before/AfterTransition（Business）、Before/AfterPersist（Common/Persistence）；
+  - 事件机制：提交成功后发布领域事件（AfterCommit），下层有机会前后处理，保证解耦。
+- 推进：
+  - D3.1 定义接口（IValidatable、IStateful、IDomainEvent、IRepository/UoW）与统一校验结果；
+  - D3.2 接入管道（API 入参→领域→校验→仓储），返回统一错误模型；
+  - D3.3 补充典型状态机（如 Layout Draft/Published）与并发控制；
+  - D3.4 事件聚合器与 AfterCommit 发布（可演进至 Outbox）。
+
 **里程碑更新（重点新增）**
 - D0 设计冻结与接口对齐：本 README、设计文档、接口文档三者一致。
 - D1 最小可运行外壳（已完成）→ 在此基础上逐步替换。
