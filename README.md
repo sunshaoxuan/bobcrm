@@ -78,6 +78,16 @@
 - 自动迁移：API 启动时自动 `Database.Migrate()`，首次运行将创建所需表。
 
 **里程碑（交付顺序）**
+- [x] D0 可运行外壳：单项目启动成功，登录页 + 框架布局可用（Mock 登录）。
+- [x] D1 真实认证：Identity + JWT（注册/激活/登录/刷新/登出/会话），前端鉴权打通；Swagger 可测。
+- [x] D2 客户列表（只读）：`GET /customers`，前端表格渲染可用（失败回退只读 Mock）。
+- [x] D3 客户详情（只读）：`GET /customers/{id}`，动态字段渲染。
+- [x] D4 字段定义与编辑：`GET /fields` + `PUT /customers/{id}`，版本递增（后续增强并发与审计）。
+- [x] D5 用户布局：`GET/POST /layout/{customerId}`，顺序/分组持久化。
+- [ ] D6 字段动作：email/link/file/rdp 的文档所列动作。
+- [ ] D7 权限与国际化：`CustomerAccess` 生效、`LocalizationResource` 接入、UI i18n。
+
+完成率（里程碑）：6/8 ≈ 75%
 - M0 可运行外壳：单项目启动成功，登录页 + 框架布局可用（Mock 登录）。
 - M1 真实认证：`/api/auth/login` + JWT，前端鉴权打通；种子 `admin`。
 - M2 客户列表（只读）：`GET /customers`，前端表格渲染可用。
@@ -93,6 +103,19 @@
 - 验证流程：登录 → 列表 → 详情 → 编辑保存（当 M4 完成）→ 切换语言 → 权限限制。
 
 **任务清单（跟踪）**
+- [x] 单项目脚手架（Blazor Server + Minimal API）
+- [x] 引入 Ant Design Blazor（基础布局/导航/消息）
+- [x] Mock 登录保持 UI 可用（已完成，后续被真实认证替换）
+- [x] 真实认证：Identity + JWT（注册/激活/刷新/会话）
+- [x] 客户列表 API + 页面（只读）
+- [x] 客户详情 API + 动态字段渲染（只读）
+- [x] 字段定义 API + 编辑/版本管理（基础版本递增已实现）
+- [x] 用户布局读写（顺序/分组）
+- [ ] 字段动作（email/link/file/rdp）
+- [ ] 权限控制（CustomerAccess）与国际化资源
+- [ ] CI 友好 InMemory 模式与基础测试
+
+完成率（任务清单）：8/11 ≈ 73%
 - [ ] 单项目脚手架（Blazor Server + Minimal API）
 - [ ] 引入 Ant Design Blazor（基础布局/导航/消息）
 - [ ] Mock 登录保持 UI 可用（后续替换为真实认证）
