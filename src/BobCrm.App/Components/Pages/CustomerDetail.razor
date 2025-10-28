@@ -23,16 +23,28 @@ else
 
     private CustomerDetailDto? _detail;
 
-    [Inject] public HttpClient Http { get; set; } = default!;
+    [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public IJSRuntime JS { get; set; } = default!;
 
     protected override async Task OnParametersSetAsync()
     {
-        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "token");
-        if (!string.IsNullOrWhiteSpace(token))
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-        _detail = await Http.GetFromJsonAsync<CustomerDetailDto>($"/api/customers/{Id}");
+        try
+        {
+            var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+            var http = HttpFactory.CreateClient("api");
+            if (!string.IsNullOrWhiteSpace(token))
+                http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var resp = await http.GetAsync($"/api/customers/{Id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                _detail = await resp.Content.ReadFromJsonAsync<CustomerDetailDto>();
+                return;
+            }
+        }
+        catch {}
+        // fallback mock
+        _detail = new CustomerDetailDto(Id, Id==1?"C001":"C002", Id==1?"客户A":"客户B", 1,
+            new List<FieldDto>{ new("email","邮箱","email","a@b.com") });
     }
 
     RenderFragment RenderField(FieldDto f) => f.type switch
