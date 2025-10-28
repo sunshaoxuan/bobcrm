@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Infrastructure.Ef;
+using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -113,6 +114,20 @@ using (var scope = app.Services.CreateScope())
             });
         }
         db.SaveChanges();
+    }
+    // Postgres JSONB indexes
+    var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+    if (isNpgsql)
+    {
+        try
+        {
+            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON \"FieldValues\" USING GIN (\"Value\");");
+            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON \"FieldDefinitions\" USING GIN (\"Tags\");");
+            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON \"FieldDefinitions\" USING GIN (\"Actions\");");
+            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON \"UserLayouts\" USING GIN (\"LayoutJson\");");
+            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON \"FieldValues\" (\"CustomerId\", \"FieldDefinitionId\");");
+        }
+        catch { /* best-effort */ }
     }
 }
 
@@ -221,7 +236,7 @@ app.MapPut("/api/customers/{id:int}", async (
 {
     // Business/Common validations (skeleton)
     if (dto?.fields == null || dto.fields.Count == 0)
-        return Results.Json(new { code = "ValidationFailed", message = "fields required" }, statusCode: 400);
+        return ApiErrors.Validation("fields required");
 
     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
@@ -230,9 +245,9 @@ app.MapPut("/api/customers/{id:int}", async (
     foreach (var f in dto.fields)
     {
         if (string.IsNullOrWhiteSpace(f.key))
-            return Results.Json(new { code = "ValidationFailed", message = "field key required" }, statusCode: 400);
+            return ApiErrors.Validation("field key required");
         if (!defs.TryGetValue(f.key, out var def))
-            return Results.Json(new { code = "BusinessRuleViolation", message = $"unknown field: {f.key}" }, statusCode: 400);
+            return ApiErrors.Business($"unknown field: {f.key}");
 
         var json = System.Text.Json.JsonSerializer.Serialize(f.value);
         var val = new FieldValue { CustomerId = id, FieldDefinitionId = def.Id, Value = json, Version = c.Version + 1 };
@@ -260,6 +275,8 @@ app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincip
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
     var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
     var json = layout.GetRawText();
+    if (string.IsNullOrWhiteSpace(json))
+        return ApiErrors.Validation("layout body required");
     if (entity == null)
     {
         entity = new UserLayout { UserId = uid, CustomerId = customerId, LayoutJson = json };
