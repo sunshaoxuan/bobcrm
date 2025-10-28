@@ -244,3 +244,9 @@
 **端口与配置**
 - API 端口：默认 `http://localhost:8080`（可按需调整）。
 - 前端配置：`src/BobCrm.App/appsettings.*.json` → `Api:BaseUrl`，默认 `http://localhost:8080`。
+
+**开发期数据库管理**
+- 启动时自动初始化数据库（创建 + 种子 + JSONB 索引，幂等）。
+- 管理端点（仅开发环境）：
+  - `GET /api/admin/db/health`：返回 provider/连接状态与表记录数。
+  - `POST /api/admin/db/recreate`：删除并重建数据库（含种子与索引）。

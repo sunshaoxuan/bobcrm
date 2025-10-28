@@ -13,6 +13,7 @@ using BobCrm.Api.Infrastructure.Ef;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Application.Queries;
+using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -270,6 +271,34 @@ app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincip
     await uow.SaveChangesAsync();
     return Results.Ok(new { status = "ok" });
 }).RequireAuthorization();
+
+// Admin/DB endpoints (development only)
+app.MapGet("/api/admin/db/health", async (AppDbContext db) =>
+{
+    if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+    var provider = db.Database.ProviderName ?? "unknown";
+    var canConnect = await db.Database.CanConnectAsync();
+    var info = new
+    {
+        provider,
+        canConnect,
+        counts = new
+        {
+            customers = await db.Customers.CountAsync(),
+            fieldDefinitions = await db.FieldDefinitions.CountAsync(),
+            fieldValues = await db.FieldValues.CountAsync(),
+            userLayouts = await db.UserLayouts.CountAsync()
+        }
+    };
+    return Results.Json(info);
+});
+
+app.MapPost("/api/admin/db/recreate", async (AppDbContext db) =>
+{
+    if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+    await DatabaseInitializer.RecreateAsync(db);
+    return Results.Ok(new { status = "recreated" });
+});
 
 app.Run();
 
