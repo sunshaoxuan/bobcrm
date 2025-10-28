@@ -1,0 +1,64 @@
+@page "/customers"
+
+<h1>客户列表</h1>
+
+<Button Type="primary" OnClick="LoadAsync">刷新</Button>
+
+<table class="ant-table">
+    <thead>
+        <tr>
+            <th>编码</th>
+            <th>名称</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in _rows)
+        {
+            <tr>
+                <td>@row.code</td>
+                <td>@row.name</td>
+                <td><a href="/customers/@row.id">详情</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private bool _loading = true;
+    private List<CustomerRow> _rows = new();
+
+    [Inject] public HttpClient Http { get; set; } = default!;
+    [Inject] public MessageService Message { get; set; } = default!;
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "token");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var data = await Http.GetFromJsonAsync<List<CustomerRow>>("/api/customers");
+            _rows = data ?? new();
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"加载失败: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public record CustomerRow(int id, string code, string name);
+}

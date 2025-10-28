@@ -1,0 +1,70 @@
+@page "/login"
+
+<h1>登录</h1>
+
+<EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
+    <DataAnnotationsValidator />
+    <div style="max-width:320px;">
+        <FormItem Label="用户名">
+            <Input @bind-Value="_model.Username" />
+        </FormItem>
+        <FormItem Label="密码">
+            <InputPassword @bind-Value="_model.Password" />
+        </FormItem>
+        <FormItem>
+            <Button Type="primary" OnClick="HandleLoginAsync">登录</Button>
+        </FormItem>
+    </div>
+    <ValidationSummary />
+    <div>@_error</div>
+    
+</EditForm>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+
+    [Inject] public HttpClient Http { get; set; } = default!;
+    [Inject] public MessageService Message { get; set; } = default!;
+    [Inject] public NavigationManager Nav { get; set; } = default!;
+
+    private async Task HandleLoginAsync()
+    {
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/auth/login", new { username = _model.Username, password = _model.Password });
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = "用户名或密码错误";
+                return;
+            }
+            var json = await resp.Content.ReadFromJsonAsync<LoginResp>();
+            if (json is null)
+            {
+                _error = "登录响应异常";
+                return;
+            }
+            // 持久化令牌（最小实现：保存在 localStorage）
+            await JS.InvokeVoidAsync("localStorage.setItem", "token", json.token);
+            // 后续请求带上 Authorization 头
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", json.token);
+            await Message.Success("登录成功");
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+
+    class LoginModel
+    {
+        public string Username { get; set; } = "admin";
+        public string Password { get; set; } = "123456";
+    }
+    record LoginResp(string token, User user);
+    record User(int id, string username, string role);
+}
+

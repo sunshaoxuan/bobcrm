@@ -1,0 +1,53 @@
+@page "/customers/{Id:int}"
+
+<h1>客户详情</h1>
+
+@if (_detail is null)
+{
+    <Spin Spinning="true" />
+}
+else
+{
+    <Descriptions Title="@(_detail.name + "(" + _detail.code + ") 版本:" + _detail.version)" Column="1" Bordered>
+        @foreach (var f in _detail.fields)
+        {
+            <DescriptionsItem Title="@f.label">
+                @RenderField(f)
+            </DescriptionsItem>
+        }
+    </Descriptions>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CustomerDetailDto? _detail;
+
+    [Inject] public HttpClient Http { get; set; } = default!;
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "token");
+        if (!string.IsNullOrWhiteSpace(token))
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        _detail = await Http.GetFromJsonAsync<CustomerDetailDto>($"/api/customers/{Id}");
+    }
+
+    RenderFragment RenderField(FieldDto f) => f.type switch
+    {
+        "email" => builder => builder.AddMarkupContent(0, $"<a href=\"mailto:{f.value}\">{f.value}</a>"),
+        "rds" => builder =>
+        {
+            var je = (JsonElement)f.value;
+            var ip = je.GetProperty("ip").GetString();
+            var user = je.GetProperty("user").GetString();
+            builder.AddContent(0, $"IP: {ip} 用户: {user}");
+        },
+        _ => builder => builder.AddContent(0, f.value?.ToString())
+    };
+
+    public record CustomerDetailDto(int id, string code, string name, int version, List<FieldDto> fields);
+    public record FieldDto(string key, string label, string type, object value);
+}
