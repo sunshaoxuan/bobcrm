@@ -10,5 +10,7 @@ public class FieldDefinition
     [Required, MaxLength(64)] public string DataType { get; set; } = string.Empty;
     public string? Tags { get; set; }
     public string? Actions { get; set; }
+    public bool Required { get; set; }
+    [MaxLength(512)] public string? Validation { get; set; }
+    public string? DefaultValue { get; set; }
 }
-

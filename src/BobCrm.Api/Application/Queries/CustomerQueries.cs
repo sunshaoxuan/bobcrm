@@ -34,7 +34,12 @@ public class CustomerQueries : ICustomerQueries
             key = d.Key,
             label = d.DisplayName,
             type = d.DataType,
-            value = values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"") ? s.Trim('"') : values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value
+            value =
+                values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"")
+                    ? s.Trim('"')
+                    : values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value ?? d.DefaultValue,
+            required = d.Required,
+            validation = d.Validation
         }).ToArray();
         return new { id = c.Id, code = c.Code, name = c.Name, version = c.Version, fields };
     }

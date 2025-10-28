@@ -1,5 +1,7 @@
 using BobCrm.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BobCrm.Api.Infrastructure;
 
@@ -7,8 +9,23 @@ public static class DatabaseInitializer
 {
     public static async Task InitializeAsync(DbContext db)
     {
-        try { await db.Database.MigrateAsync(); }
-        catch { await db.Database.EnsureCreatedAsync(); }
+        // First try to create schema from model (dev-friendly)
+        try { await db.Database.EnsureCreatedAsync(); } catch { }
+        // If __EFMigrationsHistory exists but tables not created, force create tables
+        try { await db.Set<Customer>().CountAsync(); }
+        catch
+        {
+            try
+            {
+                var creator = db.Database.GetService<IRelationalDatabaseCreator>();
+                await creator.CreateTablesAsync();
+            }
+            catch { }
+        }
+        // If there are code-based migrations, apply them (no-op if none)
+        var hasMigrations = db.Database.GetMigrations().Any();
+        if (hasMigrations)
+            await db.Database.MigrateAsync();
 
         if (!await db.Set<Customer>().AnyAsync())
         {
@@ -23,6 +40,9 @@ public static class DatabaseInitializer
                     Key = "email",
                     DisplayName = "邮箱",
                     DataType = "email",
+                    Required = true,
+                    Validation = @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                    DefaultValue = "",
                     Tags = "[\"常用\"]",
                     Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
                 });
@@ -51,4 +71,3 @@ public static class DatabaseInitializer
         await InitializeAsync(db);
     }
 }
-

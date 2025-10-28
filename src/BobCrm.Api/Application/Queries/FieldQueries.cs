@@ -20,6 +20,9 @@ public class FieldQueries : IFieldQueries
             key = f.Key,
             label = f.DisplayName,
             type = f.DataType,
+            required = f.Required,
+            validation = f.Validation,
+            defaultValue = f.DefaultValue,
             tags = string.IsNullOrWhiteSpace(f.Tags) ? new string[0] : System.Text.Json.JsonSerializer.Deserialize<string[]>(f.Tags!)!,
             actions = string.IsNullOrWhiteSpace(f.Actions) ? Array.Empty<object>() : System.Text.Json.JsonSerializer.Deserialize<object[]>(f.Actions!)!
         }).Cast<object>().ToList();

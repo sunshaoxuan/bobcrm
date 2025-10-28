@@ -77,6 +77,7 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>(
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IValidationPipeline, ValidationPipeline>();
 builder.Services.AddScoped<IBusinessValidator<UpdateCustomerDto>, UpdateCustomerBusinessValidator>();
+builder.Services.AddScoped<ICommonValidator<UpdateCustomerDto>, UpdateCustomerCommonValidator>();
 builder.Services.AddScoped<IPersistenceValidator<UpdateCustomerDto>, UpdateCustomerPersistenceValidator>();
 builder.Services.AddScoped<ICustomerQueries, CustomerQueries>();
 builder.Services.AddScoped<IFieldQueries, FieldQueries>();
@@ -101,46 +102,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
 
-// Auto-migrate database on startup (both providers), with EnsureCreated fallback and seed
+// Auto-initialize database on startup (dev-friendly, idempotent)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try { db.Database.Migrate(); }
-    catch { db.Database.EnsureCreated(); }
-
-    if (!db.Customers.Any())
-    {
-        db.Customers.AddRange(
-            new Customer { Code = "C001", Name = "客户A", Version = 1 },
-            new Customer { Code = "C002", Name = "客户B", Version = 1 }
-        );
-        if (!db.FieldDefinitions.Any())
-        {
-            db.FieldDefinitions.Add(new FieldDefinition
-            {
-                Key = "email",
-                DisplayName = "邮箱",
-                DataType = "email",
-                Tags = "[\"常用\"]",
-                Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
-            });
-        }
-        db.SaveChanges();
-    }
-    // Postgres JSONB indexes
-    var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
-    if (isNpgsql)
-    {
-        try
-        {
-            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON \"FieldValues\" USING GIN (\"Value\");");
-            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON \"FieldDefinitions\" USING GIN (\"Tags\");");
-            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON \"FieldDefinitions\" USING GIN (\"Actions\");");
-            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON \"UserLayouts\" USING GIN (\"LayoutJson\");");
-            db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON \"FieldValues\" (\"CustomerId\", \"FieldDefinitionId\");");
-        }
-        catch { /* best-effort */ }
-    }
+    await DatabaseInitializer.InitializeAsync(db);
 }
 
 // Auth endpoints
@@ -226,6 +192,8 @@ app.MapPut("/api/customers/{id:int}", async (
 
     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
+    if (dto.expectedVersion is null || dto.expectedVersion.Value != c.Version)
+        return ApiErrors.Concurrency("version mismatch");
 
     var defs = repoDef.Query().ToDictionary(d => d.Key, d => d);
     foreach (var f in dto.fields)
