@@ -11,12 +11,20 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext (SQLite default; D3 will add PostgreSQL)
+// DbContext (SQLite default; PostgreSQL via config)
 var dbProvider = builder.Configuration["Db:Provider"] ?? "sqlite";
 var conn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=./data/app.db";
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
-    if (dbProvider == "sqlite") opt.UseSqlite(conn);
+    if (dbProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+    {
+        opt.UseNpgsql(conn, npg => npg.MigrationsHistoryTable("__EFMigrationsHistory", "public"));
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+    }
+    else
+    {
+        opt.UseSqlite(conn);
+    }
 });
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -74,6 +82,13 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
+
+// Auto-migrate database on startup (both providers)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 // Auth endpoints
 app.MapPost("/api/auth/register", async (UserManager<IdentityUser> um, IEmailSender email, RegisterDto dto, LinkGenerator links, HttpContext http) =>

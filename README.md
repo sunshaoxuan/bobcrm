@@ -72,9 +72,10 @@
 - 授权：基于 `Role` 与 `CustomerAccess.CanEdit` 控制读/写。
 
 **数据库与运行模式（最小优先）**
-- 单项目内配置 `AppDbContext`：默认使用 SQLite 文件 `./data/app.db`；提供 InMemory 模式用于 CI。
-- 模式切换：环境变量 `BOBCRM_USE_INMEMORY=true` 时使用 InMemory；否则使用 SQLite。
-- 迁移：在 SQLite 模式下执行 `dotnet ef migrations add InitialCreate` 与 `dotnet ef database update`（项目为 `src/BobCrm.App`）。
+- API（D3）已支持多 Provider：PostgreSQL（主推）与 SQLite（最小）。
+- 切换方式（API）：`src/BobCrm.Api/appsettings.*.json` 中 `Db:Provider` 设为 `postgres|sqlite`，并设置 `ConnectionStrings:Default`。
+- 本地测试（PostgreSQL 推荐）：`docker-compose up -d` 启 Postgres（默认用户密码 postgres/postgres，库 bobcrm）。
+- 自动迁移：API 启动时自动 `Database.Migrate()`，首次运行将创建所需表。
 
 **里程碑（交付顺序）**
 - M0 可运行外壳：单项目启动成功，登录页 + 框架布局可用（Mock 登录）。
@@ -87,8 +88,8 @@
 - M7 权限与国际化：`CustomerAccess` 生效、`LocalizationResource` 接入、UI i18n。
 
 **运行与验证**
-- 启动（默认最小）：`dotnet run --project src/BobCrm.App`
-- 启动（CI/InMemory）：`$env:BOBCRM_USE_INMEMORY='true'; dotnet run --project src/BobCrm.App`
+- 启动 API（Postgres via docker）：先 `docker-compose up -d`，再 `dotnet run --project src/BobCrm.Api`
+- 启动 Web：`dotnet run --project src/BobCrm.App`
 - 验证流程：登录 → 列表 → 详情 → 编辑保存（当 M4 完成）→ 切换语言 → 权限限制。
 
 **任务清单（跟踪）**

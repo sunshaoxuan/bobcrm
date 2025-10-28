@@ -156,3 +156,5 @@ C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.Extensions.Hosti
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\System.Security.Cryptography.Pkcs.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\System.Security.Cryptography.Xml.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Npgsql.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
