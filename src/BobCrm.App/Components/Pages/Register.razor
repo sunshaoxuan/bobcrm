@@ -1,0 +1,64 @@
+@page "/register"
+
+<h1>注册</h1>
+
+<EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
+    <DataAnnotationsValidator />
+    <div style="max-width:420px;">
+        <FormItem Label="用户名">
+            <Input @bind-Value="_model.Username" />
+        </FormItem>
+        <FormItem Label="邮箱">
+            <Input @bind-Value="_model.Email" />
+        </FormItem>
+        <FormItem Label="密码">
+            <InputPassword @bind-Value="_model.Password" />
+        </FormItem>
+        <FormItem>
+            <Button Type="primary" OnClick="HandleRegisterAsync">注册</Button>
+        </FormItem>
+    </div>
+    <ValidationSummary />
+    <div>@_error</div>
+</EditForm>
+
+<div style="margin-top:16px; color:#888;">
+    注册成功后，开发环境下请在 API 控制台查看激活链接，或前往 <a href="/activate">激活页面</a> 手动输入 UserId + Code 进行激活。
+</div>
+
+@code {
+    private RegModel _model = new();
+    private string? _error;
+
+    [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
+    [Inject] public MessageService Message { get; set; } = default!;
+    [Inject] public NavigationManager Nav { get; set; } = default!;
+
+    private async Task HandleRegisterAsync()
+    {
+        try
+        {
+            var http = HttpFactory.CreateClient("api");
+            var resp = await http.PostAsJsonAsync("/api/auth/register", new { username = _model.Username, password = _model.Password, email = _model.Email });
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = await resp.Content.ReadAsStringAsync();
+                return;
+            }
+            await Message.Success("注册成功，请进行邮箱激活（开发环境查看 API 控制台）");
+            Nav.NavigateTo("/activate");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    class RegModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}
+

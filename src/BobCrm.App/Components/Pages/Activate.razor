@@ -1,0 +1,59 @@
+@page "/activate"
+
+<h1>激活账户</h1>
+
+<div style="max-width:480px;">
+    <FormItem Label="UserId">
+        <Input @bind-Value="_userId" />
+    </FormItem>
+    <FormItem Label="Code">
+        <Input @bind-Value="_code" />
+    </FormItem>
+    <FormItem>
+        <Button Type="primary" OnClick="HandleActivateAsync">激活</Button>
+    </FormItem>
+
+    <div>@_msg</div>
+</div>
+
+@code {
+    private string? _userId;
+    private string? _code;
+    private string? _msg;
+
+    [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
+    [Inject] public NavigationManager Nav { get; set; } = default!;
+    [Inject] public MessageService Message { get; set; } = default!;
+
+    protected override Task OnInitializedAsync()
+    {
+        // 支持从 URL 查询参数预填
+        var uri = new Uri(Nav.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _userId = query["userId"] ?? _userId;
+        _code = query["code"] ?? _code;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleActivateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_userId) || string.IsNullOrWhiteSpace(_code))
+        {
+            _msg = "请填写 UserId 和 Code";
+            return;
+        }
+        var http = HttpFactory.CreateClient("api");
+        var url = $"/api/auth/activate?userId={Uri.EscapeDataString(_userId)}&code={Uri.EscapeDataString(_code)}";
+        var resp = await http.GetAsync(url);
+        if (resp.IsSuccessStatusCode)
+        {
+            await Message.Success("激活成功，请前往登录");
+            Nav.NavigateTo("/login");
+        }
+        else
+        {
+            _msg = $"激活失败: {resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+        }
+    }
+}
+
