@@ -205,6 +205,38 @@
 - 表单设计器的拖拽实现细节：自研最小框架 vs. 引入第三方拖拽库（需评估与 AntD 兼容性）。
 
 
+**需求对齐与分层约束**
+- 分层边界：
+  - 持久化层：仓储 `IRepository<T>` + `IUnitOfWork` 直连数据库，负责 CRUD 与事务；禁止暴露 `DbContext` 至上层。
+  - 公共业务层：通用属性（审计/版本）与校验（Common），通过管道统一执行；不跨层访问持久化细节。
+  - 业务实体层：只关注业务属性与行为（Business），通过接口与下层交互。
+- 校验分层：Business → Common → Persistence，逐层早失败，并返回统一错误模型（`code/message/details`）。
+- 扩展字段：以 JSON/JSONB 存储；元数据（`FieldDefinition`）驱动 UI 渲染与写入校验（Required/Validation/DefaultValue）。
+- 身份认证：Identity + JWT，支持注册、邮件激活、登录、刷新、登出、会话重连。
+- 前端随时可用：接口未就绪时允许只读 Mock，但写操作必须依赖真实接口，接口稳定后移除 Mock。
+
+**进度追踪与完成度**
+- 统计口径：以功能大项为单位统计完成度，勾选代表“可运行/可用”。
+- 完成情况：
+  - [x] 前端可运行外壳 + Ant Design 基础布局
+  - [x] 身份认证（注册/激活/登录/刷新/登出/会话）
+  - [x] 客户列表接口 + UI（含简单详情导航）
+  - [x] 客户详情接口 + 保存（携带 expectedVersion，409 并发控制）
+  - [x] 字段定义查询（返回标签、动作）
+  - [x] 分层落地（仓储/UoW/验证管道/统一错误模型）
+  - [x] 审计与版本（影子属性 + SaveChanges 钩子）
+  - [x] 数据库初始化（EnsureCreated/迁移/种子/JSONB 索引）
+  - [x] 多数据库支持（PostgreSQL/SQLite，配置切换）
+  - [ ] 字段元数据驱动前端渲染（Required/Validation 本地校验）
+  - [ ] 用户布局 UI 对接（API 已有 GET/POST）
+  - [ ] 权限控制生效（CustomerAccess 在读/写端强制）
+  - [ ] 国际化资源加载与前端切换
+  - [ ] 移除 Mock 回退（接口稳定后）
+  - [ ] 单元测试（认证、客户读写、并发冲突）
+  - [ ] CI 流水线与发布制品
+  - [x] 生产运行配置与指引（基础）
+- 完成度：12/20 ≈ 60%
+
 **编译、测试与提交（质量门禁）**
 - 每次代码修改后：
   - 本地通过构建：`dotnet build -c Release`
@@ -243,7 +275,7 @@
 
 **端口与配置**
 - 前端端口：固定 `http://localhost:8080`（对外开放访问）。
-- API 端口（开发默认）：`http://localhost:8081`（仅用于后端服务，可在配置/环境变量覆盖）。
+- API 端口（开发默认）：`http://localhost:8081`（可用 `--urls` 或配置覆盖）。
 - 前端调用后端：`src/BobCrm.App/appsettings.*.json` → `Api:BaseUrl` 指向后端地址（默认 `http://localhost:8081`）。
 
 **运行提示**
