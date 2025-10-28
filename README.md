@@ -242,8 +242,12 @@
 - 退出机制：当对应接口完成且已灌入测试数据后，移除 Mock 代码（或关闭开关 `Mock:EnableFallback=false` 并删除代码）。
 
 **端口与配置**
-- API 端口：默认 `http://localhost:8080`（可按需调整）。
-- 前端配置：`src/BobCrm.App/appsettings.*.json` → `Api:BaseUrl`，默认 `http://localhost:8080`。
+- API 端口：默认 `http://localhost:8081`（避免与前端冲突，可按需调整）。
+- 前端配置：`src/BobCrm.App/appsettings.*.json` → `Api:BaseUrl`，默认 `http://localhost:8081`。
+
+**最近更新（运行稳定性）**
+- 修复首次运行卡死问题：本机 8080 端口冲突导致 API 启动失败，已将 API 默认端口改为 8081（`src/BobCrm.Api/Properties/launchSettings.json`）。
+- 首次启动数据库初始化：若无迁移记录会自动建表并写入种子（客户 C001/C002 与 email 字段）；PostgreSQL 下自动创建 JSONB 索引。
 
 **开发期数据库管理**
 - 启动时自动初始化数据库（创建 + 种子 + JSONB 索引，幂等）。
