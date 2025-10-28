@@ -171,19 +171,22 @@ app.MapGet("/api/auth/session", (ClaimsPrincipal user) =>
     return Results.Ok(new { valid = false });
 }).RequireAuthorization();
 
-// Business APIs (Customers, Fields, Layout)
-app.MapGet("/api/customers", (AppDbContext db) =>
+// Business APIs (Customers, Fields, Layout) via repositories (no direct DbContext)
+app.MapGet("/api/customers", (IRepository<Customer> repoCustomer) =>
 {
-    var list = db.Customers.Select(c => new { id = c.Id, code = c.Code, name = c.Name }).ToList();
+    var list = repoCustomer
+        .Query()
+        .Select(c => new { id = c.Id, code = c.Code, name = c.Name })
+        .ToList();
     return Results.Json(list);
 }).RequireAuthorization();
 
-app.MapGet("/api/customers/{id:int}", (int id, AppDbContext db) =>
+app.MapGet("/api/customers/{id:int}", (int id, IRepository<Customer> repoCustomer, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal) =>
 {
-    var c = db.Customers.FirstOrDefault(x => x.Id == id);
+    var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
-    var defs = db.FieldDefinitions.ToList();
-    var values = db.FieldValues.Where(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
+    var defs = repoDef.Query().ToList();
+    var values = repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
     var fields = defs.Select(d => new
     {
         key = d.Key,
@@ -194,9 +197,9 @@ app.MapGet("/api/customers/{id:int}", (int id, AppDbContext db) =>
     return Results.Json(new { id = c.Id, code = c.Code, name = c.Name, version = c.Version, fields });
 }).RequireAuthorization();
 
-app.MapGet("/api/fields", (AppDbContext db) =>
+app.MapGet("/api/fields", (IRepository<FieldDefinition> repoDef) =>
 {
-    var defs = db.FieldDefinitions.AsNoTracking().ToList();
+    var defs = repoDef.Query().ToList();
     var list = defs.Select(f => new
     {
         key = f.Key,
@@ -225,29 +228,31 @@ app.MapPut("/api/customers/{id:int}", async (int id, AppDbContext db, UpdateCust
     return Results.Json(new { status = "success", newVersion = c.Version });
 }).RequireAuthorization();
 
-app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, AppDbContext db) =>
+app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-    var layout = db.UserLayouts.FirstOrDefault(x => x.UserId == uid && x.CustomerId == customerId)?.LayoutJson;
+    var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
+    var layout = entity?.LayoutJson;
     var json = string.IsNullOrWhiteSpace(layout) ? new { } : System.Text.Json.JsonSerializer.Deserialize<object>(layout!);
     return Results.Json(json ?? new { });
 }).RequireAuthorization();
 
-app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, AppDbContext db, System.Text.Json.JsonElement layout) =>
+app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-    var entity = db.UserLayouts.FirstOrDefault(x => x.UserId == uid && x.CustomerId == customerId);
+    var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
     var json = layout.GetRawText();
     if (entity == null)
     {
         entity = new UserLayout { UserId = uid, CustomerId = customerId, LayoutJson = json };
-        db.UserLayouts.Add(entity);
+        await repoLayout.AddAsync(entity);
     }
     else
     {
         entity.LayoutJson = json;
+        repoLayout.Update(entity);
     }
-    await db.SaveChangesAsync();
+    await uow.SaveChangesAsync();
     return Results.Ok(new { status = "ok" });
 }).RequireAuthorization();
 
