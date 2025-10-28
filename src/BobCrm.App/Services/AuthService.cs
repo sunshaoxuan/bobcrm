@@ -57,5 +57,43 @@ public class AuthService
     }
 
     private record TokenPair(string accessToken, string refreshToken);
-}
 
+    public async Task<HttpResponseMessage> SendWithRefreshAsync(HttpRequestMessage request)
+    {
+        var http = await CreateClientWithAuthAsync();
+        var resp = await http.SendAsync(request);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var refreshed = await TryRefreshAsync();
+            if (refreshed)
+            {
+                http = await CreateClientWithAuthAsync();
+                // need to clone the request
+                var clone = await CloneAsync(request);
+                resp = await http.SendAsync(clone);
+            }
+        }
+        return resp;
+    }
+
+    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)
+    {
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri);
+        // copy content
+        if (request.Content != null)
+        {
+            var ms = new System.IO.MemoryStream();
+            await request.Content.CopyToAsync(ms);
+            ms.Position = 0;
+            var content = new StreamContent(ms);
+            foreach (var h in request.Content.Headers)
+                content.Headers.TryAddWithoutValidation(h.Key, h.Value);
+            clone.Content = content;
+        }
+        // copy headers
+        foreach (var h in request.Headers)
+            clone.Headers.TryAddWithoutValidation(h.Key, h.Value);
+        clone.Version = request.Version;
+        return clone;
+    }
+}
