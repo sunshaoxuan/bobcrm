@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,10 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.SignIn.RequireConfirmedEmail = true;
     options.User.RequireUniqueEmail = true;
 }).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+
+// Persist DataProtection Keys (session reconnect, stable cookies/tokens after restart)
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<AppDbContext>();
 
 // JWT
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
@@ -50,6 +56,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 
+// CORS (dev friendly; tighten in production)
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -60,6 +73,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors();
 
 // Auth endpoints
 app.MapPost("/api/auth/register", async (UserManager<IdentityUser> um, IEmailSender email, RegisterDto dto, LinkGenerator links, HttpContext http) =>
@@ -136,9 +150,10 @@ static async Task<(string accessToken, string refreshToken)> IssueTokensAsync(IC
     return (access, refresh);
 }
 
-class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options)
+class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
 }
 
 record RegisterDto(string username, string password, string email);

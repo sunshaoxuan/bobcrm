@@ -55,6 +55,10 @@
               "target": "Package",
               "version": "[8.*, )"
             },
+            "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.*, )"
+            },
             "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
               "target": "Package",
               "version": "[8.*, )"

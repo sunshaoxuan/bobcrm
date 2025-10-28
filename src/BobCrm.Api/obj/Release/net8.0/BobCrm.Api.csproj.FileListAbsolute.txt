@@ -148,3 +148,11 @@ C:\workspace\bobcrm\src\BobCrm.Api\obj\Release\net8.0\refint\BobCrm.Api.dll
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Release\net8.0\BobCrm.Api.pdb
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Release\net8.0\BobCrm.Api.genruntimeconfig.cache
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Release\net8.0\ref\BobCrm.Api.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.AspNetCore.DataProtection.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.AspNetCore.DataProtection.Abstractions.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\System.Security.Cryptography.Pkcs.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\System.Security.Cryptography.Xml.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Release\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll

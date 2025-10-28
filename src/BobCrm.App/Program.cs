@@ -10,6 +10,7 @@ builder.Services.AddAntDesign();
 // Http client for API (strict separation)
 var apiBase = builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5200";
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase));
+builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 
 var app = builder.Build();
 

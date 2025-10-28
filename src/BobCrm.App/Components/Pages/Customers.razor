@@ -28,7 +28,7 @@
     private bool _loading = true;
     private List<CustomerRow> _rows = new();
 
-    [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
+    [Inject] public BobCrm.App.Services.AuthService Auth { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
     [Inject] public IJSRuntime JS { get; set; } = default!;
 
@@ -43,11 +43,7 @@
         _loading = true;
         try
         {
-            var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
-            var http = HttpFactory.CreateClient("api");
-            if (!string.IsNullOrWhiteSpace(token))
-                http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            var resp = await http.GetAsync("/api/customers");
+            var resp = await Auth.GetWithRefreshAsync("/api/customers");
             if (resp.IsSuccessStatusCode)
             {
                 _rows = (await resp.Content.ReadFromJsonAsync<List<CustomerRow>>()) ?? new();
