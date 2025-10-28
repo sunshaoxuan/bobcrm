@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Infrastructure.Ef;
 using BobCrm.Api.Core.DomainCommon;
+using BobCrm.Api.Core.DomainCommon.Validation;
+using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +71,13 @@ builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IValidationPipeline, ValidationPipeline>();
+builder.Services.AddScoped<IBusinessValidator<UpdateCustomerDto>, UpdateCustomerBusinessValidator>();
+builder.Services.AddScoped<IPersistenceValidator<UpdateCustomerDto>, UpdateCustomerPersistenceValidator>();
+builder.Services.AddScoped<ICustomerQueries, CustomerQueries>();
+builder.Services.AddScoped<IFieldQueries, FieldQueries>();
+builder.Services.AddScoped<ILayoutQueries, LayoutQueries>();
 
 // CORS (dev friendly; tighten in production)
 builder.Services.AddCors(options =>
@@ -186,47 +195,18 @@ app.MapGet("/api/auth/session", (ClaimsPrincipal user) =>
     return Results.Ok(new { valid = false });
 }).RequireAuthorization();
 
-// Business APIs (Customers, Fields, Layout) via repositories (no direct DbContext)
-app.MapGet("/api/customers", (IRepository<Customer> repoCustomer) =>
+// Business APIs (Customers, Fields, Layout) via query services (no direct DbContext)
+app.MapGet("/api/customers", (ICustomerQueries q) => Results.Json(q.GetList()))
+    .RequireAuthorization();
+
+app.MapGet("/api/customers/{id:int}", (int id, ICustomerQueries q) =>
 {
-    var list = repoCustomer
-        .Query()
-        .Select(c => new { id = c.Id, code = c.Code, name = c.Name })
-        .ToList();
-    return Results.Json(list);
+    var detail = q.GetDetail(id);
+    return detail is null ? Results.NotFound() : Results.Json(detail);
 }).RequireAuthorization();
 
-app.MapGet("/api/customers/{id:int}", (int id, IRepository<Customer> repoCustomer, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal) =>
-{
-    var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
-    if (c == null) return Results.NotFound();
-
-    // no concurrency check on GET
-    var defs = repoDef.Query().ToList();
-    var values = repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
-    var fields = defs.Select(d => new
-    {
-        key = d.Key,
-        label = d.DisplayName,
-        type = d.DataType,
-        value = values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"") ? s.Trim('"') : values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value
-    }).ToArray();
-    return Results.Json(new { id = c.Id, code = c.Code, name = c.Name, version = c.Version, fields });
-}).RequireAuthorization();
-
-app.MapGet("/api/fields", (IRepository<FieldDefinition> repoDef) =>
-{
-    var defs = repoDef.Query().ToList();
-    var list = defs.Select(f => new
-    {
-        key = f.Key,
-        label = f.DisplayName,
-        type = f.DataType,
-        tags = string.IsNullOrWhiteSpace(f.Tags) ? new string[0] : System.Text.Json.JsonSerializer.Deserialize<string[]>(f.Tags!)!,
-        actions = string.IsNullOrWhiteSpace(f.Actions) ? Array.Empty<object>() : System.Text.Json.JsonSerializer.Deserialize<object[]>(f.Actions!)!
-    }).ToList();
-    return Results.Json(list);
-}).RequireAuthorization();
+app.MapGet("/api/fields", (IFieldQueries q) => Results.Json(q.GetDefinitions()))
+    .RequireAuthorization();
 
 app.MapPut("/api/customers/{id:int}", async (
     int id,
@@ -234,11 +214,12 @@ app.MapPut("/api/customers/{id:int}", async (
     IRepository<Customer> repoCustomer,
     IRepository<FieldDefinition> repoDef,
     IRepository<FieldValue> repoVal,
-    IUnitOfWork uow) =>
+    IUnitOfWork uow,
+    IValidationPipeline pipe,
+    HttpContext http) =>
 {
-    // Business/Common validations (skeleton)
-    if (dto?.fields == null || dto.fields.Count == 0)
-        return ApiErrors.Validation("fields required");
+    var vr = await pipe.ValidateAsync(dto, http);
+    if (vr is not null) return vr;
 
     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
@@ -263,13 +244,10 @@ app.MapPut("/api/customers/{id:int}", async (
     return Results.Json(new { status = "success", newVersion = c.Version });
 }).RequireAuthorization();
 
-app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout) =>
+app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, ILayoutQueries q) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-    var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
-    var layout = entity?.LayoutJson;
-    var json = string.IsNullOrWhiteSpace(layout) ? new { } : System.Text.Json.JsonSerializer.Deserialize<object>(layout!);
-    return Results.Json(json ?? new { });
+    return Results.Json(q.GetUserLayout(uid, customerId));
 }).RequireAuthorization();
 
 app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout) =>
@@ -347,8 +325,8 @@ record RegisterDto(string username, string password, string email);
 record LoginDto(string username, string password);
 record RefreshDto(string refreshToken);
 record LogoutDto(string refreshToken);
-record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
-record FieldDto(string key, object value);
+public record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
+public record FieldDto(string key, object value);
 
 class RefreshToken
 {
