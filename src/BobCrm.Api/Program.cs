@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -83,11 +84,32 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
 
-// Auto-migrate database on startup (both providers)
+// Auto-migrate database on startup (both providers), with EnsureCreated fallback and seed
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    try { db.Database.Migrate(); }
+    catch { db.Database.EnsureCreated(); }
+
+    if (!db.Customers.Any())
+    {
+        db.Customers.AddRange(
+            new Customer { Code = "C001", Name = "客户A", Version = 1 },
+            new Customer { Code = "C002", Name = "客户B", Version = 1 }
+        );
+        if (!db.FieldDefinitions.Any())
+        {
+            db.FieldDefinitions.Add(new FieldDefinition
+            {
+                Key = "email",
+                DisplayName = "邮箱",
+                DataType = "email",
+                Tags = "[\"常用\"]",
+                Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
+            });
+        }
+        db.SaveChanges();
+    }
 }
 
 // Auth endpoints
@@ -145,6 +167,86 @@ app.MapGet("/api/auth/session", (ClaimsPrincipal user) =>
     return Results.Ok(new { valid = false });
 }).RequireAuthorization();
 
+// Business APIs (Customers, Fields, Layout)
+app.MapGet("/api/customers", (AppDbContext db) =>
+{
+    var list = db.Customers.Select(c => new { id = c.Id, code = c.Code, name = c.Name }).ToList();
+    return Results.Json(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/customers/{id:int}", (int id, AppDbContext db) =>
+{
+    var c = db.Customers.FirstOrDefault(x => x.Id == id);
+    if (c == null) return Results.NotFound();
+    var defs = db.FieldDefinitions.ToList();
+    var values = db.FieldValues.Where(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
+    var fields = defs.Select(d => new
+    {
+        key = d.Key,
+        label = d.DisplayName,
+        type = d.DataType,
+        value = values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"") ? s.Trim('"') : values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value
+    }).ToArray();
+    return Results.Json(new { id = c.Id, code = c.Code, name = c.Name, version = c.Version, fields });
+}).RequireAuthorization();
+
+app.MapGet("/api/fields", (AppDbContext db) =>
+{
+    var defs = db.FieldDefinitions.AsNoTracking().ToList();
+    var list = defs.Select(f => new
+    {
+        key = f.Key,
+        label = f.DisplayName,
+        type = f.DataType,
+        tags = string.IsNullOrWhiteSpace(f.Tags) ? new string[0] : System.Text.Json.JsonSerializer.Deserialize<string[]>(f.Tags!)!,
+        actions = string.IsNullOrWhiteSpace(f.Actions) ? Array.Empty<object>() : System.Text.Json.JsonSerializer.Deserialize<object[]>(f.Actions!)!
+    }).ToList();
+    return Results.Json(list);
+}).RequireAuthorization();
+
+app.MapPut("/api/customers/{id:int}", async (int id, AppDbContext db, UpdateCustomerDto dto) =>
+{
+    var c = await db.Customers.FindAsync(id);
+    if (c == null) return Results.NotFound();
+    var defs = db.FieldDefinitions.ToDictionary(d => d.Key, d => d);
+    foreach (var f in dto.fields)
+    {
+        if (!defs.TryGetValue(f.key, out var def)) continue;
+        var json = System.Text.Json.JsonSerializer.Serialize(f.value);
+        var val = new FieldValue { CustomerId = id, FieldDefinitionId = def.Id, Value = json, Version = c.Version + 1 };
+        db.FieldValues.Add(val);
+    }
+    c.Version += 1;
+    await db.SaveChangesAsync();
+    return Results.Json(new { status = "success", newVersion = c.Version });
+}).RequireAuthorization();
+
+app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, AppDbContext db) =>
+{
+    var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var layout = db.UserLayouts.FirstOrDefault(x => x.UserId == uid && x.CustomerId == customerId)?.LayoutJson;
+    var json = string.IsNullOrWhiteSpace(layout) ? new { } : System.Text.Json.JsonSerializer.Deserialize<object>(layout!);
+    return Results.Json(json ?? new { });
+}).RequireAuthorization();
+
+app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, AppDbContext db, System.Text.Json.JsonElement layout) =>
+{
+    var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var entity = db.UserLayouts.FirstOrDefault(x => x.UserId == uid && x.CustomerId == customerId);
+    var json = layout.GetRawText();
+    if (entity == null)
+    {
+        entity = new UserLayout { UserId = uid, CustomerId = customerId, LayoutJson = json };
+        db.UserLayouts.Add(entity);
+    }
+    else
+    {
+        entity.LayoutJson = json;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { status = "ok" });
+}).RequireAuthorization();
+
 app.Run();
 
 static async Task<(string accessToken, string refreshToken)> IssueTokensAsync(IConfiguration cfg, IdentityUser user, IRefreshTokenStore rts, byte[] key)
@@ -169,12 +271,50 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<I
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerAccess> CustomerAccesses => Set<CustomerAccess>();
+    public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
+    public DbSet<FieldValue> FieldValues => Set<FieldValue>();
+    public DbSet<UserLayout> UserLayouts => Set<UserLayout>();
+    public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        base.OnModelCreating(b);
+        var isNpgsql = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        b.Entity<Customer>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            if (isNpgsql) e.Property(x => x.ExtData).HasColumnType("jsonb");
+        });
+        b.Entity<FieldDefinition>(e =>
+        {
+            e.HasIndex(x => x.Key).IsUnique();
+            if (isNpgsql)
+            {
+                e.Property(x => x.Tags).HasColumnType("jsonb");
+                e.Property(x => x.Actions).HasColumnType("jsonb");
+            }
+        });
+        b.Entity<FieldValue>(e =>
+        {
+            if (isNpgsql) e.Property(x => x.Value).HasColumnType("jsonb");
+        });
+        b.Entity<UserLayout>(e =>
+        {
+            if (isNpgsql) e.Property(x => x.LayoutJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.UserId, x.CustomerId }).IsUnique();
+        });
+    }
 }
 
 record RegisterDto(string username, string password, string email);
 record LoginDto(string username, string password);
 record RefreshDto(string refreshToken);
 record LogoutDto(string refreshToken);
+record UpdateCustomerDto(List<FieldDto> fields);
+record FieldDto(string key, object value);
 
 class RefreshToken
 {
