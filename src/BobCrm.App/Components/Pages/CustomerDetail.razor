@@ -11,8 +11,12 @@ else
     <Descriptions Title="@(_detail.name + "(" + _detail.code + ") 版本:" + _detail.version)" Column="1" Bordered>
         @foreach (var f in _detail.fields)
         {
-            <DescriptionsItem Title="@f.label">
+            <DescriptionsItem Title="@((f.required?"* ":string.Empty) + f.label)">
                 @RenderEditor(f)
+                @if (_errors.TryGetValue(f.key, out var err) && !string.IsNullOrWhiteSpace(err))
+                {
+                    <div style="color:#ff4d4f;margin-top:4px;">@err</div>
+                }
             </DescriptionsItem>
         }
     </Descriptions>
@@ -39,13 +43,14 @@ else
             if (resp.IsSuccessStatusCode)
             {
                 _detail = await resp.Content.ReadFromJsonAsync<CustomerDetailDto>();
+                _errors.Clear();
                 return;
             }
         }
         catch {}
         // fallback mock
         _detail = new CustomerDetailDto(Id, Id==1?"C001":"C002", Id==1?"客户A":"客户B", 1,
-            new List<FieldDto>{ new("email","邮箱","email","a@b.com") });
+            new List<FieldDto>{ new("email","邮箱","email","a@b.com", true, @"^[^@\s]+@[^@\s]+\.[^@\s]+$") });
     }
 
     // 编辑器渲染：简单按类型映射到可编辑控件
@@ -57,6 +62,7 @@ else
             builder.OpenComponent<Input<string>>(0);
             builder.AddAttribute(1, "Value", val);
             builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string>(this, v => SetField(f.key, v)));
+            builder.AddAttribute(3, "OnBlur", EventCallback.Factory.Create(this, () => ValidateField(f.key, f.required, f.validation)));
             builder.CloseComponent();
         },
         _ => builder =>
@@ -65,18 +71,53 @@ else
             builder.OpenComponent<Input<string>>(0);
             builder.AddAttribute(1, "Value", val);
             builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string>(this, v => SetField(f.key, v)));
+            builder.AddAttribute(3, "OnBlur", EventCallback.Factory.Create(this, () => ValidateField(f.key, f.required, f.validation)));
             builder.CloseComponent();
         }
     };
 
     public record CustomerDetailDto(int id, string code, string name, int version, List<FieldDto> fields);
-    public record FieldDto(string key, string label, string type, object value);
+    public record FieldDto(string key, string label, string type, object value, bool required, string? validation);
 
     // 本地编辑缓冲
     private Dictionary<string, object?> _changes = new();
+    private Dictionary<string, string?> _errors = new();
     void SetField(string key, object? value)
     {
         _changes[key] = value;
+        // 即时校验（有元数据时）
+        var meta = _detail?.fields.FirstOrDefault(x => x.key == key);
+        if (meta is not null)
+            ValidateField(key, meta.required, meta.validation);
+    }
+
+    private void ValidateField(string key, bool required, string? pattern)
+    {
+        string? error = null;
+        _changes.TryGetValue(key, out var val);
+        var text = val?.ToString() ?? _detail?.fields.FirstOrDefault(x => x.key == key)?.value?.ToString() ?? string.Empty;
+        if (required && string.IsNullOrWhiteSpace(text))
+            error = "必填项";
+        if (error is null && !string.IsNullOrWhiteSpace(pattern))
+        {
+            try
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(text, pattern))
+                    error = "格式不正确";
+            }
+            catch { /* ignore invalid pattern on client */ }
+        }
+        if (!string.IsNullOrWhiteSpace(error)) _errors[key] = error; else _errors.Remove(key);
+    }
+
+    private bool ValidateAll()
+    {
+        if (_detail is null) return false;
+        foreach (var f in _detail.fields)
+        {
+            ValidateField(f.key, f.required, f.validation);
+        }
+        return _errors.Count == 0;
     }
 
     private async Task SaveAsync()
@@ -88,6 +129,13 @@ else
             await Message.Info("没有变更可保存");
             return;
         }
+        // 本地校验
+        if (!ValidateAll())
+        {
+            await Message.Error("请先修正表单中的错误");
+            return;
+        }
+
         var body = new { fields, expectedVersion = _detail.version };
         var req = new HttpRequestMessage(HttpMethod.Put, $"/api/customers/{_detail.id}")
         {
