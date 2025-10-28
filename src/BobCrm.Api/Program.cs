@@ -327,31 +327,19 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<I
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
+        b.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         var isNpgsql = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
-
-        b.Entity<Customer>(e =>
+        if (isNpgsql)
         {
-            e.HasIndex(x => x.Code).IsUnique();
-            if (isNpgsql) e.Property(x => x.ExtData).HasColumnType("jsonb");
-        });
-        b.Entity<FieldDefinition>(e =>
-        {
-            e.HasIndex(x => x.Key).IsUnique();
-            if (isNpgsql)
+            b.Entity<Customer>(e => e.Property(x => x.ExtData).HasColumnType("jsonb"));
+            b.Entity<FieldDefinition>(e =>
             {
                 e.Property(x => x.Tags).HasColumnType("jsonb");
                 e.Property(x => x.Actions).HasColumnType("jsonb");
-            }
-        });
-        b.Entity<FieldValue>(e =>
-        {
-            if (isNpgsql) e.Property(x => x.Value).HasColumnType("jsonb");
-        });
-        b.Entity<UserLayout>(e =>
-        {
-            if (isNpgsql) e.Property(x => x.LayoutJson).HasColumnType("jsonb");
-            e.HasIndex(x => new { x.UserId, x.CustomerId }).IsUnique();
-        });
+            });
+            b.Entity<FieldValue>(e => e.Property(x => x.Value).HasColumnType("jsonb"));
+            b.Entity<UserLayout>(e => e.Property(x => x.LayoutJson).HasColumnType("jsonb"));
+        }
     }
 }
 
