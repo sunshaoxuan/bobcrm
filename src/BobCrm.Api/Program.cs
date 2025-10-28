@@ -211,20 +211,38 @@ app.MapGet("/api/fields", (IRepository<FieldDefinition> repoDef) =>
     return Results.Json(list);
 }).RequireAuthorization();
 
-app.MapPut("/api/customers/{id:int}", async (int id, AppDbContext db, UpdateCustomerDto dto) =>
+app.MapPut("/api/customers/{id:int}", async (
+    int id,
+    UpdateCustomerDto dto,
+    IRepository<Customer> repoCustomer,
+    IRepository<FieldDefinition> repoDef,
+    IRepository<FieldValue> repoVal,
+    IUnitOfWork uow) =>
 {
-    var c = await db.Customers.FindAsync(id);
+    // Business/Common validations (skeleton)
+    if (dto?.fields == null || dto.fields.Count == 0)
+        return Results.Json(new { code = "ValidationFailed", message = "fields required" }, statusCode: 400);
+
+    var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
-    var defs = db.FieldDefinitions.ToDictionary(d => d.Key, d => d);
+
+    var defs = repoDef.Query().ToDictionary(d => d.Key, d => d);
     foreach (var f in dto.fields)
     {
-        if (!defs.TryGetValue(f.key, out var def)) continue;
+        if (string.IsNullOrWhiteSpace(f.key))
+            return Results.Json(new { code = "ValidationFailed", message = "field key required" }, statusCode: 400);
+        if (!defs.TryGetValue(f.key, out var def))
+            return Results.Json(new { code = "BusinessRuleViolation", message = $"unknown field: {f.key}" }, statusCode: 400);
+
         var json = System.Text.Json.JsonSerializer.Serialize(f.value);
         var val = new FieldValue { CustomerId = id, FieldDefinitionId = def.Id, Value = json, Version = c.Version + 1 };
-        db.FieldValues.Add(val);
+        await repoVal.AddAsync(val);
     }
+
+    // version bump (common behavior placeholder)
     c.Version += 1;
-    await db.SaveChangesAsync();
+    repoCustomer.Update(c);
+    await uow.SaveChangesAsync();
     return Results.Json(new { status = "success", newVersion = c.Version });
 }).RequireAuthorization();
 
