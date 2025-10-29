@@ -516,6 +516,47 @@ app.MapPost("/api/admin/db/recreate", async (AppDbContext db) =>
     return Results.Ok(new { status = "recreated" });
 });
 
+// First-run admin setup endpoint. Unsafe to expose broadly; allows configuring admin
+// only when the default password still works, or when admin user does not exist yet.
+app.MapPost("/api/setup/admin", async (
+    UserManager<IdentityUser> um,
+    RoleManager<IdentityRole> rm,
+    SignInManager<IdentityUser> sm,
+    AdminSetupDto dto) =>
+{
+    if (!await rm.RoleExistsAsync("admin"))
+    {
+        await rm.CreateAsync(new IdentityRole("admin"));
+    }
+    var admin = await um.FindByNameAsync("admin");
+    if (admin == null)
+    {
+        admin = new IdentityUser { UserName = dto.username, Email = dto.email, EmailConfirmed = true };
+        var cr = await um.CreateAsync(admin, dto.password);
+        if (!cr.Succeeded) return Results.BadRequest(cr.Errors);
+        await um.AddToRoleAsync(admin, "admin");
+        return Results.Ok(new { status = "created" });
+    }
+    else
+    {
+        // Only allow update if default password still valid (considered uninitialized)
+        var canOverride = (await sm.CheckPasswordSignInAsync(admin, "Admin@12345", false)).Succeeded;
+        if (!canOverride)
+            return Results.StatusCode(403);
+
+        admin.UserName = dto.username;
+        admin.Email = dto.email;
+        admin.EmailConfirmed = true;
+        var ur = await um.UpdateAsync(admin);
+        if (!ur.Succeeded) return Results.BadRequest(ur.Errors);
+        if (await um.HasPasswordAsync(admin))
+            await um.RemovePasswordAsync(admin);
+        var pr = await um.AddPasswordAsync(admin, dto.password);
+        if (!pr.Succeeded) return Results.BadRequest(pr.Errors);
+        return Results.Ok(new { status = "updated" });
+    }
+});
+
 app.Run();
 
 static async Task<(string accessToken, string refreshToken)> IssueTokensAsync(IConfiguration cfg, IdentityUser user, IRefreshTokenStore rts, byte[] key)
@@ -619,6 +660,7 @@ public record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
 public record FieldDto(string key, object value);
 public record GenerateLayoutRequest(string[] tags, string? mode, bool? save, string? scope);
 public record AccessUpsert(string userId, bool canEdit);
+public record AdminSetupDto(string username, string email, string password);
 
 class RefreshToken
 {

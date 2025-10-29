@@ -17,6 +17,17 @@
             <SelectOption Value="en">English</SelectOption>
         </Select>
     </FormItem>
+    <Divider />
+    <h3>管理员账户</h3>
+    <FormItem Label="管理员用户名">
+        <Input @bind-Value="adminUser" />
+    </FormItem>
+    <FormItem Label="管理员邮箱">
+        <Input @bind-Value="adminEmail" />
+    </FormItem>
+    <FormItem Label="管理员密码">
+        <InputPassword @bind-Value="adminPassword" />
+    </FormItem>
     <FormItem>
         <Space>
             <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">保存并进入登录</Button>
@@ -29,6 +40,9 @@
     private string? apiBase;
     private string lang = "zh";
     private bool saving;
+    private string adminUser = "admin";
+    private string adminEmail = "admin@local";
+    private string adminPassword = "Admin@12345";
 
     protected override async Task OnInitializedAsync()
     {
@@ -48,6 +62,15 @@
                 await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
             }
             await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+            // initialize admin (best-effort)
+            try
+            {
+                var http = new HttpClient();
+                if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
+                var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword });
+                _ = resp.IsSuccessStatusCode;
+            }
+            catch { }
             await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
             Nav.NavigateTo("/login", forceLoad: true);
         }
@@ -56,4 +79,3 @@
 
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 }
-
