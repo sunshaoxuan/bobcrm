@@ -5,7 +5,10 @@
 - 测试运行命令：`dotnet test tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj --collect:"XPlat Code Coverage"`
 - 覆盖率报告生成：`reportgenerator -reports:tests/BobCrm.Api.Tests/TestResults/*/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:TextSummary`
 - 测试数据库：`Db:Provider=postgres`，连接串 `Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres`
-- 语言机制：后端统一从 DB 读取资源，接口支持 `X-Lang`/`?lang=`，并新增语言表种子（ja/zh/en）。
+- 语言机制：
+  - 统一由后端从 DB 读取资源；接口支持 `X-Lang`/`?lang=`（默认 `ja`），匿名获取多语资源。
+  - 客户端所有请求自动携带 `X-Lang`，服务端字段/动作标签与错误提示均按语言返回。
+  - 语言列表从表 `LocalizationLanguages` 读取（无数据回退 ja/zh/en）。
 
 **项目规划与运行指南**
 
@@ -77,6 +80,47 @@
     - 自由：`{ mode: "free", items: { key: { x, y, w, h } } }`
 - 生成布局：`POST /api/layout/{customerId}/generate`（Body: `{ tags:[], mode:"flow|free", save?:true, scope?:"user|default" }`）
 - 认证头：`Authorization: Bearer {token}`
+
+**国际化与本地化（i18n）**
+
+- 目标与范围
+  - 数据驱动的多语：后端集中存储 `LocalizationResource(Key, ZH, JA, EN)`；客户端用键渲染 UI。
+  - 请求级语言：所有 API 接口接受 `X-Lang` 或查询参数 `?lang=`（默认 `ja`）。
+  - 错误本地化：顶层错误消息与校验明细均可本地化（含字段标签与占位参数）。
+
+- 服务端实现
+  - 翻译接口（匿名）：
+    - `GET /api/i18n/{lang}` → 返回 `{ key: value }` 字典，默认 `ja`，回退顺序 `ja→zh→en`（非 `ja` 语种按本语→ja→en）。
+    - `GET /api/i18n/languages` → 从 `LocalizationLanguages` 读取列表（空则回退 ja/zh/en）。
+  - 业务查询本地化：
+    - 字段定义 `GET /api/fields` 返回的 `label`、`actions[].title` 按语言渲染。
+    - 客户详情字段 `label` 按语言渲染。
+  - 错误与校验本地化：
+    - 顶层消息：`ERR_BUSINESS_VALIDATION_FAILED`、`ERR_VALIDATION_FAILED`、`ERR_PERSISTENCE_VALIDATION_FAILED`。
+    - 明细模板（含占位）：`VAL_REQUIRED`、`VAL_INVALID_PATTERN`、`VAL_INVALID_FORMAT`、`VAL_UNKNOWN_FIELD`、`VAL_FIELDS_REQUIRED`。
+    - 示例：当 `email` 必填缺失时，明细会渲染为“邮箱 为必填项/メールアドレス は必須です/Email is required”。
+  - 性能与一致性：`EfLocalization` 在请求范围内缓存整包语言字典，避免 N+1 查询；默认语言与回退顺序已统一。
+
+- 客户端实现
+  - 语言头自动附带：命名客户端 `api` 注入 `LangHeaderHandler`，以及鉴权客户端在创建时附带 `X-Lang`。
+  - I18nService：`LoadAsync(lang)` 拉取 `/api/i18n/{lang}`，本地缓存到 `localStorage: i18n:{lang}:v1`；切换语言触发订阅更新，并同步 `<html lang>`。
+  - 未登录页面：Login/Register/Activate/Setup 首渲染会从 `localStorage: lang` 预加载翻译并设置 `<html lang>`；i18n 接口匿名可用。
+  - 语言选择器：主布局与设置页从 `/api/i18n/languages` 动态加载语言列表（无数据则回退固定选项）。
+
+- 数据初始化与演进
+  - 语言列表初始种子：`ja/zh/en`。
+  - 资源键种子：UI 常用键（菜单、列名、按钮、设置页等）、错误顶层消息与明细模板均已种入；对已有数据库做缺失键回填（幂等）。
+  - 新增语言：向 `LocalizationLanguages` 增加 `{ Code, NativeName }`；随后在 `LocalizationResource` 中逐步补全该语种列的翻译。
+  - 新增资源键：在 `LocalizationResource.Key` 中插入新键及多语文本；客户端使用 `I18n.T("KEY")` 即可。
+
+- 使用与调试建议
+  - 通过浏览器 DevTools 检查请求头 `X-Lang`；
+  - 访问 `/api/i18n/{lang}` 验证字典内容，或 `/api/i18n/languages` 验证语言列表；
+  - 若界面出现“键名”而非译文，检查该键是否已写入 `LocalizationResource`，以及客户端是否已刷新缓存（清理 `localStorage: i18n:{lang}:v1`）。
+
+- 已知未覆盖（可选后续）
+  - ASP.NET Identity 的原生错误集合（如密码复杂度）仍为默认英文；如需可添加映射表做本地化。
+  - 可为 `/api/i18n/{lang}` 增加 ETag/缓存控制以减少重复传输。
 
 **前端推进方式**
 - 框架基础：接入 Ant Design Blazor，统一布局/主题；集中错误处理与消息反馈。
