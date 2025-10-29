@@ -35,18 +35,70 @@ public static class DatabaseInitializer
             );
             if (!await db.Set<FieldDefinition>().AnyAsync())
             {
-                await db.Set<FieldDefinition>().AddAsync(new FieldDefinition
-                {
-                    Key = "email",
-                    DisplayName = "邮箱",
-                    DataType = "email",
-                    Required = true,
-                    Validation = @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-                    DefaultValue = "",
-                    Tags = "[\"常用\"]",
-                    Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
-                });
+                await db.Set<FieldDefinition>().AddRangeAsync(
+                    new FieldDefinition
+                    {
+                        Key = "email",
+                        DisplayName = "邮箱",
+                        DataType = "email",
+                        Required = true,
+                        Validation = @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                        DefaultValue = "",
+                        Tags = "[\"常用\"]",
+                        Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
+                    },
+                    new FieldDefinition
+                    {
+                        Key = "link",
+                        DisplayName = "链接",
+                        DataType = "link",
+                        Required = false,
+                        DefaultValue = "https://example.com",
+                        Tags = "[\"常用\"]",
+                        Actions = "[{\"icon\":\"link\",\"title\":\"打开\",\"action\":\"openLink\"},{\"icon\":\"copy\",\"title\":\"复制\",\"action\":\"copy\"}]"
+                    },
+                    new FieldDefinition
+                    {
+                        Key = "file",
+                        DisplayName = "文件路径",
+                        DataType = "file",
+                        Required = false,
+                        DefaultValue = "C:/data/readme.txt",
+                        Tags = "[\"常用\"]",
+                        Actions = "[{\"icon\":\"copy\",\"title\":\"复制路径\",\"action\":\"copy\"}]"
+                    },
+                    new FieldDefinition
+                    {
+                        Key = "rds",
+                        DisplayName = "RDS连接",
+                        DataType = "rds",
+                        Required = false,
+                        DefaultValue = null,
+                        Tags = "[\"远程\"]",
+                        Actions = "[{\"icon\":\"download\",\"title\":\"下载RDP\",\"action\":\"downloadRdp\"}]"
+                    },
+                    new FieldDefinition
+                    {
+                        Key = "priority",
+                        DisplayName = "优先级",
+                        DataType = "number",
+                        Required = false,
+                        DefaultValue = "1",
+                        Tags = "[\"扩展\"]",
+                        Actions = "[]"
+                    }
+                );
             }
+            await db.SaveChangesAsync();
+        }
+
+        if (!await db.Set<LocalizationResource>().AnyAsync())
+        {
+            await db.Set<LocalizationResource>().AddRangeAsync(
+                new LocalizationResource { Key = "LBL_CUSTOMER", ZH = "客户", JA = "顧客", EN = "Customer" },
+                new LocalizationResource { Key = "LBL_EMAIL", ZH = "邮箱", JA = "メール", EN = "Email" },
+                new LocalizationResource { Key = "BTN_SAVE", ZH = "保存", JA = "保存", EN = "Save" }
+            );
             await db.SaveChangesAsync();
         }
 

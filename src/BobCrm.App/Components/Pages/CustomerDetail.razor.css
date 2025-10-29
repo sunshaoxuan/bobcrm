@@ -1,0 +1,62 @@
+.design-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.design-tile {
+  border: 1px dashed #999;
+  border-radius: 6px;
+  padding: 8px;
+  background: #fafafa;
+}
+.design-tile-head {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.design-tile-body {
+  background: #fff;
+  border: 1px solid #eee;
+  padding: 8px;
+}
+
+.tag-palette {
+  border: 1px dashed #ccc;
+  padding: 8px;
+  background: #fafafa;
+  margin-bottom: 10px;
+}
+
+.free-canvas {
+  background-color: #fff;
+  border: 1px solid #eee;
+}
+
+.free-item:hover {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.3) inset;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 12px;
+  height: 12px;
+  background: rgba(24,144,255,0.9);
+  cursor: se-resize;
+}
+
+.guide-line-v {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(24,144,255,0.5);
+}
+.guide-line-h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(24,144,255,0.5);
+}

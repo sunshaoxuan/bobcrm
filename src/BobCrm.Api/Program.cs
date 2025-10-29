@@ -15,6 +15,7 @@ using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +108,45 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseInitializer.InitializeAsync(db);
+    // Seed admin user/role and grant access to all customers
+    try
+    {
+        var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var rm = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        if (!await rm.RoleExistsAsync("admin"))
+        {
+            await rm.CreateAsync(new IdentityRole("admin"));
+        }
+        var admin = await um.FindByNameAsync("admin");
+        if (admin == null)
+        {
+            admin = new IdentityUser { UserName = "admin", Email = "admin@local", EmailConfirmed = true };
+            await um.CreateAsync(admin, "Admin@12345");
+            await um.AddToRoleAsync(admin, "admin");
+        }
+        else
+        {
+            if (!await um.IsInRoleAsync(admin, "admin")) await um.AddToRoleAsync(admin, "admin");
+            if (!admin.EmailConfirmed)
+            {
+                admin.EmailConfirmed = true; await um.UpdateAsync(admin);
+            }
+        }
+        // Grant admin access to all customers
+        var repo = scope.ServiceProvider.GetRequiredService<IRepository<CustomerAccess>>();
+        var repoCust = scope.ServiceProvider.GetRequiredService<IRepository<Customer>>();
+        var custIds = repoCust.Query().Select(c => c.Id).ToList();
+        foreach (var cid in custIds)
+        {
+            var exists = repo.Query(a => a.CustomerId == cid && a.UserId == admin.Id).Any();
+            if (!exists)
+            {
+                await repo.AddAsync(new CustomerAccess { CustomerId = cid, UserId = admin.Id, CanEdit = true });
+            }
+        }
+        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+    }
+    catch { }
 }
 
 // Auth endpoints
@@ -174,8 +214,89 @@ app.MapGet("/api/customers/{id:int}", (int id, ICustomerQueries q) =>
     return detail is null ? Results.NotFound() : Results.Json(detail);
 }).RequireAuthorization();
 
+// Customer access management (admin only)
+app.MapGet("/api/customers/{id:int}/access", async (int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var name = user.Identity?.Name ?? string.Empty;
+    var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+        return Results.StatusCode(403);
+    var list = await db.CustomerAccesses.AsNoTracking().Where(a => a.CustomerId == id).Select(a => new { a.UserId, a.CanEdit }).ToListAsync();
+    return Results.Json(list);
+}).RequireAuthorization();
+
+app.MapPost("/api/customers/{id:int}/access", async (int id, AppDbContext db, ClaimsPrincipal user, AccessUpsert body) =>
+{
+    var name = user.Identity?.Name ?? string.Empty;
+    var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+        return Results.StatusCode(403);
+    var entity = await db.CustomerAccesses.FirstOrDefaultAsync(a => a.CustomerId == id && a.UserId == body.userId);
+    if (entity == null)
+    {
+        db.CustomerAccesses.Add(new CustomerAccess { CustomerId = id, UserId = body.userId, CanEdit = body.canEdit });
+    }
+    else
+    {
+        entity.CanEdit = body.canEdit;
+        db.CustomerAccesses.Update(entity);
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new { status = "ok" });
+}).RequireAuthorization();
+
 app.MapGet("/api/fields", (IFieldQueries q) => Results.Json(q.GetDefinitions()))
     .RequireAuthorization();
+
+// I18N endpoints
+app.MapGet("/api/i18n/resources", (AppDbContext db) =>
+{
+    var list = db.LocalizationResources.AsNoTracking().ToList();
+    return Results.Json(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
+{
+    lang = (lang ?? "zh").ToLowerInvariant();
+    var query = db.LocalizationResources.AsNoTracking();
+    var dict = new Dictionary<string, string>();
+    foreach (var r in query)
+    {
+        var val = lang switch
+        {
+            "ja" => r.JA ?? r.ZH ?? r.EN ?? r.Key,
+            "en" => r.EN ?? r.ZH ?? r.JA ?? r.Key,
+            _ => r.ZH ?? r.JA ?? r.EN ?? r.Key
+        };
+        dict[r.Key] = val;
+    }
+    return Results.Json(dict);
+}).RequireAuthorization();
+
+// Tags overview for quick layout
+app.MapGet("/api/fields/tags", (IRepository<FieldDefinition> repoDef) =>
+{
+    var defs = repoDef.Query().ToList();
+    var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    foreach (var d in defs)
+    {
+        if (string.IsNullOrWhiteSpace(d.Tags)) continue;
+        try
+        {
+            var tags = System.Text.Json.JsonSerializer.Deserialize<string[]>(d.Tags!) ?? Array.Empty<string>();
+            foreach (var t in tags)
+            {
+                if (string.IsNullOrWhiteSpace(t)) continue;
+                var k = t.Trim();
+                if (!dict.ContainsKey(k)) dict[k] = 0;
+                dict[k]++;
+            }
+        }
+        catch { }
+    }
+    var list = dict.OrderBy(kv => kv.Key).Select(kv => new { tag = kv.Key, count = kv.Value }).ToList();
+    return Results.Json(list);
+}).RequireAuthorization();
 
 app.MapPut("/api/customers/{id:int}", async (
     int id,
@@ -183,6 +304,7 @@ app.MapPut("/api/customers/{id:int}", async (
     IRepository<Customer> repoCustomer,
     IRepository<FieldDefinition> repoDef,
     IRepository<FieldValue> repoVal,
+    IRepository<CustomerAccess> repoAccess,
     IUnitOfWork uow,
     IValidationPipeline pipe,
     HttpContext http) =>
@@ -190,9 +312,18 @@ app.MapPut("/api/customers/{id:int}", async (
     var vr = await pipe.ValidateAsync(dto, http);
     if (vr is not null) return vr;
 
+    var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var anyAccessDefined = repoAccess.Query(a => a.CustomerId == id).Any();
+    if (anyAccessDefined)
+    {
+        var canEdit = repoAccess.Query(a => a.CustomerId == id && a.UserId == uid && a.CanEdit).Any();
+        if (!canEdit) return Results.StatusCode(403);
+    }
+
     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
     if (c == null) return Results.NotFound();
-    if (dto.expectedVersion is null || dto.expectedVersion.Value != c.Version)
+    // If client provides expectedVersion, enforce optimistic concurrency; otherwise allow update
+    if (dto.expectedVersion.HasValue && dto.expectedVersion.Value != c.Version)
         return ApiErrors.Concurrency("version mismatch");
 
     var defs = repoDef.Query().ToDictionary(d => d.Key, d => d);
@@ -215,22 +346,32 @@ app.MapPut("/api/customers/{id:int}", async (
     return Results.Json(new { status = "success", newVersion = c.Version });
 }).RequireAuthorization();
 
-app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, ILayoutQueries q) =>
+app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, ILayoutQueries q, string? scope) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-    return Results.Json(q.GetUserLayout(uid, customerId));
+    scope ??= "effective";
+    return Results.Json(q.GetLayout(uid, customerId, scope));
 }).RequireAuthorization();
 
-app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout) =>
+app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout, HttpContext http, string? scope) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-    var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
+    var saveScope = (scope ?? "user").ToLowerInvariant();
+    var targetUserId = saveScope == "default" ? "__default__" : uid;
+    if (saveScope == "default")
+    {
+        var name = user.Identity?.Name ?? string.Empty;
+        var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            return Results.StatusCode(403);
+    }
+    var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == customerId).FirstOrDefault();
     var json = layout.GetRawText();
     if (string.IsNullOrWhiteSpace(json))
         return ApiErrors.Validation("layout body required");
     if (entity == null)
     {
-        entity = new UserLayout { UserId = uid, CustomerId = customerId, LayoutJson = json };
+        entity = new UserLayout { UserId = targetUserId, CustomerId = customerId, LayoutJson = json };
         await repoLayout.AddAsync(entity);
     }
     else
@@ -240,6 +381,111 @@ app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincip
     }
     await uow.SaveChangesAsync();
     return Results.Ok(new { status = "ok" });
+}).RequireAuthorization();
+
+app.MapDelete("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, string? scope) =>
+{
+    var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    var delScope = (scope ?? "user").ToLowerInvariant();
+    var targetUserId = delScope == "default" ? "__default__" : uid;
+    if (delScope == "default")
+    {
+        var name = user.Identity?.Name ?? string.Empty;
+        var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            return Results.StatusCode(403);
+    }
+    var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == customerId).FirstOrDefault();
+    if (entity != null)
+    {
+        repoLayout.Remove(entity);
+        await uow.SaveChangesAsync();
+    }
+    return Results.Ok(new { status = "ok" });
+}).RequireAuthorization();
+
+// Generate layout from tags (flow or free) and optionally save
+app.MapPost("/api/layout/{customerId:int}/generate", async (
+    int customerId,
+    ClaimsPrincipal user,
+    IRepository<FieldDefinition> repoDef,
+    IRepository<UserLayout> repoLayout,
+    IUnitOfWork uow,
+    GenerateLayoutRequest req) =>
+{
+    if (req.tags == null || req.tags.Length == 0)
+        return ApiErrors.Validation("tags required");
+
+    var mode = string.Equals(req.mode, "free", StringComparison.OrdinalIgnoreCase) ? "free" : "flow";
+    var defs = repoDef.Query().ToList();
+    var tagSet = new HashSet<string>(req.tags.Select(t => t.Trim()).Where(t => !string.IsNullOrWhiteSpace(t)), StringComparer.OrdinalIgnoreCase);
+
+    bool HasTag(FieldDefinition d)
+    {
+        if (string.IsNullOrWhiteSpace(d.Tags)) return false;
+        try
+        {
+            var tags = System.Text.Json.JsonSerializer.Deserialize<string[]>(d.Tags!) ?? Array.Empty<string>();
+            return tags.Any(t => tagSet.Contains(t));
+        }
+        catch { return false; }
+    }
+
+    var withTag = defs.Where(HasTag).ToList();
+    var others = defs.Except(withTag).ToList();
+    var ordered = withTag.Concat(others).ToList();
+
+    var items = new Dictionary<string, object?>();
+    if (mode == "flow")
+    {
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var d = ordered[i];
+            items[d.Key] = new { order = i, w = 6 };
+        }
+    }
+    else // free
+    {
+        var columns = 12; var w = 3; var h = 1; var perRow = Math.Max(1, columns / w);
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var d = ordered[i];
+            var col = i % perRow; var row = i / perRow;
+            items[d.Key] = new { x = col * w, y = row * h, w, h };
+        }
+    }
+
+    var jsonObj = new { mode, items };
+
+    if (req.save == true)
+    {
+        var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var scope = (req.scope ?? "user").ToLowerInvariant();
+        var targetUserId = scope == "default" ? "__default__" : uid;
+        if (scope == "default")
+        {
+            var name = user.Identity?.Name ?? string.Empty;
+            var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+            if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+                return Results.StatusCode(403);
+        }
+
+        var json = System.Text.Json.JsonSerializer.Serialize(jsonObj);
+        var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == customerId).FirstOrDefault();
+        if (entity == null)
+        {
+            entity = new UserLayout { UserId = targetUserId, CustomerId = customerId, LayoutJson = json };
+            await repoLayout.AddAsync(entity);
+        }
+        else
+        {
+            entity.LayoutJson = json;
+            repoLayout.Update(entity);
+        }
+        await uow.SaveChangesAsync();
+    }
+
+    return Results.Json(jsonObj);
 }).RequireAuthorization();
 
 // Admin/DB endpoints (development only)
@@ -371,6 +617,8 @@ record RefreshDto(string refreshToken);
 record LogoutDto(string refreshToken);
 public record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
 public record FieldDto(string key, object value);
+public record GenerateLayoutRequest(string[] tags, string? mode, bool? save, string? scope);
+public record AccessUpsert(string userId, bool canEdit);
 
 class RefreshToken
 {
@@ -428,3 +676,6 @@ class ConsoleEmailSender : IEmailSender
 }
 
 interface IEmailSender { Task SendAsync(string to, string subject, string body); }
+
+// Enable WebApplicationFactory<Program> from test project
+public partial class Program { }

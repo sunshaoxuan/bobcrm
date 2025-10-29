@@ -1,69 +1,84 @@
 @page "/login"
+@layout BobCrm.App.Components.Layout.EmptyLayout
+@inject IHttpClientFactory HttpFactory
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <h1>登录</h1>
 
-<EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
+<EditForm Model="model" OnValidSubmit="OnLoginAsync">
     <DataAnnotationsValidator />
-    <div style="max-width:320px;">
-        <FormItem Label="用户名">
-            <Input @bind-Value="_model.Username" />
+    <ValidationSummary />
+    <Form Layout="FormLayout.Vertical">
+        <FormItem Label="用户名或邮箱">
+            <Input @bind-Value="model.username" />
         </FormItem>
         <FormItem Label="密码">
-            <InputPassword @bind-Value="_model.Password" />
+            <InputPassword @bind-Value="model.password" />
         </FormItem>
         <FormItem>
-            <Button Type="primary" OnClick="HandleLoginAsync">登录</Button>
+            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">登录</Button>
         </FormItem>
-    </div>
-    <ValidationSummary />
-    <div>@_error</div>
-    
+    </Form>
 </EditForm>
 
+@if (!string.IsNullOrEmpty(error))
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+}
+
 @code {
-    private LoginModel _model = new();
-    private string? _error;
+    private LoginModel model = new();
+    private bool loading = false;
+    private string? error;
 
-    [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
-    [Inject] public MessageService Message { get; set; } = default!;
-    [Inject] public NavigationManager Nav { get; set; } = default!;
-
-    private async Task HandleLoginAsync()
+    protected override async Task OnInitializedAsync()
     {
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            Nav.NavigateTo("/customers", forceLoad: true);
+        }
+    }
+
+    private async Task OnLoginAsync()
+    {
+        loading = true; error = null;
         try
         {
             var http = HttpFactory.CreateClient("api");
-            var resp = await http.PostAsJsonAsync("/api/auth/login", new { username = _model.Username, password = _model.Password });
+            var resp = await http.PostAsJsonAsync("/api/auth/login", model);
             if (!resp.IsSuccessStatusCode)
             {
-                _error = "用户名或密码错误";
+                error = $"登录失败: {(int)resp.StatusCode}";
                 return;
             }
-            var json = await resp.Content.ReadFromJsonAsync<LoginResp>();
+            var json = await resp.Content.ReadFromJsonAsync<LoginResult>();
             if (json is null)
             {
-                _error = "登录响应异常";
-                return;
+                error = "无法解析服务器响应"; return;
             }
-            // 持久化令牌（Access/Refresh）
             await JS.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
             await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
-            await Message.Success("登录成功");
-            Nav.NavigateTo("/");
+            var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
+            await JS.InvokeVoidAsync("localStorage.setItem", "user", userStr);
+            Nav.NavigateTo("/customers", forceLoad: true);
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
         }
     }
 
-    [Inject] public IJSRuntime JS { get; set; } = default!;
-
-    class LoginModel
+    public class LoginModel
     {
-        public string Username { get; set; } = "admin";
-        public string Password { get; set; } = "123456";
+        public string username { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
     }
-    record LoginResp(string accessToken, string refreshToken, User user);
-    record User(int id, string username, string role);
+    public record LoginResult(string accessToken, string refreshToken, UserDto user);
+    public record UserDto(string id, string username, string role);
 }

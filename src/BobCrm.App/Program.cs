@@ -11,6 +11,9 @@ builder.Services.AddAntDesign();
 var apiBase = builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5200";
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase));
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
+builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
+builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
+builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
 
 var app = builder.Build();
 

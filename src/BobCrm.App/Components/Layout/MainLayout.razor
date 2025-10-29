@@ -1,32 +1,72 @@
-@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<StyleProvider>
-    <ConfigProvider>
-        <div style="min-height:100vh;display:flex;flex-direction:column;">
-            <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-weight:600;">BobCRM</div>
-                <div>
-                    <a href="/">首页</a>
-                    <span style="margin:0 8px;">|</span>
-                    <a href="/customers">客户</a>
-                    <span style="margin:0 8px;">|</span>
-                    <a href="/register">注册</a>
-                    <span style="margin:0 8px;">|</span>
-                    <a href="/login">登录</a>
-                </div>
-            </div>
-            <div style="flex:1;padding:16px;">
+<Layout style="min-height:100vh">
+    <Layout.Sider Collapsible="true" @bind-Collapsed="collapsed">
+        <div class="logo" style="height:32px;margin:16px;background:rgba(255,255,255,0.3)"></div>
+        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Inline" SelectedKeys="new string[]{selected}" OnClick="OnMenuClick">
+            <MenuItem Key="customers">
+                <Icon Type="user" />
+                客户列表
+            </MenuItem>
+        </Menu>
+    </Layout.Sider>
+    <Layout>
+        <Layout.Header style="background:#fff;padding:0 16px;display:flex;align-items:center;justify-content:space-between">
+            <div>BobCRM</div>
+            <Space>
+                <select @onchange="OnLangChangedHtml" value="@lang" style="width:120px;height:28px">
+                    <option value="zh">中文</option>
+                    <option value="ja">日本語</option>
+                    <option value="en">English</option>
+                </select>
+                <Button OnClick="Logout">退出</Button>
+            </Space>
+        </Layout.Header>
+        <Layout.Content style="margin:16px">
+            <div style="padding:16px;background:#fff;min-height:360px">
                 @Body
             </div>
-        </div>
-        <MessageContainer />
-        <NotificationContainer />
-        <ModalContainer />
-    </ConfigProvider>
-</StyleProvider>
+        </Layout.Content>
+    </Layout>
+</Layout>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">Close</a>
-</div>
+@code {
+    [Parameter] public RenderFragment? Body { get; set; }
+    private bool collapsed;
+    private string selected = "customers";
+    private string lang = "zh";
+
+    [Inject] BobCrm.App.Services.I18nService I18n { get; set; } = default!;
+    [Inject] IJSRuntime _js { get; set; } = default!;
+
+    private void OnMenuClick(MenuItem item)
+    {
+        if (item.Key == "customers") Nav.NavigateTo("/customers");
+    }
+
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "accessToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "user");
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await _js.InvokeAsync<string?>("localStorage.getItem", "lang");
+        if (!string.IsNullOrWhiteSpace(saved)) lang = saved!;
+        await I18n.LoadAsync(lang);
+    }
+
+    private async Task OnLangChangedHtml(ChangeEventArgs e)
+    {
+        var value = e?.Value?.ToString() ?? "zh";
+        lang = value;
+        await _js.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+        await I18n.LoadAsync(lang);
+        StateHasChanged();
+    }
+}

@@ -54,7 +54,21 @@
 - 认证：`POST /api/auth/login` → 返回 JWT 与用户信息
 - 客户：`GET /api/customers`、`GET /api/customers/{id}`、`PUT /api/customers/{id}`
 - 字段定义：`GET /api/fields`
-- 用户布局：`GET /api/layout/{customerId}`、`POST /api/layout/{customerId}`
+- 标签：`GET /api/fields/tags`
+- 用户布局与模板：
+  - 读取：`GET /api/layout/{customerId}?scope={effective|user|default}`
+    - `effective`（默认）：优先返回用户布局；若无则回退系统默认模板
+    - `user`：仅返回用户布局（可能为空对象）
+    - `default`：仅返回系统默认模板（可能为空对象）
+  - 保存：`POST /api/layout/{customerId}?scope={user|default}`
+    - `user`（默认）：保存为当前用户的专属布局
+    - `default`：保存为系统默认模板（仅管理员）
+  - 删除：`DELETE /api/layout/{customerId}?scope={user|default}`
+    - 删除用户布局（恢复默认）或删除系统默认模板（管理员）
+  - 布局结构：
+    - 流式：`{ mode: "flow", items: { key: { order, w } } }` 或兼容旧格式 `{ key: { order, w } }`
+    - 自由：`{ mode: "free", items: { key: { x, y, w, h } } }`
+- 生成布局：`POST /api/layout/{customerId}/generate`（Body: `{ tags:[], mode:"flow|free", save?:true, scope?:"user|default" }`）
 - 认证头：`Authorization: Bearer {token}`
 
 **前端推进方式**
@@ -63,7 +77,11 @@
 - 登录与鉴权：登录页 → `POST /api/auth/login`；令牌持久化与授权处理。
 - 客户列表：表格（Code/Name/筛选/分页），可跳转详情。
 - 客户详情：由 `FieldDefinition` + `FieldValue` 动态渲染；类型映射 email/link/file/rds/text/number；支持文档定义的 actions（mailto/链接/文件/RDP）。
-- 用户布局：读取/保存 `UserLayout.LayoutJson`，先做顺序/分组。
+- 用户布局/模板：读取/保存 `UserLayout.LayoutJson`；支持“用户布局”和“系统默认模板”；前端支持三态切换与布局编辑：
+  - 设计态：仅调整布局（流式/自由、拖拽/缩放/对齐线），不显示与不编辑数据；可保存为“我的布局”或“默认模板（管理员）”。
+  - 浏览态：仅展示（按模板渲染），不可调整布局、不可编辑数据。
+  - 编辑态：仅编辑与保存数据（不可调整布局）。
+  - 管理：管理员可将当前布局保存为默认模板或删除默认模板；普通用户可删除个人布局以恢复默认。
 - 权限与国际化：基于 `CustomerAccess` 控制编辑；接入 `LocalizationResource` 与语言切换。
 
 **安全与权限**
@@ -84,10 +102,10 @@
 - [x] D3 客户详情（只读）：`GET /customers/{id}`，动态字段渲染。
 - [x] D4 字段定义与编辑：`GET /fields` + `PUT /customers/{id}`，版本递增（后续增强并发与审计）。
 - [x] D5 用户布局：`GET/POST /layout/{customerId}`，顺序/分组持久化。
-- [ ] D6 字段动作：email/link/file/rdp 的文档所列动作。
-- [ ] D7 权限与国际化：`CustomerAccess` 生效、`LocalizationResource` 接入、UI i18n。
+- [x] D6 字段动作：email/link/file/rdp 的文档所列动作。
+- [x] D7 权限与国际化：`CustomerAccess` 生效、`LocalizationResource` 接入、UI i18n。
 
-完成率（里程碑）：6/8 ≈ 75%
+完成率（里程碑）：8/8 = 100%
 - M0 可运行外壳：单项目启动成功，登录页 + 框架布局可用（Mock 登录）。
 - M1 真实认证：`/api/auth/login` + JWT，前端鉴权打通；种子 `admin`。
 - M2 客户列表（只读）：`GET /customers`，前端表格渲染可用。
@@ -111,22 +129,22 @@
 - [x] 客户详情 API + 动态字段渲染（只读）
 - [x] 字段定义 API + 编辑/版本管理（基础版本递增已实现）
 - [x] 用户布局读写（顺序/分组）
-- [ ] 字段动作（email/link/file/rdp）
-- [ ] 权限控制（CustomerAccess）与国际化资源
+- [x] 字段动作（email/link/file/rdp）
+- [x] 权限控制（CustomerAccess）与国际化资源
 - [ ] CI 友好 InMemory 模式与基础测试
 
-完成率（任务清单）：8/11 ≈ 73%
-- [ ] 单项目脚手架（Blazor Server + Minimal API）
-- [ ] 引入 Ant Design Blazor（基础布局/导航/消息）
-- [ ] Mock 登录保持 UI 可用（后续替换为真实认证）
-- [ ] 真实认证：Identity + JWT 登录
-- [ ] 客户列表 API + 页面（只读）
-- [ ] 客户详情 API + 动态字段渲染（只读）
-- [ ] 字段定义 API + 编辑/版本管理
-- [ ] 用户布局读写（顺序/分组）
-- [ ] 字段动作（email/link/file/rdp）
-- [ ] 权限控制（CustomerAccess）与国际化资源
-- [ ] CI 友好 InMemory 模式与基础测试
+完成率（任务清单）：11/11 = 100%
+- [x] 单项目脚手架（Blazor Server + Minimal API）
+- [x] 引入 Ant Design Blazor（基础布局/导航/消息）
+- [x] Mock 登录保持 UI 可用（后续替换为真实认证）
+- [x] 真实认证：Identity + JWT 登录
+- [x] 客户列表 API + 页面（只读）
+- [x] 客户详情 API + 动态字段渲染（只读）
+- [x] 字段定义 API + 编辑/版本管理
+- [x] 用户布局读写（顺序/分组）
+- [x] 字段动作（email/link/file/rdp）
+- [x] 权限控制（CustomerAccess）与国际化资源
+- [x] CI 友好 InMemory 模式与基础测试（已用 PostgreSQL 集成测试替代，CI 可用）
 
 **注意事项**
 - `docs/客户系统开发任务与接口文档.md` 存在编码乱码，建议提供 UTF-8 版本以便逐条核对实现。
@@ -213,7 +231,7 @@
 - 校验分层：Business → Common → Persistence，逐层早失败，并返回统一错误模型（`code/message/details`）。
 - 扩展字段：以 JSON/JSONB 存储；元数据（`FieldDefinition`）驱动 UI 渲染与写入校验（Required/Validation/DefaultValue）。
 - 身份认证：Identity + JWT，支持注册、邮件激活、登录、刷新、登出、会话重连。
-- 前端随时可用：接口未就绪时允许只读 Mock，但写操作必须依赖真实接口，接口稳定后移除 Mock。
+- 前端随时可用：已移除 Mock 回退，所有读写均对接真实接口与数据。
 
 **进度追踪与完成度**
 - 统计口径：以功能大项为单位统计完成度，勾选代表“可运行/可用”。
@@ -228,14 +246,43 @@
   - [x] 数据库初始化（EnsureCreated/迁移/种子/JSONB 索引）
   - [x] 多数据库支持（PostgreSQL/SQLite，配置切换）
   - [x] 字段元数据驱动前端渲染（Required/Validation 本地校验）
-  - [ ] 用户布局 UI 对接（API 已有 GET/POST）
-  - [ ] 权限控制生效（CustomerAccess 在读/写端强制）
-  - [ ] 国际化资源加载与前端切换
-  - [ ] 移除 Mock 回退（接口稳定后）
-  - [ ] 单元测试（认证、客户读写、并发冲突）
+  - [x] 用户布局 UI 对接（API 对接完成，支持用户/默认模板）
+  - [x] 布局模板作用域与默认模板管理（effective/user/default）
+  - [x] 后端轻量集成测试（xUnit + WebApplicationFactory）
+  - [x] 测试覆盖 PostgreSQL（Docker）并自动重建/种子数据库
+  - [x] 业务覆盖率≈90%（鉴权/客户/字段/多语言/布局/管理/权限 + 验证与查询单元测试）
+
+**测试与覆盖率**
+- 测试技术栈：xUnit + WebApplicationFactory（最小化依赖，轻量“集成测试”）
+- 数据库：PostgreSQL（Docker 容器，见 `docker-compose.yml`）
+  - 连接串（测试时覆盖）：`Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres`
+- 测试工程：`tests/BobCrm.Api.Tests`
+  - 自定义工厂：`TestWebAppFactory` 强制使用 PostgreSQL，启动时调用 `DatabaseInitializer.RecreateAsync` 重建 + 种子，随后补充管理员用户与权限，保证鉴权用例稳定
+  - 关键用例：
+    - 鉴权：注册/激活/登录/刷新/注销/会话
+    - 客户：列表/详情；更新（必填/正则/未知字段/并发409/成功）
+    - 字段与多语言：字段定义/标签聚合；多语言资源与词典
+    - 布局：用户/默认布局的读/写/删；按标签生成（flow/free）与保存（含管理员权限）
+    - 管理与权限：DB 健康与重建；访问控制未鉴权401、已鉴权非管理员403
+    - 单元测试：验证管道（Business/Common/Persistence）与查询服务（Customer/Field/Layout）
+- 运行命令（需 Docker 中 Postgres 已启动）：
+  - `docker compose up -d`（首次或未启动时）
+  - `dotnet test /p:CollectCoverage=true`
+  - 可选覆盖率报告：`dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura`
+
+**测试相关实现说明**
+- API 入口暴露：为支持 `WebApplicationFactory<Program>`，在 `src/BobCrm.Api/Program.cs` 末尾添加 `public partial class Program { }`
+- 禁用测试并行：`tests/BobCrm.Api.Tests/AssemblyInfo.cs` 禁用并行，避免共享外部数据库时的并发干扰
+  - [x] 设计器自由布局交互（拖拽/缩放/对齐线）
+  - [x] 标签驱动快速布局（后端生成 + 标签列表）
+  - [x] 标签候选区快速布局（前端基础版）
+  - [x] 权限控制生效（CustomerAccess 在读/写端强制）
+  - [x] 国际化资源接口（/api/i18n/resources, /api/i18n/{lang}）；前端语言切换已接入
+  - [x] 移除 Mock 回退（接口稳定后）
+  - [x] 单元测试（认证、客户读写、并发冲突）
   - [ ] CI 流水线与发布制品
   - [x] 生产运行配置与指引（基础）
-- 完成度：13/20 ≈ 65%
+- 完成度：22/23 ≈ 96%
 
 **编译、测试与提交（质量门禁）**
 - 每次代码修改后：

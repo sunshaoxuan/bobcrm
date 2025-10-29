@@ -1,76 +1,56 @@
 @page "/customers"
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <h1>客户列表</h1>
 
-<Button Type="primary" OnClick="LoadAsync">刷新</Button>
+<Input Placeholder="搜索名称/编码" @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 
-<table class="ant-table">
-    <thead>
-        <tr>
-            <th>编码</th>
-            <th>名称</th>
-            <th>操作</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var row in _rows)
-        {
-            <tr>
-                <td>@row.code</td>
-                <td>@row.name</td>
-                <td><a href="/customers/@row.id">详情</a></td>
-            </tr>
-        }
-    </tbody>
-</table>
+<Table TItem="CustomerItem" DataSource="filtered" RowKey="@(c => c.id)" Size="TableSize.Middle">
+    <Column TData="CustomerItem" Title="编码" Field="c => c.code" />
+    <Column TData="CustomerItem" Title="名称" Field="c => c.name" />
+    <Column TData="CustomerItem" Title="操作">
+        <Template Context="c">
+            <Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">详情</Button>
+        </Template>
+    </Column>
+</Table>
+
+@if (error is not null)
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+}
 
 @code {
-    private bool _loading = true;
-    private List<CustomerRow> _rows = new();
+    private List<CustomerItem> data = new();
+    private string keyword = string.Empty;
+    private string? error;
 
-    [Inject] public BobCrm.App.Services.AuthService Auth { get; set; } = default!;
-    [Inject] public MessageService Message { get; set; } = default!;
-    [Inject] public IJSRuntime JS { get; set; } = default!;
+    private IEnumerable<CustomerItem> filtered => string.IsNullOrWhiteSpace(keyword)
+        ? data : data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
-        // nothing; LoadAsync will fetch token and call API
-        await LoadAsync();
+        // simple auth guard
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+        if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
+
+        var resp = await Auth.GetWithRefreshAsync("/api/customers");
+        if (!resp.IsSuccessStatusCode)
+        {
+            error = $"加载失败: {(int)resp.StatusCode}"; return;
+        }
+        var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
+        data = json ?? new();
     }
 
-    private async Task LoadAsync()
+    private void OpenDetail(int id) => Nav.NavigateTo($"/customers/{id}");
+
+    public class CustomerItem
     {
-        _loading = true;
-        try
-        {
-            var resp = await Auth.GetWithRefreshAsync("/api/customers");
-            if (resp.IsSuccessStatusCode)
-            {
-                _rows = (await resp.Content.ReadFromJsonAsync<List<CustomerRow>>()) ?? new();
-            }
-            else
-            {
-                // fallback mock
-                _rows = new() {
-                    new CustomerRow(1, "C001", "客户A"),
-                    new CustomerRow(2, "C002", "客户B")
-                };
-            }
-        }
-        catch (Exception ex)
-        {
-            // fallback mock on error to keep UI usable
-            _rows = new() {
-                new CustomerRow(1, "C001", "客户A"),
-                new CustomerRow(2, "C002", "客户B")
-            };
-            await Message.Warning($"使用临时数据: {ex.Message}");
-        }
-        finally
-        {
-            _loading = false;
-        }
+        public int id { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
     }
-
-    public record CustomerRow(int id, string code, string name);
 }
