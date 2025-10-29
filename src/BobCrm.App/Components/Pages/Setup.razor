@@ -1,19 +1,30 @@
 @page "/setup"
 @layout BobCrm.App.Components.Layout.EmptyLayout
+@rendermode RenderMode.InteractiveServer
 
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.AuthService Auth
 @inject MessageService Message
+@inject IConfiguration Configuration
+@inject IConfiguration Configuration
 
 <h1>@I18n.T("LBL_SETUP")</h1>
-
-<div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_API_BASE")</div>
-        <Input @bind-Value="apiBase" Placeholder='@I18n.T("PH_API_BASE_EXAMPLE")' />
-        <div style="color:#999;margin-top:6px">@I18n.T("LBL_API_BASE_HINT")</div>
-    </div>
+
+
+<div>
+
+    <div style="margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:6px">
+            @I18n.T("LBL_API_BASE") <span style="color:#999;font-weight:normal;font-size:12px">(可选，默认: @(defaultApiBase ?? "http://localhost:5200"))</span>
+        </div>
+        <Input @bind-Value="apiBase" Placeholder="@placeholderText" />
+        <div style="color:#999;margin-top:6px">
+            @I18n.T("LBL_API_BASE_HINT") 如果不填写，将使用配置的默认地址。
+        </div>
+    </div>
+
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_LANG")</div>
         <select value="@lang" @onchange="OnLangChanged" style="width:220px;height:28px">
             @if (langs.Count == 0)
@@ -31,34 +42,86 @@
             }
         </select>
     </div>
-    <Divider />
-    <h3>@I18n.T("LBL_ADMIN_ACCOUNT")</h3>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_USERNAME")</div>
-        <Input @bind-Value="adminUser" />
-    </div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_EMAIL")</div>
-        <Input @bind-Value="adminEmail" />
-    </div>
+    <Divider />
+
+    <h3>@I18n.T("LBL_ADMIN_ACCOUNT")</h3>
+
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_USERNAME")</div>
+
+        <Input @bind-Value="adminUser" />
+
+    </div>
+
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_EMAIL")</div>
+
+        <Input @bind-Value="adminEmail" />
+
+    </div>
+
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN")@I18n.T("LBL_PASSWORD")</div>
         <InputPassword @bind-Value="adminPassword" />
     </div>
-    <div>
+    <div>
+
         <Space>
             <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">@I18n.T("BTN_SAVE_AND_GO_LOGIN")</Button>
             <Button OnClick="GotoLogin">@I18n.T("BTN_GO_LOGIN")</Button>
         </Space>
-    </div>
-</div>
-
-@code {
-    private string? apiBase;
+    </div>
+
+</div>
+
+
+
+@code {
+
+    private string? apiBase;
+    private string? defaultApiBase;
+    private string placeholderText = "";
+
     private string lang = "ja";
     private List<LangItem> langs = new();
-    private bool saving;
-    private string adminUser = "admin";
-    private string adminEmail = "admin@local";
-    private string adminPassword = "Admin@12345";
-
+    private bool saving;
+
+    private string adminUser = "admin";
+
+    private string adminEmail = "admin@local";
+
+    private string adminPassword = ""; // 密码字段不初始化，保持为空
+    
+    protected override void OnInitialized()
+    {
+        // 优先从当前页面的host推断API地址（支持分布式部署）
+        var currentUri = new Uri(Nav.BaseUri);
+        var apiPort = currentUri.Port == 8080 ? 5200 : 8081; // 如果前端在8080，API可能在5200，否则8081
+        
+        // 使用当前访问的host和scheme，而不是localhost
+        var inferredBase = $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
+        
+        // 如果配置文件中有配置且包含localhost，则替换为当前host
+        var configBase = Configuration["Api:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(configBase) && configBase.Contains("localhost"))
+        {
+            // 配置文件是localhost，需要替换为当前host
+            var configUri = new Uri(configBase);
+            defaultApiBase = $"{currentUri.Scheme}://{currentUri.Host}:{configUri.Port}";
+        }
+        else if (!string.IsNullOrWhiteSpace(configBase))
+        {
+            // 配置文件不是localhost，直接使用配置
+            defaultApiBase = configBase;
+        }
+        else
+        {
+            // 没有配置，使用推断的地址
+            defaultApiBase = inferredBase;
+        }
+        
+        apiBase = defaultApiBase; // 初始化为默认值
+        placeholderText = $"默认: {defaultApiBase}";
+    }
+
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -70,9 +133,50 @@
                 await I18n.LoadAsync(langToLoad);
                 try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
                 var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-                if (!string.IsNullOrWhiteSpace(storedBase)) apiBase = storedBase;
+                if (!string.IsNullOrWhiteSpace(storedBase)) 
+                {
+                    apiBase = storedBase;
+                }
+                else
+                {
+                    // 如果localStorage没有保存的地址，重新计算默认值（因为这时Nav已经可用）
+                    var currentUri = new Uri(Nav.BaseUri);
+                    var apiPort = currentUri.Port == 8080 ? 5200 : 8081;
+                    apiBase = $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
+                    defaultApiBase = apiBase; // 更新默认值
+                    placeholderText = $"默认: {defaultApiBase}";
+                }
                 var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
                 if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+                
+                // 从数据库读取当前管理员信息（如果已配置）
+                try
+                {
+                    var http = await Auth.CreateClientWithLangAsync();
+                    var adminResp = await http.GetAsync("/api/setup/admin");
+                    if (adminResp.IsSuccessStatusCode)
+                    {
+                        var adminInfo = await adminResp.Content.ReadFromJsonAsync<AdminInfo>();
+                        if (adminInfo != null && adminInfo.exists && !string.IsNullOrWhiteSpace(adminInfo.username))
+                        {
+                            adminUser = adminInfo.username;
+                            adminEmail = adminInfo.email ?? adminEmail;
+                            System.Diagnostics.Debug.WriteLine($"[Setup] Loaded admin info from database: username='{adminUser}', email='{adminEmail}'");
+                            await JS.InvokeVoidAsync("console.log", $"[Setup] Loaded admin from database: username='{adminUser}', email='{adminEmail}'");
+                            StateHasChanged();
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("console.log", "[Setup] No admin user found in database, using default values");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Setup] Failed to load admin info from API: {ex.Message}");
+                    await JS.InvokeVoidAsync("console.log", $"[Setup] Could not load admin from API (API may not be running): {ex.Message}");
+                }
+                
                 // load languages list from API (works without auth)
                 try
                 {
@@ -90,12 +194,63 @@
             catch { }
         }
     }
-
+
+
     private async Task SaveAsync()
     {
-        saving = true;
         try
         {
+            // Debug: Log method entry - multiple ways to ensure we see it
+            await JS.InvokeVoidAsync("console.log", "[Setup] SaveAsync method called!", apiBase, adminUser, adminEmail);
+            System.Diagnostics.Debug.WriteLine($"[Setup] SaveAsync called. apiBase={apiBase}, adminUser={adminUser}, adminEmail={adminEmail}");
+            
+            saving = true;
+            StateHasChanged();
+            await Task.Yield(); // Ensure UI updates
+            
+            
+            // Validate input - 如果用户没有填写，使用默认值
+            if (string.IsNullOrWhiteSpace(apiBase))
+            {
+                apiBase = defaultApiBase ?? "http://localhost:5200";
+            }
+            
+            // 确保API地址有效
+            if (!Uri.TryCreate(apiBase, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+            {
+                var errorMsg = $"API Base地址格式不正确：{apiBase}。请输入有效的URL（如：http://localhost:5200）";
+                System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
+                await Message.Error(errorMsg);
+                StateHasChanged();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(adminUser))
+            {
+                var errorMsg = "管理员用户名不能为空";
+                System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
+                await Message.Error(errorMsg);
+                StateHasChanged();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(adminEmail))
+            {
+                var errorMsg = "管理员邮箱不能为空";
+                System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
+                await Message.Error(errorMsg);
+                StateHasChanged();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(adminPassword))
+            {
+                var errorMsg = "管理员密码不能为空";
+                System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
+                await Message.Error(errorMsg);
+                StateHasChanged();
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine("[Setup] Validation passed, starting save process...");
+
             // persist base and lang locally first
             try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
             try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
@@ -107,32 +262,166 @@
             bool ok = false; string? err = null;
             try
             {
-                var http = await Auth.CreateClientWithLangAsync();
-                if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!, UriKind.Absolute);
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
-                ok = resp.IsSuccessStatusCode;
-                if (!ok) err = $"{(int)resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+                HttpClient http;
+                bool shouldDispose = false;
+                
+                if (!string.IsNullOrWhiteSpace(apiBase))
+                {
+                    // Create a new HttpClient with the correct BaseAddress
+                    http = new HttpClient { BaseAddress = new Uri(apiBase!.TrimEnd('/') + "/", UriKind.Absolute) };
+                    shouldDispose = true;
+                }
+                else
+                {
+                    // Use the factory-managed client (don't dispose)
+                    http = await Auth.CreateClientWithLangAsync();
+                }
+                
+                try
+                {
+                    // Set language header
+                    var langHeader = lang.ToLowerInvariant();
+                    if (http.DefaultRequestHeaders.Contains("X-Lang"))
+                        http.DefaultRequestHeaders.Remove("X-Lang");
+                    http.DefaultRequestHeaders.Add("X-Lang", langHeader);
+                    
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                    var requestUrl = http.BaseAddress + "api/setup/admin";
+                    System.Diagnostics.Debug.WriteLine($"[Setup] Sending POST request to: {requestUrl}");
+                    await JS.InvokeVoidAsync("console.log", $"[Setup] Sending POST request to: {requestUrl}, username: {adminUser}, email: {adminEmail}");
+                    
+                    var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
+                    ok = resp.IsSuccessStatusCode;
+                    System.Diagnostics.Debug.WriteLine($"[Setup] Response status: {(int)resp.StatusCode} {resp.StatusCode}, Success: {ok}");
+                    await JS.InvokeVoidAsync("console.log", $"[Setup] Response: {(int)resp.StatusCode} {resp.StatusCode}, Success: {ok}");
+                    
+                    if (!ok)
+                    {
+                        var errorContent = await resp.Content.ReadAsStringAsync();
+                        err = $"HTTP {(int)resp.StatusCode} {resp.StatusCode}: {errorContent}";
+                        System.Diagnostics.Debug.WriteLine($"[Setup] Error response: {err}");
+                        await JS.InvokeVoidAsync("console.error", $"[Setup] Error: {err}");
+                    }
+                    else
+                    {
+                        var successContent = await resp.Content.ReadAsStringAsync();
+                        System.Diagnostics.Debug.WriteLine($"[Setup] Success response: {successContent}");
+                        await JS.InvokeVoidAsync("console.log", $"[Setup] Success: {successContent}");
+                        // 确认管理员账户已保存
+                        ok = true; // 明确设置为true
+                    }
+                }
+                finally
+                {
+                    if (shouldDispose)
+                    {
+                        http.Dispose();
+                    }
+                }
             }
-            catch (Exception ex) { err = ex.Message; }
+            catch (TaskCanceledException)
+            {
+                err = $"请求超时（超过15秒）。请检查API服务器 {apiBase} 是否正在运行。\n\n请确认：\n1. API服务器已启动\n2. 在浏览器中访问 {apiBase}/swagger 确认API可访问";
+                ok = false;
+            }
+            catch (HttpRequestException httpEx)
+            {
+                err = $"无法连接到API服务器 {apiBase}：{httpEx.Message}\n\n请确认：\n1. API服务器已启动（运行 BobCrm.Api 项目）\n2. API地址正确：{apiBase}\n3. 网络连接正常\n4. 防火墙允许访问该端口";
+                ok = false;
+            }
+            catch (Exception ex)
+            {
+                err = $"发生错误：{ex.GetType().Name} - {ex.Message}\n\n堆栈跟踪：{ex.StackTrace}";
+                System.Diagnostics.Debug.WriteLine($"[Setup] Exception details: {ex}");
+                ok = false;
+            }
 
             if (!ok)
             {
-                try { await Message.Error(I18n.T("ERR_SETUP_SAVE_FAILED") + (string.IsNullOrWhiteSpace(err) ? "" : $": {err}")); } catch { }
+                var errorMsg = "保存失败";
+                if (!string.IsNullOrWhiteSpace(err))
+                {
+                    errorMsg += ": " + err;
+                }
+                System.Diagnostics.Debug.WriteLine($"[Setup] Save failed: {errorMsg}");
+                
+                // Show detailed error message with admin account info
+                var fullErrorMsg = $"无法保存管理员账户到 {apiBase}\n\n" +
+                    $"尝试保存的用户信息：\n" +
+                    $"  用户名: {adminUser}\n" +
+                    $"  邮箱: {adminEmail}\n\n" +
+                    $"错误详情：{errorMsg}\n\n" +
+                    $"请检查：\n" +
+                    $"1. API服务器是否正在运行 ({apiBase})\n" +
+                    $"2. 在浏览器中访问 {apiBase}/swagger 确认API是否可访问\n" +
+                    $"3. 网络连接是否正常\n" +
+                    $"4. API地址是否正确";
+                
+                try
+                {
+                    await Message.Error(fullErrorMsg);
+                }
+                catch (Exception msgEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Setup] Message.Error failed: {msgEx.Message}");
+                    // Fallback: try to show alert
+                    try { await JS.InvokeVoidAsync("alert", fullErrorMsg); } catch { }
+                    try { await JS.InvokeVoidAsync("console.error", errorMsg); } catch { }
+                }
+                StateHasChanged();
                 return;
             }
 
+            System.Diagnostics.Debug.WriteLine("[Setup] Save successful, navigating to home...");
+            
+            // 管理员信息已保存到数据库（PostgreSQL），无需额外的持久化操作
+            
             // mark configured and navigate to home
             try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
-            try { await Message.Success(I18n.T("MSG_SETUP_SAVED")); } catch { }
+            try
+            {
+                await Message.Success("设置已保存，正在跳转到首页...");
+            }
+            catch (Exception msgEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Setup] Message.Success failed: {msgEx.Message}");
+            }
+            await Task.Delay(500); // Give time for message to show
             Nav.NavigateTo("/", forceLoad: true);
         }
-        finally { saving = false; }
+        catch (Exception ex)
+        {
+            // Catch all unhandled exceptions
+            System.Diagnostics.Debug.WriteLine($"[Setup] Unhandled exception in SaveAsync: {ex}");
+            var errorMsg = $"发生错误: {ex.Message}";
+            try
+            {
+                await Message.Error(errorMsg);
+            }
+            catch
+            {
+                try { await JS.InvokeVoidAsync("console.error", errorMsg); } catch { }
+                try { await JS.InvokeVoidAsync("alert", errorMsg); } catch { }
+            }
+        }
+        finally
+        {
+            saving = false;
+            StateHasChanged();
+        }
     }
-
+
+
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 
     public class LangItem { public string code { get; set; } = string.Empty; public string name { get; set; } = string.Empty; }
+    
+    public class AdminInfo 
+    { 
+        public string username { get; set; } = string.Empty; 
+        public string email { get; set; } = string.Empty; 
+        public bool exists { get; set; } 
+    }
 
     private async Task OnLangChanged(ChangeEventArgs e)
     {
@@ -161,14 +450,21 @@
         StateHasChanged();
     }
 }
-
-
-
-
-
-
-
-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

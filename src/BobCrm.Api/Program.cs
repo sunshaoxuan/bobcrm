@@ -15,7 +15,6 @@ using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
-using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -551,6 +550,25 @@ app.MapPost("/api/admin/db/recreate", async (AppDbContext db) =>
     return Results.Ok(new { status = "recreated" });
 });
 
+// Get current admin user info (for setup page display)
+app.MapGet("/api/setup/admin", async (UserManager<IdentityUser> um, RoleManager<IdentityRole> rm) =>
+{
+    var adminRole = await rm.FindByNameAsync("admin");
+    if (adminRole == null) return Results.Ok(new { username = "", email = "", exists = false });
+    
+    // Find any user in admin role
+    var adminUsers = await um.GetUsersInRoleAsync("admin");
+    var admin = adminUsers.FirstOrDefault();
+    
+    if (admin == null) return Results.Ok(new { username = "", email = "", exists = false });
+    
+    return Results.Ok(new { 
+        username = admin.UserName ?? "", 
+        email = admin.Email ?? "", 
+        exists = true 
+    });
+});
+
 // First-run admin setup endpoint. Unsafe to expose broadly; allows configuring admin
 // only when the default password still works, or when admin user does not exist yet.
 app.MapPost("/api/setup/admin", async (
@@ -563,33 +581,99 @@ app.MapPost("/api/setup/admin", async (
     {
         await rm.CreateAsync(new IdentityRole("admin"));
     }
-    var admin = await um.FindByNameAsync("admin");
-    if (admin == null)
+    
+    // Check if there's already an admin user with the default credentials (uninitialized state)
+    var existingAdmin = await um.FindByNameAsync("admin");
+    IdentityUser? adminUser = null;
+    
+    if (existingAdmin != null)
     {
-        admin = new IdentityUser { UserName = dto.username, Email = dto.email, EmailConfirmed = true };
-        var cr = await um.CreateAsync(admin, dto.password);
-        if (!cr.Succeeded) return Results.BadRequest(cr.Errors);
-        await um.AddToRoleAsync(admin, "admin");
-        return Results.Ok(new { status = "created" });
+        // Check if it's the default uninitialized admin (email = admin@local and default password works)
+        var isDefaultAdmin = existingAdmin.Email == "admin@local";
+        var defaultPasswordWorks = false;
+        if (isDefaultAdmin)
+        {
+            defaultPasswordWorks = (await sm.CheckPasswordSignInAsync(existingAdmin, "Admin@12345", false)).Succeeded;
+        }
+        
+        // If it's the default admin that hasn't been customized, allow update
+        if (isDefaultAdmin && defaultPasswordWorks)
+        {
+            adminUser = existingAdmin;
+        }
+        else if (isDefaultAdmin && !defaultPasswordWorks)
+        {
+            // Default admin exists but password was changed - still allow if email is still admin@local
+            adminUser = existingAdmin;
+        }
+        else
+        {
+            // Admin exists but is customized - check if we should update it
+            // For setup purposes, allow updating the default "admin" user if password is still default
+            var canOverride = (await sm.CheckPasswordSignInAsync(existingAdmin, "Admin@12345", false)).Succeeded;
+            if (!canOverride)
+            {
+                return Results.StatusCode(403); // Cannot update - admin already configured
+            }
+            adminUser = existingAdmin;
+        }
+    }
+    
+    if (adminUser == null)
+    {
+        // No admin user exists, create new one
+        adminUser = new IdentityUser { UserName = dto.username, Email = dto.email, EmailConfirmed = true };
+        var cr = await um.CreateAsync(adminUser, dto.password);
+        if (!cr.Succeeded)
+        {
+            var errors = string.Join("; ", cr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            return Results.BadRequest(new { error = "创建管理员用户失败", details = errors });
+        }
+        await um.AddToRoleAsync(adminUser, "admin");
+        return Results.Ok(new { status = "created", username = dto.username, email = dto.email });
     }
     else
     {
-        // Only allow update if default password still valid (considered uninitialized)
-        var canOverride = (await sm.CheckPasswordSignInAsync(admin, "Admin@12345", false)).Succeeded;
-        if (!canOverride)
-            return Results.StatusCode(403);
-
-        admin.UserName = dto.username;
-        admin.Email = dto.email;
-        admin.EmailConfirmed = true;
-        var ur = await um.UpdateAsync(admin);
-        if (!ur.Succeeded) return Results.BadRequest(ur.Errors);
-        if (await um.HasPasswordAsync(admin))
-            await um.RemovePasswordAsync(admin);
-        var pr = await um.AddPasswordAsync(admin, dto.password);
-        if (!pr.Succeeded) return Results.BadRequest(pr.Errors);
-        return Results.Ok(new { status = "updated" });
+        // Update existing admin user
+        adminUser.UserName = dto.username;
+        adminUser.Email = dto.email;
+        adminUser.EmailConfirmed = true;
+        var ur = await um.UpdateAsync(adminUser);
+        if (!ur.Succeeded)
+        {
+            var errors = string.Join("; ", ur.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            return Results.BadRequest(new { error = "更新管理员用户失败", details = errors });
+        }
+        
+        // Update password
+        if (await um.HasPasswordAsync(adminUser))
+        {
+            var removeResult = await um.RemovePasswordAsync(adminUser);
+            if (!removeResult.Succeeded)
+            {
+                var errors = string.Join("; ", removeResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                return Results.BadRequest(new { error = "移除旧密码失败", details = errors });
+            }
+        }
+        
+        var pr = await um.AddPasswordAsync(adminUser, dto.password);
+        if (!pr.Succeeded)
+        {
+            var errors = string.Join("; ", pr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            return Results.BadRequest(new { error = "设置新密码失败", details = errors });
+        }
+        
+        return Results.Ok(new { status = "updated", username = dto.username, email = dto.email });
     }
+});
+
+// Read current admin info (anonymous; used by setup page to reflect saved values)
+app.MapGet("/api/setup/admin", async (UserManager<IdentityUser> um) =>
+{
+    var admin = await um.FindByNameAsync("admin");
+    if (admin == null)
+        return Results.Json(new { exists = false });
+    return Results.Json(new { exists = true, username = admin.UserName ?? "admin", email = admin.Email ?? "" });
 });
 
 app.Run();
@@ -757,5 +841,4 @@ interface IEmailSender { Task SendAsync(string to, string subject, string body);
 
 // Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
-
 
