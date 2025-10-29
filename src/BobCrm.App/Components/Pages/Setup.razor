@@ -5,6 +5,7 @@
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.AuthService Auth
+@inject MessageService Message
 
 <h1>@I18n.T("LBL_SETUP")</h1>
 
@@ -95,30 +96,36 @@
         saving = true;
         try
         {
-            if (!string.IsNullOrWhiteSpace(apiBase))
-            {
-                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
-            }
-            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+            // persist base and lang locally first
+            try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
+            try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
 
-            // reload i18n immediately so UI switches language before跳转
+            // reload i18n immediately so UI switches language before navigation
             try { await I18n.LoadAsync(lang); await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
 
-            // initialize admin (best-effort, do not block navigation)
-            _ = Task.Run(async () =>
+            // call backend to save admin; await to ensure it's actually saved
+            bool ok = false; string? err = null;
+            try
             {
-                try
-                {
-                    var http = await Auth.CreateClientWithLangAsync();
-                    if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
-                }
-                catch { }
-            });
+                var http = await Auth.CreateClientWithLangAsync();
+                if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!, UriKind.Absolute);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
+                ok = resp.IsSuccessStatusCode;
+                if (!ok) err = $"{(int)resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+            }
+            catch (Exception ex) { err = ex.Message; }
 
-            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
-            Nav.NavigateTo("/login", forceLoad: true);
+            if (!ok)
+            {
+                try { await Message.Error(I18n.T("ERR_SETUP_SAVE_FAILED") + (string.IsNullOrWhiteSpace(err) ? "" : $": {err}")); } catch { }
+                return;
+            }
+
+            // mark configured and navigate to home
+            try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
+            try { await Message.Success(I18n.T("MSG_SETUP_SAVED")); } catch { }
+            Nav.NavigateTo("/", forceLoad: true);
         }
         finally { saving = false; }
     }

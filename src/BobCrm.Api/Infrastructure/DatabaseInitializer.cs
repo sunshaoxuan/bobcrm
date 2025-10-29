@@ -163,6 +163,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "ERR_BUSINESS_VALIDATION_FAILED", ZH = "业务校验失败", JA = "ビジネス検証に失敗", EN = "Business validation failed" },
                 new LocalizationResource { Key = "ERR_VALIDATION_FAILED", ZH = "校验失败", JA = "検証に失敗", EN = "Validation failed" },
                 new LocalizationResource { Key = "ERR_PERSISTENCE_VALIDATION_FAILED", ZH = "持久化校验失败", JA = "永続化検証に失敗", EN = "Persistence validation failed" },
+                new LocalizationResource { Key = "MSG_SETUP_SAVED", ZH = "初始化已保存，正在进入首页", JA = "初期設定を保存しました。ホームへ移動します", EN = "Setup saved. Redirecting to home" },
+                new LocalizationResource { Key = "ERR_SETUP_SAVE_FAILED", ZH = "初始化保存失败", JA = "初期設定の保存に失敗しました", EN = "Setup save failed" },
                 // Detail templates
                 new LocalizationResource { Key = "VAL_REQUIRED", ZH = "{0} 为必填项", JA = "{0} は必須です", EN = "{0} is required" },
                 new LocalizationResource { Key = "VAL_INVALID_PATTERN", ZH = "{0} 的验证规则无效", JA = "{0} の検証パターンが無効です", EN = "Invalid validation pattern for {0}" },
@@ -204,6 +206,8 @@ public static class DatabaseInitializer
             Ensure("ERR_BUSINESS_VALIDATION_FAILED", "业务校验失败", "ビジネス検証に失敗", "Business validation failed");
             Ensure("ERR_VALIDATION_FAILED", "校验失败", "検証に失敗", "Validation failed");
             Ensure("ERR_PERSISTENCE_VALIDATION_FAILED", "持久化校验失败", "永続化検証に失敗", "Persistence validation failed");
+            Ensure("MSG_SETUP_SAVED", "初始化已保存，正在进入首页", "初期設定を保存しました。ホームへ移動します", "Setup saved. Redirecting to home");
+            Ensure("ERR_SETUP_SAVE_FAILED", "初始化保存失败", "初期設定の保存に失敗しました", "Setup save failed");
             Ensure("VAL_REQUIRED", "{0} 为必填项", "{0} は必須です", "{0} is required");
             Ensure("VAL_INVALID_PATTERN", "{0} 的验证规则无效", "{0} の検証パターンが無効です", "Invalid validation pattern for {0}");
             Ensure("VAL_INVALID_FORMAT", "{0} 格式不正确", "{0} の形式が正しくありません", "{0} format invalid");
