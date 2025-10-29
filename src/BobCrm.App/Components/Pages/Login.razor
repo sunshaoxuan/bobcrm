@@ -41,11 +41,22 @@
         {
             try
             {
-                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
                 await I18n.LoadAsync(langToLoad); try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
-                var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
-                if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
+                // Check backend whether admin exists; avoid localStorage
+                try
+                {
+                    var http = await new BobCrm.App.Services.AuthService(HttpFactory, JS).CreateClientWithLangAsync();
+                    var resp = await http.GetAsync("/api/setup/admin");
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var info = await resp.Content.ReadFromJsonAsync<AdminInfo>();
+                        if (info is not null && info.exists == false)
+                        { Nav.NavigateTo("/setup"); return; }
+                    }
+                }
+                catch { }
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(token))
                 {
@@ -101,6 +112,7 @@
     }
     public record LoginResult(string accessToken, string refreshToken, UserDto user);
     public record UserDto(string id, string username, string role);
+    public class AdminInfo { public bool exists { get; set; } public string? username { get; set; } public string? email { get; set; } }
 }
 
 

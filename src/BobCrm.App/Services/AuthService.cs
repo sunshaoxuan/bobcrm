@@ -18,19 +18,11 @@ public class AuthService
     private async Task<HttpClient> CreateBaseClientAsync()
     {
         var http = _httpFactory.CreateClient("api");
-        try
-        {
-            var baseUrl = await _js.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-            if (!string.IsNullOrWhiteSpace(baseUrl))
-            {
-                http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
-            }
-        }
-        catch { }
+        // For SaaS mode, do not use localStorage overrides for base URL
         // attach language header (no auth required)
         try
         {
-            var lang = await _js.InvokeAsync<string?>("localStorage.getItem", "lang") ?? "ja";
+            var lang = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
             if (http.DefaultRequestHeaders.Contains("X-Lang"))
                 http.DefaultRequestHeaders.Remove("X-Lang");
             http.DefaultRequestHeaders.Add("X-Lang", lang.ToLowerInvariant());

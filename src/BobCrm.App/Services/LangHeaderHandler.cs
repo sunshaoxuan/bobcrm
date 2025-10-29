@@ -14,15 +14,14 @@ public class LangHeaderHandler : DelegatingHandler
     {
         try
         {
-            var lang = await _js.InvokeAsync<string?>("localStorage.getItem", "lang");
-            if (!string.IsNullOrWhiteSpace(lang))
-            {
-                if (request.Headers.Contains("X-Lang")) request.Headers.Remove("X-Lang");
-                request.Headers.Add("X-Lang", lang.ToLowerInvariant());
-            }
+            string? lang = null;
+            try { lang = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang"); } catch { }
+            if (string.IsNullOrWhiteSpace(lang))
+                lang = "ja";
+            if (request.Headers.Contains("X-Lang")) request.Headers.Remove("X-Lang");
+            request.Headers.Add("X-Lang", lang!.ToLowerInvariant());
         }
         catch { }
         return await base.SendAsync(request, cancellationToken);
     }
 }
-

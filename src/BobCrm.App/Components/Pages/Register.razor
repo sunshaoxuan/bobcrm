@@ -44,7 +44,7 @@
         {
             try
             {
-                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
                 await I18n.LoadAsync(langToLoad); try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
             }

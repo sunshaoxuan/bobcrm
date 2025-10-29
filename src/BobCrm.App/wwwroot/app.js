@@ -28,5 +28,19 @@ window.bobcrm = {
   },
   setLang: function (lang) {
     try { document.documentElement.lang = (lang || 'ja'); } catch (e) { }
+  },
+  getCookie: function (name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + encodeURIComponent(name) + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  },
+  setCookie: function (name, value, days) {
+    try {
+      let expires = '';
+      if (typeof days === 'number') {
+        const d = new Date(); d.setTime(d.getTime() + days * 864e5);
+        expires = '; expires=' + d.toUTCString();
+      }
+      document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value || '') + expires + '; path=/';
+    } catch (e) { }
   }
 };

@@ -62,7 +62,7 @@
         {
             try
             {
-                var saved = await _js.InvokeAsync<string?>("localStorage.getItem", "lang");
+                var saved = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 if (!string.IsNullOrWhiteSpace(saved)) lang = saved!;
                 await I18n.LoadAsync(lang);
                 try { await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
@@ -88,7 +88,7 @@
     {
         var value = e?.Value?.ToString() ?? "zh";
         lang = value;
-        await _js.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+        try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { }
         await I18n.LoadAsync(lang);
         try { await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
         StateHasChanged();
