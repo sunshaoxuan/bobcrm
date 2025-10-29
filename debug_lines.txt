@@ -1,0 +1,462 @@
+0000: using System.IdentityModel.Tokens.Jwt;
+0001: using System.Security.Claims;
+0002: using System.Text;
+0003: using Microsoft.AspNetCore.Authentication.JwtBearer;
+0004: using Microsoft.AspNetCore.Identity;
+0005: using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+0006: using Microsoft.EntityFrameworkCore;
+0007: using Microsoft.IdentityModel.Tokens;
+0008: using Microsoft.AspNetCore.DataProtection;
+0009: using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+0010: using BobCrm.Api.Core.Persistence;
+0011: using BobCrm.Api.Infrastructure.Ef;
+0012: using BobCrm.Api.Core.DomainCommon;
+0013: using BobCrm.Api.Core.DomainCommon.Validation;
+0014: using BobCrm.Api.Application.Queries;
+0015: using BobCrm.Api.Infrastructure;
+0016: using BobCrm.Api.Domain;
+0017: 
+0018: var builder = WebApplication.CreateBuilder(args);
+0019: 
+0020: // DbContext (SQLite default; PostgreSQL via config)
+0021: var dbProvider = builder.Configuration["Db:Provider"] ?? "sqlite";
+0022: var conn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=./data/app.db";
+0023: builder.Services.AddDbContext<AppDbContext>(opt =>
+0024: {
+0025:     if (dbProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+0026:     {
+0027:         opt.UseNpgsql(conn, npg => npg.MigrationsHistoryTable("__EFMigrationsHistory", "public"));
+0028:         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+0029:     }
+0030:     else
+0031:     {
+0032:         opt.UseSqlite(conn);
+0033:     }
+0034: });
+0035: 
+0036: builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+0037: {
+0038:     options.SignIn.RequireConfirmedEmail = true;
+0039:     options.User.RequireUniqueEmail = true;
+0040: }).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+0041: 
+0042: // Persist DataProtection Keys (session reconnect, stable cookies/tokens after restart)
+0043: builder.Services.AddDataProtection()
+0044:     .PersistKeysToDbContext<AppDbContext>();
+0045: 
+0046: // JWT
+0047: var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
+0048: builder.Services.AddAuthentication(o =>
+0049: {
+0050:     o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+0051:     o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+0052: }).AddJwtBearer(o =>
+0053: {
+0054:     o.TokenValidationParameters = new TokenValidationParameters
+0055:     {
+0056:         ValidateIssuerSigningKey = true,
+0057:         IssuerSigningKey = new SymmetricSecurityKey(key),
+0058:         ValidateIssuer = true,
+0059:         ValidateAudience = true,
+0060:         ValidIssuer = builder.Configuration["Jwt:Issuer"],
+0061:         ValidAudience = builder.Configuration["Jwt:Audience"],
+0062:         ClockSkew = TimeSpan.FromMinutes(1)
+0063:     };
+0064: });
+0065: builder.Services.AddAuthorization();
+0066: 
+0067: builder.Services.AddEndpointsApiExplorer();
+0068: builder.Services.AddSwaggerGen();
+0069: 
+0070: builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
+0071: builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
+0072: builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+0073: builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+0074: // Map base DbContext to AppDbContext for generic repositories/UoW
+0075: builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
+0076: builder.Services.AddHttpContextAccessor();
+0077: builder.Services.AddScoped<IValidationPipeline, ValidationPipeline>();
+0078: builder.Services.AddScoped<IBusinessValidator<UpdateCustomerDto>, UpdateCustomerBusinessValidator>();
+0079: builder.Services.AddScoped<IPersistenceValidator<UpdateCustomerDto>, UpdateCustomerPersistenceValidator>();
+0080: builder.Services.AddScoped<ICustomerQueries, CustomerQueries>();
+0081: builder.Services.AddScoped<IFieldQueries, FieldQueries>();
+0082: builder.Services.AddScoped<ILayoutQueries, LayoutQueries>();
+0083: 
+0084: // CORS (dev friendly; tighten in production)
+0085: builder.Services.AddCors(options =>
+0086: {
+0087:     options.AddDefaultPolicy(policy =>
+0088:         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+0089: });
+0090: 
+0091: var app = builder.Build();
+0092: 
+0093: if (app.Environment.IsDevelopment())
+0094: {
+0095:     app.UseSwagger();
+0096:     app.UseSwaggerUI();
+0097: }
+0098: 
+0099: app.UseAuthentication();
+0100: app.UseAuthorization();
+0101: app.UseCors();
+0102: 
+0103: // Auto-migrate database on startup (both providers), with EnsureCreated fallback and seed
+0104: using (var scope = app.Services.CreateScope())
+0105: {
+0106:     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+0107:     try { db.Database.Migrate(); }
+0108:     catch { db.Database.EnsureCreated(); }
+0109: 
+0110:     if (!db.Customers.Any())
+0111:     {
+0112:         db.Customers.AddRange(
+0113:             new Customer { Code = "C001", Name = "客户A", Version = 1 },
+0114:             new Customer { Code = "C002", Name = "客户B", Version = 1 }
+0115:         );
+0116:         if (!db.FieldDefinitions.Any())
+0117:         {
+0118:             db.FieldDefinitions.Add(new FieldDefinition
+0119:             {
+0120:                 Key = "email",
+0121:                 DisplayName = "邮箱",
+0122:                 DataType = "email",
+0123:                 Tags = "[\"常用\"]",
+0124:                 Actions = "[{\"icon\":\"mail\",\"title\":\"发邮件\",\"type\":\"click\",\"action\":\"mailto\"}]"
+0125:             });
+0126:         }
+0127:         db.SaveChanges();
+0128:     }
+0129:     // Postgres JSONB indexes
+0130:     var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+0131:     if (isNpgsql)
+0132:     {
+0133:         try
+0134:         {
+0135:             db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON \"FieldValues\" USING GIN (\"Value\");");
+0136:             db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON \"FieldDefinitions\" USING GIN (\"Tags\");");
+0137:             db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON \"FieldDefinitions\" USING GIN (\"Actions\");");
+0138:             db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON \"UserLayouts\" USING GIN (\"LayoutJson\");");
+0139:             db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON \"FieldValues\" (\"CustomerId\", \"FieldDefinitionId\");");
+0140:         }
+0141:         catch { /* best-effort */ }
+0142:     }
+0143: }
+0144: 
+0145: // Auth endpoints
+0146: app.MapPost("/api/auth/register", async (UserManager<IdentityUser> um, IEmailSender email, RegisterDto dto, LinkGenerator links, HttpContext http) =>
+0147: {
+0148:     var user = new IdentityUser { UserName = dto.username, Email = dto.email, EmailConfirmed = false };
+0149:     var result = await um.CreateAsync(user, dto.password);
+0150:     if (!result.Succeeded) return Results.BadRequest(result.Errors);
+0151:     var code = await um.GenerateEmailConfirmationTokenAsync(user);
+0152:     var url = links.GetUriByName(http, "Activate", new { userId = user.Id, code });
+0153:     await email.SendAsync(dto.email, "Activate your account", $"Click to activate: {url}");
+0154:     return Results.Ok(new { status = "ok" });
+0155: });
+0156: 
+0157: app.MapGet("/api/auth/activate", async (UserManager<IdentityUser> um, string userId, string code) =>
+0158: {
+0159:     var user = await um.FindByIdAsync(userId);
+0160:     if (user == null) return Results.NotFound();
+0161:     var res = await um.ConfirmEmailAsync(user, code);
+0162:     return res.Succeeded ? Results.Ok(new { status = "ok" }) : Results.BadRequest(res.Errors);
+0163: }).WithName("Activate");
+0164: 
+0165: app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto) =>
+0166: {
+0167:     var user = await um.FindByNameAsync(dto.username) ?? await um.FindByEmailAsync(dto.username);
+0168:     if (user == null) return Results.Unauthorized();
+0169:     if (!user.EmailConfirmed) return Results.BadRequest(new { error = "Email not confirmed" });
+0170:     var pass = await sm.CheckPasswordSignInAsync(user, dto.password, false);
+0171:     if (!pass.Succeeded) return Results.Unauthorized();
+0172:     var tokens = await IssueTokensAsync(cfg, user, rts, key);
+0173:     return Results.Json(new { accessToken = tokens.accessToken, refreshToken = tokens.refreshToken, user = new { id = user.Id, username = user.UserName, role = "user" } });
+0174: });
+0175: 
+0176: app.MapPost("/api/auth/refresh", async (IConfiguration cfg, IRefreshTokenStore rts, UserManager<IdentityUser> um, RefreshDto dto) =>
+0177: {
+0178:     var stored = await rts.ValidateAsync(dto.refreshToken);
+0179:     if (stored == null) return Results.Unauthorized();
+0180:     var user = await um.FindByIdAsync(stored.UserId);
+0181:     if (user == null) return Results.Unauthorized();
+0182:     await rts.RevokeAsync(dto.refreshToken);
+0183:     var tokens = await IssueTokensAsync(cfg, user, rts, key);
+0184:     return Results.Json(new { accessToken = tokens.accessToken, refreshToken = tokens.refreshToken });
+0185: });
+0186: 
+0187: app.MapPost("/api/auth/logout", async (IRefreshTokenStore rts, LogoutDto dto) =>
+0188: {
+0189:     if (!string.IsNullOrWhiteSpace(dto.refreshToken)) await rts.RevokeAsync(dto.refreshToken);
+0190:     return Results.Ok(new { status = "ok" });
+0191: }).RequireAuthorization();
+0192: 
+0193: app.MapGet("/api/auth/session", (ClaimsPrincipal user) =>
+0194: {
+0195:     if (user?.Identity?.IsAuthenticated == true)
+0196:         return Results.Ok(new { valid = true, user = new { id = user.FindFirstValue(ClaimTypes.NameIdentifier), username = user.Identity!.Name } });
+0197:     return Results.Ok(new { valid = false });
+0198: }).RequireAuthorization();
+0199: 
+0200: // Business APIs (Customers, Fields, Layout) via query services (no direct DbContext)
+0201: app.MapGet("/api/customers", (ICustomerQueries q) => Results.Json(q.GetList()))
+0202:     .RequireAuthorization();
+0203: 
+0204: app.MapGet("/api/customers/{id:int}", (int id, ICustomerQueries q) =>
+0205: {
+0206:     var detail = q.GetDetail(id);
+0207:     return detail is null ? Results.NotFound() : Results.Json(detail);
+0208: }).RequireAuthorization();
+0209: 
+0210: app.MapGet("/api/fields", (IFieldQueries q) => Results.Json(q.GetDefinitions()))
+0211:     .RequireAuthorization();
+0212: 
+0213: app.MapPut("/api/customers/{id:int}", async (
+0214:     int id,
+0215:     UpdateCustomerDto dto,
+0216:     IRepository<Customer> repoCustomer,
+0217:     IRepository<FieldDefinition> repoDef,
+0218:     IRepository<FieldValue> repoVal,
+0219:     IUnitOfWork uow,
+0220:     IValidationPipeline pipe,
+0221:     HttpContext http) =>
+0222: {
+0223:     var vr = await pipe.ValidateAsync(dto, http);
+0224:     if (vr is not null) return vr;
+0225: 
+0226:     var c = repoCustomer.Query(x => x.Id == id).FirstOrDefault();
+0227:     if (c == null) return Results.NotFound();
+0228: 
+0229:     var defs = repoDef.Query().ToDictionary(d => d.Key, d => d);
+0230:     foreach (var f in dto.fields)
+0231:     {
+0232:         if (string.IsNullOrWhiteSpace(f.key))
+0233:             return ApiErrors.Validation("field key required");
+0234:         if (!defs.TryGetValue(f.key, out var def))
+0235:             return ApiErrors.Business($"unknown field: {f.key}");
+0236: 
+0237:         var json = System.Text.Json.JsonSerializer.Serialize(f.value);
+0238:         var val = new FieldValue { CustomerId = id, FieldDefinitionId = def.Id, Value = json, Version = c.Version + 1 };
+0239:         await repoVal.AddAsync(val);
+0240:     }
+0241: 
+0242:     // version bump (common behavior placeholder)
+0243:     c.Version += 1;
+0244:     repoCustomer.Update(c);
+0245:     await uow.SaveChangesAsync();
+0246:     return Results.Json(new { status = "success", newVersion = c.Version });
+0247: }).RequireAuthorization();
+0248: 
+0249: app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user, ILayoutQueries q) =>
+0250: {
+0251:     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+0252:     return Results.Json(q.GetUserLayout(uid, customerId));
+0253: }).RequireAuthorization();
+0254: 
+0255: app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout) =>
+0256: {
+0257:     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+0258:     var entity = repoLayout.Query(x => x.UserId == uid && x.CustomerId == customerId).FirstOrDefault();
+0259:     var json = layout.GetRawText();
+0260:     if (string.IsNullOrWhiteSpace(json))
+0261:         return ApiErrors.Validation("layout body required");
+0262:     if (entity == null)
+0263:     {
+0264:         entity = new UserLayout { UserId = uid, CustomerId = customerId, LayoutJson = json };
+0265:         await repoLayout.AddAsync(entity);
+0266:     }
+0267:     else
+0268:     {
+0269:         entity.LayoutJson = json;
+0270:         repoLayout.Update(entity);
+0271:     }
+0272:     await uow.SaveChangesAsync();
+0273:     return Results.Ok(new { status = "ok" });
+0274: }).RequireAuthorization();
+0275: 
+0276: // Admin/DB endpoints (development only)
+0277: app.MapGet("/api/admin/db/health", async (AppDbContext db) =>
+0278: {
+0279:     if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+0280:     var provider = db.Database.ProviderName ?? "unknown";
+0281:     var canConnect = await db.Database.CanConnectAsync();
+0282:     var info = new
+0283:     {
+0284:         provider,
+0285:         canConnect,
+0286:         counts = new
+0287:         {
+0288:             customers = await db.Customers.CountAsync(),
+0289:             fieldDefinitions = await db.FieldDefinitions.CountAsync(),
+0290:             fieldValues = await db.FieldValues.CountAsync(),
+0291:             userLayouts = await db.UserLayouts.CountAsync()
+0292:         }
+0293:     };
+0294:     return Results.Json(info);
+0295: });
+0296: 
+0297: app.MapPost("/api/admin/db/recreate", async (AppDbContext db) =>
+0298: {
+0299:     if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+0300:     await DatabaseInitializer.RecreateAsync(db);
+0301:     return Results.Ok(new { status = "recreated" });
+0302: });
+0303: 
+0304: app.Run();
+0305: 
+0306: static async Task<(string accessToken, string refreshToken)> IssueTokensAsync(IConfiguration cfg, IdentityUser user, IRefreshTokenStore rts, byte[] key)
+0307: {
+0308:     var issuer = cfg["Jwt:Issuer"];
+0309:     var audience = cfg["Jwt:Audience"];
+0310:     var accessMinutes = int.TryParse(cfg["Jwt:AccessMinutes"], out var m) ? m : 60;
+0311:     var claims = new[]
+0312:     {
+0313:         new Claim(ClaimTypes.NameIdentifier, user.Id),
+0314:         new Claim(ClaimTypes.Name, user.UserName ?? user.Email ?? ""),
+0315:         new Claim(ClaimTypes.Email, user.Email ?? "")
+0316:     };
+0317:     var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
+0318:     var jwt = new JwtSecurityToken(issuer, audience, claims, expires: DateTime.UtcNow.AddMinutes(accessMinutes), signingCredentials: creds);
+0319:     var access = new JwtSecurityTokenHandler().WriteToken(jwt);
+0320:     var refresh = await rts.CreateAsync(user.Id, DateTime.UtcNow.AddDays(int.TryParse(cfg["Jwt:RefreshDays"], out var d) ? d : 7));
+0321:     return (access, refresh);
+0322: }
+0323: 
+0324: class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor accessor) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
+0325: {
+0326:     private readonly IHttpContextAccessor _http = accessor;
+0327:     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+0328:     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
+0329:     public DbSet<Customer> Customers => Set<Customer>();
+0330:     public DbSet<CustomerAccess> CustomerAccesses => Set<CustomerAccess>();
+0331:     public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
+0332:     public DbSet<FieldValue> FieldValues => Set<FieldValue>();
+0333:     public DbSet<UserLayout> UserLayouts => Set<UserLayout>();
+0334:     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
+0335: 
+0336:     protected override void OnModelCreating(ModelBuilder b)
+0337:     {
+0338:         base.OnModelCreating(b);
+0339:         b.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+0340:         // shadow audit properties
+0341:         void Audit<T>() where T : class
+0342:         {
+0343:             b.Entity<T>().Property<DateTime>("CreatedAt");
+0344:             b.Entity<T>().Property<DateTime>("UpdatedAt");
+0345:             b.Entity<T>().Property<string>("CreatedBy").HasMaxLength(128);
+0346:             b.Entity<T>().Property<string>("UpdatedBy").HasMaxLength(128);
+0347:         }
+0348:         Audit<Customer>();
+0349:         Audit<FieldDefinition>();
+0350:         Audit<FieldValue>();
+0351:         Audit<UserLayout>();
+0352: 
+0353:         var isNpgsql = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+0354:         if (isNpgsql)
+0355:         {
+0356:             b.Entity<Customer>(e => e.Property(x => x.ExtData).HasColumnType("jsonb"));
+0357:             b.Entity<FieldDefinition>(e =>
+0358:             {
+0359:                 e.Property(x => x.Tags).HasColumnType("jsonb");
+0360:                 e.Property(x => x.Actions).HasColumnType("jsonb");
+0361:             });
+0362:             b.Entity<FieldValue>(e => e.Property(x => x.Value).HasColumnType("jsonb"));
+0363:             b.Entity<UserLayout>(e => e.Property(x => x.LayoutJson).HasColumnType("jsonb"));
+0364:         }
+0365:     }
+0366: 
+0367:     public override int SaveChanges(bool acceptAllChangesOnSuccess)
+0368:     {
+0369:         ApplyAudit();
+0370:         return base.SaveChanges(acceptAllChangesOnSuccess);
+0371:     }
+0372: 
+0373:     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+0374:     {
+0375:         ApplyAudit();
+0376:         return base.SaveChangesAsync(cancellationToken);
+0377:     }
+0378: 
+0379:     private void ApplyAudit()
+0380:     {
+0381:         var uid = _http.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+0382:         var now = DateTime.UtcNow;
+0383:         foreach (var e in ChangeTracker.Entries())
+0384:         {
+0385:             if (e.State == EntityState.Added)
+0386:             {
+0387:                 if (e.Metadata.FindProperty("CreatedAt") != null) e.Property("CreatedAt").CurrentValue = now;
+0388:                 if (e.Metadata.FindProperty("CreatedBy") != null) e.Property("CreatedBy").CurrentValue = uid;
+0389:             }
+0390:             if (e.State == EntityState.Added || e.State == EntityState.Modified)
+0391:             {
+0392:                 if (e.Metadata.FindProperty("UpdatedAt") != null) e.Property("UpdatedAt").CurrentValue = now;
+0393:                 if (e.Metadata.FindProperty("UpdatedBy") != null) e.Property("UpdatedBy").CurrentValue = uid;
+0394:             }
+0395:         }
+0396:     }
+0397: }
+0398: 
+0399: record RegisterDto(string username, string password, string email);
+0400: record LoginDto(string username, string password);
+0401: record RefreshDto(string refreshToken);
+0402: record LogoutDto(string refreshToken);
+0403: public record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
+0404: public record FieldDto(string key, object value);
+0405: 
+0406: class RefreshToken
+0407: {
+0408:     public int Id { get; set; }
+0409:     public string UserId { get; set; } = string.Empty;
+0410:     public string Token { get; set; } = string.Empty;
+0411:     public DateTime ExpiresAt { get; set; }
+0412:     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+0413:     public DateTime? RevokedAt { get; set; }
+0414: }
+0415: 
+0416: interface IRefreshTokenStore
+0417: {
+0418:     Task<string> CreateAsync(string userId, DateTime expiresAt);
+0419:     Task<RefreshToken?> ValidateAsync(string token);
+0420:     Task RevokeAsync(string token);
+0421: }
+0422: 
+0423: class EfRefreshTokenStore(AppDbContext db) : IRefreshTokenStore
+0424: {
+0425:     public async Task<string> CreateAsync(string userId, DateTime expiresAt)
+0426:     {
+0427:         var token = Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+0428:         db.RefreshTokens.Add(new RefreshToken { UserId = userId, Token = token, ExpiresAt = expiresAt });
+0429:         await db.SaveChangesAsync();
+0430:         return token;
+0431:     }
+0432: 
+0433:     public async Task<RefreshToken?> ValidateAsync(string token)
+0434:     {
+0435:         var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.Token == token);
+0436:         if (rt == null) return null;
+0437:         if (rt.RevokedAt != null || rt.ExpiresAt <= DateTime.UtcNow) return null;
+0438:         return rt;
+0439:     }
+0440: 
+0441:     public async Task RevokeAsync(string token)
+0442:     {
+0443:         var rt = await db.RefreshTokens.FirstOrDefaultAsync(x => x.Token == token);
+0444:         if (rt != null)
+0445:         {
+0446:             rt.RevokedAt = DateTime.UtcNow;
+0447:             await db.SaveChangesAsync();
+0448:         }
+0449:     }
+0450: }
+0451: 
+0452: class ConsoleEmailSender : IEmailSender
+0453: {
+0454:     public Task SendAsync(string to, string subject, string body)
+0455:     {
+0456:         Console.WriteLine($"[EMAIL] To:{to} Subject:{subject} Body:{body}");
+0457:         return Task.CompletedTask;
+0458:     }
+0459: }
+0460: 
+0461: interface IEmailSender { Task SendAsync(string to, string subject, string body); }

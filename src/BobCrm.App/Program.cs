@@ -9,7 +9,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddAntDesign();
 // Http client for API (strict separation)
 var apiBase = builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5200";
-builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase));
+builder.Services.AddTransient<BobCrm.App.Services.LangHeaderHandler>();
+builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
+    .AddHttpMessageHandler<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();

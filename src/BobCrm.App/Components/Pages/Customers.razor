@@ -1,18 +1,13 @@
-@page "/customers"
-@inject BobCrm.App.Services.AuthService Auth
-@inject NavigationManager Nav
-@inject IJSRuntime JS
+@page "/customers"`r`n`r`n@inject BobCrm.App.Services.AuthService Auth`r`n@inject NavigationManager Nav`r`n@inject IJSRuntime JS`r`n@inject BobCrm.App.Services.I18nService I18n`r`n`r`n<h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
-<h1>客户列表</h1>
-
-<Input Placeholder="搜索名称/编码" @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
+<Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 
 <table class="ant-table" style="width:100%">
-  <thead><tr><th>编码</th><th>名称</th><th>操作</th></tr></thead>
+  <thead><tr><th>@I18n.T("COL_CODE")</th><th>@I18n.T("COL_NAME")</th><th>@I18n.T("COL_ACTIONS")</th></tr></thead>
   <tbody>
     @foreach (var c in filtered)
     {
-        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">详情</Button></td></tr>
+        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">@I18n.T("BTN_DETAIL")</Button></td></tr>
     }
   </tbody>
 </table>
@@ -42,7 +37,7 @@
                 var resp = await Auth.GetWithRefreshAsync("/api/customers");
                 if (!resp.IsSuccessStatusCode)
                 {
-                    error = $"加载失败: {(int)resp.StatusCode}"; StateHasChanged(); return;
+                    error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}"; StateHasChanged(); return;
                 }
                 var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
                 data = json ?? new();
@@ -61,6 +56,13 @@
         public string? name { get; set; }
     }
 }
+
+
+
+
+
+
+
 
 
 

@@ -1,10 +1,4 @@
-@page "/login"
-@layout BobCrm.App.Components.Layout.EmptyLayout
-@inject IHttpClientFactory HttpFactory
-@inject IJSRuntime JS
-@inject NavigationManager Nav
-
-<h1>登录</h1>
+@page "/login"`r`n@layout BobCrm.App.Components.Layout.EmptyLayout`r`n`r`n@inject IHttpClientFactory HttpFactory`r`n@inject IJSRuntime JS`r`n@inject NavigationManager Nav`r`n@inject BobCrm.App.Services.I18nService I18n`r`n`r`n<h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
 
 <EditForm Model="model" OnValidSubmit="OnLoginAsync">
     <DataAnnotationsValidator />
@@ -17,7 +11,7 @@
             <InputPassword @bind-Value="model.password" />
         </div>
         <div>
-            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">登录</Button>
+            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
         </div>
     </div>
     
@@ -39,6 +33,8 @@
         {
             try
             {
+                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(savedLang)) { await I18n.LoadAsync(savedLang!); try { await JS.InvokeVoidAsync("bobcrm.setLang", savedLang); } catch { } }
                 var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
                 if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
@@ -60,16 +56,18 @@
             var http = HttpFactory.CreateClient("api");
             // allow local override
             try { var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase"); if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!); } catch { }
+            // attach X-Lang header
+            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
             var resp = await http.PostAsJsonAsync("/api/auth/login", model);
             if (!resp.IsSuccessStatusCode)
             {
-                error = $"登录失败: {(int)resp.StatusCode}";
+                error = I18n.T("ERR_LOGIN_FAILED");
                 return;
             }
             var json = await resp.Content.ReadFromJsonAsync<LoginResult>();
             if (json is null)
             {
-                error = "无法解析服务器响应"; return;
+                error = I18n.T("ERR_PARSE_RESPONSE"); return;
             }
             await JS.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
             await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
@@ -95,4 +93,12 @@
     public record LoginResult(string accessToken, string refreshToken, UserDto user);
     public record UserDto(string id, string username, string role);
 }
+
+
+
+
+
+
+
+
 

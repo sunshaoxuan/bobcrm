@@ -1,16 +1,16 @@
 @page "/activate"
 
-<h1>激活账户</h1>
+<h1>@I18n.T("LBL_ACTIVATE_TITLE")</h1>
 
 <div style="max-width:480px;">
-    <FormItem Label="UserId">
+    <FormItem Label='@I18n.T("LBL_USER_ID")'>
         <Input @bind-Value="_userId" />
     </FormItem>
-    <FormItem Label="Code">
+    <FormItem Label='@I18n.T("LBL_CODE")'>
         <Input @bind-Value="_code" />
     </FormItem>
     <FormItem>
-        <Button Type="primary" OnClick="HandleActivateAsync">激活</Button>
+        <Button Type="primary" OnClick="HandleActivateAsync">@I18n.T("BTN_ACTIVATE")</Button>
     </FormItem>
 
     <div>@_msg</div>
@@ -24,6 +24,9 @@
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public NavigationManager Nav { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+
+    [Inject] public BobCrm.App.Services.I18nService I18n { get; set; } = default!;
 
     protected override Task OnInitializedAsync()
     {
@@ -35,25 +38,39 @@
         return Task.CompletedTask;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(savedLang)) { await I18n.LoadAsync(savedLang!); try { await JS.InvokeVoidAsync("bobcrm.setLang", savedLang); } catch { } }
+            }
+            catch { }
+        }
+    }
+
     private async Task HandleActivateAsync()
     {
         if (string.IsNullOrWhiteSpace(_userId) || string.IsNullOrWhiteSpace(_code))
         {
-            _msg = "请填写 UserId 和 Code";
+            _msg = I18n.T("ERR_ACTIVATE_FILL");
             return;
         }
         var http = HttpFactory.CreateClient("api");
+        // attach X-Lang header
+        try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
         var url = $"/api/auth/activate?userId={Uri.EscapeDataString(_userId)}&code={Uri.EscapeDataString(_code)}";
         var resp = await http.GetAsync(url);
         if (resp.IsSuccessStatusCode)
         {
-            await Message.Success("激活成功，请前往登录");
+            await Message.Success(I18n.T("MSG_ACTIVATE_SUCCESS"));
             Nav.NavigateTo("/login");
         }
         else
         {
-            _msg = $"激活失败: {resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+            _msg = $"{I18n.T("ERR_ACTIVATE_FAILED")}: {resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
         }
     }
 }
-

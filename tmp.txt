@@ -1,0 +1,930 @@
+@page "/customers/{Id:int}"
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.FieldService FieldSvc
+@inject BobCrm.App.Services.AccessService AccessSvc
+@inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<h1>@I18n.T("LBL_CUSTOMER")</h1>
+
+<Space Style="margin-bottom:12px">
+    <span>@I18n.T("LBL_MODE")</span>
+    <RadioGroup @bind-Value="viewMode" Size="Size.Small">
+        <Radio Value="browse">浏览</Radio>
+        <Radio Value="edit">编辑</Radio>
+        <Radio Value="design">设计</Radio>
+    </RadioGroup>
+    @if (viewMode == "design")
+    {
+        <RadioGroup @bind-Value="layoutMode" Size="Size.Small">
+            <Radio Value="flow">流式布局</Radio>
+            <Radio Value="free">自由布局</Radio>
+        </RadioGroup>
+    }
+    <span>@I18n.T("LBL_PREVIEW")</span>
+    <RadioGroup @bind-Value="previewScope" Size="Size.Small">
+        <Radio Value="effective">有效</Radio>
+        <Radio Value="user">用户</Radio>
+        <Radio Value="default">默认</Radio>
+    </RadioGroup>
+    @if (viewMode == "design")
+    {
+        <Button OnClick="SaveLayoutAsync" Type="ButtonType.Primary" Loading="savingLayout">@I18n.T("BTN_SAVE")</Button>
+        @if (isAdmin)
+        {
+            <Button OnClick="SaveDefaultLayoutAsync" Loading="savingDefault">@I18n.T("BTN_SAVE_DEFAULT")</Button>
+            <Button OnClick="DeleteDefaultLayoutAsync">@I18n.T("BTN_DELETE_DEFAULT")</Button>
+        }
+        <Button OnClick="RestoreMyLayoutAsync">@I18n.T("BTN_RESTORE_DEFAULT")</Button>
+        <Button OnClick="ResetLayout">@I18n.T("BTN_RESET_LAYOUT")</Button>
+    }
+</Space>
+
+@if (detail is null)
+{
+    <Spin Tip="加载中..." />
+}
+else
+{
+    <Descriptions Title="基本信息" Column="2">
+        <DescriptionsItem Title="编码">@detail.code</DescriptionsItem>
+        <DescriptionsItem Title="名称">@detail.name</DescriptionsItem>
+        <DescriptionsItem Title="版本">@detail.version</DescriptionsItem>
+    </Descriptions>
+
+    <Divider />
+    <h3>@I18n.T("LBL_FIELDS")</h3>
+
+    @if (viewMode != "design" && layoutMode == "flow")
+    {
+        @if (viewMode == "edit")
+        {
+            <EditForm Model="this" OnValidSubmit="SaveAsync">
+                <Form Layout="FormLayout.Vertical">
+                    <Row Gutter="16">
+                        @foreach (var f in orderedFields)
+                        {
+                            var span = GetSpan(f);
+                            <Col Span="@span">
+                                <FormItem Label="@f.label">
+                                    @RenderField(f)
+                                </FormItem>
+                            </Col>
+                        }
+                    </Row>
+                    <FormItem>
+                        <Space>
+                            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="saving">@I18n.T("BTN_SAVE")</Button>
+                            <Button OnClick="Back">@I18n.T("BTN_BACK")</Button>
+                        </Space>
+                    </FormItem>
+                </Form>
+            </EditForm>
+        }
+        else
+        {
+            <Form Layout="FormLayout.Vertical">
+                <Row Gutter="16">
+                    @foreach (var f in orderedFields)
+                    {
+                        var span = GetSpan(f);
+                        <Col Span="@span">
+                            <FormItem Label="@f.label">
+                                @RenderFieldDisplay(f)
+                            </FormItem>
+                        </Col>
+                    }
+                </Row>
+                <FormItem>
+                    <Space>
+                        <Button OnClick="Back">@I18n.T("BTN_BACK")</Button>
+                    </Space>
+                </FormItem>
+            </Form>
+        }
+    }
+    else if (viewMode != "design" && layoutMode == "free")
+    {
+        @if (viewMode == "edit")
+        {
+            <EditForm Model="this" OnValidSubmit="SaveAsync">
+                <div class="free-canvas" style="position:relative; width:@(columns*cellW)px; height:@(CanvasHeightPx)px; overflow:auto; background-size:@(cellW)px @(rowH)px;">
+                    @foreach (var f in detail.fields)
+                    {
+                        <div class="free-item" style="position:absolute; left:@(Px(f.x))px; top:@(PxY(f.y))px; width:@(Px(f.w))px; height:@(PxY(f.h))px; border:1px solid #eee; background:#fff; padding:8px;">
+                            <div style="font-weight:600;margin-bottom:6px">@f.label</div>
+                            @RenderField(f)
+                        </div>
+                    }
+                </div>
+                <FormItem Style="margin-top:12px">
+                    <Space>
+                        <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="saving">保存</Button>
+                        <Button OnClick="Back">返回</Button>
+                    </Space>
+                </FormItem>
+            </EditForm>
+        }
+        else
+        {
+            <div class="free-canvas" style="position:relative; width:@(columns*cellW)px; height:@(CanvasHeightPx)px; overflow:auto; background-size:@(cellW)px @(rowH)px;">
+                @foreach (var f in detail.fields)
+                {
+                    <div class="free-item" style="position:absolute; left:@(Px(f.x))px; top:@(PxY(f.y))px; width:@(Px(f.w))px; height:@(PxY(f.h))px; border:1px solid #eee; background:#fff; padding:8px;">
+                        <div style="font-weight:600;margin-bottom:6px">@f.label</div>
+                        @RenderFieldDisplay(f)
+                    </div>
+                }
+            </div>
+            <FormItem Style="margin-top:12px">
+                <Space>
+                    <Button OnClick="Back">返回</Button>
+                </Space>
+            </FormItem>
+        }
+    }
+    else if (viewMode == "design" && layoutMode == "flow")
+    {
+        <div class="tag-palette" @ondragover="(e=>e.PreventDefault())" @ondrop="OnTagDropAsync">
+            <span>标签候选：</span>
+            @if (allTags.Count == 0)
+            {
+                <span>（无标签）</span>
+            }
+            else
+            {
+                @foreach (var t in allTags)
+                {
+                    <Button Size="ButtonSize.Small" Style="margin:0 6px 6px 0" draggable="true" @ondragstart="(e=>OnTagDragStart(t))" OnClick="(async ()=> await ApplyTagLayoutAsync(t))">@t</Button>
+                }
+            }
+            <span style="margin-left:8px;color:#888">可拖入下方画布以快速生成布局</span>
+            <div style="margin-top:8px">
+                <span>生成模式</span>
+                <RadioGroup @bind-Value="genMode" Size="Size.Small">
+                    <Radio Value="flow">流式</Radio>
+                    <Radio Value="free">自由</Radio>
+                </RadioGroup>
+                <Checkbox @bind-Checked="genSave" Style="margin-left:8px">立即保存</Checkbox>
+                @if (genSave)
+                {
+                    <span style="margin-left:8px">作用域</span>
+                    <RadioGroup @bind-Value="genScope" Size="Size.Small">
+                        <Radio Value="user">用户</Radio>
+                        @if (isAdmin)
+                        {
+                            <Radio Value="default">默认</Radio>
+                        }
+                    </RadioGroup>
+                }
+            </div>
+        </div>
+        <div class="design-container" @ondragover="OnDesignContainerDragOver" @ondrop="OnTagDropAsync">
+            @for (var i = 0; i < detail.fields.Count; i++)
+            {
+                var f = detail.fields[i];
+                <div class="design-tile" draggable="true"
+                     @ondragstart="(e => OnDragStart(i))"
+                     @ondragover="OnDragOver"
+                     @ondrop="(e => OnDrop(i))">
+                    <div class="design-tile-head">@f.label (@f.key)</div>
+                    <div class="design-tile-body">
+                        <span>宽度(1-12): </span>
+                        <InputNumber @bind-Value="f.width" Min="1" Max="12" />
+                        <div style="margin-top:8px">预览（不显示真实数据）：</div>
+                        <div>
+                            @RenderFieldPreview(f)
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <Alert Message="拖拽卡片可调整顺序；修改宽度后记得点击保存布局。" Type="AlertType.Info" ShowIcon />
+    }
+    else if (viewMode == "design" && layoutMode == "free")
+    {
+        <div>
+            <Space Style="margin-bottom:8px">
+                <span>列数</span>
+                <InputNumber @bind-Value="columns" Min="4" Max="24" />
+                <span>列宽(px)</span>
+                <InputNumber @bind-Value="cellW" Min="40" Max="200" />
+                <span>行高(px)</span>
+                <InputNumber @bind-Value="rowH" Min="30" Max="200" />
+            </Space>
+        </div>
+        <div @ref="canvasRef" class="free-canvas" style="position:relative; width:@(columns*cellW)px; height:@(CanvasHeightPx)px; overflow:auto; background-image:linear-gradient(0deg, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px); background-size:@(cellW)px @(rowH)px;" @onmousemove="OnCanvasMouseMove" @onmouseup="OnCanvasMouseUp" @onmouseleave="OnCanvasMouseUp">
+            @for (var i = 0; i < detail.fields.Count; i++)
+            {
+                var f = detail.fields[i];
+                <div class="free-item" style="position:absolute; left:@(Px(f.x))px; top:@(PxY(f.y))px; width:@(Px(f.w))px; height:@(PxY(f.h))px; border:1px dashed #999; background:#fafafa; padding:6px; cursor:move;" @onmousedown="(e => OnTileMouseDown(i, e))">
+                    <div class="design-tile-head">@f.label (@f.key)</div>
+                    <div class="design-tile-body">
+                        <span>宽(w):</span> <InputNumber @bind-Value="f.w" Min="1" Max="@columns" />
+                        <span style="margin-left:8px">高(h):</span> <InputNumber @bind-Value="f.h" Min="1" Max="50" />
+                        <div style="margin-top:6px">x:@(f.x) y:@(f.y)</div>
+                        <div style="margin-top:6px">预览（不显示真实数据）：@RenderFieldPreview(f)</div>
+                    </div>
+                    <div class="resize-handle" @onmousedown="(e => OnResizeMouseDown(i, e))"></div>
+                </div>
+            }
+            @if (guideCols.Count > 0)
+            {
+                @foreach (var gc in guideCols)
+                {
+                    <div class="guide-line-v" style="left:@(Px(gc))px"></div>
+                }
+            }
+            @if (guideRows.Count > 0)
+            {
+                @foreach (var gr in guideRows)
+                {
+                    <div class="guide-line-h" style="top:@(PxY(gr))px"></div>
+                }
+            }
+        </div>
+        <Alert Message="@I18n.T(\"TIP_DRAG\")" Type="AlertType.Info" ShowIcon />
+    }
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <Alert Message="@error" Type="AlertType.Error" ShowIcon />
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private DetailDto? detail;
+    private bool saving;
+    private string? error;
+    private List<BobCrm.App.Services.AccessService.AccessRow> access = new();
+    private string newUserId = string.Empty;
+    private bool newCanEdit = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+        if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
+        try
+        {
+            var u = await JS.InvokeAsync<string?>("localStorage.getItem", "user");
+            if (!string.IsNullOrWhiteSpace(u))
+            {
+                using var doc = JsonDocument.Parse(u);
+                var name = doc.RootElement.TryGetProperty("username", out var n) ? n.GetString() : null;
+                isAdmin = string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch { isAdmin = false; }
+
+        // load detail
+        var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
+        if (!resp.IsSuccessStatusCode)
+        { error = $"加载失败: {(int)resp.StatusCode}"; return; }
+        detail = await resp.Content.ReadFromJsonAsync<DetailDto>();
+
+        // enrich with field definitions (actions/required/validation)
+        var defs = await FieldSvc.GetDefinitionsAsync();
+        fieldDefs = defs;
+        var dict = defs.ToDictionary(d => d.key, d => d, StringComparer.OrdinalIgnoreCase);
+        foreach (var f in detail!.fields)
+        {
+            if (dict.TryGetValue(f.key, out var def))
+            {
+                f.required = def.required;
+                f.validation = def.validation;
+                f.actions = def.actions?.Select(a => new ActionDef { icon = a.icon, title = a.title, type = a.type, action = a.action }).ToList() ?? new();
+                f.width ??= 6; // default width
+            }
+        }
+        try
+        {
+            var tagInfos = await FieldSvc.GetTagsAsync();
+            allTags = tagInfos.Select(t => t.tag).ToList();
+        }
+        catch
+        {
+            allTags = fieldDefs.SelectMany(d => d.tags ?? Array.Empty<string>()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList();
+        }
+
+        await LoadLayoutAsync(previewScope);
+        if (isAdmin)
+        {
+            access = await AccessSvc.GetAsync(Id);
+        }
+    }
+
+    private async Task LoadLayoutAsync(string scope)
+    {
+        // load layout and apply order/width/position
+        var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/{Id}?scope={scope}");
+        if (layoutResp.IsSuccessStatusCode)
+        {
+            try
+            {
+                using var doc = await JsonDocument.ParseAsync(await layoutResp.Content.ReadAsStreamAsync());
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("mode", out var modeEl))
+                    {
+                        layoutMode = modeEl.GetString() == "free" ? "free" : "flow";
+                    }
+                    if (doc.RootElement.TryGetProperty("items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Object)
+                    {
+                        ApplyLayoutItems(itemsEl);
+                    }
+                    else
+                    {
+                        // legacy: root is mapping
+                        ApplyLayoutItems(doc.RootElement);
+                    }
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void ApplyLayoutItems(JsonElement root)
+    {
+        var map = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in root.EnumerateObject()) map[p.Name] = p.Value;
+        foreach (var f in detail!.fields)
+        {
+            if (map.TryGetValue(f.key, out var li))
+            {
+                if (li.TryGetProperty("order", out var orderEl)) f.order = orderEl.GetInt32();
+                if (li.TryGetProperty("w", out var wEl)) { f.width = wEl.GetInt32(); f.w = f.width; }
+                if (li.TryGetProperty("x", out var xEl)) f.x = xEl.GetInt32();
+                if (li.TryGetProperty("y", out var yEl)) f.y = yEl.GetInt32();
+                if (li.TryGetProperty("h", out var hEl)) f.h = hEl.GetInt32();
+            }
+        }
+        // order for flow
+        detail!.fields = detail.fields
+            .OrderBy(f => f.order ?? int.MaxValue)
+            .ThenBy(f => f.label)
+            .ToList();
+    }
+
+    private RenderFragment RenderField(FieldDto f) => builder =>
+    {
+        var seq = 0;
+        var type = f.type?.ToLowerInvariant() ?? "text";
+        switch (type)
+        {
+            case "email":
+                RenderText(builder, ref seq, f);
+                RenderActions(builder, ref seq, f);
+                break;
+            case "link":
+                RenderText(builder, ref seq, f);
+                RenderActions(builder, ref seq, f);
+                break;
+            case "file":
+                RenderText(builder, ref seq, f);
+                RenderActions(builder, ref seq, f);
+                break;
+            case "number":
+                builder.OpenComponent<InputNumber<decimal?>>(seq++);
+                builder.AddAttribute(seq++, "Value", BindConverter.FormatValue(f.valueAsDecimal));
+                builder.AddAttribute(seq++, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, v => f.value = v));
+                builder.CloseComponent();
+                RenderActions(builder, ref seq, f);
+                break;
+            case "rds":
+                // simple editor for RDP: ip/user/password(optional)
+                var r = f.rds ?? new RdsValue();
+                builder.OpenElement(seq++, "div");
+                builder.AddAttribute(seq++, "class", "rds-editor");
+                builder.OpenComponent<Input>(seq++);
+                builder.AddAttribute(seq++, "Placeholder", "IP 地址");
+                builder.AddAttribute(seq++, "Value", r.ip);
+                builder.AddAttribute(seq++, "ValueChanged", EventCallback.Factory.Create<string>(this, v => { (f.rds ??= new RdsValue()).ip = v; f.value = f.rds; }));
+                builder.CloseComponent();
+                builder.AddContent(seq++, " ");
+                builder.OpenComponent<Input>(seq++);
+                builder.AddAttribute(seq++, "Placeholder", "用户名");
+                builder.AddAttribute(seq++, "Value", r.user);
+                builder.AddAttribute(seq++, "ValueChanged", EventCallback.Factory.Create<string>(this, v => { (f.rds ??= new RdsValue()).user = v; f.value = f.rds; }));
+                builder.CloseComponent();
+                builder.CloseElement();
+                RenderActions(builder, ref seq, f);
+                break;
+            default:
+                RenderText(builder, ref seq, f);
+                RenderActions(builder, ref seq, f);
+                break;
+        }
+    };
+
+    private void RenderText(RenderTreeBuilder builder, ref int seq, FieldDto f)
+    {
+        builder.OpenComponent<Input>(seq++);
+        builder.AddAttribute(seq++, "Value", BindConverter.FormatValue(f.valueAsString));
+        builder.AddAttribute(seq++, "ValueChanged", EventCallback.Factory.Create<string>(this, v => f.value = v));
+        builder.AddAttribute(seq++, "ValueExpression", (Expression<Func<string>>)(() => f.valueAsString!));
+        builder.CloseComponent();
+    }
+
+    private RenderFragment RenderFieldDisplay(FieldDto f) => b =>
+    {
+        var seq = 0;
+        var type = f.type?.ToLowerInvariant() ?? "text";
+        var text = f.valueAsString ?? string.Empty;
+        switch (type)
+        {
+            case "email":
+                b.OpenElement(seq++, "a"); b.AddAttribute(seq++, "href", $"mailto:{text}"); b.AddContent(seq++, text); b.CloseElement();
+                break;
+            case "link":
+                b.OpenElement(seq++, "a"); b.AddAttribute(seq++, "href", text); b.AddAttribute(seq++, "target", "_blank"); b.AddContent(seq++, text); b.CloseElement();
+                break;
+            case "file":
+                b.AddContent(seq++, text);
+                break;
+            case "number":
+                b.AddContent(seq++, text);
+                break;
+            case "rds":
+                var r = f.rds; b.AddContent(seq++, r is null ? "" : $"{r.ip} ({r.user})");
+                break;
+            default:
+                b.AddContent(seq++, text);
+                break;
+        }
+    };
+
+    private RenderFragment RenderFieldPreview(FieldDto f) => b =>
+    {
+        var seq = 0;
+        var type = f.type?.ToLowerInvariant() ?? "text";
+        switch (type)
+        {
+            case "number":
+                b.OpenComponent<InputNumber<decimal?>>(seq++);
+                b.AddAttribute(seq++, "Disabled", true);
+                b.CloseComponent();
+                break;
+            default:
+                b.OpenComponent<Input>(seq++);
+                b.AddAttribute(seq++, "Disabled", true);
+                b.AddAttribute(seq++, "Placeholder", f.label);
+                b.CloseComponent();
+                break;
+        }
+    };
+
+    private void RenderActions(RenderTreeBuilder builder, ref int seq, FieldDto f)
+    {
+        if (f.actions is null || f.actions.Count == 0) return;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "style", "margin-top:6px");
+        foreach (var a in f.actions)
+        {
+            builder.OpenComponent<Button>(seq++);
+            builder.AddAttribute(seq++, nameof(Button.Type), ButtonType.Default);
+            builder.AddAttribute(seq++, nameof(Button.Size), ButtonSize.Small);
+            builder.AddAttribute(seq++, nameof(Button.ChildContent), (RenderFragment)(b =>
+            {
+                var s = 0;
+                if (!string.IsNullOrWhiteSpace(a.icon)) { b.OpenComponent<Icon>(s++); b.AddAttribute(s++, "Type", a.icon); b.CloseComponent(); b.AddContent(s++, " "); }
+                b.AddContent(s++, a.title ?? a.action);
+            }));
+            var captured = a; var capturedF = f;
+            builder.AddAttribute(seq++, nameof(Button.OnClick), EventCallback.Factory.Create(this, () => InvokeAction(capturedF, captured)));
+            builder.CloseComponent();
+            builder.AddContent(seq++, " ");
+        }
+        builder.CloseElement();
+    }
+
+    private async Task InvokeAction(FieldDto f, ActionDef action)
+    {
+        var act = (action.action ?? action.type ?? "").ToLowerInvariant();
+        var val = f.valueAsString ?? string.Empty;
+        switch (act)
+        {
+            case "mailto":
+                await JS.InvokeVoidAsync("bobcrm.openUrl", $"mailto:{val}");
+                break;
+            case "openlink":
+            case "open":
+                await JS.InvokeVoidAsync("bobcrm.openUrl", val);
+                break;
+            case "copy":
+                await JS.InvokeAsync<bool>("bobcrm.copyText", val);
+                break;
+            case "downloadrdp":
+            case "rdp":
+                var r = f.rds ?? new RdsValue();
+                var content = $"full address:s:{r.ip}\nusername:s:{r.user}\nprompt for credentials:i:1\n";
+                await JS.InvokeVoidAsync("bobcrm.downloadFile", $"{f.label ?? f.key}.rdp", content, "application/x-rdp");
+                break;
+        }
+    }
+
+    private IEnumerable<FieldDto> orderedFields => (detail?.fields ?? new()).OrderBy(f => f.order ?? int.MaxValue).ThenBy(f => f.label);
+
+    private int GetSpan(FieldDto f)
+    {
+        var w = f.width ?? 6;
+        if (w < 1) w = 1; if (w > 12) w = 12;
+        return (int)w;
+    }
+
+    private int? dragIndex;
+    private void OnDragStart(int index) => dragIndex = index;
+    private void OnDragOver(DragEventArgs e) => e.PreventDefault();
+    private void OnDrop(int index)
+    {
+        if (dragIndex is null || detail is null) return;
+        var from = dragIndex.Value; var to = index;
+        if (from == to) return;
+        var item = detail.fields[from];
+        detail.fields.RemoveAt(from);
+        if (to >= detail.fields.Count) detail.fields.Add(item); else detail.fields.Insert(to, item);
+        // reassign order
+        for (int i = 0; i < detail.fields.Count; i++) detail.fields[i].order = i;
+        dragIndex = null;
+        StateHasChanged();
+    }
+
+    private string? draggingTag;
+    private List<string> allTags = new();
+    private List<BobCrm.App.Services.FieldService.FieldDefinitionDto> fieldDefs = new();
+    private void OnTagDragStart(string tag) { draggingTag = tag; }
+    private void OnDesignContainerDragOver(DragEventArgs e) { e.PreventDefault(); }
+    private async Task OnTagDropAsync(DragEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(draggingTag))
+        {
+            await ApplyTagLayoutAsync(draggingTag!);
+            draggingTag = null;
+        }
+    }
+    private async Task ApplyTagLayoutAsync(string tag)
+    {
+        if (detail is null) return;
+        try
+        {
+            var json = await FieldSvc.GenerateLayoutAsync(Id, new[] { tag }, genMode, genSave, genScope);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                if (doc.RootElement.TryGetProperty("mode", out var mEl)) layoutMode = mEl.GetString() == "free" ? "free" : "flow";
+                if (doc.RootElement.TryGetProperty("items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Object)
+                {
+                    ApplyLayoutItems(itemsEl);
+                }
+            }
+            if (genSave)
+            {
+                await LoadLayoutAsync(previewScope);
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"生成布局失败: {ex.Message}";
+        }
+    }
+    private bool HasTag(string key, string tagLower)
+    {
+        var def = fieldDefs.FirstOrDefault(d => string.Equals(d.key, key, StringComparison.OrdinalIgnoreCase));
+        if (def == null || def.tags == null) return false;
+        return def.tags.Any(t => string.Equals(t, tagLower, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private ElementReference canvasRef;
+    private int columns = 12;
+    private int cellW = 100; // px per column
+    private int rowH = 70;   // px per row
+    private int Px(int? grid) => (grid ?? 1) * cellW;
+    private int PxY(int? grid) => (grid ?? 1) * rowH;
+    private int CanvasHeightPx => (1 + (detail?.fields?.Max(f => (f.y ?? 0) + (f.h ?? 1)) ?? 10)) * rowH;
+
+    private int? draggingIndex;
+    private int? resizingIndex;
+    private double _offsetX, _offsetY; // mouse offset within tile (px)
+    private int _startW, _startH; // grid units
+    private double _canvasLeft, _canvasTop;
+
+    private async Task CaptureCanvasRectAsync()
+    {
+        try
+        {
+            var rect = await JS.InvokeAsync<JsonElement>("bobcrm.getRect", canvasRef);
+            _canvasLeft = rect.GetProperty("left").GetDouble();
+            _canvasTop = rect.GetProperty("top").GetDouble();
+        }
+        catch { _canvasLeft = 0; _canvasTop = 0; }
+    }
+
+    private async Task OnTileMouseDown(int index, MouseEventArgs e)
+    {
+        draggingIndex = index;
+        await CaptureCanvasRectAsync();
+        var f = detail!.fields[index];
+        var leftPx = Px(f.x);
+        var topPx = PxY(f.y);
+        _offsetX = e.ClientX - _canvasLeft - leftPx;
+        _offsetY = e.ClientY - _canvasTop - topPx;
+    }
+
+    private void OnCanvasMouseMove(MouseEventArgs e)
+    {
+        if (detail is null) return;
+        guideCols.Clear(); guideRows.Clear();
+        if (draggingIndex is not null)
+        {
+            var idx = draggingIndex.Value;
+            var f = detail.fields[idx];
+            var relX = e.ClientX - _canvasLeft - _offsetX;
+            var relY = e.ClientY - _canvasTop - _offsetY;
+            var gx = Math.Max(0, (int)Math.Round(relX / cellW));
+            var gy = Math.Max(0, (int)Math.Round(relY / rowH));
+            var maxX = Math.Max(0, columns - (f.w ?? 1));
+            if (gx > maxX) gx = maxX;
+            f.x = gx; f.y = gy;
+            CollectGuides(idx);
+            StateHasChanged();
+        }
+        else if (resizingIndex is not null)
+        {
+            var idx = resizingIndex.Value;
+            var f = detail.fields[idx];
+            // compute new width/height based on mouse relative to tile origin
+            var originX = Px(f.x);
+            var originY = PxY(f.y);
+            var relW = e.ClientX - _canvasLeft - originX;
+            var relH = e.ClientY - _canvasTop - originY;
+            var gw = Math.Max(1, (int)Math.Round(relW / cellW));
+            var gh = Math.Max(1, (int)Math.Round(relH / rowH));
+            var maxW = Math.Max(1, columns - (f.x ?? 0));
+            if (gw > maxW) gw = maxW;
+            f.w = gw; f.h = gh;
+            CollectGuides(idx);
+            StateHasChanged();
+        }
+    }
+
+    private void OnCanvasMouseUp()
+    {
+        draggingIndex = null;
+        resizingIndex = null;
+        guideCols.Clear(); guideRows.Clear();
+    }
+
+    private void OnResizeMouseDown(int index, MouseEventArgs e)
+    {
+        resizingIndex = index;
+        _startW = detail!.fields[index].w ?? 1;
+        _startH = detail!.fields[index].h ?? 1;
+        e.PreventDefault();
+    }
+
+    private readonly List<int> guideCols = new();
+    private readonly List<int> guideRows = new();
+    private void CollectGuides(int currentIndex)
+    {
+        if (detail is null) return;
+        var me = detail.fields[currentIndex];
+        var meLeft = me.x ?? 0; var meRight = (me.x ?? 0) + (me.w ?? 1);
+        var meTop = me.y ?? 0; var meBottom = (me.y ?? 0) + (me.h ?? 1);
+        for (int i = 0; i < detail.fields.Count; i++)
+        {
+            if (i == currentIndex) continue;
+            var f = detail.fields[i];
+            var left = f.x ?? 0; var right = (f.x ?? 0) + (f.w ?? 1);
+            var top = f.y ?? 0; var bottom = (f.y ?? 0) + (f.h ?? 1);
+            if (left == meLeft || right == meLeft || left == meRight || right == meRight)
+            {
+                if (!guideCols.Contains(left)) guideCols.Add(left);
+                if (!guideCols.Contains(right)) guideCols.Add(right);
+                if (!guideCols.Contains(meLeft)) guideCols.Add(meLeft);
+                if (!guideCols.Contains(meRight)) guideCols.Add(meRight);
+            }
+            if (top == meTop || bottom == meTop || top == meBottom || bottom == meBottom)
+            {
+                if (!guideRows.Contains(top)) guideRows.Add(top);
+                if (!guideRows.Contains(bottom)) guideRows.Add(bottom);
+                if (!guideRows.Contains(meTop)) guideRows.Add(meTop);
+                if (!guideRows.Contains(meBottom)) guideRows.Add(meBottom);
+            }
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (detail is null) return;
+        saving = true; error = null;
+        try
+        {
+            var fieldsPayload = detail.fields.Select(f => new { key = f.key, value = f.value });
+            var body = new { fields = fieldsPayload, expectedVersion = detail.version };
+            var req = new HttpRequestMessage(HttpMethod.Put, $"/api/customers/{detail.id}")
+            {
+                Content = JsonContent.Create(body)
+            };
+            var resp = await Auth.SendWithRefreshAsync(req);
+            if (!resp.IsSuccessStatusCode)
+            {
+                if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    error = "数据已变更，请刷新后重试。";
+                }
+                else
+                {
+                    error = $"保存失败: {(int)resp.StatusCode}";
+                }
+                return;
+            }
+            // reload detail
+            await OnInitializedAsync();
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private bool savingLayout;
+    private async Task SaveLayoutAsync()
+    {
+        if (detail is null) return;
+        try
+        {
+            savingLayout = true;
+            // build layout json
+            var items = new Dictionary<string, object?>();
+            for (int i = 0; i < detail.fields.Count; i++)
+            {
+                var f = detail.fields[i];
+                if (layoutMode == "free")
+                {
+                    items[f.key] = new { x = f.x ?? 0, y = f.y ?? 0, w = f.w ?? (f.width ?? 6), h = f.h ?? 1 };
+                }
+                else
+                {
+                    var w = GetSpan(f);
+                    items[f.key] = new { order = i, w };
+                }
+            }
+            var payload = new { mode = layoutMode, items };
+            var req = new HttpRequestMessage(HttpMethod.Post, $"/api/layout/{Id}")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            var resp = await Auth.SendWithRefreshAsync(req);
+            if (!resp.IsSuccessStatusCode) error = $"布局保存失败: {(int)resp.StatusCode}";
+            else await LoadLayoutAsync(previewScope);
+        }
+        finally
+        {
+            savingLayout = false;
+        }
+    }
+
+    private bool savingDefault;
+    private async Task SaveDefaultLayoutAsync()
+    {
+        if (detail is null) return;
+        try
+        {
+            savingDefault = true;
+            var items = new Dictionary<string, object?>();
+            for (int i = 0; i < detail.fields.Count; i++)
+            {
+                var f = detail.fields[i];
+                if (layoutMode == "free") items[f.key] = new { x = f.x ?? 0, y = f.y ?? 0, w = f.w ?? (f.width ?? 6), h = f.h ?? 1 };
+                else { var w = GetSpan(f); items[f.key] = new { order = i, w }; }
+            }
+            var payload = new { mode = layoutMode, items };
+            var req = new HttpRequestMessage(HttpMethod.Post, $"/api/layout/{Id}?scope=default")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            var resp = await Auth.SendWithRefreshAsync(req);
+            if (!resp.IsSuccessStatusCode)
+                error = resp.StatusCode == System.Net.HttpStatusCode.Forbidden ? "无权限保存为默认模板（需要管理员）" : $"保存默认模板失败: {(int)resp.StatusCode}";
+            else if (previewScope == "default")
+                await LoadLayoutAsync("default");
+        }
+        finally { savingDefault = false; }
+    }
+
+    private async Task RestoreMyLayoutAsync()
+    {
+        var resp = await Auth.SendWithRefreshAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/layout/{Id}?scope=user"));
+        if (!resp.IsSuccessStatusCode) error = $"恢复默认失败: {(int)resp.StatusCode}";
+        else await LoadLayoutAsync(previewScope);
+    }
+
+    private async Task DeleteDefaultLayoutAsync()
+    {
+        var resp = await Auth.SendWithRefreshAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/layout/{Id}?scope=default"));
+        if (!resp.IsSuccessStatusCode)
+            error = resp.StatusCode == System.Net.HttpStatusCode.Forbidden ? "无权限删除默认模板（需要管理员）" : $"删除默认模板失败: {(int)resp.StatusCode}";
+        else if (previewScope == "default")
+            await LoadLayoutAsync("default");
+    }
+
+    private void ResetLayout()
+    {
+        if (detail is null) return;
+        for (int i = 0; i < detail.fields.Count; i++)
+        {
+            var f = detail.fields[i];
+            f.order = i;
+            f.width = 6;
+            // also reset free layout grid in a simple flow: 3-col rows by default
+            var defW = Math.Min(3, columns);
+            f.w = defW; f.h = 1;
+            var col = i % Math.Max(1, (columns / defW));
+            var row = i / Math.Max(1, (columns / defW));
+            f.x = col * defW;
+            f.y = row * 1;
+        }
+    }
+
+    private void Back() => Nav.NavigateTo("/customers");
+
+    public class DetailDto
+    {
+        public int id { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
+        public int version { get; set; }
+        public List<FieldDto> fields { get; set; } = new();
+    }
+    public class FieldDto
+    {
+        public string key { get; set; } = string.Empty;
+        public string label { get; set; } = string.Empty;
+        public string type { get; set; } = "text";
+        public object? value { get; set; }
+        public string? valueAsString
+        {
+            get => value?.ToString();
+            set => this.value = value;
+        }
+        public decimal? valueAsDecimal
+        {
+            get
+            {
+                if (value is null) return null;
+                if (decimal.TryParse(value.ToString(), out var d)) return d;
+                return null;
+            }
+        }
+        public bool required { get; set; }
+        public string? validation { get; set; }
+        public List<ActionDef> actions { get; set; } = new();
+        public RdsValue? rds
+        {
+            get
+            {
+                try
+                {
+                    if (value is null) return null;
+                    var json = value is string s ? s : System.Text.Json.JsonSerializer.Serialize(value);
+                    return System.Text.Json.JsonSerializer.Deserialize<RdsValue>(json!);
+                }
+                catch { return null; }
+            }
+            set { this.value = value; }
+        }
+        public int? order { get; set; }
+        public int? width { get; set; }
+        // free layout
+        public int? x { get; set; }
+        public int? y { get; set; }
+        public int? w { get; set; }
+        public int? h { get; set; } = 1;
+    }
+
+    public class ActionDef { public string? icon { get; set; } public string? title { get; set; } public string? type { get; set; } public string? action { get; set; } }
+    public class RdsValue { public string? ip { get; set; } public string? user { get; set; } public string? password { get; set; } }
+    public class LayoutItem { public int order { get; set; } public int w { get; set; } public int? x { get; set; } public int? y { get; set; } public int? h { get; set; } }
+
+    private string viewMode = "browse";
+    private string layoutMode = "flow";
+    private string genMode = "flow";
+    private bool genSave = false;
+    private string genScope = "user";
+    private bool isAdmin;
+    private string previewScope
+    {
+        get => _previewScope;
+        set
+        {
+            if (_previewScope != value)
+            {
+                _previewScope = value;
+                _ = LoadLayoutAsync(value);
+            }
+        }
+    }
+    private string _previewScope = "effective";
+}
+

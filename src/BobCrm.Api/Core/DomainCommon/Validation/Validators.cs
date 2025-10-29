@@ -9,13 +9,13 @@ public class UpdateCustomerBusinessValidator : IBusinessValidator<UpdateCustomer
     public IEnumerable<ValidationError> Validate(UpdateCustomerDto model)
     {
         if (model.fields == null || model.fields.Count == 0)
-            yield return new ValidationError("fields", "Required", "fields required");
+            yield return new ValidationError("fields", "FieldsRequired", "");
         else
         {
             foreach (var f in model.fields)
             {
                 if (string.IsNullOrWhiteSpace(f.key))
-                    yield return new ValidationError("key", "Required", "field key required");
+                    yield return new ValidationError("key", "Required", "");
             }
         }
     }
@@ -34,7 +34,7 @@ public class UpdateCustomerPersistenceValidator : IPersistenceValidator<UpdateCu
             foreach (var f in model.fields)
             {
                 if (!defs.ContainsKey(f.key))
-                    errors.Add(new ValidationError("key", "UnknownField", $"unknown field: {f.key}"));
+                    errors.Add(new ValidationError("key", "UnknownField", f.key));
             }
         }
         return Task.FromResult<IEnumerable<ValidationError>>(errors);
@@ -56,7 +56,7 @@ public class UpdateCustomerCommonValidator : ICommonValidator<UpdateCustomerDto>
             if (d.Required)
             {
                 if (!byKey.TryGetValue(d.Key, out var val) || val is null || string.IsNullOrWhiteSpace(val.ToString()))
-                    yield return new ValidationError(d.Key, "Required", $"{d.DisplayName} is required");
+                    yield return new ValidationError(d.Key, "Required", "");
             }
             if (!string.IsNullOrWhiteSpace(d.Validation) && byKey.TryGetValue(d.Key, out var v) && v is not null)
             {
@@ -66,9 +66,9 @@ public class UpdateCustomerCommonValidator : ICommonValidator<UpdateCustomerDto>
                 try { match = System.Text.RegularExpressions.Regex.IsMatch(text, d.Validation!); }
                 catch { patternError = true; }
                 if (patternError)
-                    yield return new ValidationError(d.Key, "InvalidPattern", $"invalid validation pattern for {d.Key}");
+                    yield return new ValidationError(d.Key, "InvalidPattern", "");
                 else if (!match)
-                    yield return new ValidationError(d.Key, "InvalidFormat", $"{d.DisplayName} format invalid");
+                    yield return new ValidationError(d.Key, "InvalidFormat", "");
             }
         }
     }

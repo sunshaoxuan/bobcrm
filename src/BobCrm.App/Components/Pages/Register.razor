@@ -1,21 +1,23 @@
 @page "/register"
 
-<h1>注册</h1>
+@inject BobCrm.App.Services.I18nService I18n
+
+<h1>@I18n.T("LBL_REGISTER")</h1>
 
 <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
     <DataAnnotationsValidator />
     <div style="max-width:420px;">
-        <FormItem Label="用户名">
+        <FormItem Label='@I18n.T("LBL_USERNAME")'>
             <Input @bind-Value="_model.Username" />
         </FormItem>
-        <FormItem Label="邮箱">
+        <FormItem Label='@I18n.T("LBL_EMAIL")'>
             <Input @bind-Value="_model.Email" />
         </FormItem>
-        <FormItem Label="密码">
+        <FormItem Label='@I18n.T("LBL_PASSWORD")'>
             <InputPassword @bind-Value="_model.Password" />
         </FormItem>
         <FormItem>
-            <Button Type="primary" OnClick="HandleRegisterAsync">注册</Button>
+            <Button Type="primary" OnClick="HandleRegisterAsync">@I18n.T("BTN_REGISTER")</Button>
         </FormItem>
     </div>
     <ValidationSummary />
@@ -23,7 +25,8 @@
 </EditForm>
 
 <div style="margin-top:16px; color:#888;">
-    注册成功后，开发环境下请在 API 控制台查看激活链接，或前往 <a href="/activate">激活页面</a> 手动输入 UserId + Code 进行激活。
+    @I18n.T("TXT_REGISTER_HELP") <a href="/activate">@I18n.T("LBL_ACTIVATE_TITLE")</a>
+    
 </div>
 
 @code {
@@ -33,19 +36,35 @@
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
     [Inject] public NavigationManager Nav { get; set; } = default!;
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(savedLang)) { await I18n.LoadAsync(savedLang!); try { await JS.InvokeVoidAsync("bobcrm.setLang", savedLang); } catch { } }
+            }
+            catch { }
+        }
+    }
 
     private async Task HandleRegisterAsync()
     {
         try
         {
             var http = HttpFactory.CreateClient("api");
+            // attach X-Lang header
+            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
             var resp = await http.PostAsJsonAsync("/api/auth/register", new { username = _model.Username, password = _model.Password, email = _model.Email });
             if (!resp.IsSuccessStatusCode)
             {
                 _error = await resp.Content.ReadAsStringAsync();
                 return;
             }
-            await Message.Success("注册成功，请进行邮箱激活（开发环境查看 API 控制台）");
+            await Message.Success(I18n.T("MSG_REGISTER_SUCCESS"));
             Nav.NavigateTo("/activate");
         }
         catch (Exception ex)
@@ -61,4 +80,3 @@
         public string Password { get; set; } = string.Empty;
     }
 }
-

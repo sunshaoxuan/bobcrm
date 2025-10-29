@@ -1,89 +1,122 @@
-@page "/setup"
-@layout BobCrm.App.Components.Layout.EmptyLayout
-@inject IJSRuntime JS
-@inject NavigationManager Nav
-
-<h1>初始配置</h1>
-
-<div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">API 基础地址</div>
-        <Input @bind-Value="apiBase" Placeholder="例如 http://localhost:5200 或 https://your.api" />
-        <div style="color:#999;margin-top:6px">为空则使用内置默认地址（appsettings 的 Api:BaseUrl）。建议填写实际后端地址。</div>
+@page "/setup"`r`n@layout BobCrm.App.Components.Layout.EmptyLayout`r`n`r`n@inject IJSRuntime JS`r`n@inject NavigationManager Nav`r`n@inject BobCrm.App.Services.I18nService I18n`r`n@inject BobCrm.App.Services.AuthService Auth`r`n`r`n<h1>@I18n.T("LBL_SETUP")</h1>
+
+<div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_API_BASE")</div>
+        <Input @bind-Value="apiBase" Placeholder='@I18n.T("PH_API_BASE_EXAMPLE")' />
+        <div style="color:#999;margin-top:6px">@I18n.T("LBL_API_BASE_HINT")</div>
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_LANG")</div>
+        <select @bind="lang" style="width:220px;height:28px">
+            @if (langs.Count == 0)
+            {
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+            }
+            else
+            {
+                @foreach (var l in langs)
+                {
+                    <option value="@l.code">@l.name</option>
+                }
+            }
+        </select>
     </div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">界面语言</div>
-        <select @bind="lang" style="width:220px;height:28px"><option value="zh">中文</option><option value="ja">日本語</option><option value="en">English</option></select>
-    </div>
-    <Divider />
-    <h3>管理员账户</h3>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员用户名</div>
-        <Input @bind-Value="adminUser" />
-    </div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员邮箱</div>
-        <Input @bind-Value="adminEmail" />
-    </div>
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员密码</div>
+    <Divider />
+    <h3>@I18n.T("LBL_ADMIN_ACCOUNT")</h3>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_USERNAME")</div>
+        <Input @bind-Value="adminUser" />
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_EMAIL")</div>
+        <Input @bind-Value="adminEmail" />
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN")@I18n.T("LBL_PASSWORD")</div>
         <InputPassword @bind-Value="adminPassword" />
     </div>
-    <div>
+    <div>
         <Space>
-            <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">保存并进入登录</Button>
-            <Button OnClick="GotoLogin">已有配置，去登录</Button>
+            <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">@I18n.T("BTN_SAVE_AND_GO_LOGIN")</Button>
+            <Button OnClick="GotoLogin">@I18n.T("BTN_GO_LOGIN")</Button>
         </Space>
-    </div>
-</div>
-
-@code {
-    private string? apiBase;
+    </div>
+</div>
+
+@code {
+    private string? apiBase;
     private string lang = "ja";
-    private bool saving;
-    private string adminUser = "admin";
-    private string adminEmail = "admin@local";
-    private string adminPassword = "Admin@12345";
-
+    private List<LangItem> langs = new();
+    private bool saving;
+    private string adminUser = "admin";
+    private string adminEmail = "admin@local";
+    private string adminPassword = "Admin@12345";
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             try
             {
+                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(savedLang)) { await I18n.LoadAsync(savedLang!); try { await JS.InvokeVoidAsync("bobcrm.setLang", savedLang); } catch { } }
                 var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
                 if (!string.IsNullOrWhiteSpace(storedBase)) apiBase = storedBase;
                 var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
                 if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+                // load languages list from API (works without auth)
+                try
+                {
+                    var http = await Auth.CreateClientWithLangAsync();
+                    var resp = await http.GetAsync("/api/i18n/languages");
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var json = await resp.Content.ReadFromJsonAsync<List<LangItem>>();
+                        if (json is not null && json.Count > 0) langs = json;
+                    }
+                }
+                catch { }
                 StateHasChanged();
             }
             catch { }
         }
     }
-
-    private async Task SaveAsync()
-    {
-        saving = true;
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(apiBase))
-            {
-                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
-            }
-            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
-            // initialize admin (best-effort)
+
+    private async Task SaveAsync()
+    {
+        saving = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(apiBase))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
+            }
+            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+            // initialize admin (best-effort)
             try
             {
-                var http = new HttpClient();
+                var http = await Auth.CreateClientWithLangAsync();
                 if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                    await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
+                await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
             }
-            catch { }
-            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
-            Nav.NavigateTo("/login", forceLoad: true);
-        }
-        finally { saving = false; }
-    }
-
+            catch { }
+            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+        finally { saving = false; }
+    }
+
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
-}
 
+    public class LangItem { public string code { get; set; } = string.Empty; public string name { get; set; } = string.Empty; }
+}
+
+
+
+
+
+
+
+
 
 
 

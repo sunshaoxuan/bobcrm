@@ -1,0 +1,61 @@
+Summary
+  Generated on: 2025/10/29 - 21:16:12
+  Coverage date: 2025/10/29 - 21:15:53
+  Parser: Cobertura
+  Assemblies: 1
+  Classes: 39
+  Files: 21
+  Line coverage: 91.8%
+  Covered lines: 895
+  Uncovered lines: 79
+  Coverable lines: 974
+  Total lines: 1410
+  Branch coverage: 73% (209 of 286)
+  Covered branches: 209
+  Total branches: 286
+  Method coverage: 91.1% (103 of 113)
+  Full method coverage: 86.7% (98 of 113)
+  Covered methods: 103
+  Fully covered methods: 98
+  Total methods: 113
+
+BobCrm.Api                                                                     91.8%
+  AccessUpsert                                                                  100%
+  AdminSetupDto                                                                   0%
+  AppDbContext                                                                 98.3%
+  BobCrm.Api.Application.Queries.CustomerQueries                               97.3%
+  BobCrm.Api.Application.Queries.FieldQueries                                    97%
+  BobCrm.Api.Application.Queries.LayoutQueries                                  100%
+  BobCrm.Api.Core.DomainCommon.ApiErrors                                         75%
+  BobCrm.Api.Core.DomainCommon.Validation.UpdateCustomerBusinessValidator       100%
+  BobCrm.Api.Core.DomainCommon.Validation.UpdateCustomerCommonValidator         100%
+  BobCrm.Api.Core.DomainCommon.Validation.UpdateCustomerPersistenceValidator    100%
+  BobCrm.Api.Core.DomainCommon.Validation.ValidationPipeline                    100%
+  BobCrm.Api.Core.DomainCommon.ValidationError                                  100%
+  BobCrm.Api.Core.DomainCommon.ValidationResult                                   0%
+  BobCrm.Api.Domain.Customer                                                     80%
+  BobCrm.Api.Domain.CustomerAccess                                              100%
+  BobCrm.Api.Domain.FieldDefinition                                             100%
+  BobCrm.Api.Domain.FieldValue                                                  100%
+  BobCrm.Api.Domain.LocalizationLanguage                                       66.6%
+  BobCrm.Api.Domain.LocalizationResource                                        100%
+  BobCrm.Api.Domain.UserLayout                                                  100%
+  BobCrm.Api.Infrastructure.DatabaseInitializer                                  95%
+  BobCrm.Api.Infrastructure.Ef.Configurations.CustomerConfiguration             100%
+  BobCrm.Api.Infrastructure.Ef.Configurations.FieldDefinitionConfiguration      100%
+  BobCrm.Api.Infrastructure.Ef.Configurations.UserLayoutConfiguration           100%
+  BobCrm.Api.Infrastructure.Ef.EfRepository<T>                                   90%
+  BobCrm.Api.Infrastructure.Ef.EfUnitOfWork                                     100%
+  BobCrm.Api.Infrastructure.EfLocalization                                     83.3%
+  BobCrm.Api.Infrastructure.LangHelper                                          100%
+  ConsoleEmailSender                                                            100%
+  EfRefreshTokenStore                                                           100%
+  FieldDto                                                                      100%
+  GenerateLayoutRequest                                                         100%
+  LoginDto                                                                      100%
+  LogoutDto                                                                     100%
+  Program                                                                      88.4%
+  RefreshDto                                                                    100%
+  RefreshToken                                                                 83.3%
+  RegisterDto                                                                   100%
+  UpdateCustomerDto                                                             100%

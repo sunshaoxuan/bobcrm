@@ -27,6 +27,15 @@ public class AuthService
             }
         }
         catch { }
+        // attach language header (no auth required)
+        try
+        {
+            var lang = await _js.InvokeAsync<string?>("localStorage.getItem", "lang") ?? "ja";
+            if (http.DefaultRequestHeaders.Contains("X-Lang"))
+                http.DefaultRequestHeaders.Remove("X-Lang");
+            http.DefaultRequestHeaders.Add("X-Lang", lang.ToLowerInvariant());
+        }
+        catch { }
         return http;
     }
 
@@ -40,6 +49,8 @@ public class AuthService
         }
         return http;
     }
+
+    public Task<HttpClient> CreateClientWithLangAsync() => CreateBaseClientAsync();
 
     public async Task<HttpResponseMessage> GetWithRefreshAsync(string url)
     {

@@ -1,6 +1,8 @@
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
 using System.Security.Claims;
+using BobCrm.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
 
 namespace BobCrm.Api.Application.Queries;
 
@@ -17,10 +19,11 @@ public class CustomerQueries : ICustomerQueries
     private readonly IRepository<FieldValue> _repoVal;
     private readonly IRepository<CustomerAccess> _repoAccess;
     private readonly IHttpContextAccessor _http;
+    private readonly ILocalization _loc;
 
-    public CustomerQueries(IRepository<Customer> repoCustomer, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal, IRepository<CustomerAccess> repoAccess, IHttpContextAccessor http)
+    public CustomerQueries(IRepository<Customer> repoCustomer, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal, IRepository<CustomerAccess> repoAccess, IHttpContextAccessor http, ILocalization loc)
     {
-        _repoCustomer = repoCustomer; _repoDef = repoDef; _repoVal = repoVal; _repoAccess = repoAccess; _http = http;
+        _repoCustomer = repoCustomer; _repoDef = repoDef; _repoVal = repoVal; _repoAccess = repoAccess; _http = http; _loc = loc;
     }
 
     public List<object> GetList()
@@ -44,11 +47,12 @@ public class CustomerQueries : ICustomerQueries
         var c = _repoCustomer.Query(x => x.Id == id).FirstOrDefault();
         if (c == null) return null;
         var defs = _repoDef.Query().ToList();
+        var lang = LangHelper.GetLang(_http.HttpContext!);
         var values = _repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
         var fields = defs.Select(d => new
         {
             key = d.Key,
-            label = d.DisplayName,
+            label = _loc.T(d.DisplayName, lang),
             type = d.DataType,
             value =
                 values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"")

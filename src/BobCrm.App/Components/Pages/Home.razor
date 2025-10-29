@@ -1,11 +1,12 @@
 @page "/"
 
-<PageTitle>首页</PageTitle>
+@inject BobCrm.App.Services.I18nService I18n
 
-<h1>欢迎使用 BobCRM</h1>
+<PageTitle>@I18n.T("LBL_HOME")</PageTitle>
+
+<h1>@I18n.T("LBL_WELCOME")</h1>
 
 <p>
-    - 先<a href="/login">登录</a><br />
-    - 打开<a href="/customers">客户列表</a>
+    - <a href="/login">@I18n.T("LBL_LOGIN_TITLE")</a><br />
+    - <a href="/customers">@I18n.T("MENU_CUSTOMERS")</a>
 </p>
-

@@ -1,0 +1,100 @@
+@page "/login"
+@layout BobCrm.App.Components.Layout.EmptyLayout
+@inject IHttpClientFactory HttpFactory
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
+
+<EditForm Model="model" OnValidSubmit="OnLoginAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div>
+        <div>
+            <Input @bind-Value="model.username" />
+        </div>
+        <div>
+            <InputPassword @bind-Value="model.password" />
+        </div>
+        <div>
+            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
+        </div>
+    </div>
+    
+</EditForm>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+}
+
+@code {
+    private LoginModel model = new();
+    private bool loading = false;
+    private string? error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
+                if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
+                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    Nav.NavigateTo("/customers", forceLoad: true);
+                    return;
+                }
+            }
+            catch { }
+        }
+    }
+
+    private async Task OnLoginAsync()
+    {
+        loading = true; error = null;
+        try
+        {
+            var http = HttpFactory.CreateClient("api");
+            // allow local override
+            try { var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase"); if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!); } catch { }
+            var resp = await http.PostAsJsonAsync("/api/auth/login", model);
+            if (!resp.IsSuccessStatusCode)
+            {
+                error = $"@I18n.T("LBL_LOGIN_TITLE")失败: {(int)resp.StatusCode}";
+                return;
+            }
+            var json = await resp.Content.ReadFromJsonAsync<LoginResult>();
+            if (json is null)
+            {
+                error = "无法解析服务器响应"; return;
+            }
+            await JS.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
+            await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+            var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
+            await JS.InvokeVoidAsync("localStorage.setItem", "user", userStr);
+            Nav.NavigateTo("/customers", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        public string username { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
+    }
+    public record LoginResult(string accessToken, string refreshToken, UserDto user);
+    public record UserDto(string id, string username, string role);
+}
+
+
+

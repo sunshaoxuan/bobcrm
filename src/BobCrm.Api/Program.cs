@@ -170,11 +170,15 @@ app.MapGet("/api/auth/activate", async (UserManager<IdentityUser> um, string use
     return res.Succeeded ? Results.Ok(new { status = "ok" }) : Results.BadRequest(res.Errors);
 }).WithName("Activate");
 
-app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto) =>
+app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto, ILocalization loc, HttpContext http) =>
 {
     var user = await um.FindByNameAsync(dto.username) ?? await um.FindByEmailAsync(dto.username);
     if (user == null) return Results.Unauthorized();
-    if (!user.EmailConfirmed) return Results.BadRequest(new { error = "Email not confirmed" });
+    if (!user.EmailConfirmed)
+    {
+        var lang = LangHelper.GetLang(http);
+        return Results.BadRequest(new { error = loc.T("ERR_EMAIL_NOT_CONFIRMED", lang) });
+    }
     var pass = await sm.CheckPasswordSignInAsync(user, dto.password, false);
     if (!pass.Succeeded) return Results.Unauthorized();
     var tokens = await IssueTokensAsync(cfg, user, rts, key);
@@ -258,7 +262,7 @@ app.MapGet("/api/i18n/resources", (AppDbContext db) =>
 
 app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
 {
-    lang = (lang ?? "zh").ToLowerInvariant();
+    lang = (lang ?? "ja").ToLowerInvariant();
     var query = db.LocalizationResources.AsNoTracking();
     var dict = new Dictionary<string, string>();
     foreach (var r in query)
@@ -266,21 +270,25 @@ app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
         var val = lang switch
         {
             "ja" => r.JA ?? r.ZH ?? r.EN ?? r.Key,
-            "en" => r.EN ?? r.ZH ?? r.JA ?? r.Key,
-            _ => r.ZH ?? r.JA ?? r.EN ?? r.Key
+            "en" => r.EN ?? r.JA ?? r.ZH ?? r.Key,
+            "zh" => r.ZH ?? r.JA ?? r.EN ?? r.Key,
+            _ => r.JA ?? r.ZH ?? r.EN ?? r.Key
         };
         dict[r.Key] = val;
     }
     return Results.Json(dict);
-}).RequireAuthorization();
+});
 
 // languages list
 app.MapGet("/api/i18n/languages", (AppDbContext db) =>
 {
-    // static list for now; could be a table later
-    var langs = new[] { new { code = "ja", name = "日本語" }, new { code = "zh", name = "中文" }, new { code = "en", name = "English" } };
-    return Results.Json(langs);
-}).RequireAuthorization();
+    var list = db.LocalizationLanguages.AsNoTracking().Select(l => new { code = l.Code, name = l.NativeName }).ToList();
+    if (list.Count == 0)
+    {
+        list = new[] { new { code = "ja", name = "日本語" }, new { code = "zh", name = "中文" }, new { code = "en", name = "English" } }.ToList();
+    }
+    return Results.Json(list);
+});
 
 // Tags overview for quick layout
 app.MapGet("/api/fields/tags", (IRepository<FieldDefinition> repoDef) =>
@@ -316,7 +324,8 @@ app.MapPut("/api/customers/{id:int}", async (
     IRepository<CustomerAccess> repoAccess,
     IUnitOfWork uow,
     IValidationPipeline pipe,
-    HttpContext http) =>
+    HttpContext http,
+    ILocalization loc) =>
 {
     var vr = await pipe.ValidateAsync(dto, http);
     if (vr is not null) return vr;
@@ -333,15 +342,24 @@ app.MapPut("/api/customers/{id:int}", async (
     if (c == null) return Results.NotFound();
     // If client provides expectedVersion, enforce optimistic concurrency; otherwise allow update
     if (dto.expectedVersion.HasValue && dto.expectedVersion.Value != c.Version)
-        return ApiErrors.Concurrency("version mismatch");
+    {
+        var lang = LangHelper.GetLang(http);
+        return ApiErrors.Concurrency(loc.T("ERR_CONCURRENCY", lang));
+    }
 
     var defs = repoDef.Query().ToDictionary(d => d.Key, d => d);
     foreach (var f in dto.fields)
     {
         if (string.IsNullOrWhiteSpace(f.key))
-            return ApiErrors.Validation("field key required");
+        {
+            var lang = LangHelper.GetLang(http);
+            return ApiErrors.Validation(loc.T("ERR_FIELD_KEY_REQUIRED", lang));
+        }
         if (!defs.TryGetValue(f.key, out var def))
-            return ApiErrors.Business($"unknown field: {f.key}");
+        {
+            var lang = LangHelper.GetLang(http);
+            return ApiErrors.Business($"{loc.T("ERR_UNKNOWN_FIELD", lang)}: {f.key}");
+        }
 
         var json = System.Text.Json.JsonSerializer.Serialize(f.value);
         var val = new FieldValue { CustomerId = id, FieldDefinitionId = def.Id, Value = json, Version = c.Version + 1 };
@@ -362,7 +380,7 @@ app.MapGet("/api/layout/{customerId:int}", (int customerId, ClaimsPrincipal user
     return Results.Json(q.GetLayout(uid, customerId, scope));
 }).RequireAuthorization();
 
-app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout, HttpContext http, string? scope) =>
+app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincipal user, IRepository<UserLayout> repoLayout, IUnitOfWork uow, System.Text.Json.JsonElement layout, HttpContext http, string? scope, ILocalization loc) =>
 {
     var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
     var saveScope = (scope ?? "user").ToLowerInvariant();
@@ -377,7 +395,10 @@ app.MapPost("/api/layout/{customerId:int}", async (int customerId, ClaimsPrincip
     var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == customerId).FirstOrDefault();
     var json = layout.GetRawText();
     if (string.IsNullOrWhiteSpace(json))
-        return ApiErrors.Validation("layout body required");
+    {
+        var lang = LangHelper.GetLang(http);
+        return ApiErrors.Validation(loc.T("ERR_LAYOUT_BODY_REQUIRED", lang));
+    }
     if (entity == null)
     {
         entity = new UserLayout { UserId = targetUserId, CustomerId = customerId, LayoutJson = json };
@@ -420,10 +441,15 @@ app.MapPost("/api/layout/{customerId:int}/generate", async (
     IRepository<FieldDefinition> repoDef,
     IRepository<UserLayout> repoLayout,
     IUnitOfWork uow,
-    GenerateLayoutRequest req) =>
+    GenerateLayoutRequest req,
+    ILocalization loc,
+    HttpContext http) =>
 {
     if (req.tags == null || req.tags.Length == 0)
-        return ApiErrors.Validation("tags required");
+    {
+        var lang = LangHelper.GetLang(http);
+        return ApiErrors.Validation(loc.T("ERR_TAGS_REQUIRED", lang));
+    }
 
     var mode = string.Equals(req.mode, "free", StringComparison.OrdinalIgnoreCase) ? "free" : "flow";
     var defs = repoDef.Query().ToList();

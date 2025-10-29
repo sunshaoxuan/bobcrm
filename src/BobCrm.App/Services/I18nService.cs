@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using System.Text.Json;
 
 namespace BobCrm.App.Services;
@@ -6,12 +7,15 @@ public class I18nService
 {
     private readonly IHttpClientFactory _httpFactory;
     private readonly AuthService _auth;
+    private readonly IJSRuntime _js;
     private Dictionary<string, string> _dict = new(StringComparer.OrdinalIgnoreCase);
     public string CurrentLang { get; private set; } = "ja";
     public event Action? OnChanged;
 
-    public I18nService(IHttpClientFactory httpFactory, AuthService auth)
-    { _httpFactory = httpFactory; _auth = auth; }
+    public I18nService(IHttpClientFactory httpFactory, AuthService auth, IJSRuntime js)
+    {
+        _httpFactory = httpFactory; _auth = auth; _js = js;
+    }
 
     public string T(string key)
     {
@@ -21,7 +25,23 @@ public class I18nService
 
     public async Task LoadAsync(string lang, CancellationToken ct = default)
     {
-        lang = (lang ?? "zh").ToLowerInvariant();
+        lang = (lang ?? "ja").ToLowerInvariant();
+        // Try local cache first
+        try
+        {
+            var cached = await _js.InvokeAsync<string?>("localStorage.getItem", $"i18n:{lang}:v1");
+            if (!string.IsNullOrWhiteSpace(cached))
+            {
+                var mapCached = JsonSerializer.Deserialize<Dictionary<string, string>>(cached!);
+                if (mapCached is not null && mapCached.Count > 0)
+                {
+                    _dict = new Dictionary<string, string>(mapCached, StringComparer.OrdinalIgnoreCase);
+                    CurrentLang = lang; OnChanged?.Invoke();
+                }
+            }
+        }
+        catch { }
+
         var http = await _auth.CreateClientWithAuthAsync();
         var resp = await http.GetAsync($"/api/i18n/{lang}", ct);
         if (!resp.IsSuccessStatusCode) return;
@@ -32,7 +52,12 @@ public class I18nService
             map[p.Name] = p.Value.GetString() ?? p.Name;
         }
         _dict = map; CurrentLang = lang; OnChanged?.Invoke();
+        try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+        try
+        {
+            var json = JsonSerializer.Serialize(map);
+            await _js.InvokeVoidAsync("localStorage.setItem", $"i18n:{lang}:v1", json);
+        }
+        catch { }
     }
 }
-
-
