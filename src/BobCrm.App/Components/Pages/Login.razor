@@ -33,14 +33,22 @@
     private bool loading = false;
     private string? error;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
-        if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
-        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
-        if (!string.IsNullOrWhiteSpace(token))
+        if (firstRender)
         {
-            Nav.NavigateTo("/customers", forceLoad: true);
+            try
+            {
+                var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
+                if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
+                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    Nav.NavigateTo("/customers", forceLoad: true);
+                    return;
+                }
+            }
+            catch { }
         }
     }
 

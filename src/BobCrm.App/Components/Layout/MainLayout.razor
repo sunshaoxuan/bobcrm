@@ -44,11 +44,19 @@
         Nav.NavigateTo("/login", forceLoad: true);
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var saved = await _js.InvokeAsync<string?>("localStorage.getItem", "lang");
-        if (!string.IsNullOrWhiteSpace(saved)) lang = saved!;
-        await I18n.LoadAsync(lang);
+        if (firstRender)
+        {
+            try
+            {
+                var saved = await _js.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(saved)) lang = saved!;
+                await I18n.LoadAsync(lang);
+                StateHasChanged();
+            }
+            catch { }
+        }
     }
 
     private async Task OnLangChangedHtml(ChangeEventArgs e)

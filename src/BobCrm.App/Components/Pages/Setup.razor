@@ -40,12 +40,20 @@
     private string adminEmail = "admin@local";
     private string adminPassword = "Admin@12345";
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-        if (!string.IsNullOrWhiteSpace(storedBase)) apiBase = storedBase;
-        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
-        if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+        if (firstRender)
+        {
+            try
+            {
+                var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+                if (!string.IsNullOrWhiteSpace(storedBase)) apiBase = storedBase;
+                var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+                StateHasChanged();
+            }
+            catch { }
+        }
     }
 
     private async Task SaveAsync()

@@ -29,19 +29,27 @@
     private IEnumerable<CustomerItem> filtered => string.IsNullOrWhiteSpace(keyword)
         ? data : data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // simple auth guard
-        var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
-        if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
-
-        var resp = await Auth.GetWithRefreshAsync("/api/customers");
-        if (!resp.IsSuccessStatusCode)
+        if (firstRender)
         {
-            error = $"加载失败: {(int)resp.StatusCode}"; return;
+            try
+            {
+                // simple auth guard
+                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
+
+                var resp = await Auth.GetWithRefreshAsync("/api/customers");
+                if (!resp.IsSuccessStatusCode)
+                {
+                    error = $"加载失败: {(int)resp.StatusCode}"; StateHasChanged(); return;
+                }
+                var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
+                data = json ?? new();
+                StateHasChanged();
+            }
+            catch { }
         }
-        var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
-        data = json ?? new();
     }
 
     private void OpenDetail(int id) => Nav.NavigateTo($"/customers/{id}");
