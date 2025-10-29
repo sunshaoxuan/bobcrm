@@ -7,16 +7,15 @@
 
 <Input Placeholder="搜索名称/编码" @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 
-<Table TItem="CustomerItem" DataSource="filtered" RowKey="@(c => c.id)" Size="TableSize.Middle">
-    <Column TData="CustomerItem" Title="编码" Field="c => c.code" />
-    <Column TData="CustomerItem" Title="名称" Field="c => c.name" />
-    <Column TData="CustomerItem" Title="操作">
-        <Template Context="c">
-            <Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">详情</Button>
-        </Template>
-    </Column>
-</Table>
-
+<table class="ant-table" style="width:100%">
+  <thead><tr><th>编码</th><th>名称</th><th>操作</th></tr></thead>
+  <tbody>
+    @foreach (var c in filtered)
+    {
+        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">详情</Button></td></tr>
+    }
+  </tbody>
+</table>
 @if (error is not null)
 {
     <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
@@ -54,3 +53,6 @@
         public string? name { get; set; }
     }
 }
+
+
+

@@ -2,49 +2,39 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<Layout style="min-height:100vh">
-    <Layout.Sider Collapsible="true" @bind-Collapsed="collapsed">
+<div style="min-height:100vh;display:flex">
+    <div style="width:220px;background:#001529;color:#fff">
         <div class="logo" style="height:32px;margin:16px;background:rgba(255,255,255,0.3)"></div>
-        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Inline" SelectedKeys="new string[]{selected}" OnClick="OnMenuClick">
-            <MenuItem Key="customers">
-                <Icon Type="user" />
-                客户列表
-            </MenuItem>
-        </Menu>
-    </Layout.Sider>
-    <Layout>
-        <Layout.Header style="background:#fff;padding:0 16px;display:flex;align-items:center;justify-content:space-between">
+        <ul style="list-style:none;padding:0 12px">
+            <li><a href="/customers" style="color:#fff;text-decoration:none">客户列表</a></li>
+        </ul>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column">
+        <div style="background:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee">
             <div>BobCRM</div>
-            <Space>
-                <select @onchange="OnLangChangedHtml" value="@lang" style="width:120px;height:28px">
+            <div>
+                <select @onchange="OnLangChangedHtml" value="@lang" style="width:120px;height:28px;margin-right:8px">
                     <option value="zh">中文</option>
                     <option value="ja">日本語</option>
                     <option value="en">English</option>
                 </select>
                 <Button OnClick="Logout">退出</Button>
-            </Space>
-        </Layout.Header>
-        <Layout.Content style="margin:16px">
+            </div>
+        </div>
+        <div style="padding:16px">
             <div style="padding:16px;background:#fff;min-height:360px">
                 @Body
             </div>
-        </Layout.Content>
-    </Layout>
-</Layout>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
-    private bool collapsed;
-    private string selected = "customers";
     private string lang = "zh";
 
     [Inject] BobCrm.App.Services.I18nService I18n { get; set; } = default!;
     [Inject] IJSRuntime _js { get; set; } = default!;
-
-    private void OnMenuClick(MenuItem item)
-    {
-        if (item.Key == "customers") Nav.NavigateTo("/customers");
-    }
 
     private async Task Logout()
     {

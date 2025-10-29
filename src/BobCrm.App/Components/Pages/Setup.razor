@@ -5,36 +5,32 @@
 
 <h1>初始配置</h1>
 
-<Form Layout="FormLayout.Vertical">
-    <FormItem Label="API 基础地址">
+<div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">API 基础地址</div>
         <Input @bind-Value="apiBase" Placeholder="例如 http://localhost:5200 或 https://your.api" />
         <div style="color:#999;margin-top:6px">为空则使用内置默认地址（appsettings 的 Api:BaseUrl）。建议填写实际后端地址。</div>
-    </FormItem>
-    <FormItem Label="界面语言">
-        <Select TValue="string" TItem="string" @bind-Value="lang" Style="width:220px">
-            <SelectOption Value="zh">中文</SelectOption>
-            <SelectOption Value="ja">日本語</SelectOption>
-            <SelectOption Value="en">English</SelectOption>
-        </Select>
-    </FormItem>
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">界面语言</div>
+        <select @bind="lang" style="width:220px;height:28px"><option value="zh">中文</option><option value="ja">日本語</option><option value="en">English</option></select>
+    </div>
     <Divider />
     <h3>管理员账户</h3>
-    <FormItem Label="管理员用户名">
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员用户名</div>
         <Input @bind-Value="adminUser" />
-    </FormItem>
-    <FormItem Label="管理员邮箱">
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员邮箱</div>
         <Input @bind-Value="adminEmail" />
-    </FormItem>
-    <FormItem Label="管理员密码">
+    </div>
+    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">管理员密码</div>
         <InputPassword @bind-Value="adminPassword" />
-    </FormItem>
-    <FormItem>
+    </div>
+    <div>
         <Space>
             <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">保存并进入登录</Button>
             <Button OnClick="GotoLogin">已有配置，去登录</Button>
         </Space>
-    </FormItem>
-</Form>
+    </div>
+</div>
 
 @code {
     private string? apiBase;
@@ -79,3 +75,5 @@
 
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 }
+
+

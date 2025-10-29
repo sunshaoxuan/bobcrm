@@ -9,17 +9,17 @@
 <EditForm Model="model" OnValidSubmit="OnLoginAsync">
     <DataAnnotationsValidator />
     <ValidationSummary />
-    <Form Layout="FormLayout.Vertical">
-        <FormItem Label="用户名或邮箱">
+    <div>
+        <div>
             <Input @bind-Value="model.username" />
-        </FormItem>
-        <FormItem Label="密码">
+        </div>
+        <div>
             <InputPassword @bind-Value="model.password" />
-        </FormItem>
-        <FormItem>
+        </div>
+        <div>
             <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">登录</Button>
-        </FormItem>
-    </Form>
+        </div>
+    </div>
     
 </EditForm>
 
@@ -87,3 +87,4 @@
     public record LoginResult(string accessToken, string refreshToken, UserDto user);
     public record UserDto(string id, string username, string role);
 }
+
