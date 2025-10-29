@@ -71,8 +71,8 @@
             {
                 var http = new HttpClient();
                 if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
-                var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword });
-                _ = resp.IsSuccessStatusCode;
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
             }
             catch { }
             await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
@@ -83,6 +83,7 @@
 
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 }
+
 
 
 
