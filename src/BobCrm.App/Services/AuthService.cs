@@ -15,9 +15,24 @@ public class AuthService
         _js = js;
     }
 
-    public async Task<HttpClient> CreateClientWithAuthAsync()
+    private async Task<HttpClient> CreateBaseClientAsync()
     {
         var http = _httpFactory.CreateClient("api");
+        try
+        {
+            var baseUrl = await _js.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+            if (!string.IsNullOrWhiteSpace(baseUrl))
+            {
+                http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
+            }
+        }
+        catch { }
+        return http;
+    }
+
+    public async Task<HttpClient> CreateClientWithAuthAsync()
+    {
+        var http = await CreateBaseClientAsync();
         var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
         if (!string.IsNullOrWhiteSpace(access))
         {
@@ -46,7 +61,7 @@ public class AuthService
     {
         var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
         if (string.IsNullOrWhiteSpace(refresh)) return false;
-        var http = _httpFactory.CreateClient("api");
+        var http = await CreateBaseClientAsync();
         var res = await http.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = refresh });
         if (!res.IsSuccessStatusCode) return false;
         var json = await res.Content.ReadFromJsonAsync<TokenPair>();

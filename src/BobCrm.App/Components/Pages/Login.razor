@@ -20,6 +20,7 @@
             <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">登录</Button>
         </FormItem>
     </Form>
+    
 </EditForm>
 
 @if (!string.IsNullOrEmpty(error))
@@ -34,6 +35,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var configured = await JS.InvokeAsync<string?>("localStorage.getItem", "configured");
+        if (string.IsNullOrWhiteSpace(configured)) { Nav.NavigateTo("/setup"); return; }
         var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
         if (!string.IsNullOrWhiteSpace(token))
         {
@@ -47,6 +50,8 @@
         try
         {
             var http = HttpFactory.CreateClient("api");
+            // allow local override
+            try { var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase"); if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!); } catch { }
             var resp = await http.PostAsJsonAsync("/api/auth/login", model);
             if (!resp.IsSuccessStatusCode)
             {

@@ -1,0 +1,59 @@
+@page "/setup"
+@layout BobCrm.App.Components.Layout.EmptyLayout
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<h1>初始配置</h1>
+
+<Form Layout="FormLayout.Vertical">
+    <FormItem Label="API 基础地址">
+        <Input @bind-Value="apiBase" Placeholder="例如 http://localhost:5200 或 https://your.api" />
+        <div style="color:#999;margin-top:6px">为空则使用内置默认地址（appsettings 的 Api:BaseUrl）。建议填写实际后端地址。</div>
+    </FormItem>
+    <FormItem Label="界面语言">
+        <Select TValue="string" TItem="string" @bind-Value="lang" Style="width:220px">
+            <SelectOption Value="zh">中文</SelectOption>
+            <SelectOption Value="ja">日本語</SelectOption>
+            <SelectOption Value="en">English</SelectOption>
+        </Select>
+    </FormItem>
+    <FormItem>
+        <Space>
+            <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">保存并进入登录</Button>
+            <Button OnClick="GotoLogin">已有配置，去登录</Button>
+        </Space>
+    </FormItem>
+</Form>
+
+@code {
+    private string? apiBase;
+    private string lang = "zh";
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+        if (!string.IsNullOrWhiteSpace(storedBase)) apiBase = storedBase;
+        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+        if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+    }
+
+    private async Task SaveAsync()
+    {
+        saving = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(apiBase))
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
+            }
+            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+        finally { saving = false; }
+    }
+
+    private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
+}
+
