@@ -29,6 +29,9 @@ window.bobcrm = {
   setLang: function (lang) {
     try { document.documentElement.lang = (lang || 'ja'); } catch (e) { }
   },
+  getOrigin: function () {
+    try { return window.location.origin; } catch (e) { return ''; }
+  },
   getCookie: function (name) {
     const m = document.cookie.match(new RegExp('(?:^|; )' + encodeURIComponent(name) + '=([^;]*)'));
     return m ? decodeURIComponent(m[1]) : null;

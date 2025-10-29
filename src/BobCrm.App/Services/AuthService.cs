@@ -18,7 +18,22 @@ public class AuthService
     private async Task<HttpClient> CreateBaseClientAsync()
     {
         var http = _httpFactory.CreateClient("api");
-        // For SaaS mode, do not use localStorage overrides for base URL
+        // SaaS mode: prefer cookie-provided base or same-origin
+        try
+        {
+            var cookieBase = await _js.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+            if (!string.IsNullOrWhiteSpace(cookieBase))
+            {
+                http.BaseAddress = new Uri(cookieBase!, UriKind.Absolute);
+            }
+            else
+            {
+                var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
+                if (!string.IsNullOrWhiteSpace(origin))
+                    http.BaseAddress = new Uri(origin!, UriKind.Absolute);
+            }
+        }
+        catch { }
         // attach language header (no auth required)
         try
         {

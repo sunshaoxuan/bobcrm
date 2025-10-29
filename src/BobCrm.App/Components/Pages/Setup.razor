@@ -152,7 +152,12 @@
                 // 从数据库读取当前管理员信息（如果已配置）
                 try
                 {
-                    var http = await Auth.CreateClientWithLangAsync();
+                    // 计算有效 API 基础地址：优先 cookie，再次为当前 host 推断
+                    var cookieBase = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                    var effectiveBase = !string.IsNullOrWhiteSpace(cookieBase) ? cookieBase! : apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
+                    using var http = new HttpClient { BaseAddress = new Uri((effectiveBase ?? string.Empty).TrimEnd('/') + "/", UriKind.Absolute) };
+                    // 语言头
+                    try { http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", (lang ?? "ja").ToLowerInvariant()); } catch { }
                     var adminResp = await http.GetAsync("/api/setup/admin");
                     if (adminResp.IsSuccessStatusCode)
                     {
@@ -262,22 +267,7 @@
             bool ok = false; string? err = null;
             try
             {
-                HttpClient http;
-                bool shouldDispose = false;
-                
-                if (!string.IsNullOrWhiteSpace(apiBase))
-                {
-                    // Create a new HttpClient with the correct BaseAddress
-                    http = new HttpClient { BaseAddress = new Uri(apiBase!.TrimEnd('/') + "/", UriKind.Absolute) };
-                    shouldDispose = true;
-                }
-                else
-                {
-                    // Use the factory-managed client (don't dispose)
-                    http = await Auth.CreateClientWithLangAsync();
-                }
-                
-                try
+                using (var http = new HttpClient { BaseAddress = new Uri((apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin")).TrimEnd('/') + "/", UriKind.Absolute) })
                 {
                     // Set language header
                     var langHeader = lang.ToLowerInvariant();
@@ -309,13 +299,6 @@
                         await JS.InvokeVoidAsync("console.log", $"[Setup] Success: {successContent}");
                         // 确认管理员账户已保存
                         ok = true; // 明确设置为true
-                    }
-                }
-                finally
-                {
-                    if (shouldDispose)
-                    {
-                        http.Dispose();
                     }
                 }
             }
@@ -450,7 +433,6 @@
         StateHasChanged();
     }
 }
-
 
 
 
