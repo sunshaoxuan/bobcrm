@@ -7,7 +7,7 @@ public class I18nService
     private readonly IHttpClientFactory _httpFactory;
     private readonly AuthService _auth;
     private Dictionary<string, string> _dict = new(StringComparer.OrdinalIgnoreCase);
-    public string CurrentLang { get; private set; } = "zh";
+    public string CurrentLang { get; private set; } = "ja";
     public event Action? OnChanged;
 
     public I18nService(IHttpClientFactory httpFactory, AuthService auth)
@@ -34,4 +34,5 @@ public class I18nService
         _dict = map; CurrentLang = lang; OnChanged?.Invoke();
     }
 }
+
 

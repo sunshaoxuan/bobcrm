@@ -31,7 +31,7 @@
 
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
-    private string lang = "zh";
+    private string lang = "ja";
 
     [Inject] BobCrm.App.Services.I18nService I18n { get; set; } = default!;
     [Inject] IJSRuntime _js { get; set; } = default!;
@@ -68,3 +68,4 @@
         StateHasChanged();
     }
 }
+
