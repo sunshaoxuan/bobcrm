@@ -14,7 +14,7 @@
         <div style="color:#999;margin-top:6px">@I18n.T("LBL_API_BASE_HINT")</div>
     </div>
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_LANG")</div>
-        <select @bind="lang" style="width:220px;height:28px">
+        <select value="@lang" @onchange="OnLangChanged" style="width:220px;height:28px">
             @if (langs.Count == 0)
             {
                 <option value="zh">中文</option>
@@ -56,7 +56,7 @@
     private bool saving;
     private string adminUser = "admin";
     private string adminEmail = "admin@local";
-    private string adminPassword = "Admin@12345";
+    private string adminPassword = "Admin@12345";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -90,7 +90,7 @@
         }
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync()
     {
         saving = true;
         try
@@ -118,6 +118,33 @@
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 
     public class LangItem { public string code { get; set; } = string.Empty; public string name { get; set; } = string.Empty; }
+
+    private async Task OnLangChanged(ChangeEventArgs e)
+    {
+        var value = e?.Value?.ToString() ?? "ja";
+        lang = value;
+        try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
+
+        // If the API base is typed but not saved yet, try to fetch dictionary directly
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(apiBase))
+            {
+                using var http = new HttpClient { BaseAddress = new Uri(apiBase!, UriKind.Absolute) };
+                using var resp = await http.GetAsync($"/api/i18n/{lang}");
+                if (resp.IsSuccessStatusCode)
+                {
+                    var json = await resp.Content.ReadAsStringAsync();
+                    await JS.InvokeVoidAsync("localStorage.setItem", $"i18n:{lang}:v1", json);
+                }
+            }
+        }
+        catch { }
+
+        await I18n.LoadAsync(lang);
+        try { await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+        StateHasChanged();
+    }
 }
 
 
