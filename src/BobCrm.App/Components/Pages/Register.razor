@@ -45,7 +45,8 @@
             try
             {
                 var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
-                if (!string.IsNullOrWhiteSpace(savedLang)) { await I18n.LoadAsync(savedLang!); try { await JS.InvokeVoidAsync("bobcrm.setLang", savedLang); } catch { } }
+                var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
+                await I18n.LoadAsync(langToLoad); try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
             }
             catch { }
         }
