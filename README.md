@@ -1,5 +1,12 @@
 # bobcrm
 
+更新纪要（2025-10-29）
+- 后端轻量集成测试（xUnit + WebApplicationFactory）已完善，覆盖率达 91.8%（PostgreSQL Docker 实库）。
+- 测试运行命令：`dotnet test tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj --collect:"XPlat Code Coverage"`
+- 覆盖率报告生成：`reportgenerator -reports:tests/BobCrm.Api.Tests/TestResults/*/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:TextSummary`
+- 测试数据库：`Db:Provider=postgres`，连接串 `Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres`
+- 语言机制：后端统一从 DB 读取资源，接口支持 `X-Lang`/`?lang=`，并新增语言表种子（ja/zh/en）。
+
 **项目规划与运行指南**
 
 本仓库用于实现一个客户信息管理系统（CRM）。本文档汇总架构选型、环境搭建、目录结构、API/数据模型概览、里程碑与验证步骤，用于指导开发与测试。

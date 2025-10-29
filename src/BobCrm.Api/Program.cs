@@ -73,6 +73,7 @@ builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+builder.Services.AddScoped<ILocalization, EfLocalization>();
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddHttpContextAccessor();
@@ -271,6 +272,14 @@ app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
         dict[r.Key] = val;
     }
     return Results.Json(dict);
+}).RequireAuthorization();
+
+// languages list
+app.MapGet("/api/i18n/languages", (AppDbContext db) =>
+{
+    // static list for now; could be a table later
+    var langs = new[] { new { code = "ja", name = "日本語" }, new { code = "zh", name = "中文" }, new { code = "en", name = "English" } };
+    return Results.Json(langs);
 }).RequireAuthorization();
 
 // Tags overview for quick layout
@@ -588,6 +597,7 @@ class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor 
     public DbSet<FieldValue> FieldValues => Set<FieldValue>();
     public DbSet<UserLayout> UserLayouts => Set<UserLayout>();
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
+    public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -721,3 +731,5 @@ interface IEmailSender { Task SendAsync(string to, string subject, string body);
 
 // Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
+
+

@@ -3,6 +3,7 @@ using System.Text.Json;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
+using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Http;
 
 namespace BobCrm.Api.Tests;
@@ -20,6 +21,11 @@ public class QueriesUnitTests
         public void Update(T entity) { }
     }
 
+    private class FakeLoc : ILocalization
+    {
+        public string T(string key, string lang) => key;
+    }
+
     private static IHttpContextAccessor HttpWithUser(string id)
     {
         var http = new HttpContextAccessor();
@@ -34,21 +40,21 @@ public class QueriesUnitTests
     public void CustomerQueries_Respects_Access_Control()
     {
         var repoCustomer = new ListRepo<Customer>();
-        repoCustomer.Data.AddRange(new[] { new Customer{ Id=1, Code="C001", Name="客户A", Version=1 }, new Customer{ Id=2, Code="C002", Name="客户B", Version=1 } });
+        repoCustomer.Data.AddRange(new[] { new Customer{ Id=1, Code="C001", Name="A", Version=1 }, new Customer{ Id=2, Code="C002", Name="B", Version=1 } });
         var repoDef = new ListRepo<FieldDefinition>();
-        repoDef.Data.Add(new FieldDefinition{ Id=1, Key="email", DisplayName="邮箱", DataType="email", DefaultValue = "" });
+        repoDef.Data.Add(new FieldDefinition{ Id=1, Key="email", DisplayName="LBL_EMAIL", DataType="email", DefaultValue = "" });
         var repoVal = new ListRepo<FieldValue>();
         repoVal.Data.Add(new FieldValue{ Id=1, CustomerId=1, FieldDefinitionId=1, Value="\"a@b.com\"", Version=2 });
         var repoAccess = new ListRepo<CustomerAccess>();
         repoAccess.Data.Add(new CustomerAccess{ Id=1, CustomerId=1, UserId="u1", CanEdit=true });
 
-        var q = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("u1"));
+        var q = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("u1"), new FakeLoc());
         var list = q.GetList();
-        Assert.True(list.Count == 1); // has access rows -> restricted to those
+        Assert.True(list.Count == 1);
 
         var detailAllowed = q.GetDetail(1);
         Assert.NotNull(detailAllowed);
-        var detailDenied = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("uX")).GetDetail(1);
+        var detailDenied = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("uX"), new FakeLoc()).GetDetail(1);
         Assert.Null(detailDenied);
     }
 
@@ -56,9 +62,9 @@ public class QueriesUnitTests
     public void FieldQueries_Parses_Tags_And_Actions()
     {
         var repo = new ListRepo<FieldDefinition>();
-        repo.Data.Add(new FieldDefinition{ Key="email", DisplayName="邮箱", DataType="email", Tags = "[\"常用\"]", Actions = "[]" });
-        repo.Data.Add(new FieldDefinition{ Key="link", DisplayName="链接", DataType="link", Tags = null, Actions = null });
-        var q = new FieldQueries(repo);
+        repo.Data.Add(new FieldDefinition{ Key="email", DisplayName="LBL_EMAIL", DataType="email", Tags = "[\"tag1\"]", Actions = "[]" });
+        repo.Data.Add(new FieldDefinition{ Key="link", DisplayName="LBL_LINK", DataType="link", Tags = null, Actions = null });
+        var q = new FieldQueries(repo, new FakeLoc(), HttpWithUser("u1"));
         var defs = q.GetDefinitions();
         var json = JsonSerializer.Serialize(defs);
         var arr = JsonDocument.Parse(json).RootElement;
@@ -82,6 +88,7 @@ public class QueriesUnitTests
         var ej = JsonSerializer.Serialize(eff);
         Assert.Contains("free", uj);
         Assert.Contains("flow", dj);
-        Assert.Contains("free", ej); // user layout preferred
+        Assert.Contains("free", ej);
     }
 }
+
