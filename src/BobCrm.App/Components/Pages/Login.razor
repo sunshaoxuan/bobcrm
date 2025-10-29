@@ -1,4 +1,12 @@
-@page "/login"`r`n@layout BobCrm.App.Components.Layout.EmptyLayout`r`n`r`n@inject IHttpClientFactory HttpFactory`r`n@inject IJSRuntime JS`r`n@inject NavigationManager Nav`r`n@inject BobCrm.App.Services.I18nService I18n`r`n`r`n<h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
+@page "/login"
+@layout BobCrm.App.Components.Layout.EmptyLayout
+
+@inject IHttpClientFactory HttpFactory
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject BobCrm.App.Services.I18nService I18n
+
+<h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
 
 <EditForm Model="model" OnValidSubmit="OnLoginAsync">
     <DataAnnotationsValidator />

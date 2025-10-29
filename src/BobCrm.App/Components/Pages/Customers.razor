@@ -1,4 +1,11 @@
-@page "/customers"`r`n`r`n@inject BobCrm.App.Services.AuthService Auth`r`n@inject NavigationManager Nav`r`n@inject IJSRuntime JS`r`n@inject BobCrm.App.Services.I18nService I18n`r`n`r`n<h1>@I18n.T("MENU_CUSTOMERS")</h1>
+@page "/customers"
+
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+
+<h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
 <Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 

@@ -1,4 +1,12 @@
-@page "/setup"`r`n@layout BobCrm.App.Components.Layout.EmptyLayout`r`n`r`n@inject IJSRuntime JS`r`n@inject NavigationManager Nav`r`n@inject BobCrm.App.Services.I18nService I18n`r`n@inject BobCrm.App.Services.AuthService Auth`r`n`r`n<h1>@I18n.T("LBL_SETUP")</h1>
+@page "/setup"
+@layout BobCrm.App.Components.Layout.EmptyLayout
+
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.AuthService Auth
+
+<h1>@I18n.T("LBL_SETUP")</h1>
 
 <div>
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_API_BASE")</div>
