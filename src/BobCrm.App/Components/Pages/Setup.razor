@@ -91,29 +91,37 @@
     }
 
     private async Task SaveAsync()
-    {
-        saving = true;
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(apiBase))
-            {
-                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
-            }
-            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
-            // initialize admin (best-effort)
-            try
+    {
+        saving = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(apiBase))
             {
-                var http = await Auth.CreateClientWithLangAsync();
-                if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
+                await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
             }
-            catch { }
-            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
-            Nav.NavigateTo("/login", forceLoad: true);
-        }
-        finally { saving = false; }
-    }
+            await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang);
+
+            // reload i18n immediately so UI switches language before跳转
+            try { await I18n.LoadAsync(lang); await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+
+            // initialize admin (best-effort, do not block navigation)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var http = await Auth.CreateClientWithLangAsync();
+                    if (!string.IsNullOrWhiteSpace(apiBase)) http.BaseAddress = new Uri(apiBase!);
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
+                }
+                catch { }
+            });
+
+            await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true");
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+        finally { saving = false; }
+    }
 
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
 
