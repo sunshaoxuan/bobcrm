@@ -352,8 +352,13 @@ app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
 app.MapGet("/api/debug/users", async (UserManager<IdentityUser> um) =>
 {
     if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
-    var users = um.Users.Select(u => new { id = u.Id, username = u.UserName, email = u.Email, emailConfirmed = u.EmailConfirmed, hasPassword = um.HasPasswordAsync(u).Result }).ToList();
-    return Results.Ok(users);
+    var userList = new List<object>();
+    foreach (var u in um.Users)
+    {
+        var hasPassword = await um.HasPasswordAsync(u);
+        userList.Add(new { id = u.Id, username = u.UserName, email = u.Email, emailConfirmed = u.EmailConfirmed, hasPassword });
+    }
+    return Results.Ok(userList);
 });
 
 // Development-only: reset setup (delete admin user to allow re-initialization)
