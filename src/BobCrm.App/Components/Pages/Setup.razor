@@ -66,6 +66,7 @@
         <Space>
             <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">@I18n.T("BTN_SAVE_AND_GO_LOGIN")</Button>
             <Button OnClick="GotoLogin">@I18n.T("BTN_GO_LOGIN")</Button>
+            <Button Type="ButtonType.Default" Danger="true" OnClick="ResetSetup" Loading="resetting">重置初始化设置</Button>
         </Space>
     </div>
 
@@ -89,6 +90,7 @@
     private string adminEmail = string.Empty;
 
     private string adminPassword = ""; // 密码字段不初始化，保持为空
+    private bool resetting = false;
     
     protected override void OnInitialized()
     {
@@ -431,6 +433,54 @@
 
 
     private void GotoLogin() => Nav.NavigateTo("/login", forceLoad: true);
+
+    private async Task ResetSetup()
+    {
+        resetting = true;
+        StateHasChanged();
+        
+        try
+        {
+            var confirm = await JS.InvokeAsync<bool>("confirm", "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。");
+            if (!confirm)
+            {
+                resetting = false;
+                StateHasChanged();
+                return;
+            }
+            
+            using var http = new HttpClient { BaseAddress = new Uri((apiBase ?? defaultApiBase ?? "http://localhost:5200").TrimEnd('/') + "/", UriKind.Absolute) };
+            http.Timeout = TimeSpan.FromSeconds(10);
+            
+            var resp = await http.PostAsync("/api/debug/reset-setup", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                var result = await resp.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+                var message = result?.GetValueOrDefault("message")?.ToString() ?? "设置已重置";
+                await Message.Success(message);
+                
+                // 清空表单
+                adminUser = string.Empty;
+                adminEmail = string.Empty;
+                adminPassword = string.Empty;
+                StateHasChanged();
+            }
+            else
+            {
+                var error = await resp.Content.ReadAsStringAsync();
+                await Message.Error($"重置失败: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"重置失败: {ex.Message}");
+        }
+        finally
+        {
+            resetting = false;
+            StateHasChanged();
+        }
+    }
 
     public class LangItem { public string code { get; set; } = string.Empty; public string name { get; set; } = string.Empty; }
     
