@@ -158,3 +158,10 @@ C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\refint\BobCrm.Api.dll
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.pdb
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.genruntimeconfig.cache
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\ref\BobCrm.Api.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Extensions.Logging.File.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Formatting.Compact.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.Async.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.RollingFile.dll

@@ -24,13 +24,18 @@ var logsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "lo
 Directory.CreateDirectory(logsDir);
 var logFilePath = Path.Combine(logsDir, $"api_{timestamp}.log");
 
-builder.Logging.AddConsole();
+// 输出到控制台
 builder.Logging.AddSimpleConsole(options =>
 {
     options.IncludeScopes = true;
     options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
     options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
 });
+
+// 添加文件日志提供者（简单实现）
+var logStreamWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
+builder.Services.AddSingleton(logStreamWriter);
+
 builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter("System", LogLevel.Warning);
 
@@ -109,12 +114,21 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// 配置日志到文件（在app构建后配置）
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+var logWriter = app.Services.GetRequiredService<StreamWriter>();
+
+// 手动写入日志到文件
+Action<string> writeToFile = (message) =>
+{
+    try { logWriter.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}"); }
+    catch { }
+};
+
 // 配置详细日志
-app.Logger.LogInformation("==================================================");
-app.Logger.LogInformation("Application starting at {Time}", DateTime.Now);
-app.Logger.LogInformation("Log file: {LogFile}", logFilePath);
-app.Logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-app.Logger.LogInformation("==================================================");
+var startupMsg = $"Application starting at {DateTime.Now}";
+app.Logger.LogInformation(startupMsg);
+writeToFile(startupMsg);
 
 if (app.Environment.IsDevelopment())
 {
