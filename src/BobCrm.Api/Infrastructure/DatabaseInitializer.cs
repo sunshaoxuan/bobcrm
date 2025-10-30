@@ -187,8 +187,14 @@ public static class DatabaseInitializer
             Ensure("COL_ACTIONS", "操作", "操作", "Actions");
             Ensure("BTN_DETAIL", "详情", "詳細", "Detail");
             Ensure("LBL_LOGIN_TITLE", "登录", "ログイン", "Login");
+            Ensure("ERR_LOGIN_FAILED", "登录失败", "ログイン失敗", "Login failed");
+            Ensure("ERR_PARSE_RESPONSE", "无法解析服务器响应", "サーバー応答を解析できません", "Unable to parse server response");
             Ensure("LBL_SETUP", "初始化设置", "初期設定", "Setup");
             Ensure("LBL_API_BASE", "API 基础地址", "API ベースURL", "API Base URL");
+            // Backfill missing hint/button keys for setup page
+            Ensure("LBL_API_BASE_HINT", "为空则使用内置默认地址（appsettings 的 Api:BaseUrl）。建议填写实际后端地址。", "未指定の場合は既定のアドレス（appsettings の Api:BaseUrl）を使用します。実際の API を推奨。", "If empty, uses default (appsettings Api:BaseUrl). Prefer your real API.");
+            Ensure("BTN_SAVE_AND_GO_LOGIN", "保存并进入登录", "保存してログインへ", "Save and go to Login");
+            Ensure("BTN_GO_LOGIN", "已有配置，去登录", "設定済みならログインへ", "Go to Login");
             Ensure("LBL_LANG", "语言", "言語", "Language");
             Ensure("LBL_ADMIN_ACCOUNT", "管理员账号", "管理者アカウント", "Admin Account");
             Ensure("LBL_ADMIN_USERNAME", "管理员用户名", "管理者ユーザー名", "Admin Username");

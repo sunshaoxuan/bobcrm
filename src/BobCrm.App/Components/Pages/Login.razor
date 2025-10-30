@@ -8,7 +8,7 @@
 
 <h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
 
-<EditForm Model="model" OnValidSubmit="OnLoginAsync">
+<EditForm Model="model" OnValidSubmit="OnLoginAsync" FormName="login">
     <DataAnnotationsValidator />
     <ValidationSummary />
     <div>
@@ -34,6 +34,16 @@
     private LoginModel model = new();
     private bool loading = false;
     private string? error;
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -63,6 +73,7 @@
                     Nav.NavigateTo("/customers", forceLoad: true);
                     return;
                 }
+                StateHasChanged();
             }
             catch { }
         }
@@ -73,12 +84,37 @@
         loading = true; error = null;
         try
         {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(model.username))
+            {
+                error = "用户名不能为空";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(model.password))
+            {
+                error = "密码不能为空";
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[Login] Attempting login with username: '{model.username}'");
+            await JS.InvokeVoidAsync("console.log", $"[Login] Attempting login with username: '{model.username}'");
+            
             var http = HttpFactory.CreateClient("api");
-            // allow local override
-            try { var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase"); if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!); } catch { }
+            // allow local override: localStorage -> cookie -> origin
+            try {
+                var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+                if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = await JS.InvokeAsync<string?>("bobcrm.getOrigin");
+                if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
+                await JS.InvokeVoidAsync("console.log", $"[Login] Using API base: {http.BaseAddress}");
+            } catch { }
             // attach X-Lang header
-            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
-            var resp = await http.PostAsJsonAsync("/api/auth/login", model);
+            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (string.IsNullOrWhiteSpace(lang)) lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
+            
+            await JS.InvokeVoidAsync("console.log", $"[Login] Sending login request to: {http.BaseAddress}api/auth/login");
+            var resp = await http.PostAsJsonAsync("/api/auth/login", new { username = model.username, password = model.password });
+            System.Diagnostics.Debug.WriteLine($"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
+            await JS.InvokeVoidAsync("console.log", $"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
             if (!resp.IsSuccessStatusCode)
             {
                 error = I18n.T("ERR_LOGIN_FAILED");
@@ -113,13 +149,24 @@
     public record LoginResult(string accessToken, string refreshToken, UserDto user);
     public record UserDto(string id, string username, string role);
     public class AdminInfo { public bool exists { get; set; } public string? username { get; set; } public string? email { get; set; } }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
 }
-
-
-
-
-
-
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -18,19 +18,31 @@ public class AuthService
     private async Task<HttpClient> CreateBaseClientAsync()
     {
         var http = _httpFactory.CreateClient("api");
-        // SaaS mode: prefer cookie-provided base or same-origin
+        // Prefer localStorage apiBase (来自 Setup 保存)，其次 cookie，再次同源
         try
         {
-            var cookieBase = await _js.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
-            if (!string.IsNullOrWhiteSpace(cookieBase))
+            var lsBase = await _js.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+            if (!string.IsNullOrWhiteSpace(lsBase))
             {
-                http.BaseAddress = new Uri(cookieBase!, UriKind.Absolute);
+                http.BaseAddress = new Uri(NormalizeBase(lsBase!) , UriKind.Absolute);
             }
             else
             {
-                var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
-                if (!string.IsNullOrWhiteSpace(origin))
-                    http.BaseAddress = new Uri(origin!, UriKind.Absolute);
+                var cookieBase = await _js.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                if (!string.IsNullOrWhiteSpace(cookieBase))
+                {
+                    var normalized = NormalizeBase(cookieBase!);
+                    http.BaseAddress = new Uri(normalized, UriKind.Absolute);
+                    // 同步回写，避免再次回退
+                    try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", normalized); } catch { }
+                    try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", normalized, 365); } catch { }
+                }
+                else
+                {
+                    var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
+                    if (!string.IsNullOrWhiteSpace(origin))
+                        http.BaseAddress = new Uri(origin!, UriKind.Absolute);
+                }
             }
         }
         catch { }
@@ -44,6 +56,19 @@ public class AuthService
         }
         catch { }
         return http;
+    }
+
+    private static string NormalizeBase(string baseUrl)
+    {
+        try
+        {
+            var u = new Uri(baseUrl, UriKind.Absolute);
+            // 策略：如果端口是 8081，自动切到 5200（与你的部署一致），避免无意回退。
+            if (u.IsDefaultPort || u.Port != 8081) return baseUrl;
+            var builder = new UriBuilder(u) { Port = 5200 };
+            return builder.Uri.ToString().TrimEnd('/');
+        }
+        catch { return baseUrl; }
     }
 
     public async Task<HttpClient> CreateClientWithAuthAsync()

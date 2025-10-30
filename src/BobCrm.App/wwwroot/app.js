@@ -46,4 +46,11 @@ window.bobcrm = {
       document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value || '') + expires + '; path=/';
     } catch (e) { }
   }
+  , fetchJson: async function (url) {
+    try {
+      const resp = await fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' });
+      if (!resp.ok) return null;
+      return await resp.json();
+    } catch (e) { return null; }
+  }
 };

@@ -169,18 +169,36 @@ app.MapGet("/api/auth/activate", async (UserManager<IdentityUser> um, string use
     return res.Succeeded ? Results.Ok(new { status = "ok" }) : Results.BadRequest(res.Errors);
 }).WithName("Activate");
 
-app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto, ILocalization loc, HttpContext http) =>
+app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto, ILocalization loc, HttpContext http, ILogger<Program> logger) =>
 {
+    logger.LogInformation("[Auth] Login attempt, usernameOrEmail={username}, remote={ip}", dto.username ?? "(null)", http.Connection.RemoteIpAddress);
+    
+    if (string.IsNullOrWhiteSpace(dto.username))
+    {
+        logger.LogWarning("[Auth] Invalid login request - username is empty");
+        return Results.BadRequest(new { error = "Username is required" });
+    }
+    
     var user = await um.FindByNameAsync(dto.username) ?? await um.FindByEmailAsync(dto.username);
-    if (user == null) return Results.Unauthorized();
+    if (user == null)
+    {
+        logger.LogWarning("[Auth] User not found for {username}", dto.username);
+        return Results.Unauthorized();
+    }
     if (!user.EmailConfirmed)
     {
         var lang = LangHelper.GetLang(http);
+        logger.LogWarning("[Auth] Email not confirmed for user {user}", user.UserName);
         return Results.BadRequest(new { error = loc.T("ERR_EMAIL_NOT_CONFIRMED", lang) });
     }
     var pass = await sm.CheckPasswordSignInAsync(user, dto.password, false);
-    if (!pass.Succeeded) return Results.Unauthorized();
+    if (!pass.Succeeded)
+    {
+        logger.LogWarning("[Auth] Password check failed for user {user}", user.UserName);
+        return Results.Unauthorized();
+    }
     var tokens = await IssueTokensAsync(cfg, user, rts, key);
+    logger.LogInformation("[Auth] Login success for user {user}", user.UserName);
     return Results.Json(new { accessToken = tokens.accessToken, refreshToken = tokens.refreshToken, user = new { id = user.Id, username = user.UserName, role = "user" } });
 });
 
@@ -276,6 +294,25 @@ app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
         dict[r.Key] = val;
     }
     return Results.Json(dict);
+});
+
+// Development-only: reset current admin password quickly when locked out
+app.MapPost("/api/admin/reset-password", async (UserManager<IdentityUser> um, RoleManager<IdentityRole> rm, AdminResetPasswordDto dto) =>
+{
+    if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+    if (!await rm.RoleExistsAsync("admin")) return Results.NotFound(new { error = "admin role not found" });
+    var admins = await um.GetUsersInRoleAsync("admin");
+    var user = admins.FirstOrDefault();
+    if (user == null) return Results.NotFound(new { error = "admin user not found" });
+    if (await um.HasPasswordAsync(user))
+    {
+        var rmv = await um.RemovePasswordAsync(user);
+        if (!rmv.Succeeded) return Results.BadRequest(new { error = string.Join("; ", rmv.Errors.Select(e => e.Description)) });
+    }
+    var add = await um.AddPasswordAsync(user, dto.password);
+    if (!add.Succeeded) return Results.BadRequest(new { error = string.Join("; ", add.Errors.Select(e => e.Description)) });
+    user.EmailConfirmed = true; await um.UpdateAsync(user);
+    return Results.Ok(new { status = "ok", user = new { user = user.UserName, email = user.Email } });
 });
 
 // languages list
@@ -575,8 +612,10 @@ app.MapPost("/api/setup/admin", async (
     UserManager<IdentityUser> um,
     RoleManager<IdentityRole> rm,
     SignInManager<IdentityUser> sm,
-    AdminSetupDto dto) =>
+    AdminSetupDto dto,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("[Setup] Request to configure admin: username={username}, email={email}", dto.username, dto.email);
     if (!await rm.RoleExistsAsync("admin"))
     {
         await rm.CreateAsync(new IdentityRole("admin"));
@@ -613,6 +652,7 @@ app.MapPost("/api/setup/admin", async (
             var canOverride = (await sm.CheckPasswordSignInAsync(existingAdmin, "Admin@12345", false)).Succeeded;
             if (!canOverride)
             {
+                logger.LogWarning("[Setup] Override denied: existing admin not default and default password invalid");
                 return Results.StatusCode(403); // Cannot update - admin already configured
             }
             adminUser = existingAdmin;
@@ -627,9 +667,11 @@ app.MapPost("/api/setup/admin", async (
         if (!cr.Succeeded)
         {
             var errors = string.Join("; ", cr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            logger.LogError("[Setup] Failed to create admin: {errors}", errors);
             return Results.BadRequest(new { error = "创建管理员用户失败", details = errors });
         }
         await um.AddToRoleAsync(adminUser, "admin");
+        logger.LogInformation("[Setup] Admin created: {username}", dto.username);
         return Results.Ok(new { status = "created", username = dto.username, email = dto.email });
     }
     else
@@ -642,6 +684,7 @@ app.MapPost("/api/setup/admin", async (
         if (!ur.Succeeded)
         {
             var errors = string.Join("; ", ur.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            logger.LogError("[Setup] Failed to update admin profile: {errors}", errors);
             return Results.BadRequest(new { error = "更新管理员用户失败", details = errors });
         }
         
@@ -652,29 +695,27 @@ app.MapPost("/api/setup/admin", async (
             if (!removeResult.Succeeded)
             {
                 var errors = string.Join("; ", removeResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                logger.LogError("[Setup] Failed to remove old password: {errors}", errors);
                 return Results.BadRequest(new { error = "移除旧密码失败", details = errors });
             }
         }
-        
+
         var pr = await um.AddPasswordAsync(adminUser, dto.password);
         if (!pr.Succeeded)
         {
             var errors = string.Join("; ", pr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+            logger.LogError("[Setup] Failed to set new password: {errors}", errors);
             return Results.BadRequest(new { error = "设置新密码失败", details = errors });
         }
-        
+        logger.LogInformation("[Setup] Admin updated successfully: {username}", dto.username);
         return Results.Ok(new { status = "updated", username = dto.username, email = dto.email });
     }
 });
 
-// Read current admin info (anonymous; used by setup page to reflect saved values)
-app.MapGet("/api/setup/admin", async (UserManager<IdentityUser> um) =>
-{
-    var admin = await um.FindByNameAsync("admin");
-    if (admin == null)
-        return Results.Json(new { exists = false });
-    return Results.Json(new { exists = true, username = admin.UserName ?? "admin", email = admin.Email ?? "" });
-});
+// NOTE: Duplicate older endpoint removed. We already mapped GET /api/setup/admin
+// above using RoleManager to return any user in the 'admin' role. Keeping only
+// one mapping avoids returning "exists=false" after username changes away from
+// "admin".
 
 app.Run();
 
@@ -781,6 +822,7 @@ public record FieldDto(string key, object value);
 public record GenerateLayoutRequest(string[] tags, string? mode, bool? save, string? scope);
 public record AccessUpsert(string userId, bool canEdit);
 public record AdminSetupDto(string username, string email, string password);
+public record AdminResetPasswordDto(string password);
 
 class RefreshToken
 {
@@ -841,4 +883,3 @@ interface IEmailSender { Task SendAsync(string to, string subject, string body);
 
 // Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
-

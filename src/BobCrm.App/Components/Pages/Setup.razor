@@ -48,13 +48,13 @@
 
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_USERNAME")</div>
 
-        <Input @bind-Value="adminUser" />
+        <Input @bind-Value="adminUser" Placeholder="admin" />
 
     </div>
 
     <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_EMAIL")</div>
 
-        <Input @bind-Value="adminEmail" />
+        <Input @bind-Value="adminEmail" Placeholder="admin@local" />
 
     </div>
 
@@ -83,9 +83,10 @@
     private List<LangItem> langs = new();
     private bool saving;
 
-    private string adminUser = "admin";
+    // 初始为空：避免刷新时先看到硬编码的默认值，等待 API 返回后回填
+    private string adminUser = string.Empty;
 
-    private string adminEmail = "admin@local";
+    private string adminEmail = string.Empty;
 
     private string adminPassword = ""; // 密码字段不初始化，保持为空
     
@@ -93,7 +94,7 @@
     {
         // 优先从当前页面的host推断API地址（支持分布式部署）
         var currentUri = new Uri(Nav.BaseUri);
-        var apiPort = currentUri.Port == 8080 ? 5200 : 8081; // 如果前端在8080，API可能在5200，否则8081
+        var apiPort = 5200; // 统一默认使用 5200，避免回退到 8081
         
         // 使用当前访问的host和scheme，而不是localhost
         var inferredBase = $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
@@ -128,53 +129,69 @@
         {
             try
             {
-                var savedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : lang;
-                await I18n.LoadAsync(langToLoad);
-                try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
-                var storedBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-                if (!string.IsNullOrWhiteSpace(storedBase)) 
+                // 先确定有效 API Base（localStorage -> cookie -> 已输入值/默认推断）
+                var lsBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+                var cookieBase = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                if (!string.IsNullOrWhiteSpace(lsBase))
                 {
-                    apiBase = storedBase;
+                    apiBase = lsBase;
+                }
+                else if (!string.IsNullOrWhiteSpace(cookieBase))
+                {
+                    apiBase = cookieBase;
                 }
                 else
                 {
-                    // 如果localStorage没有保存的地址，重新计算默认值（因为这时Nav已经可用）
                     var currentUri = new Uri(Nav.BaseUri);
-                    var apiPort = currentUri.Port == 8080 ? 5200 : 8081;
-                    apiBase = $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
-                    defaultApiBase = apiBase; // 更新默认值
-                    placeholderText = $"默认: {defaultApiBase}";
+                    var apiPort = 5200; // 统一默认使用 5200
+                    apiBase ??= $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
                 }
-                var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
-                if (!string.IsNullOrWhiteSpace(storedLang)) lang = storedLang!;
+                defaultApiBase = apiBase;
+                placeholderText = $"默认: {defaultApiBase}";
+                // 写入 cookie，供 I18nService/命名客户端使用
+                try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
+                try { await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
+
+                // 再加载语言（cookie 或默认）
+                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : lang;
+                await I18n.LoadAsync(langToLoad);
+                try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
                 
                 // 从数据库读取当前管理员信息（如果已配置）
                 try
                 {
-                    // 计算有效 API 基础地址：优先 cookie，再次为当前 host 推断
-                    var cookieBase = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
-                    var effectiveBase = !string.IsNullOrWhiteSpace(cookieBase) ? cookieBase! : apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
-                    using var http = new HttpClient { BaseAddress = new Uri((effectiveBase ?? string.Empty).TrimEnd('/') + "/", UriKind.Absolute) };
-                    // 语言头
-                    try { http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", (lang ?? "ja").ToLowerInvariant()); } catch { }
-                    var adminResp = await http.GetAsync("/api/setup/admin");
-                    if (adminResp.IsSuccessStatusCode)
+                    // 计算有效 API 基础地址：优先当前输入/状态，其次 cookie，再次默认/来源
+                    var cb = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                    var effectiveBase = apiBase ?? (!string.IsNullOrWhiteSpace(cb) ? cb! : null) ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
+
+                    async Task<bool> TryFetchAdminAsync(string baseUrl)
                     {
-                        var adminInfo = await adminResp.Content.ReadFromJsonAsync<AdminInfo>();
-                        if (adminInfo != null && adminInfo.exists && !string.IsNullOrWhiteSpace(adminInfo.username))
+                        try
                         {
-                            adminUser = adminInfo.username;
-                            adminEmail = adminInfo.email ?? adminEmail;
-                            System.Diagnostics.Debug.WriteLine($"[Setup] Loaded admin info from database: username='{adminUser}', email='{adminEmail}'");
-                            await JS.InvokeVoidAsync("console.log", $"[Setup] Loaded admin from database: username='{adminUser}', email='{adminEmail}'");
-                            StateHasChanged();
+                            await JS.InvokeVoidAsync("console.log", $"[Setup] Fetching admin info from (browser): {baseUrl}");
+                            var url = (baseUrl ?? string.Empty).TrimEnd('/') + "/api/setup/admin";
+                            var adminInfo = await JS.InvokeAsync<AdminInfo?>("bobcrm.fetchJson", url);
+                            if (adminInfo is null) return false;
+                            var u = adminInfo.username;
+                            var m = adminInfo.email;
+                            if (!string.IsNullOrWhiteSpace(u))
+                            {
+                                adminUser = u!;
+                                if (!string.IsNullOrWhiteSpace(m)) adminEmail = m!;
+                                apiBase = baseUrl; defaultApiBase = baseUrl;
+                                try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", baseUrl, 365); } catch { }
+                                await JS.InvokeVoidAsync("console.log", $"[Setup] Loaded admin from database: username='{adminUser}', email='{adminEmail}'");
+                                StateHasChanged();
+                                return true;
+                            }
+                            return false;
                         }
-                        else
-                        {
-                            await JS.InvokeVoidAsync("console.log", "[Setup] No admin user found in database, using default values");
-                        }
+                        catch { return false; }
                     }
+
+                    // 只尝试一次，不自动回退到其他端口
+                    await TryFetchAdminAsync(effectiveBase);
                 }
                 catch (Exception ex)
                 {
@@ -182,16 +199,32 @@
                     await JS.InvokeVoidAsync("console.log", $"[Setup] Could not load admin from API (API may not be running): {ex.Message}");
                 }
                 
-                // load languages list from API (works without auth)
+                // load languages list from API (works without auth) using effective base
                 try
                 {
-                    var http = await Auth.CreateClientWithLangAsync();
-                    var resp = await http.GetAsync("/api/i18n/languages");
-                    if (resp.IsSuccessStatusCode)
+                    var cookieBase2 = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                    var base2 = apiBase ?? (!string.IsNullOrWhiteSpace(cookieBase2) ? cookieBase2! : null) ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
+                    await JS.InvokeVoidAsync("console.log", $"[Setup] Loading languages from: {base2}");
+                    async Task<bool> TryFetchAsync(string b)
                     {
-                        var json = await resp.Content.ReadFromJsonAsync<List<LangItem>>();
-                        if (json is not null && json.Count > 0) langs = json;
+                        try
+                        {
+                            using var tmp = new HttpClient { BaseAddress = new Uri((b ?? string.Empty).TrimEnd('/') + "/", UriKind.Absolute) };
+                            try { tmp.DefaultRequestHeaders.Remove("X-Lang"); tmp.DefaultRequestHeaders.Add("X-Lang", (lang ?? "ja").ToLowerInvariant()); } catch { }
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                            var r = await tmp.GetAsync("/api/i18n/languages", cts.Token);
+                            if (!r.IsSuccessStatusCode) return false;
+                            var json = await r.Content.ReadFromJsonAsync<List<LangItem>>();
+                            if (json is null || json.Count == 0) return false;
+                            langs = json; apiBase = b; defaultApiBase = b;
+                            try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", b, 365); } catch { }
+                            return true;
+                        }
+                        catch { return false; }
                     }
+
+                    // 只尝试一次，不自动回退到其他端口
+                    await TryFetchAsync(base2);
                 }
                 catch { }
                 StateHasChanged();
@@ -256,8 +289,9 @@
             
             System.Diagnostics.Debug.WriteLine("[Setup] Validation passed, starting save process...");
 
-            // persist base and lang locally first
+            // persist base and lang locally first（即使后端保存失败也要持久化 API_BASE）
             try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
+            try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
             try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
 
             // reload i18n immediately so UI switches language before navigation
@@ -360,6 +394,7 @@
             // 管理员信息已保存到数据库（PostgreSQL），无需额外的持久化操作
             
             // mark configured and navigate to home
+            try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", (apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin")), 365); } catch { }
             try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
             try
             {
@@ -433,19 +468,6 @@
         StateHasChanged();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
