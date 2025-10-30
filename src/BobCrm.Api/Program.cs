@@ -18,9 +18,9 @@ using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 配置日志到文件
+// 配置日志到文件 - 存储在项目根目录的logs文件夹
 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-var logsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "logs");
+var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "logs");
 Directory.CreateDirectory(logsDir);
 var logFilePath = Path.Combine(logsDir, $"api_{timestamp}.log");
 
