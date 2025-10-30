@@ -6,22 +6,36 @@
 
 <div class="customer-sider">
   <div style="padding:8px">
-    <Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" />
+    <input type="text" 
+           placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' 
+           @bind="keyword"
+           style="width:100%; padding:6px; border:1px solid #d0d0d0; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; font-size:13px" />
   </div>
   @if (!string.IsNullOrWhiteSpace(error))
   {
-    <div class="text-muted small" style="padding:8px">@error</div>
+    <div class="text-muted small" style="padding:8px; color:#ff6b6b">@error</div>
   }
-  <ul class="sider-list">
-    @foreach (var c in Filtered())
-    {
-      var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
-      <li class="@cls" @onclick="(() => Go(c.id))">
-        <div class="code">@c.code</div>
-        <div class="name">@c.name</div>
-      </li>
-    }
-  </ul>
+  @if (loading)
+  {
+    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_LOADING")...</div>
+  }
+  else if (_data.Count == 0)
+  {
+    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_NOT_FOUND")</div>
+  }
+  else
+  {
+    <ul class="sider-list" style="list-style:none; padding:0; margin:0; max-height:600px; overflow-y:auto">
+      @foreach (var c in Filtered())
+      {
+        var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
+        <li class="@cls" @onclick="(() => Go(c.id))" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.1)">
+          <div class="code" style="font-weight:600; font-size:13px; color:#fff; margin-bottom:2px">@c.code</div>
+          <div class="name" style="font-size:12px; color:rgba(255,255,255,0.7)">@c.name</div>
+        </li>
+      }
+    </ul>
+  }
 </div>
 
 @code {
@@ -29,17 +43,26 @@
   private string keyword = string.Empty;
   private string? error;
   private int selectedId;
+  private bool loading = true;
 
   protected override void OnInitialized()
   {
     I18n.OnChanged += HandleI18nChanged;
-    Nav.LocationChanged += (_, __) => { TrySyncSelectedFromUrl(); InvokeAsync(StateHasChanged); };
+    Nav.LocationChanged += HandleLocationChanged;
   }
+  
   private void HandleI18nChanged() { try { InvokeAsync(StateHasChanged); } catch { } }
+  
+  private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+  {
+    TrySyncSelectedFromUrl();
+    InvokeAsync(StateHasChanged);
+  }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (!firstRender) return;
+    
     try
     {
       // Load i18n first
@@ -47,18 +70,30 @@
       var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
       await I18n.LoadAsync(langToLoad);
       
+      // Wait for UI to update
+      await InvokeAsync(StateHasChanged);
+      
       // Load customers
       var resp = await Auth.GetWithRefreshAsync("/api/customers");
       if (resp.IsSuccessStatusCode)
       {
         _data = await resp.Content.ReadFromJsonAsync<List<Item>>() ?? new();
-        // pick selected from route
         TrySyncSelectedFromUrl();
-        StateHasChanged();
       }
-      else { error = $"Load customers failed: {(int)resp.StatusCode}"; StateHasChanged(); }
+      else 
+      { 
+        error = $"Load customers failed: {(int)resp.StatusCode}"; 
+      }
+      
+      loading = false;
+      StateHasChanged();
     }
-    catch { }
+    catch (Exception ex)
+    {
+      error = $"Error: {ex.Message}";
+      loading = false;
+      StateHasChanged();
+    }
   }
 
   
