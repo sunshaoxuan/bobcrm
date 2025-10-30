@@ -54,3 +54,13 @@ window.bobcrm = {
     } catch (e) { return null; }
   }
 };
+
+window.logout = function() {
+  // 清除本地存储
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  
+  // 跳转到登录页
+  window.location.href = '/login';
+};
