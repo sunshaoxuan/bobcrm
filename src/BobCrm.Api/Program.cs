@@ -183,7 +183,7 @@ app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManage
     if (user == null)
     {
         logger.LogWarning("[Auth] User not found for {username}", dto.username);
-        return Results.Unauthorized();
+        return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
     }
     if (!user.EmailConfirmed)
     {
@@ -195,7 +195,7 @@ app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManage
     if (!pass.Succeeded)
     {
         logger.LogWarning("[Auth] Password check failed for user {user}", user.UserName);
-        return Results.Unauthorized();
+        return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
     }
     var tokens = await IssueTokensAsync(cfg, user, rts, key);
     logger.LogInformation("[Auth] Login success for user {user}", user.UserName);
