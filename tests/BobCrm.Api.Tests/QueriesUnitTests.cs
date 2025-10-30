@@ -47,14 +47,15 @@ public class QueriesUnitTests
         repoVal.Data.Add(new FieldValue{ Id=1, CustomerId=1, FieldDefinitionId=1, Value="\"a@b.com\"", Version=2 });
         var repoAccess = new ListRepo<CustomerAccess>();
         repoAccess.Data.Add(new CustomerAccess{ Id=1, CustomerId=1, UserId="u1", CanEdit=true });
+        var repoLoc = new ListRepo<CustomerLocalization>();
 
-        var q = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("u1"), new FakeLoc());
+        var q = new CustomerQueries(repoCustomer, repoLoc, repoDef, repoVal, repoAccess, HttpWithUser("u1"), new FakeLoc());
         var list = q.GetList();
         Assert.True(list.Count == 1);
 
         var detailAllowed = q.GetDetail(1);
         Assert.NotNull(detailAllowed);
-        var detailDenied = new CustomerQueries(repoCustomer, repoDef, repoVal, repoAccess, HttpWithUser("uX"), new FakeLoc()).GetDetail(1);
+        var detailDenied = new CustomerQueries(repoCustomer, repoLoc, repoDef, repoVal, repoAccess, HttpWithUser("uX"), new FakeLoc()).GetDetail(1);
         Assert.Null(detailDenied);
     }
 
@@ -91,4 +92,3 @@ public class QueriesUnitTests
         Assert.Contains("free", ej);
     }
 }
-

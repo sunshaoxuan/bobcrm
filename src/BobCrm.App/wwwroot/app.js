@@ -53,6 +53,24 @@ window.bobcrm = {
       return await resp.json();
     } catch (e) { return null; }
   }
+  , setTheme: function (name) {
+    try {
+      name = (name || 'light');
+      const root = document.documentElement;
+      root.classList.remove('theme-light', 'theme-dark');
+      root.classList.add(name === 'dark' ? 'theme-dark' : 'theme-light');
+      localStorage.setItem('theme', name);
+    } catch (e) { }
+  }
+  , getTheme: function () {
+    try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
+  }
+  , setPrimary: function (color) {
+    try { document.documentElement.style.setProperty('--primary', color || '#3f7cff'); localStorage.setItem('primary', color || '#3f7cff'); } catch (e) { }
+  }
+  , getPrimary: function () {
+    try { return localStorage.getItem('primary') || '#3f7cff'; } catch (e) { return '#3f7cff'; }
+  }
 };
 
 window.logout = function() {
