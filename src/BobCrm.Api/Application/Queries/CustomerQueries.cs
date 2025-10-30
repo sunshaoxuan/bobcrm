@@ -39,9 +39,19 @@ public class CustomerQueries : ICustomerQueries
         
         // Get localized names for all customers
         var customers = q.ToList();
-        var localizedNames = _repoLocalization.Query()
-            .Where(l => l.Language == lang)
-            .ToDictionary(l => l.CustomerId, l => l.Name);
+        Dictionary<int, string?> localizedNames = new();
+        
+        // Try to get localized names if table exists
+        try
+        {
+            localizedNames = _repoLocalization.Query()
+                .Where(l => l.Language == lang)
+                .ToDictionary(l => l.CustomerId, l => l.Name);
+        }
+        catch
+        {
+            // Table doesn't exist yet, use default names
+        }
         
         return customers.Select(c => new 
         { 
@@ -70,9 +80,20 @@ public class CustomerQueries : ICustomerQueries
         var values = _repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
         
         // Get localized name
-        var localizedName = _repoLocalization.Query()
-            .FirstOrDefault(l => l.CustomerId == id && l.Language == lang);
-        var displayName = localizedName?.Name ?? c.Name;
+        string? displayName = c.Name;
+        try
+        {
+            var localizedName = _repoLocalization.Query()
+                .FirstOrDefault(l => l.CustomerId == id && l.Language == lang);
+            if (localizedName != null && !string.IsNullOrEmpty(localizedName.Name))
+            {
+                displayName = localizedName.Name;
+            }
+        }
+        catch
+        {
+            // Table doesn't exist yet, use default name
+        }
         
         var fields = defs.Select(d => new
         {
