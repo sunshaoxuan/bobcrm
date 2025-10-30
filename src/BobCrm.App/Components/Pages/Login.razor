@@ -130,7 +130,29 @@
             await JS.InvokeVoidAsync("console.log", $"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
             if (!resp.IsSuccessStatusCode)
             {
-                error = I18n.T("ERR_LOGIN_FAILED");
+                // 获取详细错误信息
+                string detailedError = I18n.T("ERR_LOGIN_FAILED");
+                try
+                {
+                    var errorContent = await resp.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[Login] Error response: {errorContent}");
+                    await JS.InvokeVoidAsync("console.log", $"[Login] Error response: {errorContent}");
+                    if (!string.IsNullOrWhiteSpace(errorContent))
+                    {
+                        try
+                        {
+                            var errorObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(errorContent);
+                            if (errorObj != null && errorObj.ContainsKey("error"))
+                            {
+                                detailedError = errorObj["error"]?.ToString() ?? detailedError;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+                
+                error = detailedError;
                 // 恢复输入值
                 model.username = usernameToSend;
                 model.password = passwordToSend;
@@ -151,11 +173,14 @@
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            error = $"{I18n.T("ERR_LOGIN_FAILED")}: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[Login] Exception: {ex}");
+            await JS.InvokeVoidAsync("console.error", $"[Login] Exception: {ex}");
         }
         finally
         {
             loading = false;
+            StateHasChanged();
         }
     }
 
