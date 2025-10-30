@@ -53,6 +53,9 @@
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
                 
+                // Wait for UI to update after i18n load
+                await InvokeAsync(StateHasChanged);
+                
                 // simple auth guard
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }

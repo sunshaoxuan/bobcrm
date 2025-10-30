@@ -722,3 +722,4 @@ POSITION: 38
 2025-10-30 12:22:13.311 +09:00 [INF] Writing value of type '<>f__AnonymousType2`5' as Json.
 2025-10-30 12:22:13.320 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
 2025-10-30 12:22:13.323 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 109.6478ms
+2025-10-30 12:24:50.174 +09:00 [INF] Application is shutting down...

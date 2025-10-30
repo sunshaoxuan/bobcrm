@@ -73,6 +73,9 @@ else
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
                 
+                // Wait for UI to update after i18n load
+                await InvokeAsync(StateHasChanged);
+                
                 // Load customer detail
                 var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
                 if (!resp.IsSuccessStatusCode)

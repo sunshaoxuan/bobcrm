@@ -34,7 +34,8 @@
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
-                StateHasChanged();
+                // Wait for UI to update after i18n load
+                await InvokeAsync(StateHasChanged);
             }
             catch { }
         }
