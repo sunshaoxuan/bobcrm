@@ -29,8 +29,8 @@ public static class DatabaseInitializer
         if (!await db.Set<Customer>().AnyAsync())
         {
             await db.Set<Customer>().AddRangeAsync(
-                new Customer { Code = "C001", Name = "LBL_CUSTOMER", Version = 1 },
-                new Customer { Code = "C002", Name = "LBL_CUSTOMER", Version = 1 }
+                new Customer { Code = "C001", Name = "示例客户A", Version = 1 },
+                new Customer { Code = "C002", Name = "示例客户B", Version = 1 }
             );
         }
 
