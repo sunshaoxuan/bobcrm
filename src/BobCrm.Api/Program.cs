@@ -233,8 +233,8 @@ app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManage
     }
     
     Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] Checking password for user '{user.UserName}'");
-    var pass = await sm.CheckPasswordSignInAsync(user, dto.password, false);
-    if (!pass.Succeeded)
+    var validPassword = await um.CheckPasswordAsync(user, dto.password);
+    if (!validPassword)
     {
         var msg = $"[Auth] Password check failed for user '{user.UserName}'";
         Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
@@ -754,6 +754,10 @@ app.MapPost("/api/setup/admin", async (
         adminUser.UserName = dto.username;
         adminUser.Email = dto.email;
         adminUser.EmailConfirmed = true;
+        // Reset lockout counters to avoid unexpected login failure
+        adminUser.AccessFailedCount = 0;
+        adminUser.LockoutEnabled = false;
+        adminUser.LockoutEnd = null;
         var ur = await um.UpdateAsync(adminUser);
         if (!ur.Succeeded)
         {
@@ -781,6 +785,7 @@ app.MapPost("/api/setup/admin", async (
             logger.LogError("[Setup] Failed to set new password: {errors}", errors);
             return Results.BadRequest(new { error = "设置新密码失败", details = errors });
         }
+        await um.UpdateSecurityStampAsync(adminUser);
         logger.LogInformation("[Setup] Admin updated successfully: {username}", dto.username);
         return Results.Ok(new { status = "updated", username = dto.username, email = dto.email });
     }

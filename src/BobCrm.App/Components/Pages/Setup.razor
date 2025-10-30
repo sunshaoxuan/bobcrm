@@ -441,7 +441,8 @@
         
         try
         {
-            var confirm = await JS.InvokeAsync<bool>("confirm", "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。");
+            var confirmMsg = I18n.T("MSG_RESET_CONFIRM") ?? "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。";
+            var confirm = await JS.InvokeAsync<bool>("confirm", confirmMsg);
             if (!confirm)
             {
                 resetting = false;
@@ -456,7 +457,7 @@
             if (resp.IsSuccessStatusCode)
             {
                 var result = await resp.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-                var message = result?.GetValueOrDefault("message")?.ToString() ?? "设置已重置";
+                var message = result?.GetValueOrDefault("message")?.ToString() ?? I18n.T("MSG_RESET_SETUP_SUCCESS") ?? "重置成功";
                 await Message.Success(message);
                 
                 // 清空表单
@@ -468,12 +469,14 @@
             else
             {
                 var error = await resp.Content.ReadAsStringAsync();
-                await Message.Error($"重置失败: {error}");
+                var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
+                await Message.Error($"{errorMsg}: {error}");
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"重置失败: {ex.Message}");
+            var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
+            await Message.Error($"{errorMsg}: {ex.Message}");
         }
         finally
         {
