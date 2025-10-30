@@ -208,30 +208,49 @@ app.MapGet("/api/auth/activate", async (UserManager<IdentityUser> um, string use
 
 app.MapPost("/api/auth/login", async (UserManager<IdentityUser> um, SignInManager<IdentityUser> sm, IRefreshTokenStore rts, IConfiguration cfg, LoginDto dto, ILocalization loc, HttpContext http, ILogger<Program> logger) =>
 {
+    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] Login attempt: username='{dto.username}', remote={http.Connection.RemoteIpAddress}");
     logger.LogInformation("[Auth] Login attempt, usernameOrEmail={username}, remote={ip}", dto.username ?? "(null)", http.Connection.RemoteIpAddress);
     
     if (string.IsNullOrWhiteSpace(dto.username))
     {
-        logger.LogWarning("[Auth] Invalid login request - username is empty");
+        var msg = "[Auth] Invalid login request - username is empty";
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
+        logger.LogWarning(msg);
         return Results.BadRequest(new { error = "Username is required" });
     }
     
+    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] Looking for user: username='{dto.username}'");
     var user = await um.FindByNameAsync(dto.username) ?? await um.FindByEmailAsync(dto.username);
     if (user == null)
     {
-        logger.LogWarning("[Auth] User not found for {username}", dto.username);
+        var msg = $"[Auth] User not found: username='{dto.username}'";
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
+        logger.LogWarning(msg);
+        
+        // 列出所有用户以便调试
+        var allUsers = um.Users.Select(u => $"{u.UserName} ({u.Email})").ToList();
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] All users in database: {string.Join(", ", allUsers)}");
+        
         return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
     }
+    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] Found user: username='{user.UserName}', email='{user.Email}', emailConfirmed={user.EmailConfirmed}");
+    
     if (!user.EmailConfirmed)
     {
         var lang = LangHelper.GetLang(http);
-        logger.LogWarning("[Auth] Email not confirmed for user {user}", user.UserName);
+        var msg = $"[Auth] Email not confirmed for user '{user.UserName}'";
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
+        logger.LogWarning(msg);
         return Results.BadRequest(new { error = loc.T("ERR_EMAIL_NOT_CONFIRMED", lang) });
     }
+    
+    Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [Auth] Checking password for user '{user.UserName}'");
     var pass = await sm.CheckPasswordSignInAsync(user, dto.password, false);
     if (!pass.Succeeded)
     {
-        logger.LogWarning("[Auth] Password check failed for user {user}", user.UserName);
+        var msg = $"[Auth] Password check failed for user '{user.UserName}'";
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}");
+        logger.LogWarning(msg);
         return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
     }
     var tokens = await IssueTokensAsync(cfg, user, rts, key);
