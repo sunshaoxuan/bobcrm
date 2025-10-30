@@ -1,0 +1,534 @@
+2025-10-30 12:27:16.527 +09:00 [INF] ============================================
+2025-10-30 12:27:16.550 +09:00 [INF] Application starting at "2025-10-30T12:27:16.5430746+09:00", log file: C:\workspace\bobcrm\src\BobCrm.Api\..\..\logs\api_20251030_122716.log
+2025-10-30 12:27:16.555 +09:00 [INF] ============================================
+2025-10-30 12:27:17.415 +09:00 [INF] Executed DbCommand (36ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE WHEN COUNT(*) = 0 THEN FALSE ELSE TRUE END
+FROM pg_class AS cls
+JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+WHERE
+        cls.relkind IN ('r', 'v', 'm', 'f', 'p') AND
+        ns.nspname NOT IN ('pg_catalog', 'information_schema') AND
+        -- Exclude tables which are members of PG extensions
+        NOT EXISTS (
+            SELECT 1 FROM pg_depend WHERE
+                classid=(
+                    SELECT cls.oid
+                    FROM pg_class AS cls
+                             JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+                    WHERE relname='pg_class' AND ns.nspname='pg_catalog'
+                ) AND
+                objid=cls.oid AND
+                deptype IN ('e', 'x')
+        )
+2025-10-30 12:27:17.554 +09:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+2025-10-30 12:27:17.568 +09:00 [INF] Executed DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE IF NOT EXISTS "LocalizationLanguages" ("Id" SERIAL PRIMARY KEY, "Code" text NOT NULL, "NativeName" text NOT NULL);
+2025-10-30 12:27:17.572 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+
+                    CREATE TABLE IF NOT EXISTS "CustomerLocalizations" (
+                        "CustomerId" integer NOT NULL,
+                        "Language" text NOT NULL,
+                        "Name" text,
+                        CONSTRAINT "PK_CustomerLocalizations" PRIMARY KEY ("CustomerId", "Language"),
+                        CONSTRAINT "FK_CustomerLocalizations_Customers_CustomerId" FOREIGN KEY ("CustomerId") REFERENCES "Customers"("Id") ON DELETE CASCADE
+                    );
+2025-10-30 12:27:17.589 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "FieldDefinitions" AS f)
+2025-10-30 12:27:17.597 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationLanguages" AS l)
+2025-10-30 12:27:17.603 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l)
+2025-10-30 12:27:17.644 +09:00 [INF] Executed DbCommand (7ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.652 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.656 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.659 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.664 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.668 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.676 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.680 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.684 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.689 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.692 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.696 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.701 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.707 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.710 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.715 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.719 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.723 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.728 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.737 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.741 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.748 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.753 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.757 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.775 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.782 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.786 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.791 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.799 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.804 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.807 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.812 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.816 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.819 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.822 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.830 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.834 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.839 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.845 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.848 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.853 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.861 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.866 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.870 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.875 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.879 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-30 12:27:17.894 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON "FieldValues" USING GIN ("Value");
+2025-10-30 12:27:17.898 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON "FieldDefinitions" USING GIN ("Tags");
+2025-10-30 12:27:17.901 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON "FieldDefinitions" USING GIN ("Actions");
+2025-10-30 12:27:17.904 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON "UserLayouts" USING GIN ("LayoutJson");
+2025-10-30 12:27:17.908 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON "FieldValues" ("CustomerId", "FieldDefinitionId");
+2025-10-30 12:27:17.914 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Customers" AS c)
+2025-10-30 12:27:17.950 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2025-10-30 12:27:17.991 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."Email", a."EmailConfirmed", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."SecurityStamp", a."TwoFactorEnabled", a."UserName"
+FROM "AspNetUsers" AS a
+WHERE a."NormalizedUserName" = @__normalizedUserName_0
+LIMIT 1
+2025-10-30 12:27:18.027 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedRoleName_0
+LIMIT 2
+2025-10-30 12:27:18.047 +09:00 [INF] Executed DbCommand (3ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."UserId", a."RoleId"
+FROM "AspNetUserRoles" AS a
+WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+LIMIT 1
+2025-10-30 12:27:18.069 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id"
+FROM "Customers" AS c
+2025-10-30 12:27:18.077 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+2025-10-30 12:27:18.083 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+2025-10-30 12:27:18.131 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT d."Id", d."FriendlyName", d."Xml"
+FROM "DataProtectionKeys" AS d
+2025-10-30 12:27:18.277 +09:00 [INF] Now listening on: http://0.0.0.0:5200
+2025-10-30 12:27:18.280 +09:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-30 12:27:18.282 +09:00 [INF] Hosting environment: Development
+2025-10-30 12:27:18.283 +09:00 [INF] Content root path: C:\workspace\bobcrm\src\BobCrm.Api
+2025-10-30 12:27:23.997 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+2025-10-30 12:27:24.067 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:24.115 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:24.120 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-30 12:27:24.130 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:24.134 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 137.9679ms
+2025-10-30 12:27:24.150 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - null null
+2025-10-30 12:27:24.378 +09:00 [INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:24.386 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+2025-10-30 12:27:24.392 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+2025-10-30 12:27:24.402 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+2025-10-30 12:27:24.424 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+2025-10-30 12:27:24.449 +09:00 [INF] Executed DbCommand (3ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+2025-10-30 12:27:24.461 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+2025-10-30 12:27:24.464 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:24.466 +09:00 [INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+2025-10-30 12:27:24.480 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:24.482 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 331.7067ms
+2025-10-30 12:27:25.260 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+2025-10-30 12:27:25.264 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:25.271 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:25.272 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-30 12:27:25.273 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:25.275 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 14.5715ms
+2025-10-30 12:27:25.280 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers - null null
+2025-10-30 12:27:25.286 +09:00 [INF] Executing endpoint 'HTTP: GET /api/customers'
+2025-10-30 12:27:25.291 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__uid_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId"
+FROM "CustomerAccesses" AS c
+WHERE c."UserId" = @__uid_0
+2025-10-30 12:27:25.335 +09:00 [INF] Executed DbCommand (31ms) [Parameters=[@__accessIds_0='?' (DbType = Object)], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = ANY (@__accessIds_0)
+2025-10-30 12:27:25.342 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__lang_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."Language" = @__lang_0
+2025-10-30 12:27:25.345 +09:00 [INF] Writing value of type 'List`1' as Json.
+2025-10-30 12:27:25.349 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers'
+2025-10-30 12:27:25.350 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers - 200 null application/json; charset=utf-8 70.0083ms
+2025-10-30 12:27:27.356 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+2025-10-30 12:27:27.361 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:27.364 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:27.367 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-30 12:27:27.368 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:27.370 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 14.2046ms
+2025-10-30 12:27:27.376 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - null null
+2025-10-30 12:27:27.383 +09:00 [INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:27.392 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+2025-10-30 12:27:27.399 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+2025-10-30 12:27:27.404 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+2025-10-30 12:27:27.407 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+2025-10-30 12:27:27.413 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+2025-10-30 12:27:27.417 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+2025-10-30 12:27:27.421 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:27.426 +09:00 [INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+2025-10-30 12:27:27.428 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:27.430 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 54.4156ms
+2025-10-30 12:27:29.639 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+2025-10-30 12:27:29.644 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:29.647 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:29.651 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-30 12:27:29.652 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:29.654 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 14.5385ms
+2025-10-30 12:27:29.661 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - null null
+2025-10-30 12:27:29.664 +09:00 [INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:29.668 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+2025-10-30 12:27:29.678 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+2025-10-30 12:27:29.682 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+2025-10-30 12:27:29.686 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+2025-10-30 12:27:29.693 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+2025-10-30 12:27:29.697 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+2025-10-30 12:27:29.701 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:29.707 +09:00 [INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+2025-10-30 12:27:29.709 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:29.711 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 49.7934ms
+2025-10-30 12:27:31.180 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+2025-10-30 12:27:31.185 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:31.190 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:31.194 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-30 12:27:31.196 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-30 12:27:31.198 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 18.1089ms
+2025-10-30 12:27:31.208 +09:00 [INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - null null
+2025-10-30 12:27:31.213 +09:00 [INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:31.218 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+2025-10-30 12:27:31.225 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+2025-10-30 12:27:31.230 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+2025-10-30 12:27:31.239 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+2025-10-30 12:27:31.245 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='"Text"', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+2025-10-30 12:27:31.251 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+2025-10-30 12:27:31.255 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-30 12:27:31.258 +09:00 [INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+2025-10-30 12:27:31.259 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+2025-10-30 12:27:31.261 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 52.8061ms
+2025-10-30 12:28:26.536 +09:00 [INF] Application is shutting down...

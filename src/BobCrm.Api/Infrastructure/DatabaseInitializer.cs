@@ -225,6 +225,12 @@ public static class DatabaseInitializer
             Ensure("BTN_LOGOUT", "退出", "ログアウト", "Logout");
             Ensure("LBL_HOME", "首页", "ホーム", "Home");
             Ensure("LBL_WELCOME", "欢迎使用 BobCRM", "BobCRM へようこそ", "Welcome to BobCRM");
+            Ensure("LBL_CUSTOMER_DETAIL", "客户详情", "顧客詳細", "Customer Detail");
+            Ensure("LBL_LOADING", "加载中", "読み込み中", "Loading");
+            Ensure("LBL_FIELDS", "字段", "フィールド", "Fields");
+            Ensure("BTN_BACK", "返回", "戻る", "Back");
+            Ensure("LBL_NOT_FOUND", "未找到", "見つかりません", "Not Found");
+            Ensure("LBL_NO_FIELDS", "无字段", "フィールドなし", "No fields");
             Ensure("BTN_RESET_SETUP", "重置初始化设置", "初期設定をリセット", "Reset Setup");
             Ensure("MSG_RESET_CONFIRM", "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。", "初期設定をリセットしますか？現在の管理者アカウントが削除され、再設定が必要です。", "Are you sure to reset setup? This will delete the current admin account and require reconfiguration.");
             Ensure("MSG_RESET_SETUP_SUCCESS", "重置成功，请重新配置", "リセット完了。再設定してください", "Reset successful, please reconfigure");
