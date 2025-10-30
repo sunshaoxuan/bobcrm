@@ -81,6 +81,10 @@
               "target": "Package",
               "version": "[8.*, )"
             },
+            "Serilog.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "Serilog.Extensions.Logging": {
               "target": "Package",
               "version": "[9.0.2, )"

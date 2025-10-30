@@ -165,3 +165,17 @@ C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Formatting.Compact.d
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.Async.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.File.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.RollingFile.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.Extensions.Configuration.Abstractions.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.Extensions.Configuration.Binder.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.Extensions.FileProviders.Abstractions.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.AspNetCore.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Extensions.Hosting.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Settings.Configuration.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.Console.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Serilog.Sinks.Debug.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\System.IO.Pipelines.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\System.Text.Encodings.Web.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\System.Text.Json.dll
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
