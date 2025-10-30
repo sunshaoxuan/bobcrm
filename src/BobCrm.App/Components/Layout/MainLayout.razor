@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Components
+@using System.Net.Http.Json
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.AuthService Auth
+@rendermode RenderMode.InteractiveServer
 
 <div style="min-height:100vh;display:flex">
     <div style="width:220px;background:#001529;color:#fff">
@@ -50,9 +52,28 @@
 
     private async Task Logout()
     {
+        try
+        {
+            // 尝试调用后端登出API
+            var http = await Auth.CreateClientWithAuthAsync();
+            var refreshToken = await JS.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+            if (!string.IsNullOrWhiteSpace(refreshToken))
+            {
+                try
+                {
+                    await http.PostAsJsonAsync("/api/auth/logout", new { refreshToken });
+                }
+                catch { } // 即使API调用失败也继续清除本地状态
+            }
+        }
+        catch { }
+        
+        // 清除本地存储
         await JS.InvokeVoidAsync("localStorage.removeItem", "accessToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
         await JS.InvokeVoidAsync("localStorage.removeItem", "user");
+        
+        // 跳转到登录页
         Nav.NavigateTo("/login", forceLoad: true);
     }
 
