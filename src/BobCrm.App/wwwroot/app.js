@@ -68,6 +68,6 @@ window.logout = function() {
 window.changeLang = function(lang) {
   // 保存语言选择
   bobcrm.setCookie('lang', lang, 365);
-  // 刷新页面以加载新的i18n资源
+  // 刷新页面以加载新的i18n资源（最简单可靠的方式）
   window.location.reload();
 };

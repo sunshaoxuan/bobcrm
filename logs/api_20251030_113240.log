@@ -431,3 +431,4 @@ WHERE c."Id" = ANY (@__accessIds_0)
 2025-10-30 11:33:07.635 +09:00 [INF] Writing value of type 'List`1' as Json.
 2025-10-30 11:33:07.638 +09:00 [INF] Executed endpoint 'HTTP: GET /api/customers'
 2025-10-30 11:33:07.641 +09:00 [INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers - 200 null application/json; charset=utf-8 23.8881ms
+2025-10-30 11:35:23.060 +09:00 [INF] Application is shutting down...

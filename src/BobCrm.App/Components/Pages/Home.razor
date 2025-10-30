@@ -1,11 +1,42 @@
 @page "/"
 @rendermode RenderMode.InteractiveServer
 
-<PageTitle>ホーム</PageTitle>
+@inject BobCrm.App.Services.I18nService I18n
 
-<h1>BobCRM へようこそ</h1>
+<PageTitle>@I18n.T("LBL_HOME")</PageTitle>
+
+<h1>@I18n.T("LBL_WELCOME")</h1>
 
 <p>
-    - <a href="/login">ログイン</a><br />
-    - <a href="/customers">顧客</a>
+    - <a href="/login">@I18n.T("LBL_LOGIN_TITLE")</a><br />
+    - <a href="/customers">@I18n.T("MENU_CUSTOMERS")</a>
 </p>
+
+@code {
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
+                await I18n.LoadAsync(langToLoad);
+                StateHasChanged();
+            }
+            catch { }
+        }
+    }
+}

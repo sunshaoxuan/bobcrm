@@ -6,16 +6,16 @@
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
-<h1>顧客</h1>
+<h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
-<Input Placeholder="検索 名称/コード" @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
+<Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 
 <table class="ant-table" style="width:100%">
-  <thead><tr><th>コード</th><th>名称</th><th>操作</th></tr></thead>
+  <thead><tr><th>@I18n.T("COL_CODE")</th><th>@I18n.T("COL_NAME")</th><th>@I18n.T("COL_ACTIONS")</th></tr></thead>
   <tbody>
     @foreach (var c in filtered)
     {
-        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">詳細</Button></td></tr>
+        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">@I18n.T("BTN_DETAIL")</Button></td></tr>
     }
   </tbody>
 </table>
@@ -32,12 +32,27 @@
     private IEnumerable<CustomerItem> filtered => string.IsNullOrWhiteSpace(keyword)
         ? data : data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             try
             {
+                // Load i18n first
+                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
+                await I18n.LoadAsync(langToLoad);
+                
                 // simple auth guard
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
@@ -45,7 +60,7 @@
                 var resp = await Auth.GetWithRefreshAsync("/api/customers");
                 if (!resp.IsSuccessStatusCode)
                 {
-                    error = $"読み込み失敗: {(int)resp.StatusCode}"; StateHasChanged(); return;
+                    error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}"; StateHasChanged(); return;
                 }
                 var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
                 data = json ?? new();
