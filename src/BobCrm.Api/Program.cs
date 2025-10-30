@@ -823,6 +823,7 @@ class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAccess> CustomerAccesses => Set<CustomerAccess>();
+    public DbSet<CustomerLocalization> CustomerLocalizations => Set<CustomerLocalization>();
     public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
     public DbSet<FieldValue> FieldValues => Set<FieldValue>();
     public DbSet<UserLayout> UserLayouts => Set<UserLayout>();

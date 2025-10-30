@@ -15,15 +15,16 @@ public interface ICustomerQueries
 public class CustomerQueries : ICustomerQueries
 {
     private readonly IRepository<Customer> _repoCustomer;
+    private readonly IRepository<CustomerLocalization> _repoLocalization;
     private readonly IRepository<FieldDefinition> _repoDef;
     private readonly IRepository<FieldValue> _repoVal;
     private readonly IRepository<CustomerAccess> _repoAccess;
     private readonly IHttpContextAccessor _http;
     private readonly ILocalization _loc;
 
-    public CustomerQueries(IRepository<Customer> repoCustomer, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal, IRepository<CustomerAccess> repoAccess, IHttpContextAccessor http, ILocalization loc)
+    public CustomerQueries(IRepository<Customer> repoCustomer, IRepository<CustomerLocalization> repoLocalization, IRepository<FieldDefinition> repoDef, IRepository<FieldValue> repoVal, IRepository<CustomerAccess> repoAccess, IHttpContextAccessor http, ILocalization loc)
     {
-        _repoCustomer = repoCustomer; _repoDef = repoDef; _repoVal = repoVal; _repoAccess = repoAccess; _http = http; _loc = loc;
+        _repoCustomer = repoCustomer; _repoLocalization = repoLocalization; _repoDef = repoDef; _repoVal = repoVal; _repoAccess = repoAccess; _http = http; _loc = loc;
     }
 
     public List<object> GetList()
@@ -32,7 +33,25 @@ public class CustomerQueries : ICustomerQueries
         var accessIds = _repoAccess.Query(a => a.UserId == uid).Select(a => a.CustomerId).ToList();
         var hasAccessRows = accessIds.Count > 0;
         var q = hasAccessRows ? _repoCustomer.Query(c => accessIds.Contains(c.Id)) : _repoCustomer.Query();
-        return q.Select(c => new { id = c.Id, code = c.Code, name = c.Name }).Cast<object>().ToList();
+        
+        // Get current language for localization
+        var lang = LangHelper.GetLang(_http.HttpContext!);
+        
+        // Get localized names for all customers
+        var customers = q.ToList();
+        var localizedNames = _repoLocalization.Query()
+            .Where(l => l.Language == lang)
+            .ToDictionary(l => l.CustomerId, l => l.Name);
+        
+        return customers.Select(c => new 
+        { 
+            id = c.Id, 
+            code = c.Code, 
+            // Use localized name if available, otherwise fall back to default name
+            name = localizedNames.ContainsKey(c.Id) && !string.IsNullOrEmpty(localizedNames[c.Id])
+                ? localizedNames[c.Id]
+                : c.Name 
+        }).Cast<object>().ToList();
     }
 
     public object? GetDetail(int id)
@@ -49,6 +68,12 @@ public class CustomerQueries : ICustomerQueries
         var defs = _repoDef.Query().ToList();
         var lang = LangHelper.GetLang(_http.HttpContext!);
         var values = _repoVal.Query(v => v.CustomerId == id).OrderByDescending(v => v.Version).ToList();
+        
+        // Get localized name
+        var localizedName = _repoLocalization.Query()
+            .FirstOrDefault(l => l.CustomerId == id && l.Language == lang);
+        var displayName = localizedName?.Name ?? c.Name;
+        
         var fields = defs.Select(d => new
         {
             key = d.Key,
@@ -61,6 +86,6 @@ public class CustomerQueries : ICustomerQueries
             required = d.Required,
             validation = d.Validation
         }).ToArray();
-        return new { id = c.Id, code = c.Code, name = c.Name, version = c.Version, fields };
+        return new { id = c.Id, code = c.Code, name = displayName, version = c.Version, fields };
     }
 }

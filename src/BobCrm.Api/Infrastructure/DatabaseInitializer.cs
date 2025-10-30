@@ -28,9 +28,19 @@ public static class DatabaseInitializer
 
         if (!await db.Set<Customer>().AnyAsync())
         {
-            await db.Set<Customer>().AddRangeAsync(
-                new Customer { Code = "C001", Name = "示例客户A", Version = 1 },
-                new Customer { Code = "C002", Name = "示例客户B", Version = 1 }
+            var customer1 = new Customer { Code = "C001", Name = "示例客户A", Version = 1 };
+            var customer2 = new Customer { Code = "C002", Name = "示例客户B", Version = 1 };
+            await db.Set<Customer>().AddRangeAsync(customer1, customer2);
+            await db.SaveChangesAsync();
+            
+            // Add localized names
+            await db.Set<CustomerLocalization>().AddRangeAsync(
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "zh", Name = "示例客户A" },
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "ja", Name = "サンプル顧客A" },
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "en", Name = "Sample Customer A" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "zh", Name = "示例客户B" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "ja", Name = "サンプル顧客B" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "en", Name = "Sample Customer B" }
             );
         }
 
