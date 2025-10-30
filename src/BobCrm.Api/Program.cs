@@ -32,9 +32,7 @@ builder.Logging.AddSimpleConsole(options =>
     options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
 });
 
-// 添加文件日志提供者（简单实现）
-var logStreamWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
-builder.Services.AddSingleton(logStreamWriter);
+// 不再使用文件日志，只使用控制台输出（详细的Console.WriteLine已经添加）
 
 builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter("System", LogLevel.Warning);
@@ -114,21 +112,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 配置日志到文件（在app构建后配置）
-var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
-var logWriter = app.Services.GetRequiredService<StreamWriter>();
-
-// 手动写入日志到文件
-Action<string> writeToFile = (message) =>
-{
-    try { logWriter.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}"); }
-    catch { }
-};
-
 // 配置详细日志
-var startupMsg = $"Application starting at {DateTime.Now}";
+var startupMsg = $"Application starting at {DateTime.Now}, log file: {logFilePath}";
+Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ============================================");
+Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {startupMsg}");
+Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ============================================");
 app.Logger.LogInformation(startupMsg);
-writeToFile(startupMsg);
 
 if (app.Environment.IsDevelopment())
 {
