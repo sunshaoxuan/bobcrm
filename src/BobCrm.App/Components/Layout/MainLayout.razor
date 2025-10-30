@@ -1,26 +1,25 @@
 @using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
-@inject NavigationManager Nav
-@inject IJSRuntime JS
-@inject BobCrm.App.Services.AuthService Auth
 
 <div style="min-height:100vh;display:flex">
+    @* Sidebar - using i18n service directly *@
     <div style="width:220px;background:#001529;color:#fff">
         <div class="logo" style="height:32px;margin:16px;background:rgba(255,255,255,0.3)"></div>
         <ul style="list-style:none;padding:0 12px">
-            <li><a href="/customers" style="color:#fff;text-decoration:none">@I18n.T("MENU_CUSTOMERS")</a></li>
+            <li><a href="/customers" style="color:#fff;text-decoration:none">顧客</a></li>
         </ul>
     </div>
     <div style="flex:1;display:flex;flex-direction:column">
+        @* Interactive header *@
         <div style="background:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee">
             <div>BobCRM</div>
             <div>
-                <select id="langSelect" onchange="window.changeLang(this.value)" style="width:160px;height:28px;margin-right:8px">
+                <select onchange="window.changeLang(this.value)" style="width:160px;height:28px;margin-right:8px">
                     <option value="zh">中文</option>
                     <option value="ja" selected>日本語</option>
                     <option value="en">English</option>
                 </select>
-                <button type="button" class="ant-btn ant-btn-default" onclick="logout()">@I18n.T("BTN_LOGOUT")</button>
+                <button type="button" class="ant-btn ant-btn-default" onclick="logout()">ログアウト</button>
             </div>
         </div>
         <div style="padding:16px">
@@ -33,35 +32,6 @@
 
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
-
-    [Inject] BobCrm.App.Services.I18nService I18n { get; set; } = default!;
-    [Inject] IJSRuntime _js { get; set; } = default!;
-
-    protected override void OnInitialized()
-    {
-        I18n.OnChanged += HandleI18nChanged;
-    }
-
-    private void HandleI18nChanged()
-    {
-        try { InvokeAsync(StateHasChanged); } catch { }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var saved = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
-                await I18n.LoadAsync(langToLoad);
-                try { await _js.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
-                StateHasChanged();
-            }
-            catch { }
-        }
-    }
 }
 
 
