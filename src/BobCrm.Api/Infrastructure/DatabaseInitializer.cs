@@ -147,6 +147,9 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_REGISTER", ZH = "注册", JA = "登録", EN = "Register" },
                 new LocalizationResource { Key = "BTN_REGISTER", ZH = "注册", JA = "登録", EN = "Register" },
                 new LocalizationResource { Key = "LBL_USERNAME", ZH = "用户名", JA = "ユーザー名", EN = "Username" },
+                new LocalizationResource { Key = "LBL_USERNAME_OR_EMAIL", ZH = "用户名或邮箱", JA = "ユーザー名またはメール", EN = "Username or Email" },
+                new LocalizationResource { Key = "ERR_USERNAME_REQUIRED", ZH = "用户名不能为空", JA = "ユーザー名は必須です", EN = "Username is required" },
+                new LocalizationResource { Key = "ERR_PASSWORD_REQUIRED", ZH = "密码不能为空", JA = "パスワードは必須です", EN = "Password is required" },
                 new LocalizationResource { Key = "MSG_REGISTER_SUCCESS", ZH = "注册成功，请进行邮箱激活（开发环境查看 API 控制台）", JA = "登録成功。メール認証を実施してください（開発環境は API コンソール参照）", EN = "Registered. Please verify by email (check API console in dev)." },
                 new LocalizationResource { Key = "TXT_REGISTER_HELP", ZH = "注册成功后，请在 API 控制台查看激活链接，或前往激活页面手动激活。", JA = "登録後、APIコンソールの有効化リンクを確認するか、アクティベートページで手動有効化してください。", EN = "After registering, check activation link in API console or activate manually on the activate page." },
                 new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
@@ -187,6 +190,9 @@ public static class DatabaseInitializer
             Ensure("COL_ACTIONS", "操作", "操作", "Actions");
             Ensure("BTN_DETAIL", "详情", "詳細", "Detail");
             Ensure("LBL_LOGIN_TITLE", "登录", "ログイン", "Login");
+            Ensure("LBL_USERNAME_OR_EMAIL", "用户名或邮箱", "ユーザー名またはメール", "Username or Email");
+            Ensure("ERR_USERNAME_REQUIRED", "用户名不能为空", "ユーザー名は必須です", "Username is required");
+            Ensure("ERR_PASSWORD_REQUIRED", "密码不能为空", "パスワードは必須です", "Password is required");
             Ensure("ERR_LOGIN_FAILED", "登录失败", "ログイン失敗", "Login failed");
             Ensure("ERR_PARSE_RESPONSE", "无法解析服务器响应", "サーバー応答を解析できません", "Unable to parse server response");
             Ensure("LBL_SETUP", "初始化设置", "初期設定", "Setup");
