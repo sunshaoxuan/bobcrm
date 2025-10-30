@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "AmX/imfr4og=",
+  "dgSpecHash": "j8HP5P/mh7I=",
   "success": true,
   "projectFilePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
   "expectedPackageFiles": [
@@ -62,6 +62,7 @@
     "C:\\Users\\X02851\\.nuget\\packages\\serilog.extensions.logging.file\\2.0.0\\serilog.extensions.logging.file.2.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\serilog.formatting.compact\\1.0.0\\serilog.formatting.compact.1.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\serilog.sinks.async\\1.1.0\\serilog.sinks.async.1.1.0.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\serilog.sinks.console\\6.0.0\\serilog.sinks.console.6.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\serilog.sinks.file\\7.0.0\\serilog.sinks.file.7.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\serilog.sinks.rollingfile\\3.3.0\\serilog.sinks.rollingfile.3.3.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.6\\sqlitepclraw.bundle_e_sqlite3.2.1.6.nupkg.sha512",

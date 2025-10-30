@@ -16,6 +16,7 @@ using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
 using Serilog;
+using Serilog.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
