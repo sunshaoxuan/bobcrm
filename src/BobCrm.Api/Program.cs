@@ -348,6 +348,28 @@ app.MapGet("/api/debug/users", async (UserManager<IdentityUser> um) =>
     return Results.Ok(users);
 });
 
+// Development-only: reset setup (delete admin user to allow re-initialization)
+app.MapPost("/api/debug/reset-setup", async (UserManager<IdentityUser> um, RoleManager<IdentityRole> rm) =>
+{
+    if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+    
+    var admin = await um.FindByNameAsync("admin");
+    if (admin != null)
+    {
+        var result = await um.DeleteAsync(admin);
+        if (result.Succeeded)
+        {
+            return Results.Ok(new { status = "ok", message = "Admin user deleted. You can now re-initialize from setup page." });
+        }
+        else
+        {
+            return Results.BadRequest(new { error = "Failed to delete admin user", details = string.Join("; ", result.Errors.Select(e => e.Description)) });
+        }
+    }
+    
+    return Results.Ok(new { status = "ok", message = "No admin user found. Ready for initialization." });
+});
+
 // Development-only: reset current admin password quickly when locked out
 app.MapPost("/api/admin/reset-password", async (UserManager<IdentityUser> um, RoleManager<IdentityRole> rm, AdminResetPasswordDto dto) =>
 {
