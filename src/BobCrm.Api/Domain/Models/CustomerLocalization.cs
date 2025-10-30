@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Domain;
 
-public class CustomerLocalization
+public class CustomerLocalization : ILocalizationData
 {
     [Key, Column(Order = 0)]
     public int CustomerId { get; set; }
@@ -16,4 +16,16 @@ public class CustomerLocalization
     
     [ForeignKey("CustomerId")]
     public Customer? Customer { get; set; }
+    
+    // ILocalizationData implementation
+    public int EntityId { get => CustomerId; set => CustomerId = value; }
+    
+    public string? GetLocalizedValue(string propertyName)
+    {
+        return propertyName switch
+        {
+            nameof(Name) => Name,
+            _ => null
+        };
+    }
 }
