@@ -137,9 +137,18 @@ using (var scope = app.Services.CreateScope())
     // Seed test data (development only)
     try
     {
+        var customerCount = await db.Set<Customer>().CountAsync();
+        app.Logger.LogInformation("[TestData] Current customer count: {Count}", customerCount);
+        
         await TestDataSeeder.SeedTestDataAsync(db);
+        
+        var newCount = await db.Set<Customer>().CountAsync();
+        app.Logger.LogInformation("[TestData] After seeding, customer count: {Count}", newCount);
     }
-    catch { }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "[TestData] Failed to seed test data");
+    }
     
     // Seed admin user/role and grant access to all customers
     try
