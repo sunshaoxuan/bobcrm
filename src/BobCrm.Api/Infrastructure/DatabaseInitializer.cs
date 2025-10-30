@@ -24,6 +24,20 @@ public static class DatabaseInitializer
                 await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS \"LocalizationLanguages\" (\"Id\" SERIAL PRIMARY KEY, \"Code\" text NOT NULL, \"NativeName\" text NOT NULL);");
             }
             catch { }
+            
+            // Create CustomerLocalizations table if not exists
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS ""CustomerLocalizations"" (
+                        ""CustomerId"" integer NOT NULL,
+                        ""Language"" text NOT NULL,
+                        ""Name"" text,
+                        CONSTRAINT ""PK_CustomerLocalizations"" PRIMARY KEY (""CustomerId"", ""Language""),
+                        CONSTRAINT ""FK_CustomerLocalizations_Customers_CustomerId"" FOREIGN KEY (""CustomerId"") REFERENCES ""Customers""(""Id"") ON DELETE CASCADE
+                    );");
+            }
+            catch { }
         }
 
         if (!await db.Set<Customer>().AnyAsync())
@@ -164,6 +178,11 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "TXT_REGISTER_HELP", ZH = "注册成功后，请在 API 控制台查看激活链接，或前往激活页面手动激活。", JA = "登録後、APIコンソールの有効化リンクを確認するか、アクティベートページで手動有効化してください。", EN = "After registering, check activation link in API console or activate manually on the activate page." },
                 new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
                 new LocalizationResource { Key = "LBL_WELCOME", ZH = "欢迎使用 BobCRM", JA = "BobCRM へようこそ", EN = "Welcome to BobCRM" },
+                new LocalizationResource { Key = "LBL_CUSTOMER_DETAIL", ZH = "客户详情", JA = "顧客詳細", EN = "Customer Detail" },
+                new LocalizationResource { Key = "LBL_LOADING", ZH = "加载中", JA = "読み込み中", EN = "Loading" },
+                new LocalizationResource { Key = "LBL_FIELDS", ZH = "字段", JA = "フィールド", EN = "Fields" },
+                new LocalizationResource { Key = "BTN_BACK", ZH = "返回", JA = "戻る", EN = "Back" },
+                new LocalizationResource { Key = "LBL_NOT_FOUND", ZH = "未找到", JA = "見つかりません", EN = "Not Found" },
                 new LocalizationResource { Key = "LBL_USER_ID", ZH = "用户ID", JA = "ユーザーID", EN = "User ID" },
                 new LocalizationResource { Key = "LBL_CODE", ZH = "代码", JA = "コード", EN = "Code" },
                 // Error/validation keys
