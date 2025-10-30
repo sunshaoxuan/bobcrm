@@ -65,33 +65,44 @@
     
     try
     {
+      await JS.InvokeVoidAsync("console.log", "[CustomerSider] OnAfterRenderAsync started");
+      
       // Load i18n first
       var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
       var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
       await I18n.LoadAsync(langToLoad);
       
+      await JS.InvokeVoidAsync("console.log", "[CustomerSider] i18n loaded");
+      
       // Wait for UI to update
       await InvokeAsync(StateHasChanged);
       
       // Load customers
+      await JS.InvokeVoidAsync("console.log", "[CustomerSider] Loading customers...");
       var resp = await Auth.GetWithRefreshAsync("/api/customers");
+      await JS.InvokeVoidAsync("console.log", $"[CustomerSider] Response status: {(int)resp.StatusCode}");
+      
       if (resp.IsSuccessStatusCode)
       {
         _data = await resp.Content.ReadFromJsonAsync<List<Item>>() ?? new();
+        await JS.InvokeVoidAsync("console.log", $"[CustomerSider] Loaded {_data.Count} customers");
         TrySyncSelectedFromUrl();
       }
       else 
       { 
         error = $"Load customers failed: {(int)resp.StatusCode}"; 
+        await JS.InvokeVoidAsync("console.error", $"[CustomerSider] Error: {error}");
       }
       
       loading = false;
       StateHasChanged();
+      await JS.InvokeVoidAsync("console.log", "[CustomerSider] StateHasChanged called");
     }
     catch (Exception ex)
     {
       error = $"Error: {ex.Message}";
       loading = false;
+      await JS.InvokeVoidAsync("console.error", $"[CustomerSider] Exception: {ex.Message}");
       StateHasChanged();
     }
   }
