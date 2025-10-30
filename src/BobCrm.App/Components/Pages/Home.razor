@@ -1,13 +1,11 @@
 @page "/"
 @rendermode RenderMode.InteractiveServer
 
-@inject BobCrm.App.Services.I18nService I18n
+<PageTitle>ホーム</PageTitle>
 
-<PageTitle>@I18n.T("LBL_HOME")</PageTitle>
-
-<h1>@I18n.T("LBL_WELCOME")</h1>
+<h1>BobCRM へようこそ</h1>
 
 <p>
-    - <a href="/login">@I18n.T("LBL_LOGIN_TITLE")</a><br />
-    - <a href="/customers">@I18n.T("MENU_CUSTOMERS")</a>
+    - <a href="/login">ログイン</a><br />
+    - <a href="/customers">顧客</a>
 </p>

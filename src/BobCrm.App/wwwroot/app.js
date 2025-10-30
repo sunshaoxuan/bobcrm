@@ -64,3 +64,10 @@ window.logout = function() {
   // 跳转到登录页
   window.location.href = '/login';
 };
+
+window.changeLang = function(lang) {
+  // 保存语言选择
+  bobcrm.setCookie('lang', lang, 365);
+  // 刷新页面以加载新的i18n资源
+  window.location.reload();
+};

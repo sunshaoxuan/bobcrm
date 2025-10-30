@@ -6,16 +6,16 @@
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
-<h1>@I18n.T("MENU_CUSTOMERS")</h1>
+<h1>顧客</h1>
 
-<Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
+<Input Placeholder="検索 名称/コード" @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
 
 <table class="ant-table" style="width:100%">
-  <thead><tr><th>@I18n.T("COL_CODE")</th><th>@I18n.T("COL_NAME")</th><th>@I18n.T("COL_ACTIONS")</th></tr></thead>
+  <thead><tr><th>コード</th><th>名称</th><th>操作</th></tr></thead>
   <tbody>
     @foreach (var c in filtered)
     {
-        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">@I18n.T("BTN_DETAIL")</Button></td></tr>
+        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">詳細</Button></td></tr>
     }
   </tbody>
 </table>
@@ -45,7 +45,7 @@
                 var resp = await Auth.GetWithRefreshAsync("/api/customers");
                 if (!resp.IsSuccessStatusCode)
                 {
-                    error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}"; StateHasChanged(); return;
+                    error = $"読み込み失敗: {(int)resp.StatusCode}"; StateHasChanged(); return;
                 }
                 var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
                 data = json ?? new();
