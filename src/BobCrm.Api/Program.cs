@@ -133,6 +133,14 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseInitializer.InitializeAsync(db);
+    
+    // Seed test data (development only)
+    try
+    {
+        await TestDataSeeder.SeedTestDataAsync(db);
+    }
+    catch { }
+    
     // Seed admin user/role and grant access to all customers
     try
     {
