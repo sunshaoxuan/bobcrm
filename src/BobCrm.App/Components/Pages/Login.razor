@@ -1,4 +1,5 @@
 @page "/login"
+@rendermode RenderMode.InteractiveServer
 @layout BobCrm.App.Components.Layout.EmptyLayout
 
 @inject IHttpClientFactory HttpFactory
@@ -12,10 +13,12 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
     <div>
-        <div>
-            <Input @bind-Value="model.username" />
+        <div style="margin-bottom:12px">
+            <div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_USERNAME_OR_EMAIL")</div>
+            <Input @bind-Value="model.username" Placeholder="admin" />
         </div>
-        <div>
+        <div style="margin-bottom:12px">
+            <div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_PASSWORD")</div>
             <InputPassword @bind-Value="model.password" />
         </div>
         <div>
@@ -82,17 +85,23 @@
     private async Task OnLoginAsync()
     {
         loading = true; error = null;
+        StateHasChanged(); // 立即更新UI显示loading状态
+        
         try
         {
             // Validate input
             if (string.IsNullOrWhiteSpace(model.username))
             {
-                error = "用户名不能为空";
+                error = I18n.T("ERR_USERNAME_REQUIRED");
+                loading = false;
+                StateHasChanged();
                 return;
             }
             if (string.IsNullOrWhiteSpace(model.password))
             {
-                error = "密码不能为空";
+                error = I18n.T("ERR_PASSWORD_REQUIRED");
+                loading = false;
+                StateHasChanged();
                 return;
             }
             
@@ -111,13 +120,22 @@
             // attach X-Lang header
             try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (string.IsNullOrWhiteSpace(lang)) lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
             
+            // 保存当前输入，避免验证失败后被清空
+            var usernameToSend = model.username;
+            var passwordToSend = model.password;
+            
             await JS.InvokeVoidAsync("console.log", $"[Login] Sending login request to: {http.BaseAddress}api/auth/login");
-            var resp = await http.PostAsJsonAsync("/api/auth/login", new { username = model.username, password = model.password });
+            var resp = await http.PostAsJsonAsync("/api/auth/login", new { username = usernameToSend, password = passwordToSend });
             System.Diagnostics.Debug.WriteLine($"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
             await JS.InvokeVoidAsync("console.log", $"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
             if (!resp.IsSuccessStatusCode)
             {
                 error = I18n.T("ERR_LOGIN_FAILED");
+                // 恢复输入值
+                model.username = usernameToSend;
+                model.password = passwordToSend;
+                loading = false;
+                StateHasChanged();
                 return;
             }
             var json = await resp.Content.ReadFromJsonAsync<LoginResult>();
