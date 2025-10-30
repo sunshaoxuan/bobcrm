@@ -1,4 +1,5 @@
 @page "/customers"
+@page "/customers/{Id:int}"
 @rendermode RenderMode.InteractiveServer
 
 @inject BobCrm.App.Services.AuthService Auth
@@ -8,98 +9,52 @@
 
 <h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
-<div style="display:flex; gap:16px">
-    <!-- 左侧：客户列表 -->
-    <div style="flex:0 0 300px; border-right:1px solid #e0e0e0; padding-right:16px">
-        <!-- 搜索框 -->
+<!-- 客户详情 -->
+@if (loading)
+{
+    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+}
+else if (error != null)
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+}
+else if (customer == null)
+{
+    <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
+}
+else
+{
+    <div>
+        <h2>@I18n.T("LBL_CUSTOMER_DETAIL")</h2>
         <div style="margin-bottom:12px">
-            <input type="text" 
-                   placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")'
-                   @bind="SearchKeyword"
-                   @bind:event="oninput"
-                   class="form-control"
-                   style="width:100%; padding:8px; border:1px solid #d0d0d0; border-radius:4px" />
+            <strong>@I18n.T("COL_CODE"):</strong> @customer.code
         </div>
-        
-        <!-- 客户列表 -->
-        @if (error is not null)
+        <div style="margin-bottom:12px">
+            <strong>@I18n.T("COL_NAME"):</strong> @customer.name
+        </div>
+        @if (customer.fields != null && customer.fields.Any())
         {
-            <div class="text-danger small">@error</div>
-        }
-        else if (loading)
-        {
-            <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
-        }
-        else if (filteredData.Count == 0)
-        {
-            <div class="text-muted">@I18n.T("LBL_NOT_FOUND")</div>
+            <h3>@I18n.T("LBL_FIELDS")</h3>
+            @foreach (var field in customer.fields)
+            {
+                <div style="margin-bottom:8px">
+                    <strong>@field.label:</strong> @field.value
+                </div>
+            }
         }
         else
         {
-            <div style="max-height:600px; overflow-y:auto">
-                @foreach (var item in filteredData)
-                {
-                    var itemClass = item.id == selectedId ? "customer-item selected" : "customer-item";
-                    <div class="@itemClass" @onclick="(() => SelectCustomer(item.id))" style="padding:8px; cursor:pointer; margin-bottom:4px; border-radius:4px; background:#f5f5f5">
-                        <div style="font-weight:600; font-size:14px">@item.code</div>
-                        <div style="font-size:12px; color:#666">@item.name</div>
-                    </div>
-                }
-            </div>
+            <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
         }
     </div>
-    
-    <!-- 右侧：客户详情 -->
-    <div style="flex:1">
-        @if (selectedCustomer == null)
-        {
-            <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
-        }
-        else
-        {
-            <h2>@I18n.T("LBL_CUSTOMER_DETAIL")</h2>
-            <div style="margin-bottom:12px">
-                <strong>@I18n.T("COL_CODE"):</strong> @selectedCustomer.code
-            </div>
-            <div style="margin-bottom:12px">
-                <strong>@I18n.T("COL_NAME"):</strong> @selectedCustomer.name
-            </div>
-            @if (selectedCustomer.fields != null && selectedCustomer.fields.Any())
-            {
-                <h3>@I18n.T("LBL_FIELDS")</h3>
-                @foreach (var field in selectedCustomer.fields)
-                {
-                    <div style="margin-bottom:8px">
-                        <strong>@field.label:</strong> @field.value
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
-            }
-        }
-    </div>
-</div>
+}
 
 @code {
-    private List<CustomerItem> data = new();
-    private List<CustomerItem> filteredData = new();
-    private CustomerDetailModel? selectedCustomer;
+    [Parameter] public int Id { get; set; }
+    
+    private CustomerDetailModel? customer;
     private bool loading = true;
     private string? error;
-    private string searchKeyword = string.Empty;
-    private int selectedId;
-    
-    private string SearchKeyword
-    {
-        get => searchKeyword;
-        set
-        {
-            searchKeyword = value;
-            UpdateFilteredData();
-        }
-    }
 
     protected override void OnInitialized()
     {
@@ -129,56 +84,32 @@
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
 
-                var resp = await Auth.GetWithRefreshAsync("/api/customers");
-                if (!resp.IsSuccessStatusCode)
+                // Load customer detail if Id is provided
+                if (Id > 0)
                 {
-                    error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}"; StateHasChanged(); return;
+                    var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        {
+                            error = I18n.T("LBL_NOT_FOUND");
+                        }
+                        else
+                        {
+                            error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}";
+                        }
+                    }
+                    else
+                    {
+                        customer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
+                    }
                 }
-                var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
-                data = json ?? new();
-                UpdateFilteredData();
+                
                 loading = false;
                 StateHasChanged();
             }
             catch { }
         }
-    }
-
-    private void UpdateFilteredData()
-    {
-        if (string.IsNullOrWhiteSpace(searchKeyword))
-        {
-            filteredData = data;
-        }
-        else
-        {
-            filteredData = data.Where(x => 
-                (x.code?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (x.name?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) ?? false)
-            ).ToList();
-        }
-    }
-
-    private async Task SelectCustomer(int id)
-    {
-        selectedId = id;
-        try
-        {
-            var resp = await Auth.GetWithRefreshAsync($"/api/customers/{id}");
-            if (resp.IsSuccessStatusCode)
-            {
-                selectedCustomer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
-            }
-            StateHasChanged();
-        }
-        catch { }
-    }
-
-    public class CustomerItem
-    {
-        public int id { get; set; }
-        public string? code { get; set; }
-        public string? name { get; set; }
     }
 
     private class CustomerDetailModel
