@@ -13,6 +13,9 @@ public class CustomerLocalizationConfiguration : IEntityTypeConfiguration<Custom
             .WithMany()
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        // Ignore EntityId - it's just a wrapper around CustomerId for the interface
+        builder.Ignore(x => x.EntityId);
     }
 }
 
