@@ -18,6 +18,22 @@ using BobCrm.Api.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 配置日志到文件
+var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+var logsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "logs");
+Directory.CreateDirectory(logsDir);
+var logFilePath = Path.Combine(logsDir, $"api_{timestamp}.log");
+
+builder.Logging.AddConsole();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+    options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
+});
+builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+builder.Logging.AddFilter("System", LogLevel.Warning);
+
 // DbContext (SQLite default; PostgreSQL via config)
 var dbProvider = builder.Configuration["Db:Provider"] ?? "sqlite";
 var conn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=./data/app.db";
@@ -92,6 +108,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// 配置详细日志
+app.Logger.LogInformation("==================================================");
+app.Logger.LogInformation("Application starting at {Time}", DateTime.Now);
+app.Logger.LogInformation("Log file: {LogFile}", logFilePath);
+app.Logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+app.Logger.LogInformation("==================================================");
 
 if (app.Environment.IsDevelopment())
 {
