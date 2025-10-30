@@ -15,6 +15,7 @@ using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,15 +25,15 @@ var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "logs");
 Directory.CreateDirectory(logsDir);
 var logFilePath = Path.Combine(logsDir, $"api_{timestamp}.log");
 
-// 输出到控制台
-builder.Logging.AddSimpleConsole(options =>
-{
-    options.IncludeScopes = true;
-    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
-    options.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
-});
+// 配置 Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Infinite)
+    .CreateLogger();
 
-// 不再使用文件日志，只使用控制台输出（详细的Console.WriteLine已经添加）
+builder.Host.UseSerilog();
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog();
 
 builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter("System", LogLevel.Warning);
@@ -113,11 +114,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // 配置详细日志
-var startupMsg = $"Application starting at {DateTime.Now}, log file: {logFilePath}";
-Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ============================================");
-Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {startupMsg}");
-Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ============================================");
-app.Logger.LogInformation(startupMsg);
+app.Logger.LogInformation("============================================");
+app.Logger.LogInformation("Application starting at {Time}, log file: {LogFile}", DateTime.Now, logFilePath);
+app.Logger.LogInformation("============================================");
 
 if (app.Environment.IsDevelopment())
 {

@@ -81,9 +81,17 @@
               "target": "Package",
               "version": "[8.*, )"
             },
+            "Serilog.Extensions.Logging": {
+              "target": "Package",
+              "version": "[9.0.2, )"
+            },
             "Serilog.Extensions.Logging.File": {
               "target": "Package",
               "version": "[2.0.0, )"
+            },
+            "Serilog.Sinks.File": {
+              "target": "Package",
+              "version": "[7.0.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
