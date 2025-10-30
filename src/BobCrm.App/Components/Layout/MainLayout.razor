@@ -6,9 +6,7 @@
 <div class="app-shell">
     <div class="app-sider">
         <div class="logo"></div>
-        <ul style="list-style:none;padding:0 8px">
-            <li><a href="/customers" style="color:#fff;text-decoration:none">顧客</a></li>
-        </ul>
+        <BobCrm.App.Components.Shared.CustomerSider />
     </div>
     <div class="app-main">
         <div class="app-header">
@@ -38,4 +36,3 @@
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
 }
-

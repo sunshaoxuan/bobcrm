@@ -8,29 +8,98 @@
 
 <h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
-<Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" Style="max-width:260px;margin-bottom:12px" />
-
-<table class="ant-table" style="width:100%">
-  <thead><tr><th>@I18n.T("COL_CODE")</th><th>@I18n.T("COL_NAME")</th><th>@I18n.T("COL_ACTIONS")</th></tr></thead>
-  <tbody>
-    @foreach (var c in filtered)
-    {
-        <tr><td>@c.code</td><td>@c.name</td><td><Button Type="ButtonType.Link" OnClick="() => OpenDetail(c.id)">@I18n.T("BTN_DETAIL")</Button></td></tr>
-    }
-  </tbody>
-</table>
-@if (error is not null)
-{
-    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
-}
+<div style="display:flex; gap:16px">
+    <!-- 左侧：客户列表 -->
+    <div style="flex:0 0 300px; border-right:1px solid #e0e0e0; padding-right:16px">
+        <!-- 搜索框 -->
+        <div style="margin-bottom:12px">
+            <input type="text" 
+                   placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")'
+                   @bind="SearchKeyword"
+                   @bind:event="oninput"
+                   class="form-control"
+                   style="width:100%; padding:8px; border:1px solid #d0d0d0; border-radius:4px" />
+        </div>
+        
+        <!-- 客户列表 -->
+        @if (error is not null)
+        {
+            <div class="text-danger small">@error</div>
+        }
+        else if (loading)
+        {
+            <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+        }
+        else if (filteredData.Count == 0)
+        {
+            <div class="text-muted">@I18n.T("LBL_NOT_FOUND")</div>
+        }
+        else
+        {
+            <div style="max-height:600px; overflow-y:auto">
+                @foreach (var item in filteredData)
+                {
+                    var itemClass = item.id == selectedId ? "customer-item selected" : "customer-item";
+                    <div class="@itemClass" @onclick="(() => SelectCustomer(item.id))" style="padding:8px; cursor:pointer; margin-bottom:4px; border-radius:4px; background:#f5f5f5">
+                        <div style="font-weight:600; font-size:14px">@item.code</div>
+                        <div style="font-size:12px; color:#666">@item.name</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+    <!-- 右侧：客户详情 -->
+    <div style="flex:1">
+        @if (selectedCustomer == null)
+        {
+            <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
+        }
+        else
+        {
+            <h2>@I18n.T("LBL_CUSTOMER_DETAIL")</h2>
+            <div style="margin-bottom:12px">
+                <strong>@I18n.T("COL_CODE"):</strong> @selectedCustomer.code
+            </div>
+            <div style="margin-bottom:12px">
+                <strong>@I18n.T("COL_NAME"):</strong> @selectedCustomer.name
+            </div>
+            @if (selectedCustomer.fields != null && selectedCustomer.fields.Any())
+            {
+                <h3>@I18n.T("LBL_FIELDS")</h3>
+                @foreach (var field in selectedCustomer.fields)
+                {
+                    <div style="margin-bottom:8px">
+                        <strong>@field.label:</strong> @field.value
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
+            }
+        }
+    </div>
+</div>
 
 @code {
     private List<CustomerItem> data = new();
-    private string keyword = string.Empty;
+    private List<CustomerItem> filteredData = new();
+    private CustomerDetailModel? selectedCustomer;
+    private bool loading = true;
     private string? error;
-
-    private IEnumerable<CustomerItem> filtered => string.IsNullOrWhiteSpace(keyword)
-        ? data : data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    private string searchKeyword = string.Empty;
+    private int selectedId;
+    
+    private string SearchKeyword
+    {
+        get => searchKeyword;
+        set
+        {
+            searchKeyword = value;
+            UpdateFilteredData();
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -67,19 +136,68 @@
                 }
                 var json = await resp.Content.ReadFromJsonAsync<List<CustomerItem>>();
                 data = json ?? new();
+                UpdateFilteredData();
+                loading = false;
                 StateHasChanged();
             }
             catch { }
         }
     }
 
-    private void OpenDetail(int id) => Nav.NavigateTo($"/customers/{id}");
+    private void UpdateFilteredData()
+    {
+        if (string.IsNullOrWhiteSpace(searchKeyword))
+        {
+            filteredData = data;
+        }
+        else
+        {
+            filteredData = data.Where(x => 
+                (x.code?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (x.name?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+        }
+    }
+
+    private async Task SelectCustomer(int id)
+    {
+        selectedId = id;
+        try
+        {
+            var resp = await Auth.GetWithRefreshAsync($"/api/customers/{id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                selectedCustomer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
+            }
+            StateHasChanged();
+        }
+        catch { }
+    }
 
     public class CustomerItem
     {
         public int id { get; set; }
         public string? code { get; set; }
         public string? name { get; set; }
+    }
+
+    private class CustomerDetailModel
+    {
+        public int id { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
+        public int version { get; set; }
+        public FieldDetail[]? fields { get; set; }
+    }
+
+    private class FieldDetail
+    {
+        public string? key { get; set; }
+        public string? label { get; set; }
+        public string? type { get; set; }
+        public string? value { get; set; }
+        public bool required { get; set; }
+        public string? validation { get; set; }
     }
 }
 

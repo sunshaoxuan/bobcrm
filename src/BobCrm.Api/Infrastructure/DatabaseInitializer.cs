@@ -24,24 +24,25 @@ public static class DatabaseInitializer
                 await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS \"LocalizationLanguages\" (\"Id\" SERIAL PRIMARY KEY, \"Code\" text NOT NULL, \"NativeName\" text NOT NULL);");
             }
             catch { }
-            
-            // Create CustomerLocalizations table if not exists
-            try
-            {
-                await db.Database.ExecuteSqlRawAsync(@"
-                    CREATE TABLE IF NOT EXISTS ""CustomerLocalizations"" (
-                        ""CustomerId"" integer NOT NULL,
-                        ""Language"" text NOT NULL,
-                        ""Name"" text,
-                        CONSTRAINT ""PK_CustomerLocalizations"" PRIMARY KEY (""CustomerId"", ""Language""),
-                        CONSTRAINT ""FK_CustomerLocalizations_Customers_CustomerId"" FOREIGN KEY (""CustomerId"") REFERENCES ""Customers""(""Id"") ON DELETE CASCADE
-                    );");
-            }
-            catch { }
         }
 
-        // 测试数据现在由 TestDataSeeder 单独管理
-        // 如需填充测试数据，请在 Program.cs 中调用 TestDataSeeder.SeedTestDataAsync(db)
+        if (!await db.Set<Customer>().AnyAsync())
+        {
+            var customer1 = new Customer { Code = "C001", Name = "示例客户A", Version = 1 };
+            var customer2 = new Customer { Code = "C002", Name = "示例客户B", Version = 1 };
+            await db.Set<Customer>().AddRangeAsync(customer1, customer2);
+            await db.SaveChangesAsync();
+            
+            // Add localized names
+            await db.Set<CustomerLocalization>().AddRangeAsync(
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "zh", Name = "示例客户A" },
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "ja", Name = "サンプル顧客A" },
+                new CustomerLocalization { CustomerId = customer1.Id, Language = "en", Name = "Sample Customer A" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "zh", Name = "示例客户B" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "ja", Name = "サンプル顧客B" },
+                new CustomerLocalization { CustomerId = customer2.Id, Language = "en", Name = "Sample Customer B" }
+            );
+        }
 
         if (!await db.Set<FieldDefinition>().AnyAsync())
         {
@@ -163,13 +164,15 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "TXT_REGISTER_HELP", ZH = "注册成功后，请在 API 控制台查看激活链接，或前往激活页面手动激活。", JA = "登録後、APIコンソールの有効化リンクを確認するか、アクティベートページで手動有効化してください。", EN = "After registering, check activation link in API console or activate manually on the activate page." },
                 new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
                 new LocalizationResource { Key = "LBL_WELCOME", ZH = "欢迎使用 BobCRM", JA = "BobCRM へようこそ", EN = "Welcome to BobCRM" },
+                new LocalizationResource { Key = "LBL_USER_ID", ZH = "用户ID", JA = "ユーザーID", EN = "User ID" },
+                new LocalizationResource { Key = "LBL_CODE", ZH = "代码", JA = "コード", EN = "Code" },
                 new LocalizationResource { Key = "LBL_CUSTOMER_DETAIL", ZH = "客户详情", JA = "顧客詳細", EN = "Customer Detail" },
                 new LocalizationResource { Key = "LBL_LOADING", ZH = "加载中", JA = "読み込み中", EN = "Loading" },
                 new LocalizationResource { Key = "LBL_FIELDS", ZH = "字段", JA = "フィールド", EN = "Fields" },
                 new LocalizationResource { Key = "BTN_BACK", ZH = "返回", JA = "戻る", EN = "Back" },
                 new LocalizationResource { Key = "LBL_NOT_FOUND", ZH = "未找到", JA = "見つかりません", EN = "Not Found" },
-                new LocalizationResource { Key = "LBL_USER_ID", ZH = "用户ID", JA = "ユーザーID", EN = "User ID" },
-                new LocalizationResource { Key = "LBL_CODE", ZH = "代码", JA = "コード", EN = "Code" },
+                new LocalizationResource { Key = "LBL_NO_FIELDS", ZH = "无字段", JA = "フィールドなし", EN = "No fields" },
+                new LocalizationResource { Key = "LBL_PLEASE_SELECT_CUSTOMER", ZH = "请选择客户", JA = "顧客を選択してください", EN = "Please select a customer" },
                 // Error/validation keys
                 new LocalizationResource { Key = "ERR_EMAIL_NOT_CONFIRMED", ZH = "邮箱未激活", JA = "メール未確認", EN = "Email not confirmed" },
                 new LocalizationResource { Key = "ERR_CONCURRENCY", ZH = "版本冲突", JA = "バージョン競合", EN = "Version mismatch" },
@@ -231,6 +234,7 @@ public static class DatabaseInitializer
             Ensure("BTN_BACK", "返回", "戻る", "Back");
             Ensure("LBL_NOT_FOUND", "未找到", "見つかりません", "Not Found");
             Ensure("LBL_NO_FIELDS", "无字段", "フィールドなし", "No fields");
+            Ensure("LBL_PLEASE_SELECT_CUSTOMER", "请选择客户", "顧客を選択してください", "Please select a customer");
             Ensure("BTN_RESET_SETUP", "重置初始化设置", "初期設定をリセット", "Reset Setup");
             Ensure("MSG_RESET_CONFIRM", "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。", "初期設定をリセットしますか？現在の管理者アカウントが削除され、再設定が必要です。", "Are you sure to reset setup? This will delete the current admin account and require reconfiguration.");
             Ensure("MSG_RESET_SETUP_SUCCESS", "重置成功，请重新配置", "リセット完了。再設定してください", "Reset successful, please reconfigure");

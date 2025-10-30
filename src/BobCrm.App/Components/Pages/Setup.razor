@@ -15,17 +15,17 @@
 
 <div>
 
-    <div style="margin-bottom:12px">
-        <div style="font-weight:600;margin-bottom:6px">
-            @I18n.T("LBL_API_BASE") <span style="color:#999;font-weight:normal;font-size:12px">(可选，默认: @(defaultApiBase ?? "http://localhost:5200"))</span>
+    <div class="section">
+        <div class="heading">
+            @I18n.T("LBL_API_BASE") <span class="text-muted small">(可选，默认: @(defaultApiBase ?? "http://localhost:5200"))</span>
         </div>
         <Input @bind-Value="apiBase" Placeholder="@placeholderText" />
-        <div style="color:#999;margin-top:6px">
+        <div class="text-muted small" style="margin-top:6px">
             @I18n.T("LBL_API_BASE_HINT") 如果不填写，将使用配置的默认地址。
         </div>
     </div>
 
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_LANG")</div>
+    <div class="section"><div class="heading">@I18n.T("LBL_LANG")</div>
         <select value="@lang" @onchange="OnLangChanged" style="width:220px;height:28px">
             @if (langs.Count == 0)
             {
@@ -46,19 +46,19 @@
 
     <h3>@I18n.T("LBL_ADMIN_ACCOUNT")</h3>
 
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_USERNAME")</div>
+    <div class="section"><div class="heading">@I18n.T("LBL_ADMIN_USERNAME")</div>
 
         <Input @bind-Value="adminUser" Placeholder="admin" />
 
     </div>
 
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN_EMAIL")</div>
+    <div class="section"><div class="heading">@I18n.T("LBL_ADMIN_EMAIL")</div>
 
         <Input @bind-Value="adminEmail" Placeholder="admin@local" />
 
     </div>
 
-    <div style="margin-bottom:12px"><div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_ADMIN")@I18n.T("LBL_PASSWORD")</div>
+    <div class="section"><div class="heading">@I18n.T("LBL_ADMIN")@I18n.T("LBL_PASSWORD")</div>
         <InputPassword @bind-Value="adminPassword" />
     </div>
     <div>
@@ -521,7 +521,6 @@
         StateHasChanged();
     }
 }
-
 
 
 

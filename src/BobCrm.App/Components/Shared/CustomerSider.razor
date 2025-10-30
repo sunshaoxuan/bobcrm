@@ -1,0 +1,83 @@
+@using Microsoft.AspNetCore.Components
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+
+<div class="customer-sider">
+  <div style="padding:8px">
+    <Input Placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")' @bind-Value="keyword" />
+  </div>
+  @if (!string.IsNullOrWhiteSpace(error))
+  {
+    <div class="text-muted small" style="padding:8px">@error</div>
+  }
+  <ul class="sider-list">
+    @foreach (var c in Filtered())
+    {
+      var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
+      <li class="@cls" @onclick="(() => Go(c.id))">
+        <div class="code">@c.code</div>
+        <div class="name">@c.name</div>
+      </li>
+    }
+  </ul>
+</div>
+
+@code {
+  private List<Item> _data = new();
+  private string keyword = string.Empty;
+  private string? error;
+  private int selectedId;
+
+  protected override void OnInitialized()
+  {
+    I18n.OnChanged += HandleI18nChanged;
+    Nav.LocationChanged += (_, __) => { TrySyncSelectedFromUrl(); InvokeAsync(StateHasChanged); };
+  }
+  private void HandleI18nChanged() { try { InvokeAsync(StateHasChanged); } catch { } }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+    try
+    {
+      var resp = await Auth.GetWithRefreshAsync("/api/customers");
+      if (resp.IsSuccessStatusCode)
+      {
+        _data = await resp.Content.ReadFromJsonAsync<List<Item>>() ?? new();
+        // pick selected from route
+        TrySyncSelectedFromUrl();
+        StateHasChanged();
+      }
+      else { error = $"Load customers failed: {(int)resp.StatusCode}"; StateHasChanged(); }
+    }
+    catch { }
+  }
+
+  
+
+  private IEnumerable<Item> Filtered()
+  {
+    if (string.IsNullOrWhiteSpace(keyword)) return _data;
+    return _data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
+  }
+
+  private void Go(int id)
+  {
+    Nav.NavigateTo($"/customers/{id}");
+  }
+
+  private void TrySyncSelectedFromUrl()
+  {
+    try
+    {
+      var uri = new Uri(Nav.Uri);
+      var seg = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+      if (seg.Length >= 2 && seg[0] == "customers" && int.TryParse(seg[1], out var id)) selectedId = id;
+    }
+    catch { }
+  }
+
+  public class Item { public int id { get; set; } public string? code { get; set; } public string? name { get; set; } }
+}
