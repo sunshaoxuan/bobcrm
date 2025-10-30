@@ -13,28 +13,28 @@
   </div>
   @if (!string.IsNullOrWhiteSpace(error))
   {
-    <div class="text-muted small" style="padding:8px; color:#ff6b6b">@error</div>
+    <div style="padding:8px; color:#ff6b6b; font-size:12px">@error</div>
   }
   @if (loading)
   {
     <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_LOADING")...</div>
   }
-  else if (_data.Count == 0)
+  
+  @* Always show the list, even if empty *@
+  <ul class="sider-list" style="list-style:none; padding:0; margin:0; max-height:600px; overflow-y:auto">
+    @foreach (var c in Filtered())
+    {
+      var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
+      <li class="@cls" @onclick="(() => Go(c.id))" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.1)">
+        <div class="code" style="font-weight:600; font-size:13px; color:#fff; margin-bottom:2px">@c.code</div>
+        <div class="name" style="font-size:12px; color:rgba(255,255,255,0.7)">@c.name</div>
+      </li>
+    }
+  </ul>
+  
+  @if (!loading && _data.Count == 0 && string.IsNullOrWhiteSpace(error))
   {
     <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_NOT_FOUND")</div>
-  }
-  else
-  {
-    <ul class="sider-list" style="list-style:none; padding:0; margin:0; max-height:600px; overflow-y:auto">
-      @foreach (var c in Filtered())
-      {
-        var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
-        <li class="@cls" @onclick="(() => Go(c.id))" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.1)">
-          <div class="code" style="font-weight:600; font-size:13px; color:#fff; margin-bottom:2px">@c.code</div>
-          <div class="name" style="font-size:12px; color:rgba(255,255,255,0.7)">@c.name</div>
-        </li>
-      }
-    </ul>
   }
 </div>
 
