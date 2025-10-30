@@ -296,6 +296,14 @@ app.MapGet("/api/i18n/{lang}", (string lang, AppDbContext db) =>
     return Results.Json(dict);
 });
 
+// Development-only: debug endpoint to list all users
+app.MapGet("/api/debug/users", async (UserManager<IdentityUser> um) =>
+{
+    if (!app.Environment.IsDevelopment()) return Results.StatusCode(403);
+    var users = um.Users.Select(u => new { id = u.Id, username = u.UserName, email = u.Email, emailConfirmed = u.EmailConfirmed, hasPassword = um.HasPasswordAsync(u).Result }).ToList();
+    return Results.Ok(users);
+});
+
 // Development-only: reset current admin password quickly when locked out
 app.MapPost("/api/admin/reset-password", async (UserManager<IdentityUser> um, RoleManager<IdentityRole> rm, AdminResetPasswordDto dto) =>
 {
