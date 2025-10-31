@@ -1,0 +1,878 @@
+C:\workspace\bobcrm\src\BobCrm.Api\Properties\launchSettings.json からの起動設定を使用中...
+ビルドしています...
+[10:37:03 INF] ============================================
+[10:37:03 INF] Application starting at 10/31/2025 10:37:03, log file: C:\workspace\bobcrm\src\BobCrm.Api\..\..\logs\api_20251031_103703.log
+[10:37:03 INF] ============================================
+[10:37:04 INF] Executed DbCommand (34ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT CASE WHEN COUNT(*) = 0 THEN FALSE ELSE TRUE END
+FROM pg_class AS cls
+JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+WHERE
+        cls.relkind IN ('r', 'v', 'm', 'f', 'p') AND
+        ns.nspname NOT IN ('pg_catalog', 'information_schema') AND
+        -- Exclude tables which are members of PG extensions
+        NOT EXISTS (
+            SELECT 1 FROM pg_depend WHERE
+                classid=(
+                    SELECT cls.oid
+                    FROM pg_class AS cls
+                             JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+                    WHERE relname='pg_class' AND ns.nspname='pg_catalog'
+                ) AND
+                objid=cls.oid AND
+                deptype IN ('e', 'x')
+        )
+[10:37:04 INF] Executed DbCommand (5ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+[10:37:04 INF] Executed DbCommand (6ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE TABLE IF NOT EXISTS "LocalizationLanguages" ("Id" SERIAL PRIMARY KEY, "Code" text NOT NULL, "NativeName" text NOT NULL);
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Customers" AS c)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "FieldDefinitions" AS f)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationLanguages" AS l)
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l)
+[10:37:04 INF] Executed DbCommand (7ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON "FieldValues" USING GIN ("Value");
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON "FieldDefinitions" USING GIN ("Tags");
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON "FieldDefinitions" USING GIN ("Actions");
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON "UserLayouts" USING GIN ("LayoutJson");
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON "FieldValues" ("CustomerId", "FieldDefinitionId");
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+[10:37:04 INF] [TestData] Current customer count: 2
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Customers" AS c)
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+[10:37:04 INF] [TestData] After seeding, customer count: 2
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedName_0
+LIMIT 1
+[10:37:04 INF] Executed DbCommand (3ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."Email", a."EmailConfirmed", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."SecurityStamp", a."TwoFactorEnabled", a."UserName"
+FROM "AspNetUsers" AS a
+WHERE a."NormalizedUserName" = @__normalizedUserName_0
+LIMIT 1
+[10:37:04 INF] Executed DbCommand (1ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedRoleName_0
+LIMIT 2
+[10:37:04 INF] Executed DbCommand (2ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."UserId", a."RoleId"
+FROM "AspNetUserRoles" AS a
+WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+LIMIT 1
+[10:37:05 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT c."Id"
+FROM "Customers" AS c
+[10:37:05 INF] Executed DbCommand (2ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+[10:37:05 INF] Executed DbCommand (1ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+[10:37:05 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT d."Id", d."FriendlyName", d."Xml"
+FROM "DataProtectionKeys" AS d
+[10:37:05 INF] Now listening on: http://0.0.0.0:5200
+[10:37:05 INF] Application started. Press Ctrl+C to shut down.
+[10:37:05 INF] Hosting environment: Development
+[10:37:05 INF] Content root path: C:\workspace\bobcrm\src\BobCrm.Api
+[10:37:19 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+[10:37:19 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/user/preferences - null null
+[10:37:19 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+[10:37:19 INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:19 INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:19 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:19 INF] Writing value of type 'Dictionary`2' as Json.
+[10:37:19 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:19 INF] Writing value of type 'Dictionary`2' as Json.
+[10:37:20 INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:20 INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 242.0404ms
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 242.0571ms
+[10:37:20 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers - null null
+[10:37:20 INF] Failed to validate the token.
+Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '2025/10/31 1:31:45', Current time (UTC): '2025/10/31 1:37:20'.
+   at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+[10:37:20 INF] Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '2025/10/31 1:31:45', Current time (UTC): '2025/10/31 1:37:20'.
+[10:37:20 INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+[10:37:20 INF] AuthenticationScheme: Bearer was challenged.
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/user/preferences - 401 0 null 507.9851ms
+[10:37:20 INF] Request starting HTTP/1.1 POST http://192.168.20.218:5200/api/auth/refresh - application/json; charset=utf-8 null
+[10:37:20 INF] Executing endpoint 'HTTP: POST /api/auth/refresh'
+[10:37:20 INF] Failed to validate the token.
+Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '2025/10/31 1:31:45', Current time (UTC): '2025/10/31 1:37:20'.
+   at Microsoft.IdentityModel.Tokens.Validators.ValidateLifetime(Nullable`1 notBefore, Nullable`1 expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateTokenPayloadAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+   at Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler.ValidateJWSAsync(JsonWebToken jsonWebToken, TokenValidationParameters validationParameters, BaseConfiguration configuration)
+[10:37:20 INF] Bearer was not authenticated. Failure message: IDX10223: Lifetime validation failed. The token is expired. ValidTo (UTC): '2025/10/31 1:31:45', Current time (UTC): '2025/10/31 1:37:20'.
+[10:37:20 INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+[10:37:20 INF] AuthenticationScheme: Bearer was challenged.
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers - 401 0 null 282.3308ms
+[10:37:20 INF] Request starting HTTP/1.1 POST http://192.168.20.218:5200/api/auth/refresh - application/json; charset=utf-8 null
+[10:37:20 INF] Executing endpoint 'HTTP: POST /api/auth/refresh'
+[10:37:20 INF] Executed DbCommand (2ms) [Parameters=[@__token_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT r."Id", r."CreatedAt", r."ExpiresAt", r."RevokedAt", r."Token", r."UserId"
+FROM "RefreshTokens" AS r
+WHERE r."Token" = @__token_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (1ms) [Parameters=[@__token_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT r."Id", r."CreatedAt", r."ExpiresAt", r."RevokedAt", r."Token", r."UserId"
+FROM "RefreshTokens" AS r
+WHERE r."Token" = @__token_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (2ms) [Parameters=[@__p_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."Email", a."EmailConfirmed", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."SecurityStamp", a."TwoFactorEnabled", a."UserName"
+FROM "AspNetUsers" AS a
+WHERE a."Id" = @__p_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (2ms) [Parameters=[@__p_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."Email", a."EmailConfirmed", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."SecurityStamp", a."TwoFactorEnabled", a."UserName"
+FROM "AspNetUsers" AS a
+WHERE a."Id" = @__p_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (1ms) [Parameters=[@__token_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT r."Id", r."CreatedAt", r."ExpiresAt", r."RevokedAt", r."Token", r."UserId"
+FROM "RefreshTokens" AS r
+WHERE r."Token" = @__token_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (1ms) [Parameters=[@__token_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT r."Id", r."CreatedAt", r."ExpiresAt", r."RevokedAt", r."Token", r."UserId"
+FROM "RefreshTokens" AS r
+WHERE r."Token" = @__token_0
+LIMIT 1
+[10:37:20 INF] Executed DbCommand (7ms) [Parameters=[@p1='?' (DbType = Int32), @p0='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='30']
+UPDATE "RefreshTokens" SET "RevokedAt" = @p0
+WHERE "Id" = @p1;
+[10:37:20 INF] Executed DbCommand (9ms) [Parameters=[@p1='?' (DbType = Int32), @p0='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='30']
+UPDATE "RefreshTokens" SET "RevokedAt" = @p0
+WHERE "Id" = @p1;
+[10:37:20 INF] Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = DateTime), @p1='?' (DbType = DateTime), @p2='?' (DbType = DateTime), @p3='?', @p4='?'], CommandType='Text', CommandTimeout='30']
+INSERT INTO "RefreshTokens" ("CreatedAt", "ExpiresAt", "RevokedAt", "Token", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4)
+RETURNING "Id";
+[10:37:20 INF] Executed DbCommand (8ms) [Parameters=[@p0='?' (DbType = DateTime), @p1='?' (DbType = DateTime), @p2='?' (DbType = DateTime), @p3='?', @p4='?'], CommandType='Text', CommandTimeout='30']
+INSERT INTO "RefreshTokens" ("CreatedAt", "ExpiresAt", "RevokedAt", "Token", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4)
+RETURNING "Id";
+[10:37:20 INF] Writing value of type '<>f__AnonymousType14`2' as Json.
+[10:37:20 INF] Writing value of type '<>f__AnonymousType14`2' as Json.
+[10:37:20 INF] Executed endpoint 'HTTP: POST /api/auth/refresh'
+[10:37:20 INF] Executed endpoint 'HTTP: POST /api/auth/refresh'
+[10:37:20 INF] Request finished HTTP/1.1 POST http://192.168.20.218:5200/api/auth/refresh - 200 null application/json; charset=utf-8 217.6045ms
+[10:37:20 INF] Request finished HTTP/1.1 POST http://192.168.20.218:5200/api/auth/refresh - 200 null application/json; charset=utf-8 188.0568ms
+[10:37:20 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers - null null
+[10:37:20 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/user/preferences - null null
+[10:37:20 INF] Executing endpoint 'HTTP: GET /api/user/preferences'
+[10:37:20 INF] Executing endpoint 'HTTP: GET /api/customers'
+[10:37:20 INF] Executed DbCommand (2ms) [Parameters=[@__uid_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT c."CustomerId"
+FROM "CustomerAccesses" AS c
+WHERE c."UserId" = @__uid_0
+[10:37:20 ERR] Failed executing DbCommand (4ms) [Parameters=[@__uid_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT u."Id", u."Language", u."PrimaryColor", u."Theme", u."UpdatedAt", u."UserId"
+FROM "UserPreferences" AS u
+WHERE u."UserId" = @__uid_0
+LIMIT 1
+[10:37:20 ERR] An exception occurred while iterating over the results of a query for context type 'AppDbContext'.
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+[10:37:20 INF] Executed endpoint 'HTTP: GET /api/user/preferences'
+[10:37:20 ERR] An unhandled exception has occurred while executing the request.
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at Program.<>c.<<<Main>$>b__0_12>d.MoveNext() in C:\workspace\bobcrm\src\BobCrm.Api\Program.cs:line 296
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Http.RequestDelegateFactory.ExecuteTaskResult[T](Task`1 task, HttpContext httpContext)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/user/preferences - 500 null text/plain; charset=utf-8 72.5626ms
+[10:37:20 INF] Request starting HTTP/1.1 PUT http://192.168.20.218:5200/api/user/preferences - application/json; charset=utf-8 null
+[10:37:20 INF] Executing endpoint 'HTTP: PUT /api/user/preferences'
+[10:37:20 ERR] Failed executing DbCommand (2ms) [Parameters=[@__uid_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT u."Id", u."Language", u."PrimaryColor", u."Theme", u."UpdatedAt", u."UserId"
+FROM "UserPreferences" AS u
+WHERE u."UserId" = @__uid_0
+LIMIT 1
+[10:37:20 ERR] An exception occurred while iterating over the results of a query for context type 'AppDbContext'.
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+[10:37:20 INF] Executed DbCommand (61ms) [Parameters=[@__accessIds_0='?' (DbType = Object)], CommandType='Text', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = ANY (@__accessIds_0)
+[10:37:20 INF] Executed endpoint 'HTTP: PUT /api/user/preferences'
+[10:37:20 ERR] An unhandled exception has occurred while executing the request.
+Npgsql.PostgresException (0x80004005): 42P01: relation "UserPreferences" does not exist
+
+POSITION: 91
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Npgsql.EntityFrameworkCore.PostgreSQL.Storage.Internal.NpgsqlExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at Program.<>c.<<<Main>$>b__0_13>d.MoveNext() in C:\workspace\bobcrm\src\BobCrm.Api\Program.cs:line 316
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Http.RequestDelegateFactory.ExecuteTaskResult[T](Task`1 task, HttpContext httpContext)
+   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<>c__DisplayClass102_2.<<HandleRequestBodyAndCompileRequestDelegateForJson>b__2>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+  Exception data:
+    Severity: ERROR
+    SqlState: 42P01
+    MessageText: relation "UserPreferences" does not exist
+    Position: 91
+    File: parse_relation.c
+    Line: 1449
+    Routine: parserOpenTable
+[10:37:20 INF] Request finished HTTP/1.1 PUT http://192.168.20.218:5200/api/user/preferences - 500 null text/plain; charset=utf-8 31.7685ms
+[10:37:20 INF] Executed DbCommand (2ms) [Parameters=[@__lang_0='?'], CommandType='Text', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."Language" = @__lang_0
+[10:37:20 INF] Writing value of type 'List`1' as Json.
+[10:37:20 INF] Executed endpoint 'HTTP: GET /api/customers'
+[10:37:20 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers - 200 null application/json; charset=utf-8 173.5978ms
+[10:37:21 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+[10:37:21 INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:21 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:21 INF] Writing value of type 'Dictionary`2' as Json.
+[10:37:21 INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:21 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 5.3635ms
+[10:37:21 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/1 - null null
+[10:37:21 INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:21 INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+[10:37:21 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+[10:37:21 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+[10:37:21 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+[10:37:21 INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+[10:37:22 INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+[10:37:22 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:22 INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+[10:37:22 INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:22 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/1 - 200 null application/json; charset=utf-8 93.7771ms
+[10:37:23 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+[10:37:23 INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:23 INF] Writing value of type 'Dictionary`2' as Json.
+[10:37:23 INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:23 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 3.5693ms
+[10:37:23 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - null null
+[10:37:23 INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:23 INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+[10:37:23 INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:23 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/2 - 200 null application/json; charset=utf-8 17.7457ms
+[10:37:23 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - null null
+[10:37:23 INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:23 INF] Writing value of type 'Dictionary`2' as Json.
+[10:37:23 INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+[10:37:23 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/i18n/ja - 200 null application/json; charset=utf-8 5.1239ms
+[10:37:23 INF] Request starting HTTP/1.1 GET http://192.168.20.218:5200/api/customers/1 - null null
+[10:37:23 INF] Executing endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:23 INF] Executed DbCommand (2ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0)
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__uid_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__id_0 AND c."UserId" = @__uid_1)
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT c."Id", c."Code", c."CreatedAt", c."CreatedBy", c."ExtData", c."Name", c."UpdatedAt", c."UpdatedBy", c."Version"
+FROM "Customers" AS c
+WHERE c."Id" = @__id_0
+LIMIT 1
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."Actions", f."CreatedAt", f."CreatedBy", f."DataType", f."DefaultValue", f."DisplayName", f."Key", f."Required", f."Tags", f."UpdatedAt", f."UpdatedBy", f."Validation"
+FROM "FieldDefinitions" AS f
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='30']
+SELECT f."Id", f."CreatedAt", f."CreatedBy", f."CustomerId", f."FieldDefinitionId", f."UpdatedAt", f."UpdatedBy", f."Value", f."Version"
+FROM "FieldValues" AS f
+WHERE f."CustomerId" = @__id_0
+ORDER BY f."Version" DESC
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[@__id_0='?' (DbType = Int32), @__lang_1='?'], CommandType='Text', CommandTimeout='30']
+SELECT c."CustomerId", c."Language", c."Name"
+FROM "CustomerLocalizations" AS c
+WHERE c."CustomerId" = @__id_0 AND c."Language" = @__lang_1
+LIMIT 1
+[10:37:23 INF] Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+[10:37:23 INF] Writing value of type '<>f__AnonymousType2`5' as Json.
+[10:37:23 INF] Executed endpoint 'HTTP: GET /api/customers/{id:int}'
+[10:37:23 INF] Request finished HTTP/1.1 GET http://192.168.20.218:5200/api/customers/1 - 200 null application/json; charset=utf-8 17.71ms
+[10:39:54 INF] Application is shutting down...

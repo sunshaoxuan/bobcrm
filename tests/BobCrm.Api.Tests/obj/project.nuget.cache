@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "SQwKugvVXc8=",
+  "dgSpecHash": "KcPS5aMo1bA=",
   "success": true,
-  "projectFilePath": "C:\\workspace\\bobcrm\\tests\\BobCrm.Api.Tests\\BobCrm.Api.Tests.csproj",
+  "projectFilePath": "c:\\workspace\\bobcrm\\tests\\BobCrm.Api.Tests\\BobCrm.Api.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\X02851\\.nuget\\packages\\coverlet.collector\\6.0.4\\coverlet.collector.6.0.4.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.21\\microsoft.aspnetcore.authentication.jwtbearer.8.0.21.nupkg.sha512",

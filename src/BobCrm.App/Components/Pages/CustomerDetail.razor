@@ -88,31 +88,45 @@ else if (customer != null)
                                      @onmouseout="@((e) => {  })">
                                     @if (widget.Type == "textbox")
                                     {
-                                        <Input Value="@widget.Label" Disabled style="width:100%" />
+                                        <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none">
+                                            @widget.Label
+                                        </div>
                                     }
                                     else if (widget.Type == "label")
                                     {
-                                        <Text>@widget.Label</Text>
+                                        <div style="padding:4px; font-weight:500">@widget.Label</div>
                                     }
                                     else if (widget.Type == "calendar")
                                     {
-                                        <DatePicker TValue="DateTime?" Disabled="true" style="width:100%" />
+                                        <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none; display:flex; align-items:center">
+                                            <Icon Type="@IconType.Outline.Calendar" Style="margin-right:8px" />
+                                            <span>@widget.Label</span>
+                                        </div>
                                     }
                                     else if (widget.Type == "listbox")
                                     {
-                                        <Select Mode="multiple" TItemValue="string" TItem="string" Disabled style="width:100%" />
+                                        <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none; display:flex; align-items:center">
+                                            <Icon Type="@IconType.Outline.UnorderedList" Style="margin-right:8px" />
+                                            <span>@widget.Label</span>
+                                        </div>
                                     }
                                     else if (widget.Type == "tabbox")
                                     {
-                                        <Tabs>
-                                            <TabPane Tab="Tab 1" Key="1"></TabPane>
-                                            <TabPane Tab="Tab 2" Key="2"></TabPane>
-                                        </Tabs>
+                                        <div style="border:1px solid #d9d9d9; border-radius:4px; padding:8px; pointer-events:none">
+                                            <div style="display:flex; gap:8px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; margin-bottom:8px">
+                                                <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:2px; font-size:12px">Tab 1</div>
+                                                <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:2px; font-size:12px">Tab 2</div>
+                                            </div>
+                                            <div style="padding:8px; color:#999; font-size:12px">@widget.Label</div>
+                                        </div>
                                     }
                                     else if (widget.Type == "frame")
                                     {
-                                        <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px; min-height:80px">
-                                            <Text Type="@TextElementType.Secondary">Frame Container</Text>
+                                        <div style="border:2px dashed #d9d9d9; border-radius:4px; padding:12px; min-height:80px; pointer-events:none; background:#fafafa">
+                                            <div style="color:#999; font-size:12px; display:flex; align-items:center">
+                                                <Icon Type="@IconType.Outline.BorderOuter" Style="margin-right:4px" />
+                                                <span>@widget.Label</span>
+                                            </div>
                                         </div>
                                     }
                                     else

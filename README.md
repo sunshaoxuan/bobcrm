@@ -171,6 +171,35 @@
 - 启动 Web：`dotnet run --project src/BobCrm.App`
 - 验证流程：登录 → 列表 → 详情 → 编辑保存（当 M4 完成）→ 切换语言 → 权限限制。
 
+**一键启动/停止（Windows PowerShell）**
+
+新增脚本：`scripts/dev.ps1`
+
+```powershell
+# 启动（交互模式，按回车或 Ctrl+C 关闭）
+pwsh scripts/dev.ps1 -Action start
+
+# 后台启动（不占用当前终端）
+pwsh scripts/dev.ps1 -Action start -Detached
+
+# 停止
+pwsh scripts/dev.ps1 -Action stop
+
+# 重启
+pwsh scripts/dev.ps1 -Action restart
+
+# 可选参数
+# -Configuration Debug|Release（默认 Debug）
+# -NoBuild 跳过构建
+# -NoLogs 取消写入 logs 目录（默认写入）
+# -ShowWindows 在新窗口显示两个服务的实时输出
+# -Detached 后台运行（不阻塞当前窗口）
+```
+
+说明：
+- 默认将日志输出到 `logs/`，并将进程 PID 写入 `.dev/pids.json`，停止时会按顺序先关前端再关后端。
+- 如需更改端口或配置，请在各自项目的 `appsettings.*.json` 或 `launchSettings.json` 中调整。
+
 **任务清单（跟踪）**
 - [x] 单项目脚手架（Blazor Server + Minimal API）
 - [x] 引入 Ant Design Blazor（基础布局/导航/消息）

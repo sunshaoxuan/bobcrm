@@ -1,0 +1,122 @@
+C:\workspace\bobcrm\src\BobCrm.App\Properties\launchSettings.json からの起動設定を使用中...
+ビルドしています...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://0.0.0.0:8080
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\workspace\bobcrm\src\BobCrm.App
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/user/preferences
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/user/preferences
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 257.225ms - 200
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 306.5467ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 262.3949ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 314.6463ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/customers
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/customers
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 523.2466ms - 500
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 523.5206ms - 500
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request PUT http://192.168.20.218:5200/api/user/preferences
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request PUT http://192.168.20.218:5200/api/user/preferences
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 296.6527ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 297.2398ms - 200
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 35.9606ms - 500
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 36.3328ms - 500
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/i18n/ja
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 6.9521ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 7.3445ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[100]
+      Start processing HTTP request GET http://192.168.20.218:5200/api/customers/1
+info: System.Net.Http.HttpClient.api.ClientHandler[100]
+      Sending HTTP request GET http://192.168.20.218:5200/api/customers/1
+info: System.Net.Http.HttpClient.api.ClientHandler[101]
+      Received HTTP response headers after 66.3047ms - 200
+info: System.Net.Http.HttpClient.api.LogicalHandler[101]
+      End processing HTTP request after 66.6092ms - 200
+warn: Microsoft.AspNetCore.Components.Server.Circuits.RemoteRenderer[100]
+      Unhandled exception rendering component: Unable to set property 'onchange' on object of type 'AntDesign.Input`1[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]'. The error was: Unable to cast object of type 'Microsoft.AspNetCore.Components.EventCallback`1[Microsoft.AspNetCore.Components.ChangeEventArgs]' to type 'Microsoft.AspNetCore.Components.EventCallback`1[System.String]'.
+      System.InvalidOperationException: Unable to set property 'onchange' on object of type 'AntDesign.Input`1[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]'. The error was: Unable to cast object of type 'Microsoft.AspNetCore.Components.EventCallback`1[Microsoft.AspNetCore.Components.ChangeEventArgs]' to type 'Microsoft.AspNetCore.Components.EventCallback`1[System.String]'.
+       ---> System.InvalidCastException: Unable to cast object of type 'Microsoft.AspNetCore.Components.EventCallback`1[Microsoft.AspNetCore.Components.ChangeEventArgs]' to type 'Microsoft.AspNetCore.Components.EventCallback`1[System.String]'.
+         at Microsoft.AspNetCore.Components.Reflection.PropertySetter.CallPropertySetter[TTarget,TValue](Action`2 setter, Object target, Object value)
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.<SetProperties>g__SetProperty|3_0(Object target, PropertySetter writer, String parameterName, Object value)
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.<SetProperties>g__SetProperty|3_0(Object target, PropertySetter writer, String parameterName, Object value)
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.SetProperties(ParameterView& parameters, Object target)
+         at AntDesign.AntInputComponentBase`1.SetParametersAsync(ParameterView parameters)
+         at Microsoft.AspNetCore.Components.Rendering.ComponentState.SupplyCombinedParameters(ParameterView directAndCascadingParameters)
+fail: Microsoft.AspNetCore.Components.Server.Circuits.CircuitHost[111]
+      Unhandled exception in circuit 'fjzsbLDp-Gx52Rm7D3CeeVv285YZ2c-BnYg_OO7ZStU'.
+      System.InvalidOperationException: Unable to set property 'onchange' on object of type 'AntDesign.Input`1[[System.String, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]'. The error was: Unable to cast object of type 'Microsoft.AspNetCore.Components.EventCallback`1[Microsoft.AspNetCore.Components.ChangeEventArgs]' to type 'Microsoft.AspNetCore.Components.EventCallback`1[System.String]'.
+       ---> System.InvalidCastException: Unable to cast object of type 'Microsoft.AspNetCore.Components.EventCallback`1[Microsoft.AspNetCore.Components.ChangeEventArgs]' to type 'Microsoft.AspNetCore.Components.EventCallback`1[System.String]'.
+         at Microsoft.AspNetCore.Components.Reflection.PropertySetter.CallPropertySetter[TTarget,TValue](Action`2 setter, Object target, Object value)
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.<SetProperties>g__SetProperty|3_0(Object target, PropertySetter writer, String parameterName, Object value)
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.<SetProperties>g__SetProperty|3_0(Object target, PropertySetter writer, String parameterName, Object value)
+         at Microsoft.AspNetCore.Components.Reflection.ComponentProperties.SetProperties(ParameterView& parameters, Object target)
+         at AntDesign.AntInputComponentBase`1.SetParametersAsync(ParameterView parameters)
+         at Microsoft.AspNetCore.Components.Rendering.ComponentState.SupplyCombinedParameters(ParameterView directAndCascadingParameters)
+warn: Microsoft.AspNetCore.Components.Server.Circuits.RemoteRenderer[100]
+      Unhandled exception rendering component: Cannot access a disposed object.
+      System.ObjectDisposedException: Cannot access a disposed object.
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext& diffContext, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception& renderFragmentException)
+         at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()
+fail: Microsoft.AspNetCore.Components.Server.Circuits.CircuitHost[111]
+      Unhandled exception in circuit 'fjzsbLDp-Gx52Rm7D3CeeVv285YZ2c-BnYg_OO7ZStU'.
+      System.ObjectDisposedException: Cannot access a disposed object.
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.InsertNewFrame(DiffContext& diffContext, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForFramesWithSameSequence(DiffContext& diffContext, Int32 oldFrameIndex, Int32 newFrameIndex)
+         at Microsoft.AspNetCore.Components.RenderTree.RenderTreeDiffBuilder.AppendDiffEntriesForRange(DiffContext& diffContext, Int32 oldStartIndex, Int32 oldEndIndexExcl, Int32 newStartIndex, Int32 newEndIndexExcl)
+         at Microsoft.AspNetCore.Components.Rendering.ComponentState.RenderIntoBatch(RenderBatchBuilder batchBuilder, RenderFragment renderFragment, Exception& renderFragmentException)
+         at Microsoft.AspNetCore.Components.RenderTree.Renderer.ProcessRenderQueue()
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj": {}
+    "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj": {}
   },
   "projects": {
-    "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj": {
+    "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+        "projectUniqueName": "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
         "projectName": "BobCrm.Api",
-        "projectPath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+        "projectPath": "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
         "packagesPath": "C:\\Users\\X02851\\.nuget\\packages\\",
-        "outputPath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\obj\\",
+        "outputPath": "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

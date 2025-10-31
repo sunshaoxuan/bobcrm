@@ -1,0 +1,458 @@
+2025-10-31 10:27:12.705 +09:00 [INF] ============================================
+2025-10-31 10:27:12.717 +09:00 [INF] Application starting at "2025-10-31T10:27:12.7147250+09:00", log file: C:\workspace\bobcrm\src\BobCrm.Api\..\..\logs\api_20251031_102712.log
+2025-10-31 10:27:12.719 +09:00 [INF] ============================================
+2025-10-31 10:27:13.235 +09:00 [INF] Executed DbCommand (23ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT CASE WHEN COUNT(*) = 0 THEN FALSE ELSE TRUE END
+FROM pg_class AS cls
+JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+WHERE
+        cls.relkind IN ('r', 'v', 'm', 'f', 'p') AND
+        ns.nspname NOT IN ('pg_catalog', 'information_schema') AND
+        -- Exclude tables which are members of PG extensions
+        NOT EXISTS (
+            SELECT 1 FROM pg_depend WHERE
+                classid=(
+                    SELECT cls.oid
+                    FROM pg_class AS cls
+                             JOIN pg_namespace AS ns ON ns.oid = cls.relnamespace
+                    WHERE relname='pg_class' AND ns.nspname='pg_catalog'
+                ) AND
+                objid=cls.oid AND
+                deptype IN ('e', 'x')
+        )
+2025-10-31 10:27:13.318 +09:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+2025-10-31 10:27:13.327 +09:00 [INF] Executed DbCommand (3ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE IF NOT EXISTS "LocalizationLanguages" ("Id" SERIAL PRIMARY KEY, "Code" text NOT NULL, "NativeName" text NOT NULL);
+2025-10-31 10:27:13.335 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Customers" AS c)
+2025-10-31 10:27:13.338 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "FieldDefinitions" AS f)
+2025-10-31 10:27:13.340 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationLanguages" AS l)
+2025-10-31 10:27:13.341 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l)
+2025-10-31 10:27:13.362 +09:00 [INF] Executed DbCommand (5ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.366 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.367 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.368 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.368 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.369 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.370 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.370 +09:00 [INF] Executed DbCommand (0ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.371 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.372 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.373 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.373 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.374 +09:00 [INF] Executed DbCommand (0ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.375 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.375 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.376 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.377 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.378 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.378 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.379 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.380 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.381 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.382 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.382 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.383 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.384 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.385 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.385 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.386 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.387 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.388 +09:00 [INF] Executed DbCommand (0ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.388 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.389 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.390 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.390 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.391 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.392 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.392 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.393 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.394 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.395 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.395 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.396 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.397 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.398 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.399 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.400 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.400 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.401 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.402 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.402 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.403 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.404 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.404 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.405 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.406 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.407 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.407 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.408 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.409 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.409 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.410 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.411 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.411 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.412 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.413 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.414 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.414 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.415 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__key_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "LocalizationResources" AS l
+    WHERE l."Key" = @__key_0)
+2025-10-31 10:27:13.422 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON "FieldValues" USING GIN ("Value");
+2025-10-31 10:27:13.423 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON "FieldDefinitions" USING GIN ("Tags");
+2025-10-31 10:27:13.424 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON "FieldDefinitions" USING GIN ("Actions");
+2025-10-31 10:27:13.425 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON "UserLayouts" USING GIN ("LayoutJson");
+2025-10-31 10:27:13.426 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON "FieldValues" ("CustomerId", "FieldDefinitionId");
+2025-10-31 10:27:13.427 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+2025-10-31 10:27:13.427 +09:00 [INF] [TestData] Current customer count: 2
+2025-10-31 10:27:13.429 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Customers" AS c)
+2025-10-31 10:27:13.430 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT count(*)::int
+FROM "Customers" AS c
+2025-10-31 10:27:13.430 +09:00 [INF] [TestData] After seeding, customer count: 2
+2025-10-31 10:27:13.456 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedName_0
+LIMIT 1
+2025-10-31 10:27:13.478 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."Email", a."EmailConfirmed", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."SecurityStamp", a."TwoFactorEnabled", a."UserName"
+FROM "AspNetUsers" AS a
+WHERE a."NormalizedUserName" = @__normalizedUserName_0
+LIMIT 1
+2025-10-31 10:27:13.499 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+FROM "AspNetRoles" AS a
+WHERE a."NormalizedName" = @__normalizedRoleName_0
+LIMIT 2
+2025-10-31 10:27:13.508 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT a."UserId", a."RoleId"
+FROM "AspNetUserRoles" AS a
+WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+LIMIT 1
+2025-10-31 10:27:13.518 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT c."Id"
+FROM "Customers" AS c
+2025-10-31 10:27:13.521 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+2025-10-31 10:27:13.522 +09:00 [INF] Executed DbCommand (1ms) [Parameters=[@__cid_0='?' (DbType = Int32), @__8__locals1_admin_Id_1='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "CustomerAccesses" AS c
+    WHERE c."CustomerId" = @__cid_0 AND c."UserId" = @__8__locals1_admin_Id_1)
+2025-10-31 10:27:13.552 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT d."Id", d."FriendlyName", d."Xml"
+FROM "DataProtectionKeys" AS d
+2025-10-31 10:27:13.650 +09:00 [INF] Now listening on: http://0.0.0.0:5200
+2025-10-31 10:27:13.650 +09:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-31 10:27:13.650 +09:00 [INF] Hosting environment: Development
+2025-10-31 10:27:13.650 +09:00 [INF] Content root path: C:\workspace\bobcrm\src\BobCrm.Api
+2025-10-31 10:27:24.801 +09:00 [INF] Request starting HTTP/1.1 GET http://localhost:5200/api/i18n/ja - null null
+2025-10-31 10:27:24.862 +09:00 [INF] Executing endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-31 10:27:24.902 +09:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT l."Key", l."EN", l."JA", l."ZH"
+FROM "LocalizationResources" AS l
+2025-10-31 10:27:24.905 +09:00 [INF] Writing value of type 'Dictionary`2' as Json.
+2025-10-31 10:27:24.915 +09:00 [INF] Executed endpoint 'HTTP: GET /api/i18n/{lang}'
+2025-10-31 10:27:24.918 +09:00 [INF] Request finished HTTP/1.1 GET http://localhost:5200/api/i18n/ja - 200 null application/json; charset=utf-8 117.446ms
