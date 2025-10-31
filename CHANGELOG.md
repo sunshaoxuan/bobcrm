@@ -1,5 +1,80 @@
 # ChangeLog
 
+## 2025-10-31 - 设计器UI优化和拖拽功能修复
+
+### 更新：优化设计器界面体验和拖拽交互
+
+根据用户反馈，对设计器进行了界面优化和功能修复。
+
+#### 改进内容
+
+**1. 画布视觉优化**
+- 画布改为撑满整个工作区（左抵工具栏，右抵属性栏）
+- 添加点状网格背景（20px间距，灰色圆点）
+- 移除了限制画布宽度的容器，改为全宽布局
+- 画布最小高度设为 `calc(100vh - 120px)`，确保足够的拖拽空间
+
+**2. 默认属性面板显示**
+- 未选中组件时，属性面板显示客户基本信息：
+  - 客户编码（COL_CODE）
+  - 客户名称（COL_NAME）
+  - 组件总数
+  - 可见组件数
+- 保留"选择一个组件"的提示区域，使用虚线边框突出显示
+
+**3. 组件拖拽优化**
+- 添加组件容器样式：白色背景、圆角、阴影效果
+- 设置 `cursor:move` 和 `user-select:none` 提升拖拽体验
+- 选中状态：2px 蓝色边框（#1890ff）
+- 未选中状态：1px 灰色边框（#e0e0e0）
+- 添加 0.2s 过渡动画，使交互更流畅
+- 修复 `@ondragstart:preventDefault="false"` 确保拖拽事件正常触发
+
+**4. 多语资源准备**
+- 已添加的 i18n 键已包含在 DatabaseInitializer.cs 中
+- 删除数据库重新初始化后即可加载新的多语资源
+- 设计器界面将正确显示日语/中文/英语标签
+
+#### 技术细节
+
+**画布背景样式：**
+```css
+background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px);
+background-size: 20px 20px;
+background-color: #f5f5f5;
+```
+
+**组件容器样式增强：**
+```css
+cursor:move;
+user-select:none;
+padding:8px;
+background:#fff;
+border-radius:4px;
+box-shadow:0 1px 3px rgba(0,0,0,0.1);
+transition:all 0.2s;
+```
+
+**拖拽事件处理：**
+- 画布：`@ondrop="OnDrop" @ondrop:preventDefault @ondragover:preventDefault`
+- 组件：`draggable="true" @ondragstart="..." @ondragstart:preventDefault="false"`
+
+#### 修改文件
+
+- `src/BobCrm.App/Components/Pages/CustomerDetail.razor`
+  - L75-78: 画布样式优化（点状背景，撑满区域）
+  - L81-88: 组件容器样式增强（拖拽提示，选中状态）
+  - L185-210: 属性面板默认显示客户信息
+  - L508-517: 边框样式优化
+
+#### 编译状态
+```
+dotnet build -c Debug
+✓ 成功，0个警告，0个错误
+```
+
+---
+
 ## 2025-10-31 - 可视化布局设计器与用户体验优化
 
 ### 重大更新：实现完整的WYSIWYG可视化布局设计器

@@ -72,17 +72,20 @@ else if (customer != null)
                 </div>
 
                 <!-- Center Canvas -->
-                <div class="designer-canvas" style="flex:1; overflow:auto; padding:20px; background:#f5f5f5"
-                     @ondrop="OnDrop" @ondragover:preventDefault @ondragover="OnDragOver">
-                    <div style="max-width:1200px; margin:0 auto; background:#fff; border:1px solid #d9d9d9; border-radius:8px; padding:24px; min-height:600px">
-                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+                <div class="designer-canvas" style="flex:1; overflow:auto; padding:0; background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px; background-color: #f5f5f5;"
+                     @ondrop="OnDrop" @ondrop:preventDefault @ondragover:preventDefault>
+                    <div style="padding:24px; min-height:100%">
+                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 120px)">
                             @foreach (var widget in layoutWidgets)
                             {
                                 <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
                                      draggable="true"
                                      @ondragstart="@(() => OnWidgetDragStart(widget))"
+                                     @ondragstart:preventDefault="false"
                                      @onclick="@(() => SelectWidget(widget))"
-                                     style="@GetWidgetStyle(widget)">
+                                     style="@GetWidgetStyle(widget); cursor:move; user-select:none; padding:8px; background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:all 0.2s;"
+                                     @onmouseover="@((e) => {  })"
+                                     @onmouseout="@((e) => {  })">
                                     @if (widget.Type == "textbox")
                                     {
                                         <Input Value="@widget.Label" Disabled style="width:100%" />
@@ -182,9 +185,31 @@ else if (customer != null)
                     }
                     else
                     {
-                        <div style="padding:60px 20px; text-align:center; color:#999">
-                            <Icon Type="@IconType.Outline.Select" Style="font-size:36px; margin-bottom:8px" />
-                            <div style="font-size:12px">@I18n.T("LBL_SELECT_COMPONENT")</div>
+                        <div style="padding:16px">
+                            <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
+                            <div style="padding:20px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; margin-bottom:16px">
+                                <div style="margin-bottom:12px">
+                                    <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("COL_CODE")</div>
+                                    <div style="font-weight:500">@customer.code</div>
+                                </div>
+                                <div style="margin-bottom:12px">
+                                    <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("COL_NAME")</div>
+                                    <div style="font-weight:500">@customer.name</div>
+                                </div>
+                                <Divider Style="margin:12px 0" />
+                                <div style="margin-bottom:12px">
+                                    <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</div>
+                                    <div style="font-weight:500">@layoutWidgets.Count</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_VISIBLE")</div>
+                                    <div style="font-weight:500">@layoutWidgets.Count(w => w.Visible)</div>
+                                </div>
+                            </div>
+                            <div style="text-align:center; padding:40px 20px; color:#999; border:2px dashed #d9d9d9; border-radius:4px">
+                                <Icon Type="@IconType.Outline.Select" Style="font-size:36px; margin-bottom:8px" />
+                                <div style="font-size:12px">@I18n.T("LBL_SELECT_COMPONENT")</div>
+                            </div>
                         </div>
                     }
                 </div>
@@ -486,7 +511,7 @@ else
             ? $"calc({widget.Width}% - 6px)"
             : $"{widget.Width}px";
 
-        var border = selectedWidget == widget ? "2px solid #1890ff" : "";
+        var border = selectedWidget == widget ? "border:2px solid #1890ff !important" : "border:1px solid #e0e0e0";
 
         return $"width:{width}; {border}";
     }
