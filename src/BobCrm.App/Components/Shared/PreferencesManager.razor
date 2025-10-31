@@ -2,6 +2,8 @@
 @using BobCrm.App.Services
 @inject PreferencesService PrefsService
 @inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IDisposable
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -14,18 +16,16 @@
                 await JS.InvokeVoidAsync("bobcrm.registerPreferencesCallback",
                     DotNetObjectReference.Create(this));
 
-                // Load preferences from server and apply
+                // Load preferences from server/localStorage and apply to cache+UI
                 var prefs = await PrefsService.LoadPreferencesAsync();
 
-                // Apply to UI via JavaScript (skip save during initialization)
-                if (!string.IsNullOrEmpty(prefs.Theme))
-                {
-                    await JS.InvokeVoidAsync("bobcrm.setTheme", prefs.Theme);
-                }
-                if (!string.IsNullOrEmpty(prefs.PrimaryColor))
-                {
-                    await JS.InvokeVoidAsync("bobcrm.setPrimary", prefs.PrimaryColor, true);
-                }
+                // Update localStorage (cache) with loaded preferences
+                await JS.InvokeVoidAsync("localStorage.setItem", "theme", prefs.Theme ?? "light");
+                var initColor = await JS.InvokeAsync<string>("bobcrm.getInitColor");
+                await JS.InvokeVoidAsync("localStorage.setItem", "udfColor", prefs.UdfColor ?? initColor);
+
+                // Render UI from cache
+                await JS.InvokeVoidAsync("bobcrm.initTheme");
             }
             catch
             {
@@ -42,7 +42,7 @@
             var prefs = new PreferencesService.UserPreferences
             {
                 Theme = theme,
-                PrimaryColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff",
+                UdfColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? await JS.InvokeAsync<string>("bobcrm.getInitColor"),
                 Language = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja"
             };
             await PrefsService.SavePreferencesAsync(prefs);
@@ -61,7 +61,7 @@
             var prefs = new PreferencesService.UserPreferences
             {
                 Theme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light",
-                PrimaryColor = color,
+                UdfColor = color,
                 Language = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja"
             };
             await PrefsService.SavePreferencesAsync(prefs);
@@ -80,7 +80,7 @@
             var prefs = new PreferencesService.UserPreferences
             {
                 Theme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light",
-                PrimaryColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff",
+                UdfColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? await JS.InvokeAsync<string>("bobcrm.getInitColor"),
                 Language = language
             };
             await PrefsService.SavePreferencesAsync(prefs);
@@ -89,5 +89,10 @@
         {
             // Ignore save errors
         }
+    }
+
+    public void Dispose()
+    {
+        // No cleanup needed
     }
 }

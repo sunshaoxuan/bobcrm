@@ -48,7 +48,7 @@ public class PreferencesService
         // Try to save to server
         try
         {
-            var dto = new UserPreferencesDto(prefs.Theme, prefs.PrimaryColor, prefs.Language);
+            var dto = new UserPreferencesDto(prefs.Theme, prefs.UdfColor, prefs.Language);
             var resp = await _auth.PutAsJsonWithRefreshAsync("/api/user/preferences", dto);
             return resp.IsSuccessStatusCode;
         }
@@ -62,26 +62,36 @@ public class PreferencesService
     {
         try
         {
+            // Get system default color from JS (APP_DEFAULTS or CSS var)
+            var initColor = await _js.InvokeAsync<string>("bobcrm.getInitColor");
             var theme = await _js.InvokeAsync<string?>("localStorage.getItem", "theme") ?? "light";
-            // Try primaryColor first, then fall back to primary (JS uses 'primary' key)
-            var primaryColor = await _js.InvokeAsync<string?>("localStorage.getItem", "primaryColor") 
-                ?? await _js.InvokeAsync<string?>("localStorage.getItem", "primary") 
-                ?? "#3f7cff";
+
+            // Get user-defined color, if not exists, initialize with initColor
+            var udfColor = await _js.InvokeAsync<string?>("localStorage.getItem", "udfColor");
+            if (string.IsNullOrEmpty(udfColor))
+            {
+                udfColor = initColor;
+                await _js.InvokeVoidAsync("localStorage.setItem", "udfColor", udfColor);
+            }
+
             var language = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
 
             return new UserPreferences
             {
                 Theme = theme,
-                PrimaryColor = primaryColor,
+                UdfColor = udfColor,
                 Language = language
             };
         }
         catch
         {
+            string fallbackInit;
+            try { fallbackInit = await _js.InvokeAsync<string>("bobcrm.getInitColor"); }
+            catch { fallbackInit = string.Empty; }
             return new UserPreferences
             {
                 Theme = "light",
-                PrimaryColor = "#3f7cff",
+                UdfColor = fallbackInit,
                 Language = "ja"
             };
         }
@@ -92,10 +102,9 @@ public class PreferencesService
         try
         {
             await _js.InvokeVoidAsync("localStorage.setItem", "theme", prefs.Theme ?? "light");
-            var primaryColor = prefs.PrimaryColor ?? "#3f7cff";
-            // Sync to both keys: primaryColor (for .NET) and primary (for JS)
-            await _js.InvokeVoidAsync("localStorage.setItem", "primaryColor", primaryColor);
-            await _js.InvokeVoidAsync("localStorage.setItem", "primary", primaryColor);
+            var udfColor = prefs.UdfColor ?? await _js.InvokeAsync<string>("bobcrm.getInitColor");
+            // Always use 'udfColor' key
+            await _js.InvokeVoidAsync("localStorage.setItem", "udfColor", udfColor);
             if (!string.IsNullOrEmpty(prefs.Language))
             {
                 await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", prefs.Language, 365);
@@ -110,9 +119,9 @@ public class PreferencesService
     public class UserPreferences
     {
         public string? Theme { get; set; }
-        public string? PrimaryColor { get; set; }
+        public string? UdfColor { get; set; }
         public string? Language { get; set; }
     }
 
-    private record UserPreferencesDto(string? theme, string? primaryColor, string? language);
+    private record UserPreferencesDto(string? theme, string? udfColor, string? language);
 }

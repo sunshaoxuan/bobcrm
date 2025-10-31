@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<link rel="stylesheet" href="css/theme.css" />
+@* Moved theme.css to App.razor <head> for stable load order *@
 
 <div class="app-shell">
     <div class="app-sider">
@@ -42,4 +44,21 @@
 
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
+    private bool _navHooked;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !_navHooked)
+        {
+            _navHooked = true;
+            try
+            {
+                Nav.LocationChanged += async (_, __) =>
+                {
+                    try { await JS.InvokeVoidAsync("bobcrm.initTheme"); } catch { }
+                };
+            }
+            catch { }
+        }
+    }
 }

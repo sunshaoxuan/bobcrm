@@ -47,7 +47,7 @@ else if (customer != null)
                                 <div style="display:flex; flex-direction:column; gap:8px">
                                     @foreach (var comp in basicComponents)
                                     {
-                                        <div class="component-item" draggable="true" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false"
+                                        <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                              style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                             <Icon Type="@comp.Icon" />
                                             <span style="font-size:13px">@I18n.T(comp.Label)</span>
@@ -59,7 +59,7 @@ else if (customer != null)
                                 <div style="display:flex; flex-direction:column; gap:8px">
                                     @foreach (var comp in layoutComponents)
                                     {
-                                        <div class="component-item" draggable="true" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false"
+                                        <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                              style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                             <Icon Type="@comp.Icon" />
                                             <span style="font-size:13px">@I18n.T(comp.Label)</span>
@@ -73,17 +73,20 @@ else if (customer != null)
 
                 <!-- Center Canvas -->
                 <div class="designer-canvas" style="flex:1; overflow:auto; padding:0; background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px; background-color: #f5f5f5;"
-                     @ondrop="OnDrop" @ondrop:preventDefault @ondragover:preventDefault>
+                     @ondrop="OnDrop" @ondrop:preventDefault @ondragover="OnDragOver" @ondragover:preventDefault>
                     <div style="padding:24px; min-height:100%">
-                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 120px)"
-                             @ondragover:preventDefault>
+                        <div class="layout-widgets-container" style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 120px)"
+                             @ondrop="OnDrop" @ondrop:preventDefault @ondragover="OnDragOver" @ondragover:preventDefault>
                             @foreach (var widget in layoutWidgets)
                             {
                                 <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
                                      draggable="true"
+                                     data-drag-type="widget"
+                                     data-drag-data="@widget.Id"
                                      @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
                                      @ondragstart:preventDefault="false"
-                                     @ondragover:preventDefault
+                                     @ondragend="OnDragEnd"
+                                     @ondragover="OnDragOver" @ondragover:preventDefault
                                      @onclick="@(() => SelectWidget(widget))"
                                      style="@GetWidgetStyle(widget); cursor:move; user-select:none; padding:8px; background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:all 0.2s;"
                                      @onmouseover="@((e) => {  })"
@@ -96,7 +99,7 @@ else if (customer != null)
                                     }
                                     else if (widget.Type == "label")
                                     {
-                                        <div style="padding:4px; font-weight:500">@widget.Label</div>
+                                        <div style="padding:4px; font-weight:500; pointer-events:none">@widget.Label</div>
                                     }
                                     else if (widget.Type == "calendar")
                                     {
@@ -133,7 +136,7 @@ else if (customer != null)
                                     }
                                     else
                                     {
-                                        <div style="padding:8px">@widget.Type</div>
+                                        <div style="padding:8px; pointer-events:none">@widget.Type</div>
                                     }
                                 </div>
                             }
@@ -343,6 +346,7 @@ else
     private LayoutWidget? selectedWidget = null;
     private ComponentDefinition? draggedComponent = null;
     private LayoutWidget? draggedWidget = null;
+    private bool dropSucceeded = false;
 
     // Component definitions
     private List<ComponentDefinition> basicComponents = new()
@@ -407,6 +411,9 @@ else
         {
             try
             {
+                // Initialize drag and drop support
+                await JS.InvokeVoidAsync("bobcrm.initDragDrop");
+                
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
@@ -459,55 +466,48 @@ else
     }
 
     // Drag and drop handlers
-    private void OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ComponentDefinition component)
+    private async Task OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ComponentDefinition component)
     {
+        dropSucceeded = false;  // Reset flag at start of drag
         draggedComponent = component;
-        // Set dataTransfer for cross-browser compatibility (especially Firefox)
         try
         {
-            if (e.DataTransfer != null)
-            {
-                e.DataTransfer.SetData("text/plain", component.Type);
-                e.DataTransfer.EffectAllowed = "move";
-            }
-            else
-            {
-                // Fallback: use JS to set drag data
-                _ = JS.InvokeVoidAsync("bobcrm.setDragData", "component", component.Type);
-            }
+            await JS.InvokeVoidAsync("console.log", $"[C#] OnDragStart: {component.Type}");
         }
-        catch { }
+        catch { /* Ignore JS errors */ }
+        // dataTransfer is set via data-* attributes and global dragstart handler in app.js
     }
 
-    private void OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, LayoutWidget widget)
+    private async Task OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, LayoutWidget widget)
     {
+        dropSucceeded = false;  // Reset flag at start of drag
         draggedWidget = widget;
-        // Set dataTransfer for cross-browser compatibility
         try
         {
-            if (e.DataTransfer != null)
-            {
-                e.DataTransfer.SetData("text/plain", widget.Id);
-                e.DataTransfer.EffectAllowed = "move";
-            }
-            else
-            {
-                // Fallback: use JS to set drag data
-                _ = JS.InvokeVoidAsync("bobcrm.setDragData", "widget", widget.Id);
-            }
+            await JS.InvokeVoidAsync("console.log", $"[C#] OnWidgetDragStart: {widget.Id}");
         }
-        catch { }
+        catch { /* Ignore JS errors */ }
+        // dataTransfer is set via data-* attributes and global dragstart handler in app.js
     }
 
-    private void OnDragOver()
+    private void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
-        // Allow drop
+        // Allow drop by preventing default behavior
+        // This method is explicitly called to ensure dragover events are handled correctly
     }
 
-    private void OnDrop()
+    private async Task OnDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
+        try
+        {
+            await JS.InvokeVoidAsync("console.log",
+                $"[C#] OnDrop: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, count={layoutWidgets.Count}, pos=({e.ClientX},{e.ClientY})");
+        }
+        catch { /* Ignore JS errors */ }
+
         if (draggedComponent != null)
         {
+            // New component from toolbox
             var newWidget = new LayoutWidget
             {
                 Id = Guid.NewGuid().ToString(),
@@ -517,16 +517,152 @@ else
                 WidthUnit = "%",
                 Visible = true
             };
-            layoutWidgets.Add(newWidget);
+            
+            // Get drop coordinates and calculate insertion index
+            try
+            {
+                var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", ".layout-widgets-container", e.ClientX, e.ClientY);
+                if (insertIndex >= 0 && insertIndex < layoutWidgets.Count)
+                {
+                    layoutWidgets.Insert(insertIndex, newWidget);
+                }
+                else if (insertIndex >= layoutWidgets.Count)
+                {
+                    layoutWidgets.Add(newWidget);
+                }
+                else
+                {
+                    // Fallback: try to insert after selected widget
+                    if (selectedWidget != null && layoutWidgets.Contains(selectedWidget))
+                    {
+                        var selectedIndex = layoutWidgets.IndexOf(selectedWidget);
+                        layoutWidgets.Insert(selectedIndex + 1, newWidget);
+                    }
+                    else
+                    {
+                        layoutWidgets.Add(newWidget);
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback: try to insert after selected widget or append
+                if (selectedWidget != null && layoutWidgets.Contains(selectedWidget))
+                {
+                    var selectedIndex = layoutWidgets.IndexOf(selectedWidget);
+                    layoutWidgets.Insert(selectedIndex + 1, newWidget);
+                }
+                else
+                {
+                    layoutWidgets.Add(newWidget);
+                }
+            }
+            
             selectedWidget = newWidget;
+            dropSucceeded = true;  // Mark drop as successful
             draggedComponent = null;
+            try
+            {
+                await JS.InvokeVoidAsync("console.log", $"  ✓ Widget added! Total: {layoutWidgets.Count}");
+            }
+            catch { /* Ignore JS errors */ }
             StateHasChanged();
         }
         else if (draggedWidget != null)
         {
             // Reorder existing widget
+            var widgetToMove = draggedWidget;
+            var originalIndex = layoutWidgets.IndexOf(widgetToMove);
+            
+            if (originalIndex >= 0)
+            {
+                // Get drop coordinates and calculate insertion index
+                try
+                {
+                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", ".layout-widgets-container", e.ClientX, e.ClientY);
+                    
+                    if (insertIndex >= 0)
+                    {
+                        // Remove from original position
+                        layoutWidgets.RemoveAt(originalIndex);
+                        
+                        // Adjust insert index if widget was removed before target position
+                        if (insertIndex > originalIndex)
+                        {
+                            insertIndex--;
+                        }
+                        
+                        // Insert at new position
+                        if (insertIndex >= 0 && insertIndex <= layoutWidgets.Count)
+                        {
+                            layoutWidgets.Insert(insertIndex, widgetToMove);
+                            selectedWidget = widgetToMove;
+                        }
+                        else
+                        {
+                            // Fallback: append
+                            layoutWidgets.Add(widgetToMove);
+                            selectedWidget = widgetToMove;
+                        }
+                    }
+                    else
+                    {
+                        // If can't calculate, just reset state
+                        selectedWidget = widgetToMove;
+                    }
+                }
+                catch
+                {
+                    // If calculation fails, just reset state
+                    selectedWidget = widgetToMove;
+                }
+            }
+
+            dropSucceeded = true;  // Mark drop as successful
             draggedWidget = null;
             StateHasChanged();
+        }
+        else
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("console.log", "  ⚠ No draggedComponent or draggedWidget - drop ignored");
+            }
+            catch { /* Ignore JS errors */ }
+        }
+    }
+
+    private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        try
+        {
+            // Log in a single call to reduce interop overhead
+            await JS.InvokeVoidAsync("console.log",
+                $"[C#] OnDragEnd: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, dropSucceeded={dropSucceeded}");
+
+            // Delay to allow OnDrop to complete first
+            // (dragend can fire before drop in some browsers)
+            await Task.Delay(50);
+
+            // Only clean up if drop didn't succeed
+            // If drop succeeded, OnDrop already cleaned up draggedComponent/draggedWidget
+            if (!dropSucceeded)
+            {
+                draggedComponent = null;
+                draggedWidget = null;
+                StateHasChanged();
+            }
+
+            // Always reset the flag for next drag
+            dropSucceeded = false;
+        }
+        catch
+        {
+            // Silently handle interop errors (circuit may be disconnected)
+            // Just clean up the state
+            draggedComponent = null;
+            draggedWidget = null;
+            dropSucceeded = false;
         }
     }
 

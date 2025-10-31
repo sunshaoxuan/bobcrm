@@ -5,31 +5,44 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <script>
+        // Earliest boot: apply cached theme/color before CSS to avoid flash
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('theme') || 'light';
+                var udfColor = localStorage.getItem('udfColor');
+                // Apply theme class ASAP
+                document.documentElement.classList.add(savedTheme === 'dark' ? 'theme-dark' : 'theme-light');
+                // Apply inline variable (overrides any later CSS defaults)
+                if (udfColor) { document.documentElement.style.setProperty('--primary', udfColor); }
+            } catch(e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="_content/AntDesign/css/ant-design-blazor.css" />
     <link rel="stylesheet" href="BobCrm.App.styles.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <style id="dynamic-theme">
+        /* This will be updated by JavaScript and won't be cleared by Blazor navigation */
+        :root { /* --primary will be set at runtime from defaults/cache */ }
+    </style>
     <HeadOutlet />
 </head>
 
 <body>
     <Routes />
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
     <script>
-        // Apply theme immediately (before DOM ready)
-        (function() {
-            try {
-                const savedTheme = localStorage.getItem('theme') || 'light';
-                const savedPrimary = localStorage.getItem('primary') || '#3f7cff';
-                document.documentElement.classList.add(savedTheme === 'dark' ? 'theme-dark' : 'theme-light');
-                document.documentElement.style.setProperty('--primary', savedPrimary);
-            } catch(e) {}
-        })();
-
         // Initialize theme only once on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.bobcrm && window.bobcrm.initTheme) {
-                window.bobcrm.initTheme();
-            }
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Fetch theme defaults once (public endpoint)
+                const resp = await fetch('/api/theme/defaults', { method: 'GET', credentials: 'omit' });
+                if (resp.ok) {
+                    window.APP_DEFAULTS = await resp.json();
+                }
+            } catch (e) { /* ignore */ }
+            if (window.bobcrm && window.bobcrm.initTheme) { window.bobcrm.initTheme(); }
 
             // Re-init when toolbar becomes available (only once)
             let toolbarInitialized = false;
@@ -37,9 +50,7 @@
                 const toolbar = document.querySelector('.toolbar');
                 if (toolbar && !toolbarInitialized) {
                     toolbarInitialized = true;
-                    if (window.bobcrm && window.bobcrm.initTheme) {
-                        window.bobcrm.initTheme();
-                    }
+                    if (window.bobcrm && window.bobcrm.initTheme) { window.bobcrm.initTheme(); }
                     clearInterval(checkToolbar);
                 }
             }, 100);
