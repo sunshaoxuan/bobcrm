@@ -1,4 +1,4 @@
-@page "/customers/{id:int}"
+@page "/customer/{Id:int}"
 @rendermode RenderMode.InteractiveServer
 
 @inject BobCrm.App.Services.AuthService Auth
@@ -6,39 +6,121 @@
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
-<h1>@I18n.T("LBL_CUSTOMER_DETAIL")</h1>
-
 @if (loading)
 {
-    <div>@I18n.T("LBL_LOADING")...</div>
-}
-else if (customer != null)
-{
-    <div>
-        <div style="margin-bottom:12px">
-            <strong>@I18n.T("COL_CODE"):</strong> @customer.code
-        </div>
-        <div style="margin-bottom:12px">
-            <strong>@I18n.T("COL_NAME"):</strong> @customer.name
-        </div>
-        @if (customer.fields != null)
-        {
-            <h2>@I18n.T("LBL_FIELDS")</h2>
-            @foreach (var field in customer.fields)
-            {
-                <div style="margin-bottom:8px">
-                    <strong>@field.label:</strong> @field.value
-                </div>
-            }
-        }
-    </div>
-    <div style="margin-top:20px">
-        <Button OnClick="GoBack">@I18n.T("BTN_BACK")</Button>
-    </div>
+    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
 }
 else if (error != null)
 {
     <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+    <div style="margin-top:16px">
+        <Button OnClick="GoBack">@I18n.T("BTN_BACK")</Button>
+    </div>
+}
+else if (customer != null)
+{
+    <!-- Header with customer info and mode switcher -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+        <div>
+            <h1 style="margin:0; font-size:24px">@customer.name</h1>
+            <div style="color:var(--muted); font-size:14px; margin-top:4px">@I18n.T("COL_CODE"): @customer.code</div>
+        </div>
+
+        <!-- Mode switcher -->
+        <div style="display:flex; gap:8px">
+            <Button Type="@(mode == ViewMode.Browse ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Browse))">
+                @I18n.T("MODE_BROWSE")
+            </Button>
+            <Button Type="@(mode == ViewMode.Edit ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Edit))">
+                @I18n.T("MODE_EDIT")
+            </Button>
+            <Button Type="@(mode == ViewMode.Design ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Design))">
+                @I18n.T("MODE_DESIGN")
+            </Button>
+        </div>
+    </div>
+
+    <!-- Content based on mode -->
+    @if (mode == ViewMode.Browse)
+    {
+        <!-- Browse Mode: Display fields read-only -->
+        <div class="customer-fields">
+            @if (customer.fields != null && customer.fields.Any())
+            {
+                @foreach (var field in customer.fields)
+                {
+                    <div class="field-item" style="margin-bottom:16px; padding:12px; border:1px solid var(--border); border-radius:4px">
+                        <div style="font-weight:600; margin-bottom:4px">@field.label</div>
+                        <div style="color:var(--text)">@field.value</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
+            }
+        </div>
+    }
+    else if (mode == ViewMode.Edit)
+    {
+        <!-- Edit Mode: Editable fields with Save/Cancel -->
+        <div class="customer-fields-edit">
+            @if (customer.fields != null && customer.fields.Any())
+            {
+                @foreach (var field in customer.fields)
+                {
+                    <div class="field-item-edit" style="margin-bottom:16px">
+                        <label style="display:block; font-weight:600; margin-bottom:4px">@field.label</label>
+                        <Input @bind-Value="editValues[field.key]" style="width:100%" />
+                    </div>
+                }
+
+                <div style="margin-top:20px; display:flex; gap:12px">
+                    <Button Type="@ButtonType.Primary" OnClick="SaveChanges">@I18n.T("BTN_SAVE")</Button>
+                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
+                </div>
+            }
+            else
+            {
+                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
+            }
+        </div>
+    }
+    else if (mode == ViewMode.Design)
+    {
+        <!-- Design Mode: Layout adjustment UI -->
+        <div class="customer-layout-designer" style="border:2px dashed var(--primary); padding:20px; border-radius:8px; min-height:400px">
+            <div style="text-align:center; color:var(--muted); margin-bottom:20px">
+                <h3>@I18n.T("LBL_DESIGN_MODE_TITLE")</h3>
+                <p>@I18n.T("LBL_DESIGN_MODE_DESC")</p>
+            </div>
+
+            <!-- Field list for design -->
+            @if (customer.fields != null && customer.fields.Any())
+            {
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px">
+                    @foreach (var field in customer.fields)
+                    {
+                        <div class="design-field-block" style="padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:4px; cursor:move">
+                            <div style="font-weight:600; font-size:13px">@field.label</div>
+                            <div style="font-size:11px; color:var(--muted)">@field.key</div>
+                        </div>
+                    }
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:12px">
+                    <Button Type="@ButtonType.Primary" OnClick="SaveLayout">@I18n.T("BTN_SAVE_LAYOUT")</Button>
+                    <Button OnClick="GenerateLayout">@I18n.T("BTN_GENERATE_LAYOUT")</Button>
+                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Footer actions -->
+    <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border)">
+        <Button OnClick="GoBack">@I18n.T("BTN_BACK")</Button>
+    </div>
 }
 else
 {
@@ -47,14 +129,27 @@ else
 
 @code {
     [Parameter] public int Id { get; set; }
+
+    private enum ViewMode { Browse, Edit, Design }
+
+    private ViewMode mode = ViewMode.Browse;
     
     private CustomerDetailModel? customer;
     private bool loading = true;
     private string? error;
+    private Dictionary<string, string> editValues = new();
 
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void InitializeEditValues()
+    {
+        if (customer?.fields != null)
+        {
+            editValues = customer.fields.ToDictionary(f => f.key ?? "", f => f.value?.ToString() ?? "");
+        }
     }
 
     private void HandleI18nChanged()
@@ -92,6 +187,7 @@ else
                 else
                 {
                     customer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
+                    InitializeEditValues();
                 }
                 loading = false;
                 StateHasChanged();
@@ -101,6 +197,36 @@ else
     }
 
     private void GoBack() => Nav.NavigateTo("/customers");
+
+    private void SwitchMode(ViewMode newMode)
+    {
+        if (newMode == ViewMode.Edit)
+        {
+            InitializeEditValues();
+        }
+        mode = newMode;
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        // TODO: Implement save customer data via API
+        await Task.CompletedTask;
+        SwitchMode(ViewMode.Browse);
+    }
+
+    private async Task SaveLayout()
+    {
+        // TODO: Implement save layout via API
+        await Task.CompletedTask;
+        SwitchMode(ViewMode.Browse);
+    }
+
+    private async Task GenerateLayout()
+    {
+        // TODO: Implement generate layout via API
+        await Task.CompletedTask;
+    }
 
     private class CustomerDetailModel
     {

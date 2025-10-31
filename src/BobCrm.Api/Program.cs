@@ -287,6 +287,54 @@ app.MapGet("/api/auth/session", (ClaimsPrincipal user) =>
     return Results.Ok(new { valid = false });
 }).RequireAuthorization();
 
+// User Preferences API
+app.MapGet("/api/user/preferences", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var uid = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(uid)) return Results.Unauthorized();
+
+    var prefs = await db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == uid);
+    if (prefs == null)
+    {
+        // Return defaults
+        return Results.Json(new { theme = "light", primaryColor = "#3f7cff", language = "ja" });
+    }
+
+    return Results.Json(new
+    {
+        theme = prefs.Theme ?? "light",
+        primaryColor = prefs.PrimaryColor ?? "#3f7cff",
+        language = prefs.Language ?? "ja"
+    });
+}).RequireAuthorization();
+
+app.MapPut("/api/user/preferences", async (UserPreferencesDto dto, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var uid = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(uid)) return Results.Unauthorized();
+
+    var prefs = await db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == uid);
+    if (prefs == null)
+    {
+        prefs = new UserPreferences { UserId = uid };
+        db.UserPreferences.Add(prefs);
+    }
+
+    if (!string.IsNullOrEmpty(dto.theme)) prefs.Theme = dto.theme;
+    if (!string.IsNullOrEmpty(dto.primaryColor)) prefs.PrimaryColor = dto.primaryColor;
+    if (!string.IsNullOrEmpty(dto.language)) prefs.Language = dto.language;
+    prefs.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+
+    return Results.Json(new
+    {
+        theme = prefs.Theme,
+        primaryColor = prefs.PrimaryColor,
+        language = prefs.Language
+    });
+}).RequireAuthorization();
+
 // Business APIs (Customers, Fields, Layout) via query services (no direct DbContext)
 app.MapGet("/api/customers", (ICustomerQueries q) => Results.Json(q.GetList()))
     .RequireAuthorization();
@@ -295,6 +343,61 @@ app.MapGet("/api/customers/{id:int}", (int id, ICustomerQueries q) =>
 {
     var detail = q.GetDetail(id);
     return detail is null ? Results.NotFound() : Results.Json(detail);
+}).RequireAuthorization();
+
+app.MapPost("/api/customers", async (
+    CreateCustomerDto dto,
+    IRepository<Customer> repoCustomer,
+    IRepository<CustomerAccess> repoAccess,
+    IUnitOfWork uow,
+    HttpContext http,
+    ILocalization loc) =>
+{
+    var lang = LangHelper.GetLang(http);
+
+    // Validate required fields
+    if (string.IsNullOrWhiteSpace(dto.code))
+    {
+        return ApiErrors.Validation(loc.T("ERR_CUSTOMER_CODE_REQUIRED", lang));
+    }
+    if (string.IsNullOrWhiteSpace(dto.name))
+    {
+        return ApiErrors.Validation(loc.T("ERR_CUSTOMER_NAME_REQUIRED", lang));
+    }
+
+    // Check if code already exists
+    var exists = repoCustomer.Query(c => c.Code == dto.code).Any();
+    if (exists)
+    {
+        return ApiErrors.Validation(loc.T("ERR_CUSTOMER_CODE_EXISTS", lang));
+    }
+
+    // Create new customer
+    var customer = new Customer
+    {
+        Code = dto.code,
+        Name = dto.name,
+        Version = 1,
+        ExtData = "{}"
+    };
+
+    await repoCustomer.AddAsync(customer);
+    await uow.SaveChangesAsync();
+
+    // Grant access to creator
+    var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    if (!string.IsNullOrEmpty(uid))
+    {
+        await repoAccess.AddAsync(new CustomerAccess
+        {
+            CustomerId = customer.Id,
+            UserId = uid,
+            CanEdit = true
+        });
+        await uow.SaveChangesAsync();
+    }
+
+    return Results.Json(new { id = customer.Id, code = customer.Code, name = customer.Name });
 }).RequireAuthorization();
 
 // Customer access management (admin only)
@@ -849,6 +952,7 @@ class AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor 
     public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
     public DbSet<FieldValue> FieldValues => Set<FieldValue>();
     public DbSet<UserLayout> UserLayouts => Set<UserLayout>();
+    public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
 
@@ -919,12 +1023,14 @@ record RegisterDto(string username, string password, string email);
 record LoginDto(string username, string password);
 record RefreshDto(string refreshToken);
 record LogoutDto(string refreshToken);
+public record CreateCustomerDto(string code, string name);
 public record UpdateCustomerDto(List<FieldDto> fields, int? expectedVersion);
 public record FieldDto(string key, object value);
 public record GenerateLayoutRequest(string[] tags, string? mode, bool? save, string? scope);
 public record AccessUpsert(string userId, bool canEdit);
 public record AdminSetupDto(string username, string email, string password);
 public record AdminResetPasswordDto(string password);
+public record UserPreferencesDto(string? theme, string? primaryColor, string? language);
 
 class RefreshToken
 {

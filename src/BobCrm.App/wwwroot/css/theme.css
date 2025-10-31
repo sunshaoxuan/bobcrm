@@ -51,6 +51,53 @@
 .ant-select-selector, .ant-input, .ant-input-password, .ant-input-affix-wrapper { border-radius: var(--radius) !important; }
 .ant-divider-horizontal { border-top-color: var(--border) !important; }
 
+/* Apply primary color to ALL primary-styled elements */
+.ant-btn-primary,
+.btn-primary,
+a.primary-link,
+button.primary-button,
+.primary-bg {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.ant-btn-primary:hover,
+.btn-primary:hover,
+a.primary-link:hover,
+button.primary-button:hover {
+  filter: brightness(1.1);
+  opacity: 0.95;
+}
+
+/* Links and text with primary color */
+a.link-primary,
+.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Borders with primary color */
+.border-primary {
+  border-color: var(--primary) !important;
+}
+
+/* Color picker button styles */
+.color-picker-group {
+  transition: all 0.2s ease;
+}
+
+.color-btn {
+  transition: all 0.2s ease;
+}
+
+.color-btn:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
+}
+
+.color-btn:active {
+  transform: scale(0.95);
+}
+
 /* Simple page wrapper for EmptyLayout pages */
 .page-blank { background: var(--bg); min-height: 100vh; display:flex; align-items:flex-start; justify-content:center; padding: 32px 16px; }
 .page-blank .page-card { width: min(960px, 96%); background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
@@ -72,3 +119,64 @@
 .customer-sider .code { font-size: 12px; opacity:.8 }
 .customer-sider .name { font-weight:600; }
 .customer-sider .sider-item.selected { background: rgba(255,255,255,.18); }
+
+/* New customer button */
+.btn-new-customer {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.btn-new-customer:hover {
+  filter: brightness(1.1);
+  opacity: 0.95;
+}
+
+.btn-new-customer:active {
+  transform: scale(0.98);
+}
+
+/* Custom buttons that use theme colors */
+.btn-primary-custom {
+  padding: 8px 16px;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-primary-custom:hover:not(:disabled) {
+  filter: brightness(1.1);
+  opacity: 0.95;
+}
+
+.btn-primary-custom:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary-custom {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-custom:hover {
+  background-color: #5a6268;
+}

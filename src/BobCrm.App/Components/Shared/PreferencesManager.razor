@@ -1,0 +1,93 @@
+@rendermode RenderMode.InteractiveServer
+@using BobCrm.App.Services
+@inject PreferencesService PrefsService
+@inject IJSRuntime JS
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Register .NET callback for JavaScript to call
+                await JS.InvokeVoidAsync("bobcrm.registerPreferencesCallback",
+                    DotNetObjectReference.Create(this));
+
+                // Load preferences from server and apply
+                var prefs = await PrefsService.LoadPreferencesAsync();
+
+                // Apply to UI via JavaScript
+                if (!string.IsNullOrEmpty(prefs.Theme))
+                {
+                    await JS.InvokeVoidAsync("bobcrm.setTheme", prefs.Theme);
+                }
+                if (!string.IsNullOrEmpty(prefs.PrimaryColor))
+                {
+                    await JS.InvokeVoidAsync("bobcrm.setPrimary", prefs.PrimaryColor);
+                }
+            }
+            catch
+            {
+                // Ignore initialization errors
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task SaveThemeAsync(string theme)
+    {
+        try
+        {
+            var prefs = new PreferencesService.UserPreferences
+            {
+                Theme = theme,
+                PrimaryColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff",
+                Language = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja"
+            };
+            await PrefsService.SavePreferencesAsync(prefs);
+        }
+        catch
+        {
+            // Ignore save errors
+        }
+    }
+
+    [JSInvokable]
+    public async Task SavePrimaryColorAsync(string color)
+    {
+        try
+        {
+            var prefs = new PreferencesService.UserPreferences
+            {
+                Theme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light",
+                PrimaryColor = color,
+                Language = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja"
+            };
+            await PrefsService.SavePreferencesAsync(prefs);
+        }
+        catch
+        {
+            // Ignore save errors
+        }
+    }
+
+    [JSInvokable]
+    public async Task SaveLanguageAsync(string language)
+    {
+        try
+        {
+            var prefs = new PreferencesService.UserPreferences
+            {
+                Theme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light",
+                PrimaryColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff",
+                Language = language
+            };
+            await PrefsService.SavePreferencesAsync(prefs);
+        }
+        catch
+        {
+            // Ignore save errors
+        }
+    }
+}

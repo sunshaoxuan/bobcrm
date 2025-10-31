@@ -13,7 +13,41 @@
 
 <body>
     <Routes />
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
+    <script>
+        // Apply theme immediately (before DOM ready)
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                const savedPrimary = localStorage.getItem('primary') || '#3f7cff';
+                document.documentElement.classList.add(savedTheme === 'dark' ? 'theme-dark' : 'theme-light');
+                document.documentElement.style.setProperty('--primary', savedPrimary);
+            } catch(e) {}
+        })();
+
+        // Initialize theme only once on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.bobcrm && window.bobcrm.initTheme) {
+                window.bobcrm.initTheme();
+            }
+
+            // Re-init when toolbar becomes available (only once)
+            let toolbarInitialized = false;
+            const checkToolbar = setInterval(() => {
+                const toolbar = document.querySelector('.toolbar');
+                if (toolbar && !toolbarInitialized) {
+                    toolbarInitialized = true;
+                    if (window.bobcrm && window.bobcrm.initTheme) {
+                        window.bobcrm.initTheme();
+                    }
+                    clearInterval(checkToolbar);
+                }
+            }, 100);
+
+            // Clear after 5 seconds
+            setTimeout(() => clearInterval(checkToolbar), 5000);
+        });
+    </script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

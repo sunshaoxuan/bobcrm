@@ -16,6 +16,7 @@ builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
+builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
 
 var app = builder.Build();
 

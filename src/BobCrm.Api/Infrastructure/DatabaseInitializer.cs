@@ -190,7 +190,25 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "VAL_INVALID_PATTERN", ZH = "{0} 的验证规则无效", JA = "{0} の検証パターンが無効です", EN = "Invalid validation pattern for {0}" },
                 new LocalizationResource { Key = "VAL_INVALID_FORMAT", ZH = "{0} 格式不正确", JA = "{0} の形式が正しくありません", EN = "{0} format invalid" },
                 new LocalizationResource { Key = "VAL_UNKNOWN_FIELD", ZH = "未知字段: {0}", JA = "不明なフィールド: {0}", EN = "Unknown field: {0}" },
-                new LocalizationResource { Key = "VAL_FIELDS_REQUIRED", ZH = "必须提供字段", JA = "フィールドは必須です", EN = "Fields are required" }
+                new LocalizationResource { Key = "VAL_FIELDS_REQUIRED", ZH = "必须提供字段", JA = "フィールドは必須です", EN = "Fields are required" },
+                // New customer keys
+                new LocalizationResource { Key = "BTN_NEW_CUSTOMER", ZH = "新建客户", JA = "新規顧客", EN = "New Customer" },
+                new LocalizationResource { Key = "LBL_NEW_CUSTOMER", ZH = "新建客户", JA = "新規顧客", EN = "New Customer" },
+                new LocalizationResource { Key = "LBL_CUSTOMER_CODE_HINT", ZH = "唯一标识，例如: C001", JA = "一意の識別子、例: C001", EN = "Unique identifier, e.g. C001" },
+                new LocalizationResource { Key = "BTN_CANCEL", ZH = "取消", JA = "キャンセル", EN = "Cancel" },
+                new LocalizationResource { Key = "LBL_SAVING", ZH = "保存中", JA = "保存中", EN = "Saving" },
+                new LocalizationResource { Key = "LBL_SAVE_FAILED", ZH = "保存失败", JA = "保存に失敗", EN = "Save failed" },
+                new LocalizationResource { Key = "ERR_CUSTOMER_CODE_REQUIRED", ZH = "客户编码不能为空", JA = "顧客コードは必須です", EN = "Customer code is required" },
+                new LocalizationResource { Key = "ERR_CUSTOMER_NAME_REQUIRED", ZH = "客户名称不能为空", JA = "顧客名は必須です", EN = "Customer name is required" },
+                new LocalizationResource { Key = "ERR_CUSTOMER_CODE_EXISTS", ZH = "客户编码已存在", JA = "顧客コードは既に存在します", EN = "Customer code already exists" },
+                // View mode keys
+                new LocalizationResource { Key = "MODE_BROWSE", ZH = "浏览", JA = "閲覧", EN = "Browse" },
+                new LocalizationResource { Key = "MODE_EDIT", ZH = "编辑", JA = "編集", EN = "Edit" },
+                new LocalizationResource { Key = "MODE_DESIGN", ZH = "设计", JA = "デザイン", EN = "Design" },
+                new LocalizationResource { Key = "BTN_SAVE_LAYOUT", ZH = "保存布局", JA = "レイアウトを保存", EN = "Save Layout" },
+                new LocalizationResource { Key = "BTN_GENERATE_LAYOUT", ZH = "生成布局", JA = "レイアウトを生成", EN = "Generate Layout" },
+                new LocalizationResource { Key = "LBL_DESIGN_MODE_TITLE", ZH = "设计模式", JA = "デザインモード", EN = "Design Mode" },
+                new LocalizationResource { Key = "LBL_DESIGN_MODE_DESC", ZH = "在此模式下可以调整字段布局，拖拽字段块进行排列", JA = "このモードでフィールドのレイアウトを調整できます", EN = "Adjust field layout in this mode" }
             );
         }
         else
@@ -255,6 +273,24 @@ public static class DatabaseInitializer
             Ensure("VAL_INVALID_FORMAT", "{0} 格式不正确", "{0} の形式が正しくありません", "{0} format invalid");
             Ensure("VAL_UNKNOWN_FIELD", "未知字段: {0}", "不明なフィールド: {0}", "Unknown field: {0}");
             Ensure("VAL_FIELDS_REQUIRED", "必须提供字段", "フィールドは必須です", "Fields are required");
+            // New customer keys
+            Ensure("BTN_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
+            Ensure("LBL_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
+            Ensure("LBL_CUSTOMER_CODE_HINT", "唯一标识，例如: C001", "一意の識別子、例: C001", "Unique identifier, e.g. C001");
+            Ensure("BTN_CANCEL", "取消", "キャンセル", "Cancel");
+            Ensure("LBL_SAVING", "保存中", "保存中", "Saving");
+            Ensure("LBL_SAVE_FAILED", "保存失败", "保存に失敗", "Save failed");
+            Ensure("ERR_CUSTOMER_CODE_REQUIRED", "客户编码不能为空", "顧客コードは必須です", "Customer code is required");
+            Ensure("ERR_CUSTOMER_NAME_REQUIRED", "客户名称不能为空", "顧客名は必須です", "Customer name is required");
+            Ensure("ERR_CUSTOMER_CODE_EXISTS", "客户编码已存在", "顧客コードは既に存在します", "Customer code already exists");
+            // View mode keys
+            Ensure("MODE_BROWSE", "浏览", "閲覧", "Browse");
+            Ensure("MODE_EDIT", "编辑", "編集", "Edit");
+            Ensure("MODE_DESIGN", "设计", "デザイン", "Design");
+            Ensure("BTN_SAVE_LAYOUT", "保存布局", "レイアウトを保存", "Save Layout");
+            Ensure("BTN_GENERATE_LAYOUT", "生成布局", "レイアウトを生成", "Generate Layout");
+            Ensure("LBL_DESIGN_MODE_TITLE", "设计模式", "デザインモード", "Design Mode");
+            Ensure("LBL_DESIGN_MODE_DESC", "在此模式下可以调整字段布局，拖拽字段块进行排列", "このモードでフィールドのレイアウトを調整できます", "Adjust field layout in this mode");
         }
 
         await db.SaveChangesAsync();

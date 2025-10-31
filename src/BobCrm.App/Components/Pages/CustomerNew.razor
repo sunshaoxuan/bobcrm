@@ -1,0 +1,157 @@
+@page "/customers/new"
+@rendermode RenderMode.InteractiveServer
+
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+
+<h1>@I18n.T("LBL_NEW_CUSTOMER")</h1>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger" role="alert" style="margin-bottom:16px; padding:12px; background:#fee; border:1px solid #fcc; border-radius:4px; color:#c33">
+        @error
+    </div>
+}
+
+<div style="max-width:600px">
+    <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block; margin-bottom:4px; font-weight:600">@I18n.T("COL_CODE") <span style="color:red">*</span></label>
+        <input type="text" @bind="code" class="form-control" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:14px" />
+        <small style="color:var(--muted); font-size:12px">@I18n.T("LBL_CUSTOMER_CODE_HINT")</small>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+        <label style="display:block; margin-bottom:4px; font-weight:600">@I18n.T("COL_NAME") <span style="color:red">*</span></label>
+        <input type="text" @bind="name" class="form-control" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:14px" />
+    </div>
+
+    <div style="display:flex; gap:12px">
+        <button @onclick="Save" disabled="@saving" class="btn-primary-custom">
+            @(saving ? I18n.T("LBL_SAVING") : I18n.T("BTN_SAVE"))
+        </button>
+        <button @onclick="Cancel" class="btn-secondary-custom">
+            @I18n.T("BTN_CANCEL")
+        </button>
+    </div>
+</div>
+
+@code {
+    private string code = string.Empty;
+    private string name = string.Empty;
+    private string? error;
+    private bool saving = false;
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Load i18n first
+                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
+                await I18n.LoadAsync(langToLoad);
+
+                // Wait for UI to update after i18n load
+                await InvokeAsync(StateHasChanged);
+
+                // simple auth guard
+                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
+            }
+            catch { }
+        }
+    }
+
+    private async Task Save()
+    {
+        error = null;
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            error = I18n.T("ERR_CUSTOMER_CODE_REQUIRED");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            error = I18n.T("ERR_CUSTOMER_NAME_REQUIRED");
+            return;
+        }
+
+        try
+        {
+            saving = true;
+            StateHasChanged();
+
+            var payload = new { code = code.Trim(), name = name.Trim() };
+            var resp = await Auth.PostAsJsonWithRefreshAsync("/api/customers", payload);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                var result = await resp.Content.ReadFromJsonAsync<CreateCustomerResult>();
+                if (result != null)
+                {
+                    // Navigate to the newly created customer
+                    Nav.NavigateTo($"/customer/{result.id}");
+                }
+                else
+                {
+                    Nav.NavigateTo("/customers");
+                }
+            }
+            else
+            {
+                var errorResponse = await resp.Content.ReadAsStringAsync();
+                try
+                {
+                    var errorObj = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(errorResponse);
+                    error = errorObj?.error ?? $"{I18n.T("LBL_SAVE_FAILED")}: {(int)resp.StatusCode}";
+                }
+                catch
+                {
+                    error = $"{I18n.T("LBL_SAVE_FAILED")}: {(int)resp.StatusCode}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"{I18n.T("LBL_SAVE_FAILED")}: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo("/customers");
+    }
+
+    private class CreateCustomerResult
+    {
+        public int id { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
+    }
+
+    private class ErrorResponse
+    {
+        public string? error { get; set; }
+    }
+}

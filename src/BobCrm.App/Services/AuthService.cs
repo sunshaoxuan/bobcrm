@@ -100,6 +100,38 @@ public class AuthService
         return resp;
     }
 
+    public async Task<HttpResponseMessage> PostAsJsonWithRefreshAsync<T>(string url, T data)
+    {
+        var http = await CreateClientWithAuthAsync();
+        var resp = await http.PostAsJsonAsync(url, data);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var refreshed = await TryRefreshAsync();
+            if (refreshed)
+            {
+                http = await CreateClientWithAuthAsync();
+                resp = await http.PostAsJsonAsync(url, data);
+            }
+        }
+        return resp;
+    }
+
+    public async Task<HttpResponseMessage> PutAsJsonWithRefreshAsync<T>(string url, T data)
+    {
+        var http = await CreateClientWithAuthAsync();
+        var resp = await http.PutAsJsonAsync(url, data);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var refreshed = await TryRefreshAsync();
+            if (refreshed)
+            {
+                http = await CreateClientWithAuthAsync();
+                resp = await http.PutAsJsonAsync(url, data);
+            }
+        }
+        return resp;
+    }
+
     public async Task<bool> TryRefreshAsync()
     {
         var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");

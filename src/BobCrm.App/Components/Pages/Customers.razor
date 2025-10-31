@@ -1,61 +1,13 @@
 @page "/customers"
-@page "/customers/{Id:int}"
 @rendermode RenderMode.InteractiveServer
 
-@inject BobCrm.App.Services.AuthService Auth
-@inject NavigationManager Nav
-@inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
 <h1>@I18n.T("MENU_CUSTOMERS")</h1>
 
-<!-- 客户详情 -->
-@if (loading)
-{
-    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
-}
-else if (error != null)
-{
-    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
-}
-else if (customer == null)
-{
-    <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
-}
-else
-{
-    <div>
-        <h2>@I18n.T("LBL_CUSTOMER_DETAIL")</h2>
-        <div style="margin-bottom:12px">
-            <strong>@I18n.T("COL_CODE"):</strong> @customer.code
-        </div>
-        <div style="margin-bottom:12px">
-            <strong>@I18n.T("COL_NAME"):</strong> @customer.name
-        </div>
-        @if (customer.fields != null && customer.fields.Any())
-        {
-            <h3>@I18n.T("LBL_FIELDS")</h3>
-            @foreach (var field in customer.fields)
-            {
-                <div style="margin-bottom:8px">
-                    <strong>@field.label:</strong> @field.value
-                </div>
-            }
-        }
-        else
-        {
-            <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
-        }
-    </div>
-}
+<div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
 
 @code {
-    [Parameter] public int Id { get; set; }
-    
-    private CustomerDetailModel? customer;
-    private bool loading = true;
-    private string? error;
-
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
@@ -64,71 +16,6 @@ else
     private void HandleI18nChanged()
     {
         try { InvokeAsync(StateHasChanged); } catch { }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                // Load i18n first
-                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
-                await I18n.LoadAsync(langToLoad);
-                
-                // Wait for UI to update after i18n load
-                await InvokeAsync(StateHasChanged);
-                
-                // simple auth guard
-                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
-                if (string.IsNullOrWhiteSpace(token)) { Nav.NavigateTo("/login"); return; }
-
-                // Load customer detail if Id is provided
-                if (Id > 0)
-                {
-                    var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
-                    if (!resp.IsSuccessStatusCode)
-                    {
-                        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
-                        {
-                            error = I18n.T("LBL_NOT_FOUND");
-                        }
-                        else
-                        {
-                            error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}";
-                        }
-                    }
-                    else
-                    {
-                        customer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
-                    }
-                }
-                
-                loading = false;
-                StateHasChanged();
-            }
-            catch { }
-        }
-    }
-
-    private class CustomerDetailModel
-    {
-        public int id { get; set; }
-        public string? code { get; set; }
-        public string? name { get; set; }
-        public int version { get; set; }
-        public FieldDetail[]? fields { get; set; }
-    }
-
-    private class FieldDetail
-    {
-        public string? key { get; set; }
-        public string? label { get; set; }
-        public string? type { get; set; }
-        public string? value { get; set; }
-        public bool required { get; set; }
-        public string? validation { get; set; }
     }
 }
 

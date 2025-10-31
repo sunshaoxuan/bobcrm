@@ -1,4 +1,8 @@
 window.bobcrm = {
+  preferencesCallback: null,
+  registerPreferencesCallback: function(dotnetRef) {
+    this.preferencesCallback = dotnetRef;
+  },
   copyText: async function (text) {
     try {
       await navigator.clipboard.writeText(text || '');
@@ -60,16 +64,73 @@ window.bobcrm = {
       root.classList.remove('theme-light', 'theme-dark');
       root.classList.add(name === 'dark' ? 'theme-dark' : 'theme-light');
       localStorage.setItem('theme', name);
+
+      // Save to server
+      if (this.preferencesCallback) {
+        this.preferencesCallback.invokeMethodAsync('SaveThemeAsync', name);
+      }
     } catch (e) { }
   }
   , getTheme: function () {
     try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
   }
   , setPrimary: function (color) {
-    try { document.documentElement.style.setProperty('--primary', color || '#3f7cff'); localStorage.setItem('primary', color || '#3f7cff'); } catch (e) { }
+    try {
+      const normalizedColor = color || '#3f7cff';
+      document.documentElement.style.setProperty('--primary', normalizedColor);
+      localStorage.setItem('primary', normalizedColor);
+
+      // Update active state for color buttons
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        const btnColor = btn.getAttribute('data-color');
+        if (btnColor && btnColor.toLowerCase() === normalizedColor.toLowerCase()) {
+          btn.style.borderColor = '#333';
+          btn.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.1)';
+        } else {
+          btn.style.borderColor = 'transparent';
+          btn.style.boxShadow = 'none';
+        }
+      });
+
+      // Save to server
+      if (this.preferencesCallback) {
+        this.preferencesCallback.invokeMethodAsync('SavePrimaryColorAsync', normalizedColor);
+      }
+    } catch (e) { }
   }
   , getPrimary: function () {
     try { return localStorage.getItem('primary') || '#3f7cff'; } catch (e) { return '#3f7cff'; }
+  }
+  , initTheme: function () {
+    try {
+      // Apply saved theme
+      const savedTheme = this.getTheme();
+      this.setTheme(savedTheme);
+
+      // Apply saved primary color
+      const savedPrimary = this.getPrimary();
+      document.documentElement.style.setProperty('--primary', savedPrimary);
+
+      // Update theme selector
+      const themeSelector = document.getElementById('theme-selector');
+      if (themeSelector) {
+        themeSelector.value = savedTheme;
+      }
+
+      // Update color button active states
+      setTimeout(() => {
+        document.querySelectorAll('.color-btn').forEach(btn => {
+          const btnColor = btn.getAttribute('data-color');
+          if (btnColor && btnColor.toLowerCase() === savedPrimary.toLowerCase()) {
+            btn.style.borderColor = '#333';
+            btn.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.1)';
+          } else {
+            btn.style.borderColor = 'transparent';
+            btn.style.boxShadow = 'none';
+          }
+        });
+      }, 100);
+    } catch (e) { console.error('initTheme error:', e); }
   }
 };
 
@@ -86,6 +147,12 @@ window.logout = function() {
 window.changeLang = function(lang) {
   // 保存语言选择
   bobcrm.setCookie('lang', lang, 365);
+
+  // Save to server
+  if (bobcrm.preferencesCallback) {
+    bobcrm.preferencesCallback.invokeMethodAsync('SaveLanguageAsync', lang);
+  }
+
   // 刷新页面以加载新的i18n资源（最简单可靠的方式）
   window.location.reload();
 };
