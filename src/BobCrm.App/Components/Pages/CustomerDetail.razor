@@ -73,46 +73,56 @@ else if (customer != null)
                 </div>
 
                 <!-- Center Canvas -->
-                <div class="designer-canvas" style="flex:1; overflow:auto; padding:24px; background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px; background-color: #f5f5f5;"
-                     @ondrop="OnDropAbs" @ondrop:preventDefault @ondragover="OnDragOverAbs" @ondragover:preventDefault>
+                <div class="designer-canvas" style="flex:1; overflow:auto; padding:24px; background:#f5f5f5;"
+                     @ondrop="OnDrop" @ondrop:preventDefault @ondragover="OnDragOver" @ondragover:preventDefault>
                     <div style="padding:24px; min-height:100%">
-                        <div @ref="canvasRef" class="abs-canvas" style="position:relative; min-height:calc(100vh - 160px); background:transparent">
-                            @foreach (var widget in layoutWidgets)
+                        <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 160px); background:#fff; border-radius:8px; padding:16px; position:relative">
+                            @foreach (var widget in layoutWidgets.OrderBy(w => w.X))
                             {
-                                <div class="abs-widget @(selectedWidget == widget ? "selected" : "")"
-                                     data-widget-id="@widget.Id"
+                                <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
+                                     draggable="true"
+                                     data-drag-type="widget"
+                                     data-drag-data="@widget.Id"
+                                     @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
+                                     @ondragstart:preventDefault="false"
+                                     @ondragend="OnDragEnd"
                                      @onclick="@(() => SelectWidget(widget))"
-                                     style="@GetAbsStyle(widget)">
+                                     style="@GetFlowWidgetStyle(widget)">
 
                                     <!-- Widget Content -->
-                                    <div class="widget-content" style="width:100%; height:100%; pointer-events:none">
+                                    <div class="widget-content" style="width:100%; pointer-events:none">
                                         @if (widget.Type == "textbox")
                                         {
-                                            <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; height:100%; display:flex; align-items:center">
-                                                @widget.Label
+                                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa; width:100%">
+                                                <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+                                                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
                                             </div>
                                         }
                                         else if (widget.Type == "label")
                                         {
-                                            <div style="padding:4px; font-weight:500">@widget.Label</div>
+                                            <div style="padding:8px; font-weight:500">@widget.Label</div>
                                         }
                                         else if (widget.Type == "calendar")
                                         {
-                                            <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; height:100%; display:flex; align-items:center">
-                                                <Icon Type="@IconType.Outline.Calendar" Style="margin-right:8px" />
-                                                <span>@widget.Label</span>
+                                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa; width:100%">
+                                                <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+                                                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px">
+                                                    <Icon Type="@IconType.Outline.Calendar" />
+                                                </div>
                                             </div>
                                         }
                                         else if (widget.Type == "listbox")
                                         {
-                                            <div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; height:100%; display:flex; align-items:center">
-                                                <Icon Type="@IconType.Outline.UnorderedList" Style="margin-right:8px" />
-                                                <span>@widget.Label</span>
+                                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa; width:100%">
+                                                <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+                                                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px">
+                                                    <Icon Type="@IconType.Outline.UnorderedList" />
+                                                </div>
                                             </div>
                                         }
                                         else if (widget.Type == "tabbox")
                                         {
-                                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:8px; width:100%; height:100%">
+                                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:8px; width:100%">
                                                 <div style="display:flex; gap:8px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; margin-bottom:8px">
                                                     <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:2px; font-size:12px">Tab 1</div>
                                                     <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:2px; font-size:12px">Tab 2</div>
@@ -122,7 +132,7 @@ else if (customer != null)
                                         }
                                         else if (widget.Type == "frame")
                                         {
-                                            <div style="border:2px dashed #d9d9d9; border-radius:4px; padding:12px; min-height:80px; background:#fafafa; width:100%; height:100%">
+                                            <div style="border:2px dashed #d9d9d9; border-radius:4px; padding:12px; min-height:80px; background:#fafafa; width:100%">
                                                 <div style="color:#999; font-size:12px; display:flex; align-items:center">
                                                     <Icon Type="@IconType.Outline.BorderOuter" Style="margin-right:4px" />
                                                     <span>@widget.Label</span>
@@ -134,21 +144,6 @@ else if (customer != null)
                                             <div style="padding:8px">@widget.Type</div>
                                         }
                                     </div>
-
-                                    <!-- Resize Handles (8-direction) -->
-                                    @if (selectedWidget == widget)
-                                    {
-                                        <div class="resize-handles">
-                                            <div class="resize-handle handle-nw" data-handle="nw" style="position:absolute; left:-4px; top:-4px; width:8px; height:8px; background:#1890ff; cursor:nw-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-n" data-handle="n" style="position:absolute; left:50%; top:-4px; transform:translateX(-50%); width:8px; height:8px; background:#1890ff; cursor:n-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-ne" data-handle="ne" style="position:absolute; right:-4px; top:-4px; width:8px; height:8px; background:#1890ff; cursor:ne-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-e" data-handle="e" style="position:absolute; right:-4px; top:50%; transform:translateY(-50%); width:8px; height:8px; background:#1890ff; cursor:e-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-se" data-handle="se" style="position:absolute; right:-4px; bottom:-4px; width:8px; height:8px; background:#1890ff; cursor:se-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-s" data-handle="s" style="position:absolute; left:50%; bottom:-4px; transform:translateX(-50%); width:8px; height:8px; background:#1890ff; cursor:s-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-sw" data-handle="sw" style="position:absolute; left:-4px; bottom:-4px; width:8px; height:8px; background:#1890ff; cursor:sw-resize; border-radius:50%; z-index:10"></div>
-                                            <div class="resize-handle handle-w" data-handle="w" style="position:absolute; left:-4px; top:50%; transform:translateY(-50%); width:8px; height:8px; background:#1890ff; cursor:w-resize; border-radius:50%; z-index:10"></div>
-                                        </div>
-                                    }
                                 </div>
                             }
                             @if (!layoutWidgets.Any())
@@ -358,11 +353,7 @@ else
     private ComponentDefinition? draggedComponent = null;
     private LayoutWidget? draggedWidget = null;
     private bool dropSucceeded = false;
-
-    // Free designer references
     private ElementReference canvasRef;
-    private DotNetObjectReference<CustomerDetail>? dotNetRef;
-    private const int GRID_SIZE = 8;
 
     // Component definitions
     private List<ComponentDefinition> basicComponents = new()
@@ -454,51 +445,11 @@ else
             catch { loading = false; error = "Load error"; StateHasChanged(); }
         }
 
-        // Initialize free designer when entering design mode
-        if (mode == ViewMode.Design && dotNetRef == null)
-        {
-            try
-            {
-                dotNetRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("bobcrm.freeDesigner.init", ".abs-canvas", dotNetRef, GRID_SIZE);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to initialize free designer: {ex.Message}");
-            }
-        }
-    }
-
-    // JS Interop callbacks
-    [JSInvokable]
-    public async Task OnWidgetMoved(string widgetId, int x, int y)
-    {
-        var widget = layoutWidgets.FirstOrDefault(w => w.Id == widgetId);
-        if (widget != null)
-        {
-            widget.X = x;
-            widget.Y = y;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    [JSInvokable]
-    public async Task OnWidgetResized(string widgetId, int x, int y, int w, int h)
-    {
-        var widget = layoutWidgets.FirstOrDefault(w => w.Id == widgetId);
-        if (widget != null)
-        {
-            widget.X = x;
-            widget.Y = y;
-            widget.W = w;
-            widget.H = h;
-            await InvokeAsync(StateHasChanged);
-        }
     }
 
     public void Dispose()
     {
-        dotNetRef?.Dispose();
+        I18n.OnChanged -= HandleI18nChanged;
     }
 
     private void GoBack() => Nav.NavigateTo("/customers");
@@ -531,25 +482,45 @@ else
                 var layoutData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(layoutJson);
 
                 // Check layout mode
-                if (layoutData.TryGetProperty("mode", out var modeEl) && modeEl.GetString() == "free")
+                if (layoutData.TryGetProperty("mode", out var modeEl) && modeEl.GetString() == "flow")
                 {
-                    // Load free layout
-                    if (layoutData.TryGetProperty("widgets", out var widgetsEl))
+                    // Load flow layout
+                    if (layoutData.TryGetProperty("items", out var itemsEl))
                     {
                         layoutWidgets.Clear();
-                        foreach (var w in widgetsEl.EnumerateArray())
+                        var sortedItems = new List<(string key, System.Text.Json.JsonElement item)>();
+
+                        foreach (var prop in itemsEl.EnumerateObject())
                         {
+                            sortedItems.Add((prop.Name, prop.Value));
+                        }
+
+                        // Sort by order
+                        sortedItems.Sort((a, b) =>
+                        {
+                            var orderA = a.item.TryGetProperty("order", out var oA) ? oA.GetInt32() : 0;
+                            var orderB = b.item.TryGetProperty("order", out var oB) ? oB.GetInt32() : 0;
+                            return orderA.CompareTo(orderB);
+                        });
+
+                        for (int i = 0; i < sortedItems.Count; i++)
+                        {
+                            var (key, item) = sortedItems[i];
+                            var colWidth = item.TryGetProperty("w", out var wEl) ? wEl.GetInt32() : 6;
+                            var visible = item.TryGetProperty("visible", out var vEl) ? vEl.GetBoolean() : true;
+                            var label = item.TryGetProperty("label", out var lEl) ? lEl.GetString() : key;
+                            var type = item.TryGetProperty("type", out var tEl) ? tEl.GetString() : "textbox";
+
                             layoutWidgets.Add(new LayoutWidget
                             {
-                                Id = w.GetProperty("id").GetString() ?? Guid.NewGuid().ToString(),
-                                Type = w.GetProperty("type").GetString() ?? "textbox",
-                                Label = w.GetProperty("label").GetString() ?? "",
-                                DataField = w.TryGetProperty("dataField", out var df) ? df.GetString() : null,
-                                X = w.GetProperty("x").GetInt32(),
-                                Y = w.GetProperty("y").GetInt32(),
-                                W = w.GetProperty("w").GetInt32(),
-                                H = w.GetProperty("h").GetInt32(),
-                                Visible = w.TryGetProperty("visible", out var vis) ? vis.GetBoolean() : true
+                                Id = Guid.NewGuid().ToString(),
+                                Type = type ?? "textbox",
+                                Label = label ?? key,
+                                DataField = key,
+                                Width = (int)Math.Round(colWidth * 8.33), // 1-12列转换为百分比
+                                WidthUnit = "%",
+                                X = i * 10, // Use order as X for sorting
+                                Visible = visible
                             });
                         }
                         return;
@@ -571,26 +542,28 @@ else
     {
         try
         {
-            // Build free layout JSON
+            // Build flow layout JSON (使用X作为order排序)
+            var orderedWidgets = layoutWidgets.OrderBy(w => w.X).ToList();
+
+            var items = new Dictionary<string, object>();
+            for (int i = 0; i < orderedWidgets.Count; i++)
+            {
+                var w = orderedWidgets[i];
+                var key = w.DataField ?? w.Id;
+                items[key] = new
+                {
+                    order = i,
+                    w = (int)Math.Round(w.Width / 8.33), // 转换为1-12列
+                    visible = w.Visible,
+                    label = w.Label,
+                    type = w.Type
+                };
+            }
+
             var layout = new
             {
-                mode = "free",
-                widgets = layoutWidgets.Select(w => new
-                {
-                    id = w.Id,
-                    type = w.Type,
-                    label = w.Label,
-                    dataField = w.DataField,
-                    x = w.X,
-                    y = w.Y,
-                    w = w.W,
-                    h = w.H,
-                    zIndex = 1,
-                    locked = false,
-                    visible = w.Visible,
-                    containerId = (string?)null
-                }).ToList(),
-                grid = GRID_SIZE
+                mode = "flow",
+                items = items
             };
 
             var resp = await Auth.PostAsJsonWithRefreshAsync($"/api/layout/{Id}", layout);
@@ -665,7 +638,7 @@ else
                 WidthUnit = "%",
                 Visible = true
             };
-            
+
             // Get drop coordinates and calculate insertion index
             try
             {
@@ -705,9 +678,12 @@ else
                     layoutWidgets.Add(newWidget);
                 }
             }
-            
+
+            // Update X values to reflect order
+            ReorderWidgetsByIndex();
+
             selectedWidget = newWidget;
-            dropSucceeded = true;  // Mark drop as successful
+            dropSucceeded = true;
             draggedComponent = null;
             try
             {
@@ -721,25 +697,25 @@ else
             // Reorder existing widget
             var widgetToMove = draggedWidget;
             var originalIndex = layoutWidgets.IndexOf(widgetToMove);
-            
+
             if (originalIndex >= 0)
             {
                 // Get drop coordinates and calculate insertion index
                 try
                 {
                     var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", ".layout-widgets-container", e.ClientX, e.ClientY);
-                    
+
                     if (insertIndex >= 0)
                     {
                         // Remove from original position
                         layoutWidgets.RemoveAt(originalIndex);
-                        
+
                         // Adjust insert index if widget was removed before target position
                         if (insertIndex > originalIndex)
                         {
                             insertIndex--;
                         }
-                        
+
                         // Insert at new position
                         if (insertIndex >= 0 && insertIndex <= layoutWidgets.Count)
                         {
@@ -752,6 +728,9 @@ else
                             layoutWidgets.Add(widgetToMove);
                             selectedWidget = widgetToMove;
                         }
+
+                        // Update X values to reflect new order
+                        ReorderWidgetsByIndex();
                     }
                     else
                     {
@@ -766,7 +745,7 @@ else
                 }
             }
 
-            dropSucceeded = true;  // Mark drop as successful
+            dropSucceeded = true;
             draggedWidget = null;
             StateHasChanged();
         }
@@ -780,64 +759,15 @@ else
         }
     }
 
-    private async Task OnDropAbs(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    private void ReorderWidgetsByIndex()
     {
-        try
+        // Update X values based on list index (for sorting purposes)
+        for (int i = 0; i < layoutWidgets.Count; i++)
         {
-            await JS.InvokeVoidAsync("console.log",
-                $"[C#] OnDropAbs: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, count={layoutWidgets.Count}, pos=({e.ClientX},{e.ClientY})");
-        }
-        catch { }
-
-        try
-        {
-            var pos = await JS.InvokeAsync<Position>("bobcrm.getDropPosition", ".abs-canvas", e.ClientX, e.ClientY, 8);
-
-            if (draggedComponent != null)
-            {
-                var newWidget = new LayoutWidget
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Type = draggedComponent.Type,
-                    Label = I18n.T(draggedComponent.Label),
-                    Visible = true,
-                    X = pos.x,
-                    Y = pos.y,
-                    W = 360,
-                    H = 56
-                };
-                layoutWidgets.Add(newWidget);
-                selectedWidget = newWidget;
-                dropSucceeded = true;
-                draggedComponent = null;
-            }
-            else if (draggedWidget != null)
-            {
-                draggedWidget.X = pos.x;
-                draggedWidget.Y = pos.y;
-                selectedWidget = draggedWidget;
-                dropSucceeded = true;
-                draggedWidget = null;
-            }
-
-            await JS.InvokeVoidAsync("bobcrm.clearDropMarker");
-            StateHasChanged();
-        }
-        catch
-        {
-            // ignore
+            layoutWidgets[i].X = i * 10;
         }
     }
 
-    private void OnDragOverAbs(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
-    {
-        try
-        {
-            JS.InvokeVoidAsync("bobcrm.updateDropMarker", ".abs-canvas", e.ClientX, e.ClientY);
-            // Allow drop
-        }
-        catch { }
-    }
 
     private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
@@ -905,10 +835,16 @@ else
         return $"width:{width}; {border}";
     }
 
-    private string GetAbsStyle(LayoutWidget widget)
+    private string GetFlowWidgetStyle(LayoutWidget widget)
     {
+        // 使用Width作为flex-basis的百分比 (1-12列，每列约8.33%)
+        var flexBasis = widget.WidthUnit == "%"
+            ? $"calc({widget.Width}% - 6px)"
+            : $"{widget.Width}px";
+
         var border = selectedWidget == widget ? "2px solid #1890ff" : "1px solid #e0e0e0";
-        return $"position:absolute; left:{widget.X}px; top:{widget.Y}px; width:{widget.W}px; height:{widget.H}px; padding:8px; background:#fff; border-radius:4px; border:{border}; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:move; user-select:none;";
+
+        return $"flex:0 0 {flexBasis}; max-width:{flexBasis}; background:#fff; border-radius:4px; border:{border}; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:move; user-select:none; transition: all 0.2s ease;";
     }
 
     // Models
