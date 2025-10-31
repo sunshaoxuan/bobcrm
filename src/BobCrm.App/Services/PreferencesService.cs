@@ -63,7 +63,10 @@ public class PreferencesService
         try
         {
             var theme = await _js.InvokeAsync<string?>("localStorage.getItem", "theme") ?? "light";
-            var primaryColor = await _js.InvokeAsync<string?>("localStorage.getItem", "primaryColor") ?? "#3f7cff";
+            // Try primaryColor first, then fall back to primary (JS uses 'primary' key)
+            var primaryColor = await _js.InvokeAsync<string?>("localStorage.getItem", "primaryColor") 
+                ?? await _js.InvokeAsync<string?>("localStorage.getItem", "primary") 
+                ?? "#3f7cff";
             var language = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
 
             return new UserPreferences
@@ -89,7 +92,10 @@ public class PreferencesService
         try
         {
             await _js.InvokeVoidAsync("localStorage.setItem", "theme", prefs.Theme ?? "light");
-            await _js.InvokeVoidAsync("localStorage.setItem", "primaryColor", prefs.PrimaryColor ?? "#3f7cff");
+            var primaryColor = prefs.PrimaryColor ?? "#3f7cff";
+            // Sync to both keys: primaryColor (for .NET) and primary (for JS)
+            await _js.InvokeVoidAsync("localStorage.setItem", "primaryColor", primaryColor);
+            await _js.InvokeVoidAsync("localStorage.setItem", "primary", primaryColor);
             if (!string.IsNullOrEmpty(prefs.Language))
             {
                 await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", prefs.Language, 365);

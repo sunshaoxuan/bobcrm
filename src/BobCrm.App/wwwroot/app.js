@@ -102,6 +102,23 @@ window.bobcrm = {
   , getPrimary: function () {
     try { return localStorage.getItem('primary') || '#3f7cff'; } catch (e) { return '#3f7cff'; }
   }
+  , setDragData: function (type, data) {
+    try {
+      // Store drag data for use in dragstart event handler
+      this._dragType = type;
+      this._dragData = data;
+      // Set up global dragstart handler if not already set
+      if (!this._dragStartHandlerSet) {
+        document.addEventListener('dragstart', function(e) {
+          if (window.bobcrm._dragData) {
+            e.dataTransfer.setData('text/plain', window.bobcrm._dragData);
+            e.dataTransfer.effectAllowed = 'move';
+          }
+        }, true); // Use capture phase
+        this._dragStartHandlerSet = true;
+      }
+    } catch (e) { }
+  }
   , initTheme: function () {
     try {
       // Apply saved theme

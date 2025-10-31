@@ -1,5 +1,179 @@
 # ChangeLog
 
+## 2025-10-31 - 修复多语资源加载、拖拽功能和主题色持久化问题
+
+### 修复：设计器多语资源未加载
+
+**问题：**
+- 设计器相关键（LBL_COMPONENTS、LBL_PROPERTIES等）显示为键名而非翻译文本
+- 数据库在新增键之前已创建，导致这些键缺失
+
+**解决方案：**
+- 在`DatabaseInitializer.cs`的`else`分支中添加了所有设计器相关键的`Ensure`调用
+- 包括：LBL_COMPONENTS、LBL_BASIC_COMPONENTS、LBL_LAYOUT_COMPONENTS、LBL_PROPERTIES等18个设计器相关键
+- 即使数据库在这些键加入之前已创建，现在也能自动补齐缺失的键
+
+**修改文件：**
+- `src/BobCrm.Api/Infrastructure/DatabaseInitializer.cs` (L313-331)
+
+---
+
+### 修复：工具栏组件无法拖到画布
+
+**问题：**
+- 工具栏组件设置了`draggable="true"`但拖拽时无法触发`drop`事件
+- 缺少`@ondragstart:preventDefault="false"`导致拖拽被默认行为阻止
+
+**解决方案：**
+- 在工具栏的基础组件和布局组件项上添加`@ondragstart:preventDefault="false"`
+- 确保拖拽事件能正常触发
+
+**修改文件：**
+- `src/BobCrm.App/Components/Pages/CustomerDetail.razor` (L50, L62)
+
+---
+
+### 修复：主题色持久化问题
+
+**问题：**
+- JS使用`localStorage`键名为`primary`，但.NET偏好服务读写的是`primaryColor`
+- 刷新或重新渲染后主题色会回到默认值`#3f7cff`
+
+**解决方案：**
+- 在`PreferencesService.cs`中统一键名处理：
+  - `LoadFromLocalStorageAsync`: 优先读取`primaryColor`，不存在时回退到`primary`
+  - `SyncToLocalStorageAsync`: 同时写入`primaryColor`和`primary`两个键
+- 确保JS和.NET都能正确读取/写入主题色
+
+**修改文件：**
+- `src/BobCrm.App/Services/PreferencesService.cs` (L66-69, L97-98)
+
+---
+
+### 修复：设计态画布拖放问题
+
+**问题：**
+- 工具栏组件能触发拖动，但无法放到画布上
+- 画布控件能拖动但无法正确放置
+- Firefox等浏览器上drop事件不触发
+
+**解决方案：**
+1. **添加dragover事件处理：**
+   - 在布局容器层（承载所有layout-widget的flex容器）添加`@ondragover:preventDefault`
+   - 在每个layout-widget外层也添加`@ondragover:preventDefault`
+   - 确保任何可能成为落点的容器都允许drop
+
+2. **设置dataTransfer数据：**
+   - 修改`OnDragStart`和`OnWidgetDragStart`方法，接收`DragEventArgs`参数
+   - 在拖拽开始时设置`dataTransfer.SetData("text/plain", ...)`
+   - 在`app.js`中添加`setDragData`函数作为跨浏览器兼容的fallback
+
+**修改文件：**
+- `src/BobCrm.App/Components/Pages/CustomerDetail.razor` (L78-79, L86, L462-500)
+- `src/BobCrm.App/wwwroot/app.js` (L105-121)
+
+---
+
+## 2025-10-31 - 修复设计器组件灰显问题，实现完整拖拽功能
+
+### 更新：解决组件Disabled导致的灰显和不可拖拽问题
+
+根据用户反馈，设计器中的组件显示为灰色且无法拖拽。经过代码分析，发现是AntDesign组件的Disabled属性导致。
+
+#### 核心问题
+
+**症状：**
+- 所有设计态组件显示为灰色（降低透明度）
+- 组件无法被拖拽和移动
+- 视觉效果不符合WYSIWYG原则
+
+**根本原因：**
+在设计模式下，使用了带`Disabled`属性的AntDesign组件：
+```razor
+<Input Value="@widget.Label" Disabled style="width:100%" />
+<DatePicker TValue="DateTime?" Disabled="true" style="width:100%" />
+<Select Mode="multiple" Disabled style="width:100%" />
+```
+
+AntDesign的Disabled组件会渲染为灰色外观，并阻止所有交互。
+
+#### 解决方案
+
+**替换策略：**
+将所有Disabled的AntDesign组件替换为样式化的div元素，使用`pointer-events:none`阻止内部交互，同时保持父容器的`draggable`属性。
+
+**具体修改（CustomerDetail.razor L89-131）：**
+
+1. **Textbox组件：**
+```razor
+<div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none">
+    @widget.Label
+</div>
+```
+
+2. **Calendar组件：**
+```razor
+<div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none; display:flex; align-items:center">
+    <Icon Type="@IconType.Outline.Calendar" Style="margin-right:8px" />
+    <span>@widget.Label</span>
+</div>
+```
+
+3. **Listbox组件：**
+```razor
+<div style="padding:4px; border:1px solid #d9d9d9; border-radius:2px; background:#fafafa; width:100%; pointer-events:none; display:flex; align-items:center">
+    <Icon Type="@IconType.Outline.UnorderedList" Style="margin-right:8px" />
+    <span>@widget.Label</span>
+</div>
+```
+
+4. **Tabbox组件：**
+```razor
+<div style="border:1px solid #d9d9d9; border-radius:4px; padding:8px; pointer-events:none">
+    <div style="display:flex; gap:8px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; margin-bottom:8px">
+        <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:2px; font-size:12px">Tab 1</div>
+        <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:2px; font-size:12px">Tab 2</div>
+    </div>
+    <div style="padding:8px; color:#999; font-size:12px">@widget.Label</div>
+</div>
+```
+
+5. **Frame组件：**
+```razor
+<div style="border:2px dashed #d9d9d9; border-radius:4px; padding:12px; min-height:80px; pointer-events:none; background:#fafafa">
+    <div style="color:#999; font-size:12px; display:flex; align-items:center">
+        <Icon Type="@IconType.Outline.BorderOuter" Style="margin-right:4px" />
+        <span>@widget.Label</span>
+    </div>
+</div>
+```
+
+#### 技术要点
+
+- **pointer-events:none**: 阻止内部元素的鼠标事件，但不影响父容器的拖拽
+- **父容器保持draggable**: `draggable="true"` 和 `cursor:move` 确保组件可拖拽
+- **视觉一致性**: div样式模拟原组件外观，无灰色效果
+- **图标增强**: Calendar、Listbox、Frame添加对应图标，提升可识别性
+
+#### 效果
+
+- ✅ 组件显示为正常颜色（非灰显）
+- ✅ 组件可以被拖拽和重新排列
+- ✅ 符合WYSIWYG设计理念
+- ✅ 内部元素不响应点击，保持设计态纯净性
+
+#### 修改文件
+
+- `src/BobCrm.App/Components/Pages/CustomerDetail.razor` (L89-131)
+
+#### 编译状态
+```
+dotnet build -c Debug
+✓ 成功，0个警告，0个错误
+```
+
+---
+
 ## 2025-10-31 - 设计器UI优化和拖拽功能修复
 
 ### 更新：优化设计器界面体验和拖拽交互

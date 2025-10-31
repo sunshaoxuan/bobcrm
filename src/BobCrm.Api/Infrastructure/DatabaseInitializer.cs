@@ -310,6 +310,25 @@ public static class DatabaseInitializer
             Ensure("BTN_GENERATE_LAYOUT", "生成布局", "レイアウトを生成", "Generate Layout");
             Ensure("LBL_DESIGN_MODE_TITLE", "设计模式", "デザインモード", "Design Mode");
             Ensure("LBL_DESIGN_MODE_DESC", "在此模式下可以调整字段布局，拖拽字段块进行排列", "このモードでフィールドのレイアウトを調整できます", "Adjust field layout in this mode");
+            // Designer keys
+            Ensure("BTN_EXIT_DESIGN", "退出设计", "デザインを終了", "Exit Design");
+            Ensure("LBL_COMPONENTS", "组件", "コンポーネント", "Components");
+            Ensure("LBL_BASIC_COMPONENTS", "基础组件", "基本コンポーネント", "Basic Components");
+            Ensure("LBL_LAYOUT_COMPONENTS", "布局组件", "レイアウトコンポーネント", "Layout Components");
+            Ensure("LBL_TEXTBOX", "文本框", "テキストボックス", "Textbox");
+            Ensure("LBL_LABEL", "标签", "ラベル", "Label");
+            Ensure("LBL_CALENDAR", "日历", "カレンダー", "Calendar");
+            Ensure("LBL_LISTBOX", "列表框", "リストボックス", "Listbox");
+            Ensure("LBL_FRAME", "容器", "フレーム", "Frame");
+            Ensure("LBL_TABBOX", "标签页", "タブボックス", "Tabbox");
+            Ensure("LBL_DRAG_COMPONENT_HERE", "拖拽组件到这里", "コンポーネントをここにドラッグ", "Drag component here");
+            Ensure("LBL_PROPERTIES", "属性", "プロパティ", "Properties");
+            Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
+            Ensure("LBL_WIDTH", "宽度", "幅", "Width");
+            Ensure("LBL_DATA_SOURCE", "数据源", "データソース", "Data Source");
+            Ensure("LBL_VISIBLE", "可见", "表示", "Visible");
+            Ensure("BTN_DELETE", "删除", "削除", "Delete");
+            Ensure("LBL_SELECT_COMPONENT", "选择一个组件", "コンポーネントを選択", "Select a component");
         }
 
         await db.SaveChangesAsync();

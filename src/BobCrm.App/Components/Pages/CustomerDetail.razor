@@ -47,7 +47,7 @@ else if (customer != null)
                                 <div style="display:flex; flex-direction:column; gap:8px">
                                     @foreach (var comp in basicComponents)
                                     {
-                                        <div class="component-item" draggable="true" @ondragstart="@(() => OnDragStart(comp))"
+                                        <div class="component-item" draggable="true" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false"
                                              style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                             <Icon Type="@comp.Icon" />
                                             <span style="font-size:13px">@I18n.T(comp.Label)</span>
@@ -59,7 +59,7 @@ else if (customer != null)
                                 <div style="display:flex; flex-direction:column; gap:8px">
                                     @foreach (var comp in layoutComponents)
                                     {
-                                        <div class="component-item" draggable="true" @ondragstart="@(() => OnDragStart(comp))"
+                                        <div class="component-item" draggable="true" @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false"
                                              style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                             <Icon Type="@comp.Icon" />
                                             <span style="font-size:13px">@I18n.T(comp.Label)</span>
@@ -75,13 +75,15 @@ else if (customer != null)
                 <div class="designer-canvas" style="flex:1; overflow:auto; padding:0; background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px; background-color: #f5f5f5;"
                      @ondrop="OnDrop" @ondrop:preventDefault @ondragover:preventDefault>
                     <div style="padding:24px; min-height:100%">
-                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 120px)">
+                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 120px)"
+                             @ondragover:preventDefault>
                             @foreach (var widget in layoutWidgets)
                             {
                                 <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
                                      draggable="true"
-                                     @ondragstart="@(() => OnWidgetDragStart(widget))"
+                                     @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
                                      @ondragstart:preventDefault="false"
+                                     @ondragover:preventDefault
                                      @onclick="@(() => SelectWidget(widget))"
                                      style="@GetWidgetStyle(widget); cursor:move; user-select:none; padding:8px; background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:all 0.2s;"
                                      @onmouseover="@((e) => {  })"
@@ -457,14 +459,44 @@ else
     }
 
     // Drag and drop handlers
-    private void OnDragStart(ComponentDefinition component)
+    private void OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ComponentDefinition component)
     {
         draggedComponent = component;
+        // Set dataTransfer for cross-browser compatibility (especially Firefox)
+        try
+        {
+            if (e.DataTransfer != null)
+            {
+                e.DataTransfer.SetData("text/plain", component.Type);
+                e.DataTransfer.EffectAllowed = "move";
+            }
+            else
+            {
+                // Fallback: use JS to set drag data
+                _ = JS.InvokeVoidAsync("bobcrm.setDragData", "component", component.Type);
+            }
+        }
+        catch { }
     }
 
-    private void OnWidgetDragStart(LayoutWidget widget)
+    private void OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, LayoutWidget widget)
     {
         draggedWidget = widget;
+        // Set dataTransfer for cross-browser compatibility
+        try
+        {
+            if (e.DataTransfer != null)
+            {
+                e.DataTransfer.SetData("text/plain", widget.Id);
+                e.DataTransfer.EffectAllowed = "move";
+            }
+            else
+            {
+                // Fallback: use JS to set drag data
+                _ = JS.InvokeVoidAsync("bobcrm.setDragData", "widget", widget.Id);
+            }
+        }
+        catch { }
     }
 
     private void OnDragOver()
