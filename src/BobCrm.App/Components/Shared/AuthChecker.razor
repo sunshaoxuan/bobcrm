@@ -1,0 +1,28 @@
+@rendermode RenderMode.InteractiveServer
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@ChildContent
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    Nav.NavigateTo("/login", true);
+                }
+            }
+            catch
+            {
+                Nav.NavigateTo("/login", true);
+            }
+        }
+    }
+}

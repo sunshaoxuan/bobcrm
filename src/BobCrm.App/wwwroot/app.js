@@ -1,5 +1,6 @@
 window.bobcrm = {
   preferencesCallback: null,
+  skipNextSave: false,
   registerPreferencesCallback: function(dotnetRef) {
     this.preferencesCallback = dotnetRef;
   },
@@ -74,7 +75,7 @@ window.bobcrm = {
   , getTheme: function () {
     try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
   }
-  , setPrimary: function (color) {
+  , setPrimary: function (color, skipSave) {
     try {
       const normalizedColor = color || '#3f7cff';
       document.documentElement.style.setProperty('--primary', normalizedColor);
@@ -92,8 +93,8 @@ window.bobcrm = {
         }
       });
 
-      // Save to server
-      if (this.preferencesCallback) {
+      // Save to server (unless explicitly skipped during initialization)
+      if (!skipSave && this.preferencesCallback) {
         this.preferencesCallback.invokeMethodAsync('SavePrimaryColorAsync', normalizedColor);
       }
     } catch (e) { }

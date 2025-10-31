@@ -3,9 +3,10 @@
 
 @inject BobCrm.App.Services.I18nService I18n
 
-<h1>@I18n.T("MENU_CUSTOMERS")</h1>
-
-<div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
+<AuthChecker>
+    <h1>@I18n.T("MENU_CUSTOMERS")</h1>
+    <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
+</AuthChecker>
 
 @code {
     protected override void OnInitialized()

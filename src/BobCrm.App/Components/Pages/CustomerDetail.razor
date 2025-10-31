@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
+<AuthChecker>
 @if (loading)
 {
     <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
@@ -19,136 +20,338 @@ else if (error != null)
 }
 else if (customer != null)
 {
-    <!-- Header with customer info and mode switcher -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border)">
-        <div>
-            <h1 style="margin:0; font-size:24px">@customer.name</h1>
-            <div style="color:var(--muted); font-size:14px; margin-top:4px">@I18n.T("COL_CODE"): @customer.code</div>
-        </div>
-
-        <!-- Mode switcher -->
-        <div style="display:flex; gap:8px">
-            <Button Type="@(mode == ViewMode.Browse ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Browse))">
-                @I18n.T("MODE_BROWSE")
-            </Button>
-            <Button Type="@(mode == ViewMode.Edit ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Edit))">
-                @I18n.T("MODE_EDIT")
-            </Button>
-            <Button Type="@(mode == ViewMode.Design ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Design))">
-                @I18n.T("MODE_DESIGN")
-            </Button>
-        </div>
-    </div>
-
-    <!-- Content based on mode -->
-    @if (mode == ViewMode.Browse)
+    @if (mode == ViewMode.Design)
     {
-        <!-- Browse Mode: Display fields read-only -->
-        <div class="customer-fields">
-            @if (customer.fields != null && customer.fields.Any())
-            {
-                @foreach (var field in customer.fields)
-                {
-                    <div class="field-item" style="margin-bottom:16px; padding:12px; border:1px solid var(--border); border-radius:4px">
-                        <div style="font-weight:600; margin-bottom:4px">@field.label</div>
-                        <div style="color:var(--text)">@field.value</div>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
-            }
-        </div>
-    }
-    else if (mode == ViewMode.Edit)
-    {
-        <!-- Edit Mode: Editable fields with Save/Cancel -->
-        <div class="customer-fields-edit">
-            @if (customer.fields != null && customer.fields.Any())
-            {
-                @foreach (var field in customer.fields)
-                {
-                    <div class="field-item-edit" style="margin-bottom:16px">
-                        <label style="display:block; font-weight:600; margin-bottom:4px">@field.label</label>
-                        <Input @bind-Value="editValues[field.key]" style="width:100%" />
-                    </div>
-                }
-
-                <div style="margin-top:20px; display:flex; gap:12px">
-                    <Button Type="@ButtonType.Primary" OnClick="SaveChanges">@I18n.T("BTN_SAVE")</Button>
-                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
+        <!-- Design Mode: Full screen designer with toolbox and properties -->
+        <div class="designer-container" style="position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; z-index:1000; display:flex; flex-direction:column">
+            <!-- Designer Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card-bg)">
+                <div style="display:flex; align-items:center; gap:16px">
+                    <h2 style="margin:0; font-size:18px">@I18n.T("MODE_DESIGN") - @customer.name</h2>
+                    <Tag Color="blue">@customer.code</Tag>
                 </div>
-            }
-            else
-            {
-                <div class="text-muted">@I18n.T("LBL_NO_FIELDS")</div>
-            }
-        </div>
-    }
-    else if (mode == ViewMode.Design)
-    {
-        <!-- Design Mode: Layout adjustment UI -->
-        <div class="customer-layout-designer" style="border:2px dashed var(--primary); padding:20px; border-radius:8px; min-height:400px">
-            <div style="text-align:center; color:var(--muted); margin-bottom:20px">
-                <h3>@I18n.T("LBL_DESIGN_MODE_TITLE")</h3>
-                <p>@I18n.T("LBL_DESIGN_MODE_DESC")</p>
+                <div style="display:flex; gap:8px">
+                    <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
+                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
+                </div>
             </div>
 
-            <!-- Field list for design -->
-            @if (customer.fields != null && customer.fields.Any())
-            {
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px">
-                    @foreach (var field in customer.fields)
+            <!-- Designer Main Area -->
+            <div style="display:flex; flex:1; overflow:hidden">
+                <!-- Left Toolbox -->
+                <div class="designer-toolbox" style="width:240px; border-right:1px solid var(--border); overflow-y:auto; background:#fafafa">
+                    <div style="padding:16px">
+                        <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_COMPONENTS")</h3>
+                        <Collapse Accordion="false" DefaultActiveKey="@(new[]{"1","2"})">
+                            <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
+                                <div style="display:flex; flex-direction:column; gap:8px">
+                                    @foreach (var comp in basicComponents)
+                                    {
+                                        <div class="component-item" draggable="true" @ondragstart="@(() => OnDragStart(comp))"
+                                             style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
+                                            <Icon Type="@comp.Icon" />
+                                            <span style="font-size:13px">@I18n.T(comp.Label)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </Panel>
+                            <Panel Header="@I18n.T("LBL_LAYOUT_COMPONENTS")" Key="2">
+                                <div style="display:flex; flex-direction:column; gap:8px">
+                                    @foreach (var comp in layoutComponents)
+                                    {
+                                        <div class="component-item" draggable="true" @ondragstart="@(() => OnDragStart(comp))"
+                                             style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
+                                            <Icon Type="@comp.Icon" />
+                                            <span style="font-size:13px">@I18n.T(comp.Label)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </Panel>
+                        </Collapse>
+                    </div>
+                </div>
+
+                <!-- Center Canvas -->
+                <div class="designer-canvas" style="flex:1; overflow:auto; padding:20px; background:#f5f5f5"
+                     @ondrop="OnDrop" @ondragover:preventDefault @ondragover="OnDragOver">
+                    <div style="max-width:1200px; margin:0 auto; background:#fff; border:1px solid #d9d9d9; border-radius:8px; padding:24px; min-height:600px">
+                        <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+                            @foreach (var widget in layoutWidgets)
+                            {
+                                <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
+                                     draggable="true"
+                                     @ondragstart="@(() => OnWidgetDragStart(widget))"
+                                     @onclick="@(() => SelectWidget(widget))"
+                                     style="@GetWidgetStyle(widget)">
+                                    @if (widget.Type == "textbox")
+                                    {
+                                        <Input Value="@widget.Label" Disabled style="width:100%" />
+                                    }
+                                    else if (widget.Type == "label")
+                                    {
+                                        <Text>@widget.Label</Text>
+                                    }
+                                    else if (widget.Type == "calendar")
+                                    {
+                                        <DatePicker TValue="DateTime?" Disabled="true" style="width:100%" />
+                                    }
+                                    else if (widget.Type == "listbox")
+                                    {
+                                        <Select Mode="multiple" TItemValue="string" TItem="string" Disabled style="width:100%" />
+                                    }
+                                    else if (widget.Type == "tabbox")
+                                    {
+                                        <Tabs>
+                                            <TabPane Tab="Tab 1" Key="1"></TabPane>
+                                            <TabPane Tab="Tab 2" Key="2"></TabPane>
+                                        </Tabs>
+                                    }
+                                    else if (widget.Type == "frame")
+                                    {
+                                        <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px; min-height:80px">
+                                            <Text Type="@TextElementType.Secondary">Frame Container</Text>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="padding:8px">@widget.Type</div>
+                                    }
+                                </div>
+                            }
+                            @if (!layoutWidgets.Any())
+                            {
+                                <div style="width:100%; text-align:center; padding:60px 20px; color:#999">
+                                    <Icon Type="@IconType.Outline.Inbox" Style="font-size:48px; margin-bottom:12px" />
+                                    <div>@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Properties Panel -->
+                <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; background:#fafafa">
+                    @if (selectedWidget != null)
                     {
-                        <div class="design-field-block" style="padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:4px; cursor:move">
-                            <div style="font-weight:600; font-size:13px">@field.label</div>
-                            <div style="font-size:11px; color:var(--muted)">@field.key</div>
+                        <div style="padding:16px">
+                            <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENT_TYPE")</label>
+                                <Input Value="@selectedWidget.Type" Disabled />
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_LABEL")</label>
+                                <Input @bind-Value="selectedWidget.Label" @onchange="UpdateWidget" />
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_WIDTH")</label>
+                                <InputGroup Compact>
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="100" Style="width:70%" @onchange="UpdateWidget" />
+                                    <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.WidthUnit" Style="width:30%" @onchange="UpdateWidget">
+                                        <SelectOption Value="@("%")" Label="@("%")" />
+                                        <SelectOption Value="@("px")" Label="@("px")" />
+                                    </Select>
+                                </InputGroup>
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DATA_SOURCE")</label>
+                                <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear Style="width:100%" @onchange="UpdateWidget">
+                                    @if (customer.fields != null)
+                                    {
+                                        @foreach (var field in customer.fields)
+                                        {
+                                            <SelectOption Value="@field.key" Label="@field.label" />
+                                        }
+                                    }
+                                </Select>
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_VISIBLE")</label>
+                                <Switch @bind-Value="selectedWidget.Visible" @onchange="UpdateWidget" />
+                            </div>
+
+                            <Divider />
+
+                            <Button Danger Block OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="padding:60px 20px; text-align:center; color:#999">
+                            <Icon Type="@IconType.Outline.Select" Style="font-size:36px; margin-bottom:8px" />
+                            <div style="font-size:12px">@I18n.T("LBL_SELECT_COMPONENT")</div>
                         </div>
                     }
                 </div>
-
-                <div style="margin-top:20px; display:flex; gap:12px">
-                    <Button Type="@ButtonType.Primary" OnClick="SaveLayout">@I18n.T("BTN_SAVE_LAYOUT")</Button>
-                    <Button OnClick="GenerateLayout">@I18n.T("BTN_GENERATE_LAYOUT")</Button>
-                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
-                </div>
-            }
+            </div>
         </div>
     }
+    else
+    {
+        <!-- Browse and Edit Mode: Normal view -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+            <div>
+                <h1 style="margin:0; font-size:24px">@customer.name</h1>
+                <div style="color:var(--muted); font-size:14px; margin-top:4px">@I18n.T("COL_CODE"): @customer.code</div>
+            </div>
 
-    <!-- Footer actions -->
-    <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border)">
-        <Button OnClick="GoBack">@I18n.T("BTN_BACK")</Button>
-    </div>
+            <div style="display:flex; gap:8px">
+                <Button Type="@(mode == ViewMode.Browse ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Browse))">
+                    @I18n.T("MODE_BROWSE")
+                </Button>
+                <Button Type="@(mode == ViewMode.Edit ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Edit))">
+                    @I18n.T("MODE_EDIT")
+                </Button>
+                <Button Type="@(mode == ViewMode.Design ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Design))">
+                    @I18n.T("MODE_DESIGN")
+                </Button>
+            </div>
+        </div>
+
+        @if (mode == ViewMode.Browse)
+        {
+            <!-- Browse Mode: WYSIWYG display using saved layout -->
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+                @foreach (var widget in layoutWidgets.Where(w => w.Visible))
+                {
+                    <div style="@GetWidgetStyle(widget)">
+                        @{
+                            var fieldData = widget.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == widget.DataField) : null;
+                            var displayValue = fieldData?.value ?? widget.Label;
+                        }
+                        @if (widget.Type == "textbox" || widget.Type == "label")
+                        {
+                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <div>@displayValue</div>
+                            </div>
+                        }
+                        else if (widget.Type == "calendar")
+                        {
+                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <div>@displayValue</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (mode == ViewMode.Edit)
+        {
+            <!-- Edit Mode: WYSIWYG editable fields -->
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+                @foreach (var widget in layoutWidgets.Where(w => w.Visible))
+                {
+                    <div style="@GetWidgetStyle(widget)">
+                        @{
+                            var fieldData = widget.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == widget.DataField) : null;
+                        }
+                        @if (widget.Type == "textbox")
+                        {
+                            <div style="padding:8px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</label>
+                                <Input @bind-Value="editValues[widget.DataField ?? widget.Id]" />
+                            </div>
+                        }
+                        else if (widget.Type == "calendar")
+                        {
+                            <div style="padding:8px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</label>
+                                <DatePicker TValue="DateTime?" style="width:100%" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div style="margin-top:20px; display:flex; gap:12px">
+                <Button Type="@ButtonType.Primary" OnClick="SaveChanges">@I18n.T("BTN_SAVE")</Button>
+                <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
+            </div>
+        }
+
+        <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border)">
+            <Button OnClick="GoBack">@I18n.T("BTN_BACK")</Button>
+        </div>
+    }
 }
 else
 {
     <div>@I18n.T("LBL_NOT_FOUND")</div>
 }
+</AuthChecker>
 
 @code {
     [Parameter] public int Id { get; set; }
 
     private enum ViewMode { Browse, Edit, Design }
-
     private ViewMode mode = ViewMode.Browse;
-    
+
     private CustomerDetailModel? customer;
     private bool loading = true;
     private string? error;
     private Dictionary<string, string> editValues = new();
 
+    // Designer state
+    private List<LayoutWidget> layoutWidgets = new();
+    private LayoutWidget? selectedWidget = null;
+    private ComponentDefinition? draggedComponent = null;
+    private LayoutWidget? draggedWidget = null;
+
+    // Component definitions
+    private List<ComponentDefinition> basicComponents = new()
+    {
+        new() { Type = "textbox", Label = "LBL_TEXTBOX", Icon = IconType.Outline.Edit },
+        new() { Type = "label", Label = "LBL_LABEL", Icon = IconType.Outline.FileText },
+        new() { Type = "calendar", Label = "LBL_CALENDAR", Icon = IconType.Outline.Calendar },
+        new() { Type = "listbox", Label = "LBL_LISTBOX", Icon = IconType.Outline.UnorderedList },
+    };
+
+    private List<ComponentDefinition> layoutComponents = new()
+    {
+        new() { Type = "frame", Label = "LBL_FRAME", Icon = IconType.Outline.BorderOuter },
+        new() { Type = "tabbox", Label = "LBL_TABBOX", Icon = IconType.Outline.AppstoreAdd },
+    };
+
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
+        InitializeDefaultLayout();
+    }
+
+    private void InitializeDefaultLayout()
+    {
+        // Create default widgets for existing fields
+        if (customer?.fields != null)
+        {
+            foreach (var field in customer.fields)
+            {
+                layoutWidgets.Add(new LayoutWidget
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Type = "textbox",
+                    Label = field.label ?? field.key ?? "",
+                    DataField = field.key,
+                    Width = 48,
+                    WidthUnit = "%",
+                    Visible = true
+                });
+            }
+        }
     }
 
     private void InitializeEditValues()
     {
-        if (customer?.fields != null)
+        editValues.Clear();
+        foreach (var widget in layoutWidgets.Where(w => !string.IsNullOrEmpty(w.DataField)))
         {
-            editValues = customer.fields.ToDictionary(f => f.key ?? "", f => f.value?.ToString() ?? "");
+            var field = customer?.fields?.FirstOrDefault(f => f.key == widget.DataField);
+            editValues[widget.DataField!] = field?.value ?? "";
         }
     }
 
@@ -163,36 +366,28 @@ else
         {
             try
             {
-                // Load i18n first
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
-                
-                // Wait for UI to update after i18n load
                 await InvokeAsync(StateHasChanged);
-                
-                // Load customer detail
+
                 var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
                 if (!resp.IsSuccessStatusCode)
                 {
-                    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    {
-                        error = I18n.T("LBL_NOT_FOUND");
-                    }
-                    else
-                    {
-                        error = $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}";
-                    }
+                    error = resp.StatusCode == System.Net.HttpStatusCode.NotFound
+                        ? I18n.T("LBL_NOT_FOUND")
+                        : $"{I18n.T("LBL_LOAD_FAILED")}: {(int)resp.StatusCode}";
                 }
                 else
                 {
                     customer = await resp.Content.ReadFromJsonAsync<CustomerDetailModel>();
+                    InitializeDefaultLayout();
                     InitializeEditValues();
                 }
                 loading = false;
                 StateHasChanged();
             }
-            catch { }
+            catch { loading = false; error = "Load error"; StateHasChanged(); }
         }
     }
 
@@ -210,24 +405,93 @@ else
 
     private async Task SaveChanges()
     {
-        // TODO: Implement save customer data via API
+        // TODO: Implement save
         await Task.CompletedTask;
         SwitchMode(ViewMode.Browse);
     }
 
     private async Task SaveLayout()
     {
-        // TODO: Implement save layout via API
+        // TODO: Save layout to server
         await Task.CompletedTask;
         SwitchMode(ViewMode.Browse);
     }
 
-    private async Task GenerateLayout()
+    // Drag and drop handlers
+    private void OnDragStart(ComponentDefinition component)
     {
-        // TODO: Implement generate layout via API
-        await Task.CompletedTask;
+        draggedComponent = component;
     }
 
+    private void OnWidgetDragStart(LayoutWidget widget)
+    {
+        draggedWidget = widget;
+    }
+
+    private void OnDragOver()
+    {
+        // Allow drop
+    }
+
+    private void OnDrop()
+    {
+        if (draggedComponent != null)
+        {
+            var newWidget = new LayoutWidget
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = draggedComponent.Type,
+                Label = I18n.T(draggedComponent.Label),
+                Width = 48,
+                WidthUnit = "%",
+                Visible = true
+            };
+            layoutWidgets.Add(newWidget);
+            selectedWidget = newWidget;
+            draggedComponent = null;
+            StateHasChanged();
+        }
+        else if (draggedWidget != null)
+        {
+            // Reorder existing widget
+            draggedWidget = null;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectWidget(LayoutWidget widget)
+    {
+        selectedWidget = widget;
+        StateHasChanged();
+    }
+
+    private void UpdateWidget()
+    {
+        StateHasChanged();
+    }
+
+    private void DeleteSelectedWidget()
+    {
+        if (selectedWidget != null)
+        {
+            layoutWidgets.Remove(selectedWidget);
+            selectedWidget = null;
+            StateHasChanged();
+        }
+    }
+
+    private string GetWidgetStyle(LayoutWidget widget)
+    {
+        var width = widget.WidthUnit == "%"
+            ? $"calc({widget.Width}% - 6px)"
+            : $"{widget.Width}px";
+
+        var border = selectedWidget == widget ? "2px solid #1890ff" : "";
+
+        return $"width:{width}; {border}";
+    }
+
+    // Models
     private class CustomerDetailModel
     {
         public int id { get; set; }
@@ -246,5 +510,22 @@ else
         public bool required { get; set; }
         public string? validation { get; set; }
     }
-}
 
+    private class ComponentDefinition
+    {
+        public string Type { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string Icon { get; set; } = "";
+    }
+
+    private class LayoutWidget
+    {
+        public string Id { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string? DataField { get; set; }
+        public int Width { get; set; } = 48;
+        public string WidthUnit { get; set; } = "%";
+        public bool Visible { get; set; } = true;
+    }
+}

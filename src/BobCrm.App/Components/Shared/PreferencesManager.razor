@@ -17,14 +17,14 @@
                 // Load preferences from server and apply
                 var prefs = await PrefsService.LoadPreferencesAsync();
 
-                // Apply to UI via JavaScript
+                // Apply to UI via JavaScript (skip save during initialization)
                 if (!string.IsNullOrEmpty(prefs.Theme))
                 {
                     await JS.InvokeVoidAsync("bobcrm.setTheme", prefs.Theme);
                 }
                 if (!string.IsNullOrEmpty(prefs.PrimaryColor))
                 {
-                    await JS.InvokeVoidAsync("bobcrm.setPrimary", prefs.PrimaryColor);
+                    await JS.InvokeVoidAsync("bobcrm.setPrimary", prefs.PrimaryColor, true);
                 }
             }
             catch

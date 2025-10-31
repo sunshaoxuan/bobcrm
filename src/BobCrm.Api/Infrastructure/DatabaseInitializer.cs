@@ -208,7 +208,26 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "BTN_SAVE_LAYOUT", ZH = "保存布局", JA = "レイアウトを保存", EN = "Save Layout" },
                 new LocalizationResource { Key = "BTN_GENERATE_LAYOUT", ZH = "生成布局", JA = "レイアウトを生成", EN = "Generate Layout" },
                 new LocalizationResource { Key = "LBL_DESIGN_MODE_TITLE", ZH = "设计模式", JA = "デザインモード", EN = "Design Mode" },
-                new LocalizationResource { Key = "LBL_DESIGN_MODE_DESC", ZH = "在此模式下可以调整字段布局，拖拽字段块进行排列", JA = "このモードでフィールドのレイアウトを調整できます", EN = "Adjust field layout in this mode" }
+                new LocalizationResource { Key = "LBL_DESIGN_MODE_DESC", ZH = "在此模式下可以调整字段布局，拖拽字段块进行排列", JA = "このモードでフィールドのレイアウトを調整できます", EN = "Adjust field layout in this mode" },
+                // Designer keys
+                new LocalizationResource { Key = "BTN_EXIT_DESIGN", ZH = "退出设计", JA = "デザインを終了", EN = "Exit Design" },
+                new LocalizationResource { Key = "LBL_COMPONENTS", ZH = "组件", JA = "コンポーネント", EN = "Components" },
+                new LocalizationResource { Key = "LBL_BASIC_COMPONENTS", ZH = "基础组件", JA = "基本コンポーネント", EN = "Basic Components" },
+                new LocalizationResource { Key = "LBL_LAYOUT_COMPONENTS", ZH = "布局组件", JA = "レイアウトコンポーネント", EN = "Layout Components" },
+                new LocalizationResource { Key = "LBL_TEXTBOX", ZH = "文本框", JA = "テキストボックス", EN = "Textbox" },
+                new LocalizationResource { Key = "LBL_LABEL", ZH = "标签", JA = "ラベル", EN = "Label" },
+                new LocalizationResource { Key = "LBL_CALENDAR", ZH = "日历", JA = "カレンダー", EN = "Calendar" },
+                new LocalizationResource { Key = "LBL_LISTBOX", ZH = "列表框", JA = "リストボックス", EN = "Listbox" },
+                new LocalizationResource { Key = "LBL_FRAME", ZH = "容器", JA = "フレーム", EN = "Frame" },
+                new LocalizationResource { Key = "LBL_TABBOX", ZH = "标签页", JA = "タブボックス", EN = "Tabbox" },
+                new LocalizationResource { Key = "LBL_DRAG_COMPONENT_HERE", ZH = "拖拽组件到这里", JA = "コンポーネントをここにドラッグ", EN = "Drag component here" },
+                new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
+                new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
+                new LocalizationResource { Key = "LBL_WIDTH", ZH = "宽度", JA = "幅", EN = "Width" },
+                new LocalizationResource { Key = "LBL_DATA_SOURCE", ZH = "数据源", JA = "データソース", EN = "Data Source" },
+                new LocalizationResource { Key = "LBL_VISIBLE", ZH = "可见", JA = "表示", EN = "Visible" },
+                new LocalizationResource { Key = "BTN_DELETE", ZH = "删除", JA = "削除", EN = "Delete" },
+                new LocalizationResource { Key = "LBL_SELECT_COMPONENT", ZH = "选择一个组件", JA = "コンポーネントを選択", EN = "Select a component" }
             );
         }
         else
