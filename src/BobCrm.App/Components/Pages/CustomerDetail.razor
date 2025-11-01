@@ -83,11 +83,23 @@ else if (customer != null)
                                      draggable="true"
                                      data-drag-type="widget"
                                      data-drag-data="@widget.Id"
+                                     data-widget-id="@widget.Id"
                                      @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
                                      @ondragstart:preventDefault="false"
                                      @ondragend="OnDragEnd"
                                      @onclick="@(() => SelectWidget(widget))"
                                      style="@GetFlowWidgetStyle(widget)">
+
+                                    <!-- Resize Handle -->
+                                    @if (selectedWidget == widget)
+                                    {
+                                        <div class="resize-handle"
+                                             @onmousedown="@((e) => OnResizeStart(e, widget))"
+                                             @onmousedown:stopPropagation
+                                             style="position:absolute; right:0; top:0; bottom:0; width:8px; cursor:ew-resize; background:transparent; z-index:10;">
+                                            <div style="position:absolute; right:2px; top:50%; transform:translateY(-50%); width:4px; height:24px; background:#1890ff; border-radius:2px"></div>
+                                        </div>
+                                    }
 
                                     <!-- Widget Content -->
                                     <div class="widget-content" style="width:100%; pointer-events:none">
@@ -186,6 +198,19 @@ else if (customer != null)
                             </div>
 
                             <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_HEIGHT")</label>
+                                <InputGroup Compact>
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Height" Min="20" Max="500" Style="width:70%"
+                                                          Disabled="@(!selectedWidget.CanEditProperty("Height"))" OnChange="@(value => UpdateWidget())" />
+                                    <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.HeightUnit" Style="width:30%"
+                                           Disabled="@(!selectedWidget.CanEditProperty("Height"))" OnSelectedItemChanged="@(item => UpdateWidget())">
+                                        <SelectOption Value="@("px")" Label="@("px")" />
+                                        <SelectOption Value="@("auto")" Label="@("auto")" />
+                                    </Select>
+                                </InputGroup>
+                            </div>
+
+                            <div style="margin-bottom:16px">
                                 <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DATA_SOURCE")</label>
                                 <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear Style="width:100%" OnSelectedItemChanged="@(item => UpdateWidget())">
                                     @if (customer.fields != null)
@@ -198,8 +223,47 @@ else if (customer != null)
                                 </Select>
                             </div>
 
+                            <Divider Style="margin:12px 0" />
+
                             <div style="margin-bottom:16px">
-                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_VISIBLE")</label>
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DEFAULT_VALUE")</label>
+                                <Input @bind-Value="selectedWidget.DefaultValue"
+                                      Disabled="@(!selectedWidget.CanEditProperty("DefaultValue"))"
+                                      OnChange="@((string value) => UpdateWidget())" />
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_PLACEHOLDER")</label>
+                                <Input @bind-Value="selectedWidget.Placeholder"
+                                      Disabled="@(!selectedWidget.CanEditProperty("Placeholder"))"
+                                      OnChange="@((string value) => UpdateWidget())" />
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_MAX_LENGTH")</label>
+                                <AntDesign.InputNumber TValue="int?" @bind-Value="selectedWidget.MaxLength" Min="1" Max="10000"
+                                                      Disabled="@(!selectedWidget.CanEditProperty("MaxLength"))"
+                                                      OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            <Divider Style="margin:12px 0" />
+
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">@I18n.T("LBL_REQUIRED")</label>
+                                <Switch @bind-Value="selectedWidget.Required"
+                                       Disabled="@(!selectedWidget.CanEditProperty("Required"))"
+                                       OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">@I18n.T("LBL_READONLY")</label>
+                                <Switch @bind-Value="selectedWidget.Readonly"
+                                       Disabled="@(!selectedWidget.CanEditProperty("Readonly"))"
+                                       OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">@I18n.T("LBL_VISIBLE")</label>
                                 <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
                             </div>
 
@@ -511,6 +575,18 @@ else
                             var label = item.TryGetProperty("label", out var lEl) ? lEl.GetString() : key;
                             var type = item.TryGetProperty("type", out var tEl) ? tEl.GetString() : "textbox";
 
+                            // 读取扩展属性
+                            var height = item.TryGetProperty("height", out var hEl) ? hEl.GetInt32() : 40;
+                            var heightUnit = item.TryGetProperty("heightUnit", out var huEl) ? huEl.GetString() : "px";
+                            var defaultValue = item.TryGetProperty("defaultValue", out var dvEl) ? dvEl.GetString() : null;
+                            var placeholder = item.TryGetProperty("placeholder", out var phEl) ? phEl.GetString() : null;
+                            var required = item.TryGetProperty("required", out var rqEl) ? rqEl.GetBoolean() : false;
+                            var readOnly = item.TryGetProperty("readonly", out var roEl) ? roEl.GetBoolean() : false;
+                            var disabled = item.TryGetProperty("disabled", out var dsEl) ? dsEl.GetBoolean() : false;
+                            int? minValue = item.TryGetProperty("minValue", out var mnEl) ? mnEl.GetInt32() : null;
+                            int? maxValue = item.TryGetProperty("maxValue", out var mxEl) ? mxEl.GetInt32() : null;
+                            int? maxLength = item.TryGetProperty("maxLength", out var mlEl) ? mlEl.GetInt32() : null;
+
                             layoutWidgets.Add(new LayoutWidget
                             {
                                 Id = Guid.NewGuid().ToString(),
@@ -519,8 +595,18 @@ else
                                 DataField = key,
                                 Width = (int)Math.Round(colWidth * 8.33), // 1-12列转换为百分比
                                 WidthUnit = "%",
+                                Height = height,
+                                HeightUnit = heightUnit ?? "px",
                                 X = i * 10, // Use order as X for sorting
-                                Visible = visible
+                                Visible = visible,
+                                DefaultValue = defaultValue,
+                                Placeholder = placeholder,
+                                Required = required,
+                                Readonly = readOnly,
+                                Disabled = disabled,
+                                MinValue = minValue,
+                                MaxValue = maxValue,
+                                MaxLength = maxLength
                             });
                         }
                         return;
@@ -548,14 +634,40 @@ else
             {
                 var w = layoutWidgets[i];
                 var key = w.DataField ?? w.Id;
-                items[key] = new
+
+                // 构建基础属性
+                var itemData = new Dictionary<string, object>
                 {
-                    order = i,
-                    w = (int)Math.Round(w.Width / 8.33), // 转换为1-12列
-                    visible = w.Visible,
-                    label = w.Label,
-                    type = w.Type
+                    ["order"] = i,
+                    ["w"] = (int)Math.Round(w.Width / 8.33), // 转换为1-12列
+                    ["visible"] = w.Visible,
+                    ["label"] = w.Label,
+                    ["type"] = w.Type,
+                    ["height"] = w.Height,
+                    ["heightUnit"] = w.HeightUnit
                 };
+
+                // 添加可选属性（非默认值时才保存）
+                if (!string.IsNullOrWhiteSpace(w.DefaultValue))
+                    itemData["defaultValue"] = w.DefaultValue;
+                if (!string.IsNullOrWhiteSpace(w.Placeholder))
+                    itemData["placeholder"] = w.Placeholder;
+                if (w.Required)
+                    itemData["required"] = w.Required;
+                if (w.Readonly)
+                    itemData["readonly"] = w.Readonly;
+                if (w.Disabled)
+                    itemData["disabled"] = w.Disabled;
+                if (w.MinValue.HasValue)
+                    itemData["minValue"] = w.MinValue.Value;
+                if (w.MaxValue.HasValue)
+                    itemData["maxValue"] = w.MaxValue.Value;
+                if (w.MaxLength.HasValue)
+                    itemData["maxLength"] = w.MaxLength.Value;
+                if (w.ExtendedProperties != null && w.ExtendedProperties.Any())
+                    itemData["extended"] = w.ExtendedProperties;
+
+                items[key] = itemData;
             }
 
             var layout = new
@@ -813,6 +925,32 @@ else
         StateHasChanged();
     }
 
+    private async Task OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, LayoutWidget widget)
+    {
+        try
+        {
+            // 启动调整大小模式
+            var dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("bobcrm.startWidgetResize", dotNetRef, widget.Id, e.ClientX, widget.Width, widget.WidthUnit);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"Failed to start resize: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public void OnWidgetResized(string widgetId, int newWidth, string unit)
+    {
+        var widget = layoutWidgets.FirstOrDefault(w => w.Id == widgetId);
+        if (widget != null)
+        {
+            widget.Width = newWidth;
+            widget.WidthUnit = unit;
+            StateHasChanged();
+        }
+    }
+
     private void DeleteSelectedWidget()
     {
         if (selectedWidget != null)
@@ -841,9 +979,13 @@ else
             ? $"calc({widget.Width}% - 6px)"
             : $"{widget.Width}px";
 
+        var height = widget.HeightUnit == "auto" || widget.HeightUnit == "px"
+            ? (widget.HeightUnit == "auto" ? "auto" : $"{widget.Height}px")
+            : $"{widget.Height}px";
+
         var border = selectedWidget == widget ? "2px solid #1890ff" : "1px solid #e0e0e0";
 
-        return $"flex:0 0 {flexBasis}; max-width:{flexBasis}; background:#fff; border-radius:4px; border:{border}; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:move; user-select:none; transition: all 0.2s ease;";
+        return $"flex:0 0 {flexBasis}; max-width:{flexBasis}; min-height:{height}; background:#fff; border-radius:4px; border:{border}; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:move; user-select:none; transition: all 0.2s ease; position:relative;";
     }
 
     // Models
@@ -881,11 +1023,43 @@ else
         public string? DataField { get; set; }
         public int Width { get; set; } = 48;
         public string WidthUnit { get; set; } = "%";
+        public int Height { get; set; } = 40; // 控件高度（像素）
+        public string HeightUnit { get; set; } = "px";
         public bool Visible { get; set; } = true;
+        public string? DefaultValue { get; set; } // 默认值
+        public string? Placeholder { get; set; } // 占位符
+        public bool Required { get; set; } = false; // 是否必填
+        public bool Readonly { get; set; } = false; // 是否只读
+        public bool Disabled { get; set; } = false; // 是否禁用
+        public int? MinValue { get; set; } // 最小值（数字类型）
+        public int? MaxValue { get; set; } // 最大值（数字类型）
+        public int? MaxLength { get; set; } // 最大长度（文本类型）
+
+        // 位置属性（保留用于其他布局模式）
         public int X { get; set; } = 24;
         public int Y { get; set; } = 24;
         public int W { get; set; } = 360;
         public int H { get; set; } = 56;
+
+        // 扩展属性（用于未来扩展，以JSON格式存储）
+        public Dictionary<string, object>? ExtendedProperties { get; set; }
+
+        // 判断某个属性是否可编辑（根据控件类型）
+        public bool CanEditProperty(string propertyName)
+        {
+            return propertyName switch
+            {
+                "Height" => Type != "section" && Type != "divider", // 分组和分隔线不能调整高度
+                "DefaultValue" => Type == "textbox" || Type == "number" || Type == "textarea" || Type == "select",
+                "Placeholder" => Type == "textbox" || Type == "number" || Type == "textarea",
+                "Required" => Type != "section" && Type != "divider" && Type != "label",
+                "Readonly" => Type == "textbox" || Type == "number" || Type == "textarea",
+                "MinValue" => Type == "number",
+                "MaxValue" => Type == "number",
+                "MaxLength" => Type == "textbox" || Type == "textarea",
+                _ => true
+            };
+        }
     }
 
     private record Position(int x, int y);

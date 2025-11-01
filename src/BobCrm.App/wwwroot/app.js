@@ -715,6 +715,64 @@ window.bobcrm = {
       // TODO: Remove alignment guides
     }
   }
+  , startWidgetResize: function (dotNetRef, widgetId, startX, initialWidth, widthUnit) {
+    // 开始调整控件宽度
+    const resizeState = {
+      dotNetRef,
+      widgetId,
+      startX,
+      initialWidth,
+      widthUnit,
+      containerWidth: null
+    };
+
+    // 获取容器宽度（用于计算百分比）
+    const container = document.querySelector('.layout-widgets-container');
+    if (container && widthUnit === '%') {
+      resizeState.containerWidth = container.getBoundingClientRect().width;
+    }
+
+    const onMouseMove = (e) => {
+      const deltaX = e.clientX - resizeState.startX;
+
+      let newWidth;
+      if (resizeState.widthUnit === '%' && resizeState.containerWidth) {
+        // 百分比模式：计算像素变化对应的百分比
+        const deltaPercent = (deltaX / resizeState.containerWidth) * 100;
+        newWidth = Math.max(8, Math.min(100, Math.round(resizeState.initialWidth + deltaPercent)));
+      } else {
+        // 像素模式
+        newWidth = Math.max(100, Math.round(resizeState.initialWidth + deltaX));
+      }
+
+      // 实时更新控件宽度
+      const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
+      if (widgetElement) {
+        const flexBasis = resizeState.widthUnit === '%'
+          ? `calc(${newWidth}% - 6px)`
+          : `${newWidth}px`;
+        widgetElement.style.flexBasis = flexBasis;
+        widgetElement.style.maxWidth = flexBasis;
+      }
+
+      // 通知C#更新数据
+      if (resizeState.dotNetRef && resizeState.dotNetRef.invokeMethodAsync) {
+        resizeState.dotNetRef.invokeMethodAsync('OnWidgetResized', widgetId, newWidth, resizeState.widthUnit);
+      }
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  }
 };
 
 // Monitor localStorage changes for 'udfColor' key
