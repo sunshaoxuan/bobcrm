@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
+using Microsoft.EntityFrameworkCore;
 
 // Use Postgres from docker (see docker-compose.yml):
 // Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres
@@ -25,7 +26,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             var dict = new Dictionary<string, string?>
             {
                 ["Db:Provider"] = "postgres",
-                ["ConnectionStrings:Default"] = "Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres"
+                // 使用独立的测试数据库，避免影响开发数据
+                ["ConnectionStrings:Default"] = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres"
             };
             config.AddInMemoryCollection(dict!);
         });
@@ -57,7 +59,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
             var repo = scope.ServiceProvider.GetRequiredService<IRepository<CustomerAccess>>();
             var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var customers = db.Customers.Select(c => c.Id).ToList();
+            // 禁用查询过滤器，测试初始化时没有 HttpContext
+            var customers = db.Customers.IgnoreQueryFilters().Select(c => c.Id).ToList();
             foreach (var cid in customers)
             {
                 var exists = repo.Query(a => a.CustomerId == cid && a.UserId == admin!.Id).Any();

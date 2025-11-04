@@ -14,24 +14,7 @@ public class AccessIntegrationTests : IClassFixture<TestWebAppFactory>
     private async Task<(string userId, string username, string access)> CreateAndLoginUserAsync()
     {
         var client = _factory.CreateClient();
-        var username = $"user_{Guid.NewGuid():N}";
-        var email = $"{username}@local";
-        var password = "User@12345";
-        var reg = await client.PostAsJsonAsync("/api/auth/register", new { username, password, email });
-        reg.EnsureSuccessStatusCode();
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-            var u = await um.FindByNameAsync(username);
-            var code = await um.GenerateEmailConfirmationTokenAsync(u!);
-            var act = await client.GetAsync($"/api/auth/activate?userId={Uri.EscapeDataString(u!.Id)}&code={Uri.EscapeDataString(code)}");
-            act.EnsureSuccessStatusCode();
-            var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
-            login.EnsureSuccessStatusCode();
-            var json = JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement;
-            var access = json.GetProperty("accessToken").GetString()!;
-            return (u!.Id, username, access);
-        }
+        return await client.CreateAndLoginUserAsync(_factory.Services);
     }
 
     [Fact]
@@ -45,8 +28,9 @@ public class AccessIntegrationTests : IClassFixture<TestWebAppFactory>
         var userClient = _factory.CreateClient();
         userClient.UseBearer(userAccess);
 
-        // pick a customer id (when user has no access rows, list returns all)
-        var list = await userClient.GetFromJsonAsync<JsonElement>("/api/customers");
+        // 使用 admin 客户端获取客户列表（普通用户没有权限会看到空列表）
+        var list = await admin.GetFromJsonAsync<JsonElement>("/api/customers");
+        Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
         // ensure at least one access row exists, but not for this user -> user cannot edit (403)
@@ -67,10 +51,17 @@ public class AccessIntegrationTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task Layout_Save_Default_Forbidden_For_NonAdmin()
     {
+        var admin = _factory.CreateClient();
+        var (adminAccess, _) = await admin.LoginAsAdminAsync();
+        admin.UseBearer(adminAccess);
+
         var (_, _, userAccess) = await CreateAndLoginUserAsync();
         var userClient = _factory.CreateClient();
         userClient.UseBearer(userAccess);
-        var list = await userClient.GetFromJsonAsync<JsonElement>("/api/customers");
+        
+        // 使用 admin 客户端获取客户列表
+        var list = await admin.GetFromJsonAsync<JsonElement>("/api/customers");
+        Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
         var res = await userClient.PostAsJsonAsync($"/api/layout/{id}?scope=default", new { mode = "flow", items = new { email = new { order = 0, w = 6 } } });
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);

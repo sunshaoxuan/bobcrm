@@ -18,6 +18,7 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
 
         // choose a customer
         var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
         // initial effective layout (likely empty)
@@ -55,6 +56,7 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         client.UseBearer(access);
 
         var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
         // generate flow mode and save user

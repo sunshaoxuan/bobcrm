@@ -24,6 +24,9 @@ public class QueriesUnitTests
     private class FakeLoc : ILocalization
     {
         public string T(string key, string lang) => key;
+        public Dictionary<string, string> GetDictionary(string lang) => new Dictionary<string, string>();
+        public void InvalidateCache() { }
+        public long GetCacheVersion() => 0;
     }
 
     private static IHttpContextAccessor HttpWithUser(string id)

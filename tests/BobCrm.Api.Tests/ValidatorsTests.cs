@@ -2,6 +2,7 @@ using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
+using BobCrm.Api.Contracts.DTOs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 
@@ -69,9 +70,20 @@ public class ValidatorsTests
         });
         services.AddSingleton<IValidationPipeline, ValidationPipeline>();
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        // 添加 mock ILocalization
+        services.AddSingleton<BobCrm.Api.Infrastructure.ILocalization>(new MockLocalization());
         var sp = services.BuildServiceProvider();
         var pipe = sp.GetRequiredService<IValidationPipeline>();
         var res = await pipe.ValidateAsync(new UpdateCustomerDto(new List<FieldDto>(), null), new DefaultHttpContext());
         Assert.NotNull(res); // should fail on business validator (no fields)
+    }
+
+    // Mock ILocalization for testing
+    private class MockLocalization : BobCrm.Api.Infrastructure.ILocalization
+    {
+        public string T(string key, string lang = "ja") => key;
+        public Dictionary<string, string> GetDictionary(string lang) => new Dictionary<string, string>();
+        public long GetCacheVersion() => 1;
+        public void InvalidateCache() { }
     }
 }
