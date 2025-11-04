@@ -5,12 +5,16 @@
 
 @using BobCrm.App.Models
 @using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using BobCrm.App.Services.Widgets.Rendering
+@using ListItem = BobCrm.App.Models.Widgets.ListItem;
 
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.FieldService FieldService
+@inject IDesignWidgetContentRenderer DesignRenderer
 
 <PageTitle>@I18n.T("MENU_TEMPLATES") - @I18n.T("MODE_DESIGN")</PageTitle>
 
@@ -55,23 +59,137 @@ else
                     <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_COMPONENTS")</h3>
                     <div style="display:flex; flex-direction:column; gap:8px">
                         <div style="font-size:12px; color:#666; margin:4px 0">@I18n.T("LBL_BASIC_COMPONENTS")</div>
-                        @foreach (var comp in basicComponents)
+                        @foreach (var comp in WidgetRegistry.BasicWidgets)
                         {
                             <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
                                  @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                  style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                 <Icon Type="@comp.Icon" />
-                                <span style="font-size:13px">@I18n.T(comp.Label)</span>
+                                <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
+                            </div>
+                        }
+                        @if (selectedWidget is NumberWidget numberWidget)
+                        {
+                            <Divider Style="margin:12px 0" />
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">默认值</label>
+                                <AntDesign.InputNumber TValue="double?" @bind-Value="numberWidget.DefaultValue" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                            </div>
+                            <div style="display:flex; gap:8px; margin-bottom:16px">
+                                <div style="flex:1">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">最小值</label>
+                                    <AntDesign.InputNumber TValue="double?" @bind-Value="numberWidget.MinValue" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                                </div>
+                                <div style="flex:1">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">最大值</label>
+                                    <AntDesign.InputNumber TValue="double?" @bind-Value="numberWidget.MaxValue" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                                </div>
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">步长</label>
+                                <AntDesign.InputNumber TValue="double" @bind-Value="numberWidget.Step" Min="0.1" Step="0.1" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">允许小数</label>
+                                <Switch @bind-Value="numberWidget.AllowDecimal" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">显示千分位</label>
+                                <Switch @bind-Value="numberWidget.ShowThousandsSeparator" @bind-Value:after="UpdateWidget" />
+                            </div>
+                        }
+                        @if (selectedWidget is SelectWidget selectWidget)
+                        {
+                            <Divider Style="margin:12px 0" />
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">默认值</label>
+                                <Input @bind-Value="selectWidget.DefaultValue" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">占位提示</label>
+                                <Input @bind-Value="selectWidget.Placeholder" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">选项（value:label，以逗号分隔）</label>
+                                <Input @bind-Value="SelectOptionsText" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">允许搜索</label>
+                                <Switch @bind-Value="selectWidget.AllowSearch" @bind-Value:after="UpdateWidget" />
+                            </div>
+                        }
+                        @if (selectedWidget is TextareaWidget textareaWidget)
+                        {
+                            <Divider Style="margin:12px 0" />
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">默认值</label>
+                                <Input @bind-Value="textareaWidget.DefaultValue" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">占位提示</label>
+                                <Input @bind-Value="textareaWidget.Placeholder" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="display:flex; gap:8px; margin-bottom:16px">
+                                <div style="flex:1">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">行数</label>
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="textareaWidget.Rows" Min="2" Max="10" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                                </div>
+                                <div style="flex:1">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">最大长度</label>
+                                    <AntDesign.InputNumber TValue="int?" @bind-Value="textareaWidget.MaxLength" Min="50" Max="5000" @bind-Value:after="UpdateWidget" Style="width:100%" />
+                                </div>
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">自动高度</label>
+                                <Switch @bind-Value="textareaWidget.AutoSize" @bind-Value:after="UpdateWidget" />
+                            </div>
+                        }
+                        @if (selectedWidget is ButtonWidget buttonWidget)
+                        {
+                            <Divider Style="margin:12px 0" />
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">按钮类型</label>
+                                <Select TItemValue="string" TItem="string" Value="@buttonWidget.Variant" OnSelectedItemChanged="@(value => { buttonWidget.Variant = value; UpdateWidget(); })">
+                                    <SelectOptions>
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("primary")" Label="Primary" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("default")" Label="Default" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("dashed")" Label="Dashed" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("link")" Label="Link" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("text")" Label="Text" />
+                                    </SelectOptions>
+                                </Select>
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">按钮尺寸</label>
+                                <Select TItemValue="string" TItem="string" Value="@buttonWidget.Size" OnSelectedItemChanged="@(value => { buttonWidget.Size = value; UpdateWidget(); })">
+                                    <SelectOptions>
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("large")" Label="Large" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("default")" Label="Default" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("small")" Label="Small" />
+                                    </SelectOptions>
+                                </Select>
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">动作标识</label>
+                                <Input @bind-Value="buttonWidget.Action" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">动作参数</label>
+                                <Input @bind-Value="buttonWidget.ActionPayload" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">块级按钮</label>
+                                <Switch @bind-Value="buttonWidget.Block" @bind-Value:after="UpdateWidget" />
                             </div>
                         }
                         <div style="font-size:12px; color:#666; margin:8px 0 4px">@I18n.T("LBL_LAYOUT_COMPONENTS")</div>
-                        @foreach (var comp in layoutComponents)
+                        @foreach (var comp in WidgetRegistry.LayoutWidgets)
                         {
                             <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
                                  @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                  style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                 <Icon Type="@comp.Icon" />
-                                <span style="font-size:13px">@I18n.T(comp.Label)</span>
+                                <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
                             </div>
                         }
                     </div>
@@ -111,69 +229,7 @@ else
                                 </div>
                             }
                             <div class="widget-content" style="width:100%;">
-                                @if (widget.Type == "frame" || widget.Type == "section")
-                                {
-                                    @* 容器类型：显示为可容纳子控件的框 *@
-                                    <div style="border:2px dashed #1890ff; border-radius:4px; background:@GetWidgetBackgroundColor(widget); padding:12px; pointer-events:auto; @(widget.Children == null || !widget.Children.Any() ? "min-height:80px;" : "")">
-                                        <div style="@GetWidgetTextStyle(widget) margin-bottom:8px; font-weight:600; color:#1890ff; pointer-events:none;">@widget.Label</div>
-                                        @* 容器内部拖放区域 *@
-                                        <div class="frame-drop-zone" 
-                                             data-container-id="@widget.Id"
-                                             @ondrop="@((e) => OnDropToContainer(e, widget))" 
-                                             @ondrop:preventDefault 
-                                             @ondrop:stopPropagation
-                                             @ondragover:preventDefault
-                                             style="display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; align-items:flex-start; position:relative; @(widget.Children == null || !widget.Children.Any() ? "min-height:48px;" : "")">
-                                            @if (widget.Children != null && widget.Children.Any())
-                                            {
-                                                @foreach (var child in widget.Children)
-                                                {
-                                                    @* 换行占位符：NewLine=true 时强制子控件从新行开始 *@
-                                                    @if (child.NewLine)
-                                                    {
-                                                        <div class="flow-break" style="flex-basis:100%; width:100%; height:0; padding:0; margin:0;"></div>
-                                                    }
-                                                    @* 递归渲染子控件（支持嵌套容器） *@
-                                                    <div class="container-child-widget @(selectedWidget == child ? "selected" : "")"
-                                                         draggable="@(resizingIds.Contains(child.Id) ? "false" : "true")"
-                                                         data-drag-type="widget" data-drag-data="@child.Id"
-                                                         data-widget-id="@child.Id"
-                                                         @ondragstart="@((e) => OnWidgetDragStart(e, child))" @ondragstart:stopPropagation
-                                                         @ondragstart:preventDefault="@(resizingIds.Contains(child.Id))"
-                                                         @ondragend="OnDragEnd"
-                                                         @onclick="@(() => SelectWidget(child))"
-                                                         @onclick:stopPropagation
-                                                         style="@GetContainerChildStyle(child)">
-                                                        @if (selectedWidget == child)
-                                                        {
-                                                            <div class="resize-handle"
-                                                                 draggable="false"
-                                                                 @onmousedown="@((e) => OnResizeStart(e, child))"
-                                                                 @onmousedown:stopPropagation
-                                                                 @onmousedown:preventDefault
-                                                                 @ondragstart:preventDefault="true"
-                                                                 style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:4px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); opacity:0.8;">
-                                                            </div>
-                                                        }
-                                                        @RenderWidgetContent(child)
-                                                    </div>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <div style="text-align:center; color:#999; font-size:12px; padding:20px; width:100%; pointer-events:none;">@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                                else
-                                {
-                                    @* 普通控件 *@
-                                    <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:@GetWidgetBackgroundColor(widget); width:100%; pointer-events:none;">
-                                        <div style="@GetWidgetTextStyle(widget) margin-bottom:4px">@widget.Label</div>
-                                    <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
-                                </div>
-                                }
+                                @RenderWidgetContent(widget)
                             </div>
                         </div>
                     }
@@ -207,10 +263,10 @@ else
                                        Value="@selectedWidget.WidthUnit" 
                                        Style="width:30%" 
                                        OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
-                                    <SelectOptions>
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%" />
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
-                                    </SelectOptions>
+                                <SelectOptions>
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                </SelectOptions>
                                 </Select>
                             </InputGroup>
                         </div>
@@ -222,10 +278,10 @@ else
                                        Value="@selectedWidget.HeightUnit" 
                                        Style="width:30%"
                                        OnSelectedItemChanged="@(value => { selectedWidget.HeightUnit = value; UpdateWidget(); })">
-                                    <SelectOptions>
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("auto")" Label="auto" />
-                                    </SelectOptions>
+                                <SelectOptions>
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("auto")" Label="auto" />
+                                </SelectOptions>
                                 </Select>
                             </InputGroup>
                         </div>
@@ -325,7 +381,7 @@ else
                         </div>
                         
                         @* 容器背景色（仅容器类控件） *@
-                        @if (selectedWidget.Type == "frame" || selectedWidget.Type == "section")
+                        @if (selectedWidget.Type == "frame" || selectedWidget.Type == "section" || selectedWidget.Type == "panel" || selectedWidget.Type == "grid")
                         {
                             <div style="margin-bottom:16px">
                                 <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_BG_COLOR")</label>
@@ -341,7 +397,35 @@ else
                                            style="padding:4px 8px; border:1px solid #d9d9d9; border-radius:4px; background:#e6f7ff; cursor:pointer; font-size:11px">@I18n.T("COLOR_LIGHT_BLUE")</button>
                                     <button type="button" @onclick="@(() => SetStyleValue("backgroundColor", "#fff7e6"))" 
                                            style="padding:4px 8px; border:1px solid #d9d9d9; border-radius:4px; background:#fff7e6; cursor:pointer; font-size:11px">@I18n.T("COLOR_LIGHT_YELLOW")</button>
+                               </div>
+                           </div>
+                       }
+                        else if (selectedWidget is TabContainerWidget tabContainerPanel)
+                        {
+                            <div style="margin-bottom:16px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">Tabs</label>
+                                <div style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow:auto;">
+                                    @foreach (var tab in tabContainerPanel.Children?.OfType<TabWidget>() ?? Enumerable.Empty<TabWidget>())
+                                    {
+                                        var isActive = activeTabs.TryGetValue(tabContainerPanel.Id, out var activeId) && activeId == tab.TabId;
+                                        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; border:1px solid @(isActive ? "#1890ff" : "#e0e0e0"); border-radius:4px; background:@(isActive ? "#e6f7ff" : "#fff");">
+                                            <div style="display:flex; align-items:center; gap:6px;">
+                                                <Button Size="@ButtonSize.Small" Type="@(isActive ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => ActivateTab(tabContainerPanel, tab))">激活</Button>
+                                                <span>@tab.Label</span>
+                                            </div>
+                                            <Button Size="@ButtonSize.Small" Type="@ButtonType.Text" Danger OnClick="@(() => RemoveTab(tabContainerPanel, tab))" Icon="@IconType.Outline.Delete" Disabled="@( (tabContainerPanel.Children?.OfType<TabWidget>().Count() ?? 0) <= 1 )"></Button>
+                                        </div>
+                                    }
                                 </div>
+                                <Button Type="@ButtonType.Dashed" Block Size="@ButtonSize.Small" Style="margin-top:8px" Icon="@IconType.Outline.Plus" OnClick="@(() => AddTab(tabContainerPanel))">新增标签</Button>
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666;">动画切换</label>
+                                <Switch @bind-Value="tabContainerPanel.Animated" @bind-Value:after="UpdateWidget" />
+                            </div>
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666;">居中标签</label>
+                                <Switch @bind-Value="tabContainerPanel.Centered" @bind-Value:after="UpdateWidget" />
                             </div>
                         }
                         
@@ -372,11 +456,12 @@ else
     private List<DraggableWidget> layoutWidgets = new();
     private DraggableWidget? selectedWidget = null;
     private DraggableWidget? draggedWidget = null;
-    private ComponentDefinition? draggedComponent = null;
+    private WidgetRegistry.WidgetDefinition? draggedDefinition = null;
     private DraggableWidget? draggedParentContainer = null;  // 拖放子控件时，记录其父容器
     private bool dropSucceeded = false;
     private List<BobCrm.App.Services.FieldService.FieldDefinitionDto>? fieldDefs;
     private HashSet<string> resizingIds = new();  // 正在调整大小的控件ID集合
+    private Dictionary<string, string> activeTabs = new();
 
     protected override void OnInitialized()
     {
@@ -589,8 +674,12 @@ else
         }
     }
 
-    private async Task OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ComponentDefinition comp)
-    { dropSucceeded = false; draggedComponent = comp; try { await JS.InvokeVoidAsync("console.log", $"[drag] start new {comp.Type}"); } catch { } }
+    private async Task OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, WidgetRegistry.WidgetDefinition def)
+    {
+        dropSucceeded = false;
+        draggedDefinition = def;
+        try { await JS.InvokeVoidAsync("console.log", $"[drag] start new {def.Type}"); } catch { }
+    }
     private async Task OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget w)
     { 
         dropSucceeded = false; 
@@ -606,28 +695,31 @@ else
     {
         try
         {
-            await JS.InvokeVoidAsync("console.log", $"[OnDrop Root] Component={draggedComponent?.Type}, Widget={draggedWidget?.Id}, Parent={draggedParentContainer?.Id}");
-            
-            // 情况1：从工具栏拖放新组件
-        if (draggedComponent != null)
-        {
-                var nw = CreateWidgetByType(draggedComponent.Type, I18n.T(draggedComponent.Label));
-                
-            try
+            await JS.InvokeVoidAsync("console.log", $"[OnDrop Root] Component={draggedDefinition?.Type}, Widget={draggedWidget?.Id}, Parent={draggedParentContainer?.Id}");
+
+            if (draggedDefinition != null)
             {
-                var idx = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".layout-widgets-container", e.ClientX, e.ClientY);
-                    if (idx >= 0 && idx <= layoutWidgets.Count) 
-                        layoutWidgets.Insert(idx, nw); 
-                    else 
+                var label = I18n.T(draggedDefinition.LabelKey);
+                var nw = CreateWidgetByType(draggedDefinition.Type, label);
+
+                try
+                {
+                    var idx = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".layout-widgets-container", e.ClientX, e.ClientY);
+                    if (idx >= 0 && idx <= layoutWidgets.Count)
+                        layoutWidgets.Insert(idx, nw);
+                    else
                         layoutWidgets.Add(nw);
                     await JS.InvokeVoidAsync("console.log", $"[OnDrop Root] New component inserted at index {idx}");
-            }
-            catch { layoutWidgets.Add(nw); }
-                
-                selectedWidget = nw; 
-                dropSucceeded = true; 
-                draggedComponent = null; 
-                StateHasChanged(); 
+                }
+                catch
+                {
+                    layoutWidgets.Add(nw);
+                }
+
+                selectedWidget = nw;
+                dropSucceeded = true;
+                draggedDefinition = null;
+                StateHasChanged();
                 return;
             }
             
@@ -702,7 +794,7 @@ else
         try { await Task.Delay(50); } catch { } 
         if (!dropSucceeded) 
         { 
-            draggedComponent = null; 
+            draggedDefinition = null; 
             draggedWidget = null; 
             draggedParentContainer = null;
         } 
@@ -890,7 +982,7 @@ else
         // - 显式 px：输出 height
         // - auto 且叶子控件：给小的 min-height 确保可见性（不拉伸）
         // - auto 且容器：不设高度（由子控件决定）
-        var isContainer = w.Type == "frame" || w.Type == "section";
+        var isContainer = w.Type == "frame" || w.Type == "section" || w.Type == "panel" || w.Type == "grid" || w.Type == "tabbox" || w.Type == "tab";
         // 使用 min-height 避免裁切内容；容器在 auto 时不强制高度
         var heightStyle = w.HeightUnit == "px"
             ? $"min-height:{Math.Max(w.Height, 32)}px;"
@@ -924,7 +1016,7 @@ else
     /// </summary>
     private RenderFragment RenderWidgetContent(DraggableWidget widget) => __builder =>
     {
-        if (widget.Type == "frame" || widget.Type == "section")
+        if (widget.Type == "frame" || widget.Type == "section" || widget.Type == "panel" || widget.Type == "grid")
         {
             // 嵌套容器：递归渲染
             <div style="border:1px dashed #52c41a; border-radius:4px; background:@GetWidgetBackgroundColor(widget); padding:8px; pointer-events:auto; @(widget.Children == null || !widget.Children.Any() ? "min-height:80px;" : "")">
@@ -964,48 +1056,78 @@ else
                 </div>
             </div>
         }
-        else if (widget is TextboxWidget)
+        else if (widget.Type == "tabbox" && widget is TabContainerWidget tabContainer)
         {
-            // 文本框
-            <div style="padding:6px; background:@GetWidgetBackgroundColor(widget); pointer-events:none;">
-                <div style="@GetWidgetTextStyle(widget) font-size:11px; margin-bottom:2px;">@widget.Label</div>
-                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px;"></div>
-            </div>
-        }
-        else if (widget is LabelWidget)
-        {
-            // 标签
-            <div style="padding:6px; background:@GetWidgetBackgroundColor(widget); pointer-events:none;">
-                <div style="@GetWidgetTextStyle(widget) font-size:11px; font-weight:500;">@widget.Label</div>
-            </div>
-        }
-        else if (widget is CalendarWidget)
-        {
-            // 日历
-            <div style="padding:6px; background:@GetWidgetBackgroundColor(widget); pointer-events:none;">
-                <div style="@GetWidgetTextStyle(widget) font-size:11px; margin-bottom:2px;">@widget.Label</div>
-                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 4px;">
-                    <span style="font-size:10px; color:#999;">📅</span>
+            var tabs = tabContainer.Children?.OfType<TabWidget>().ToList() ?? new List<TabWidget>();
+            var activeTab = GetActiveTab(tabContainer, tabs);
+
+            <div style="border:1px solid #d9d9d9; border-radius:6px; background:#fff; padding:8px; width:100%; pointer-events:auto;">
+                <div style="display:flex; gap:4px; border-bottom:1px solid #f0f0f0; padding-bottom:8px; margin-bottom:8px;">
+                    @if (tabs.Any())
+                    {
+                        foreach (var tab in tabs)
+                        {
+                            var isActive = activeTab != null && activeTab.TabId == tab.TabId;
+                            var tabStyle = isActive
+                                ? "padding:4px 12px; background:#1890ff; color:#fff; border-radius:4px; font-size:12px; cursor:pointer;"
+                                : "padding:4px 12px; background:#f5f5f5; color:#555; border-radius:4px; font-size:12px; cursor:pointer;";
+                            <div style="@tabStyle"
+                                 @onclick="() => ActivateTab(tabContainer, tab)"
+                                 @onclick:stopPropagation>
+                                @tab.Label
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="font-size:12px; color:#999;">暂无标签</div>
+                    }
                 </div>
-            </div>
-        }
-        else if (widget is ListboxWidget)
-        {
-            // 列表框
-            <div style="padding:6px; background:@GetWidgetBackgroundColor(widget); pointer-events:none;">
-                <div style="@GetWidgetTextStyle(widget) font-size:11px; margin-bottom:2px;">@widget.Label</div>
-                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 4px;">
-                    <span style="font-size:10px; color:#999;">▼</span>
-                </div>
+
+                @if (activeTab != null)
+                {
+                    <div class="frame-drop-zone"
+                         data-container-id="@activeTab.TabId"
+                         @ondrop="@((e) => OnDropToContainer(e, activeTab))"
+                         @ondrop:preventDefault
+                         @ondrop:stopPropagation
+                         @ondragover:preventDefault
+                         style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; gap:4px; min-height:64px; background:#fafafa; border-radius:4px; padding:8px;">
+                        @if (activeTab.Children != null && activeTab.Children.Any())
+                        {
+                            foreach (var child in activeTab.Children)
+                            {
+                                if (child.NewLine)
+                                {
+                                    <div class="flow-break" style="flex-basis:100%; width:100%; height:0; padding:0; margin:0;"></div>
+                                }
+
+                                <div class="container-child-widget @(selectedWidget == child ? "selected" : "")"
+                                     draggable="true" data-drag-type="widget" data-drag-data="@child.Id"
+                                     @ondragstart="@((e) => OnWidgetDragStart(e, child))" @ondragstart:stopPropagation
+                                     @ondragend="OnDragEnd"
+                                     @onclick="@(() => SelectWidget(child))"
+                                     @onclick:stopPropagation
+                                     style="@GetNestedChildStyle(child)">
+                                    @RenderWidgetContent(child)
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div style="width:100%; text-align:center; color:#999; font-size:11px; pointer-events:none;">拖拽控件到此</div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="width:100%; text-align:center; color:#bbb; font-size:12px; padding:16px; border:1px dashed #d9d9d9; border-radius:4px;">尚未创建标签页</div>
+                }
             </div>
         }
         else
         {
-            // 未识别类型：也按“复合控件”方式预览，保证高度与交互一致
-            <div style="padding:6px; background:@GetWidgetBackgroundColor(widget); pointer-events:none;">
-                <div style="@GetWidgetTextStyle(widget) font-size:11px; margin-bottom:2px;">@widget.Label</div>
-                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px;"></div>
-            </div>
+            @DesignRenderer.Render(widget, GetWidgetTextStyle, GetWidgetBackgroundColor, key => I18n.T(key))
         }
     };
     
@@ -1040,10 +1162,10 @@ else
                 container.Children = new List<DraggableWidget>();
             }
 
-            if (draggedComponent != null)
+            if (draggedDefinition != null)
             {
                 // 从工具栏拖放新控件到容器
-                var nw = CreateWidgetByType(draggedComponent.Type, I18n.T(draggedComponent.Label));
+                var nw = CreateWidgetByType(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
                 // 保持与容器外相同的默认宽度（不再强制缩窄）
                 // 计算插入位置（与根画布一致的严格模式）
                 var sel = $".frame-drop-zone[data-container-id='" + container.Id + "']";
@@ -1053,7 +1175,7 @@ else
                 container.Children.Insert(insertIndex, nw);
                 selectedWidget = nw;
                 dropSucceeded = true;
-                draggedComponent = null;
+                draggedDefinition = null;
                 
                 await JS.InvokeVoidAsync("console.log", $"[OnDropToContainer] Added new widget {nw.Id} to container at {insertIndex}");
             }
@@ -1061,7 +1183,7 @@ else
             {
                 // 如果拖动的是容器（frame/section），不允许嵌套到其他容器内。
                 // 改为：在根画布内重排（放到目标容器前/后，取决于指针位置）。
-                if (draggedWidget.Type == "frame" || draggedWidget.Type == "section")
+                if (draggedWidget.Type == "frame" || draggedWidget.Type == "section" || draggedWidget.Type == "panel" || draggedWidget.Type == "grid" || draggedWidget.Type == "tabbox")
                 {
                     await JS.InvokeVoidAsync("console.log", $"[OnDropToContainer] Container drag detected. Redirect to root reorder.");
                     var containerWidget = draggedWidget;
@@ -1343,55 +1465,18 @@ else
         
         return false;
     }
-
-    private record ComponentDefinition(string Type, string Label, string Icon);
-    private List<ComponentDefinition> basicComponents = new()
-    {
-        new("textbox","LBL_TEXTBOX", IconType.Outline.Edit),
-        new("label","LBL_LABEL", IconType.Outline.FileText),
-        new("calendar","LBL_CALENDAR", IconType.Outline.Calendar),
-        new("listbox","LBL_LISTBOX", IconType.Outline.UnorderedList)
-    };
-    private List<ComponentDefinition> layoutComponents = new()
-    {
-        new("section","LBL_SECTION", IconType.Outline.AppstoreAdd),
-        new("frame","LBL_FRAME", IconType.Outline.BorderOuter),
-        new("tabbox","LBL_TABBOX", IconType.Outline.Appstore)
-    };
-
-    // ===== 控件工厂方法 =====
-
-    /// <summary>
-    /// 根据类型字符串创建具体控件实例
-    /// 统一控件创建，避免页面私有类型导致的转换异常
-    /// </summary>
     private DraggableWidget CreateWidgetByType(string type, string label)
     {
-        DraggableWidget widget = type.ToLower() switch
+        var widget = WidgetRegistry.Create(type, label);
+        if (widget is TabContainerWidget tabContainer)
         {
-            "textbox" => new TextboxWidget(),
-            "label" => new LabelWidget(),
-            "calendar" => new CalendarWidget(),
-            "listbox" => new ListboxWidget(),
-            "frame" => new FrameWidget(),
-            "section" => new SectionWidget(),
-            _ => new TextboxWidget()
-        };
-        
-        // 设置默认属性
-        widget.Id = Guid.NewGuid().ToString();
-        widget.Type = type;
-        widget.Label = label;
-        widget.Width = 48;
-        widget.WidthUnit = "%";
-        widget.Visible = true;
-        
-        // 为容器类型初始化 Children
-        if (type == "frame" || type == "section" || type == "tabbox")
-        {
-            widget.Children = new List<DraggableWidget>();
+            var tabs = tabContainer.Children?.OfType<TabWidget>().ToList() ?? new List<TabWidget>();
+            var active = GetActiveTab(tabContainer, tabs);
+            if (active != null)
+            {
+                activeTabs[tabContainer.Id] = active.TabId;
+            }
         }
-        
         return widget;
     }
     
@@ -1424,7 +1509,7 @@ else
     {
         if (widget.ExtendedProperties == null)
             widget.ExtendedProperties = new Dictionary<string, object>();
-            
+        
         if (value == null)
             widget.ExtendedProperties.Remove(key);
         else
@@ -1461,5 +1546,124 @@ else
     {
         get => selectedWidget is TextboxWidget tb ? tb.Readonly : false;
         set { if (selectedWidget is TextboxWidget tb) { tb.Readonly = value; UpdateWidget(); } }
+    }
+
+    private string SelectOptionsText
+    {
+        get
+        {
+            if (selectedWidget is SelectWidget select)
+                return string.Join(",", select.Items.Select(i => $"{i.Value}:{i.Label}"));
+            return string.Empty;
+        }
+        set
+        {
+            if (selectedWidget is SelectWidget select)
+            {
+                select.Items = ParseOptions(value);
+                UpdateWidget();
+            }
+        }
+    }
+
+    private static List<ListItem> ParseOptions(string? raw)
+    {
+        var items = new List<ListItem>();
+        if (string.IsNullOrWhiteSpace(raw))
+            return items;
+
+        var tokens = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var token in tokens)
+        {
+            var parts = token.Split(':', 2, StringSplitOptions.TrimEntries);
+            var value = parts[0];
+            var label = parts.Length > 1 ? parts[1] : parts[0];
+            if (!string.IsNullOrEmpty(value))
+            {
+                items.Add(new ListItem { Value = value, Label = label });
+            }
+        }
+
+        return items;
+    }
+
+    private TabWidget? GetActiveTab(TabContainerWidget container, List<TabWidget> tabs)
+    {
+        if (tabs.Count == 0)
+        {
+            return null;
+        }
+
+        if (!activeTabs.TryGetValue(container.Id, out var activeId) || string.IsNullOrWhiteSpace(activeId))
+        {
+            activeId = container.ActiveTabId ?? tabs.First().TabId;
+            activeTabs[container.Id] = activeId;
+        }
+
+        var tab = tabs.FirstOrDefault(t => t.TabId == activeId) ?? tabs.First();
+        activeTabs[container.Id] = tab.TabId;
+        container.ActiveTabId = tab.TabId;
+        return tab;
+    }
+
+    private void ActivateTab(TabContainerWidget container, TabWidget tab)
+    {
+        activeTabs[container.Id] = tab.TabId;
+        container.ActiveTabId = tab.TabId;
+        foreach (var item in container.Children?.OfType<TabWidget>() ?? Enumerable.Empty<TabWidget>())
+        {
+            item.IsDefault = item.TabId == tab.TabId;
+        }
+        selectedWidget = tab;
+        StateHasChanged();
+    }
+
+    private void AddTab(TabContainerWidget container)
+    {
+        if (container.Children == null)
+        {
+            container.Children = new List<DraggableWidget>();
+        }
+
+        var index = container.Children.OfType<TabWidget>().Count() + 1;
+        var newTab = new TabWidget { Label = $"Tab {index}" };
+        container.Children.Add(newTab);
+        ActivateTab(container, newTab);
+        StateHasChanged();
+    }
+
+    private void RemoveTab(TabContainerWidget container, TabWidget tab)
+    {
+        if (container.Children == null)
+        {
+            return;
+        }
+
+        if ((container.Children.OfType<TabWidget>().Count()) <= 1)
+        {
+            return;
+        }
+
+        container.Children.Remove(tab);
+        if (activeTabs.TryGetValue(container.Id, out var activeId) && activeId == tab.TabId)
+        {
+            var next = container.Children.OfType<TabWidget>().FirstOrDefault();
+            if (next != null)
+            {
+                ActivateTab(container, next);
+            }
+            else
+            {
+                activeTabs.Remove(container.Id);
+                container.ActiveTabId = null;
+            }
+        }
+
+        if (selectedWidget == tab)
+        {
+            selectedWidget = container;
+        }
+
+        StateHasChanged();
     }
 }
