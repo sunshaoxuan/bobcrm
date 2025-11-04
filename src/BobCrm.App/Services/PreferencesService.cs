@@ -66,7 +66,7 @@ public class PreferencesService
             var initColor = await _js.InvokeAsync<string>("bobcrm.getInitColor");
             var theme = await _js.InvokeAsync<string?>("localStorage.getItem", "theme") ?? "light";
 
-            // Get user-defined color, if not exists, initialize with initColor
+            // Get user-defined color from localStorage
             var udfColor = await _js.InvokeAsync<string?>("localStorage.getItem", "udfColor");
             if (string.IsNullOrEmpty(udfColor))
             {
@@ -103,7 +103,7 @@ public class PreferencesService
         {
             await _js.InvokeVoidAsync("localStorage.setItem", "theme", prefs.Theme ?? "light");
             var udfColor = prefs.UdfColor ?? await _js.InvokeAsync<string>("bobcrm.getInitColor");
-            // Always use 'udfColor' key
+            // 保存到 localStorage（使用 udfColor 键名）
             await _js.InvokeVoidAsync("localStorage.setItem", "udfColor", udfColor);
             if (!string.IsNullOrEmpty(prefs.Language))
             {
@@ -119,7 +119,7 @@ public class PreferencesService
     public class UserPreferences
     {
         public string? Theme { get; set; }
-        public string? UdfColor { get; set; }
+        public string? UdfColor { get; set; }  // 用户自定义颜色（前端缓存和前后端交互都用此名）
         public string? Language { get; set; }
     }
 

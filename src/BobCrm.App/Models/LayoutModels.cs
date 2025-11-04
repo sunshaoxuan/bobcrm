@@ -3,8 +3,12 @@ using System.Text.Json.Serialization;
 namespace BobCrm.App.Models;
 
 /// <summary>
-/// 自由布局模型 - 支持绝对定位
+/// 【已废弃】自由布局模型 - 支持绝对定位
+/// 废弃原因：已被 DraggableWidget + LayoutOptions 替代
+/// 建议使用：DraggableWidget.Layout (LayoutMode.Absolute)
+/// 保留此文件仅供参考，未来版本将删除
 /// </summary>
+[Obsolete("Use DraggableWidget with LayoutOptions (LayoutMode.Absolute) instead", false)]
 public class AbsLayout
 {
     [JsonPropertyName("mode")]
@@ -24,8 +28,11 @@ public class AbsLayout
 }
 
 /// <summary>
-/// 自由布局控件 - 绝对定位属性
+/// 【已废弃】自由布局控件 - 绝对定位属性
+/// 废弃原因：已被 DraggableWidget (实现 IAbsolutePositioned) 替代
+/// 建议使用：DraggableWidget 及其子类
 /// </summary>
+[Obsolete("Use DraggableWidget and its subclasses instead", false)]
 public class AbsWidget
 {
     [JsonPropertyName("id")]
@@ -73,8 +80,11 @@ public class AbsWidget
 }
 
 /// <summary>
-/// Flow 布局模型 - 兼容旧版
+/// 【已废弃】Flow 布局模型 - 兼容旧版
+/// 废弃原因：已被 DraggableWidget + LayoutOptions 替代
+/// 建议使用：DraggableWidget.Layout (LayoutMode.Flow)
 /// </summary>
+[Obsolete("Use DraggableWidget with LayoutOptions (LayoutMode.Flow) instead", false)]
 public class FlowLayout
 {
     [JsonPropertyName("mode")]
@@ -84,6 +94,11 @@ public class FlowLayout
     public Dictionary<string, FlowItem> Items { get; set; } = new();
 }
 
+/// <summary>
+/// 【已废弃】Flow 布局项
+/// 废弃原因：已被 DraggableWidget (实现 IFlowSized) 替代
+/// </summary>
+[Obsolete("Use DraggableWidget and IFlowSized interface instead", false)]
 public class FlowItem
 {
     [JsonPropertyName("order")]
@@ -97,8 +112,10 @@ public class FlowItem
 }
 
 /// <summary>
-/// 拖拽状态（前端使用）
+/// 【已废弃】拖拽状态（前端使用）
+/// 废弃原因：已被统一的 DragManager.js 替代
 /// </summary>
+[Obsolete("Use DragManager.js for drag state management instead", false)]
 public class DragState
 {
     public string? DraggedId { get; set; }
@@ -111,8 +128,10 @@ public class DragState
 }
 
 /// <summary>
-/// 缩放手柄方向
+/// 【已废弃】缩放手柄方向
+/// 废弃原因：已被 DragManager.js 的 direction 参数替代
 /// </summary>
+[Obsolete("Use DragManager.js direction parameter instead", false)]
 public enum ResizeHandle
 {
     None,

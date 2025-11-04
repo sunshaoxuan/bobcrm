@@ -8,6 +8,16 @@ public class AuthService
 {
     private readonly IHttpClientFactory _httpFactory;
     private readonly IJSRuntime _js;
+    
+    // 单飞刷新机制：确保同一时间只有一个刷新请求
+    private readonly SemaphoreSlim _refreshGate = new(1, 1);
+    private Task<bool>? _refreshTask;
+    private DateTime _lastRefreshTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 当认证失败且无法刷新时触发（用于全局导航到登录页）
+    /// </summary>
+    public event Action? OnUnauthorized;
 
     public AuthService(IHttpClientFactory httpFactory, IJSRuntime js)
     {
@@ -84,66 +94,208 @@ public class AuthService
 
     public Task<HttpClient> CreateClientWithLangAsync() => CreateBaseClientAsync();
 
-    public async Task<HttpResponseMessage> GetWithRefreshAsync(string url)
+    /// <summary>
+    /// 统一的认证请求发送器：自动处理 401、单飞刷新、竞态重试
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithAuthAndRetryAsync(
+        Func<HttpClient, Task<HttpResponseMessage>> sendFunc,
+        string methodName)
     {
         var http = await CreateClientWithAuthAsync();
-        var resp = await http.GetAsync(url);
+        var resp = await sendFunc(http);
+        
         if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             var refreshed = await TryRefreshAsync();
             if (refreshed)
             {
                 http = await CreateClientWithAuthAsync();
-                resp = await http.GetAsync(url);
+                resp = await sendFunc(http);
+            }
+            else
+            {
+                // 竞态重试：可能刷新已被其他并发请求完成，等待并重试
+                await Task.Delay(200);
+                var newToken = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                if (!string.IsNullOrWhiteSpace(newToken))
+                {
+                    try
+                    {
+                        await _js.InvokeVoidAsync("console.log", $"[Auth] Race recovery - retry {methodName}");
+                    }
+                    catch { }
+                    http = await CreateClientWithAuthAsync();
+                    resp = await sendFunc(http);
+                }
             }
         }
         return resp;
     }
 
-    public async Task<HttpResponseMessage> PostAsJsonWithRefreshAsync<T>(string url, T data)
-    {
-        var http = await CreateClientWithAuthAsync();
-        var resp = await http.PostAsJsonAsync(url, data);
-        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            var refreshed = await TryRefreshAsync();
-            if (refreshed)
-            {
-                http = await CreateClientWithAuthAsync();
-                resp = await http.PostAsJsonAsync(url, data);
-            }
-        }
-        return resp;
-    }
+    public Task<HttpResponseMessage> GetWithRefreshAsync(string url) =>
+        SendWithAuthAndRetryAsync(client => client.GetAsync(url), "GET");
 
-    public async Task<HttpResponseMessage> PutAsJsonWithRefreshAsync<T>(string url, T data)
-    {
-        var http = await CreateClientWithAuthAsync();
-        var resp = await http.PutAsJsonAsync(url, data);
-        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            var refreshed = await TryRefreshAsync();
-            if (refreshed)
-            {
-                http = await CreateClientWithAuthAsync();
-                resp = await http.PutAsJsonAsync(url, data);
-            }
-        }
-        return resp;
-    }
+    public Task<HttpResponseMessage> PostAsJsonWithRefreshAsync<T>(string url, T data) =>
+        SendWithAuthAndRetryAsync(client => client.PostAsJsonAsync(url, data), "POST");
+
+    public Task<HttpResponseMessage> PutAsJsonWithRefreshAsync<T>(string url, T data) =>
+        SendWithAuthAndRetryAsync(client => client.PutAsJsonAsync(url, data), "PUT");
+
+    public Task<HttpResponseMessage> DeleteWithRefreshAsync(string url) =>
+        SendWithAuthAndRetryAsync(client => client.DeleteAsync(url), "DELETE");
 
     public async Task<bool> TryRefreshAsync()
     {
+        // 单飞机制：如果已有刷新任务在进行，等待其完成而不是再发一次
+        await _refreshGate.WaitAsync();
+        try
+        {
+            // 双重检查：进入临界区后，如果最近1秒内已成功刷新过，直接返回成功
+            if ((DateTime.UtcNow - _lastRefreshTime).TotalSeconds < 1)
+            {
+                try
+                {
+                    await _js.InvokeVoidAsync("console.log", "[Auth] Skip refresh - recent refresh detected");
+                }
+                catch { }
+                return true;
+            }
+
+            // 如果有正在进行的刷新任务，等待它
+            if (_refreshTask != null && !_refreshTask.IsCompleted)
+            {
+                try
+                {
+                    await _js.InvokeVoidAsync("console.log", "[Auth] Waiting for in-progress refresh");
+                }
+                catch { }
+                return await _refreshTask;
+            }
+
+            // 创建新的刷新任务
+            _refreshTask = PerformRefreshAsync();
+            return await _refreshTask;
+        }
+        finally
+        {
+            _refreshGate.Release();
+        }
+    }
+
+    private async Task<bool> PerformRefreshAsync()
+    {
+        try
+        {
+            await _js.InvokeVoidAsync("console.log", "[Auth] Starting token refresh");
+        }
+        catch { }
+
         var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
-        if (string.IsNullOrWhiteSpace(refresh)) return false;
+        if (string.IsNullOrWhiteSpace(refresh))
+        {
+            try
+            {
+                await _js.InvokeVoidAsync("console.warn", "[Auth] No refresh token found");
+            }
+            catch { }
+            await ClearTokensAsync();
+            return false;
+        }
+        
         var http = await CreateBaseClientAsync();
         var res = await http.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = refresh });
-        if (!res.IsSuccessStatusCode) return false;
+        
+        if (!res.IsSuccessStatusCode)
+        {
+            // 刷新失败，清理本地 token
+            try
+            {
+                await _js.InvokeVoidAsync("console.error", $"[Auth] Refresh failed: {res.StatusCode}");
+            }
+            catch { }
+            await ClearTokensAsync();
+            OnUnauthorized?.Invoke();
+            return false;
+        }
+        
         var json = await res.Content.ReadFromJsonAsync<TokenPair>();
-        if (json == null) return false;
+        if (json == null)
+        {
+            try
+            {
+                await _js.InvokeVoidAsync("console.error", "[Auth] Refresh response parse failed");
+            }
+            catch { }
+            await ClearTokensAsync();
+            return false;
+        }
+        
         await _js.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
         await _js.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+        _lastRefreshTime = DateTime.UtcNow;
+        
+        try
+        {
+            await _js.InvokeVoidAsync("console.log", "[Auth] Token refresh successful");
+        }
+        catch { }
+        
         return true;
+    }
+
+    /// <summary>
+    /// 清理本地存储的认证令牌
+    /// </summary>
+    public async Task ClearTokensAsync()
+    {
+        try
+        {
+            await _js.InvokeVoidAsync("localStorage.removeItem", "accessToken");
+            await _js.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// 检查用户是否已登录（有有效的 accessToken 或可刷新的 refreshToken）
+    /// </summary>
+    public async Task<bool> IsSignedInAsync()
+    {
+        try
+        {
+            var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+            if (!string.IsNullOrWhiteSpace(access))
+                return true;
+
+            var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+            return !string.IsNullOrWhiteSpace(refresh);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 确保已认证，如果未认证尝试刷新令牌
+    /// </summary>
+    /// <returns>true 表示已认证或刷新成功，false 表示需要登录</returns>
+    public async Task<bool> EnsureAuthenticatedAsync()
+    {
+        try
+        {
+            // 检查是否有 accessToken
+            var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+            if (!string.IsNullOrWhiteSpace(access))
+                return true;
+
+            // 没有 accessToken，尝试刷新
+            return await TryRefreshAsync();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private record TokenPair(string accessToken, string refreshToken);

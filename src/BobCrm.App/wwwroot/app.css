@@ -27,3 +27,209 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+/* ========================================
+   设计器样式 - 拖拽、选中、调整大小
+   ======================================== */
+
+/* 布局控件样式 */
+.layout-widget {
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.layout-widget:hover {
+    border-color: #40a9ff !important;
+}
+
+.layout-widget.selected {
+    border: 2px solid var(--designer-selected-border, #1890ff) !important;
+    box-shadow: 0 2px 8px var(--designer-selected-shadow, rgba(24, 144, 255, 0.3));
+}
+
+/* 调整大小手柄 - 增强命中区域 */
+.resize-handle {
+    position: absolute;
+    right: -8px; /* 向右扩展命中区域 */
+    top: 0;
+    bottom: 0;
+    width: 16px; /* 增加到16px以提升易用性 */
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 添加过渡效果 */
+    transition: background 0.2s;
+}
+
+/* 手柄内的可视指示器 */
+.resize-handle > div {
+    width: 4px;
+    height: 32px;
+    background: var(--designer-handle-color, #1890ff);
+    border-radius: 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s;
+}
+
+.resize-handle:hover {
+    background: var(--designer-handle-hover, rgba(24, 144, 255, 0.1));
+}
+
+/* 鼠标悬停时，可视指示器变宽以提供更好的反馈 */
+.resize-handle:hover > div {
+    width: 6px;
+    height: 40px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.resize-handle:active > div {
+    width: 6px;
+    background: var(--primary, #1890ff);
+}
+
+/* 拖拽时的样式 */
+.layout-widget.dragging {
+    opacity: 0.6;
+    cursor: move;
+}
+
+/* 拖放标记线 */
+.drop-marker {
+    position: absolute;
+    width: 0px;
+    border-left: 3px solid var(--primary, #1890ff);
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+}
+
+/* 组件面板 */
+.component-item {
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.component-item:hover {
+    background: #f5f5f5;
+    border-color: #40a9ff;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.component-item:active {
+    transform: translateY(0);
+}
+
+/* 拖拽中禁用子元素的 pointer-events */
+body.is-dragging .layout-widget > * {
+    pointer-events: none !important;
+}
+
+/* 容器样式 */
+.layout-widgets-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: flex-start; /* 保证同行不同高时不被拉伸 */
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    /* 取消全局最小高度，避免虚高影响布局 */
+    position: relative;
+}
+
+/* Frame 容器样式 */
+.frame-drop-zone {
+    position: relative;
+    min-height: 48px;
+    padding: 8px;
+    background: #fafafa;
+    border: 1px dashed #d9d9d9;
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.frame-drop-zone:hover {
+    border-color: #40a9ff;
+    background: #f0f9ff;
+}
+
+/* 容器内子控件 */
+.container-child-widget {
+    position: relative;
+    margin: 4px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.container-child-widget:hover {
+    border-color: #40a9ff !important;
+}
+
+.container-child-widget.selected {
+    border: 2px solid #1890ff !important;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* 拖拽时禁用容器内子控件内层内容的 pointer-events，确保命中外壳用于计算插入位置 */
+body.is-dragging .container-child-widget > * {
+    pointer-events: none !important;
+}
+
+/* 绝对定位模式的控件 */
+.abs-widget {
+    position: absolute;
+    cursor: move;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    background: #fff;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.abs-widget:hover {
+    border-color: #40a9ff;
+}
+
+.abs-widget.selected {
+    border: 2px solid #1890ff !important;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.abs-widget.dragging {
+    opacity: 0.8;
+    z-index: 1000;
+}
+
+/* 绝对定位画布 */
+.abs-canvas {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    min-height: calc(100vh - 160px);
+}
+
+/* 禁用文本选择（拖拽时） */
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}

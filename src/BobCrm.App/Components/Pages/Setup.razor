@@ -17,7 +17,7 @@
 
     <div class="section">
         <div class="heading">
-            @I18n.T("LBL_API_BASE") <span class="text-muted small">(可选，默认: @(defaultApiBase ?? "http://localhost:5200"))</span>
+            @I18n.T("LBL_API_BASE") <span class="text-muted small">(@I18n.T("LBL_OPTIONAL_DEFAULT"): @(defaultApiBase ?? "http://localhost:5200"))</span>
         </div>
         <Input @bind-Value="apiBase" Placeholder="@placeholderText" />
         <div class="text-muted small" style="margin-top:6px">
@@ -121,7 +121,7 @@
         }
         
         apiBase = defaultApiBase; // 初始化为默认值
-        placeholderText = $"默认: {defaultApiBase}";
+        placeholderText = string.Format(I18n.T("PH_DEFAULT_VALUE"), defaultApiBase);
     }
 
 
@@ -149,7 +149,7 @@
                     apiBase ??= $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
                 }
                 defaultApiBase = apiBase;
-                placeholderText = $"默认: {defaultApiBase}";
+                placeholderText = string.Format(I18n.T("PH_DEFAULT_VALUE"), defaultApiBase);
                 // 写入 cookie，供 I18nService/命名客户端使用
                 try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
                 try { await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
@@ -258,7 +258,7 @@
             // 确保API地址有效
             if (!Uri.TryCreate(apiBase, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
             {
-                var errorMsg = $"API Base地址格式不正确：{apiBase}。请输入有效的URL（如：http://localhost:5200）";
+                var errorMsg = string.Format(I18n.T("ERR_INVALID_API_BASE"), apiBase);
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
                 await Message.Error(errorMsg);
                 StateHasChanged();
@@ -266,7 +266,7 @@
             }
             if (string.IsNullOrWhiteSpace(adminUser))
             {
-                var errorMsg = "管理员用户名不能为空";
+                var errorMsg = I18n.T("ERR_ADMIN_USERNAME_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
                 await Message.Error(errorMsg);
                 StateHasChanged();
@@ -274,7 +274,7 @@
             }
             if (string.IsNullOrWhiteSpace(adminEmail))
             {
-                var errorMsg = "管理员邮箱不能为空";
+                var errorMsg = I18n.T("ERR_ADMIN_EMAIL_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
                 await Message.Error(errorMsg);
                 StateHasChanged();
@@ -282,7 +282,7 @@
             }
             if (string.IsNullOrWhiteSpace(adminPassword))
             {
-                var errorMsg = "管理员密码不能为空";
+                var errorMsg = I18n.T("ERR_ADMIN_PASSWORD_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
                 await Message.Error(errorMsg);
                 StateHasChanged();
@@ -340,24 +340,24 @@
             }
             catch (TaskCanceledException)
             {
-                err = $"请求超时（超过15秒）。请检查API服务器 {apiBase} 是否正在运行。\n\n请确认：\n1. API服务器已启动\n2. 在浏览器中访问 {apiBase}/swagger 确认API可访问";
+                err = string.Format(I18n.T("ERR_REQUEST_TIMEOUT"), apiBase);
                 ok = false;
             }
             catch (HttpRequestException httpEx)
             {
-                err = $"无法连接到API服务器 {apiBase}：{httpEx.Message}\n\n请确认：\n1. API服务器已启动（运行 BobCrm.Api 项目）\n2. API地址正确：{apiBase}\n3. 网络连接正常\n4. 防火墙允许访问该端口";
+                err = string.Format(I18n.T("ERR_CANNOT_CONNECT_API"), apiBase, httpEx.Message);
                 ok = false;
             }
             catch (Exception ex)
             {
-                err = $"发生错误：{ex.GetType().Name} - {ex.Message}\n\n堆栈跟踪：{ex.StackTrace}";
+                err = string.Format(I18n.T("ERR_EXCEPTION_OCCURRED"), ex.GetType().Name, ex.Message, ex.StackTrace);
                 System.Diagnostics.Debug.WriteLine($"[Setup] Exception details: {ex}");
                 ok = false;
             }
 
             if (!ok)
             {
-                var errorMsg = "保存失败";
+                var errorMsg = I18n.T("LBL_SAVE_FAILED");
                 if (!string.IsNullOrWhiteSpace(err))
                 {
                     errorMsg += ": " + err;
@@ -365,16 +365,7 @@
                 System.Diagnostics.Debug.WriteLine($"[Setup] Save failed: {errorMsg}");
                 
                 // Show detailed error message with admin account info
-                var fullErrorMsg = $"无法保存管理员账户到 {apiBase}\n\n" +
-                    $"尝试保存的用户信息：\n" +
-                    $"  用户名: {adminUser}\n" +
-                    $"  邮箱: {adminEmail}\n\n" +
-                    $"错误详情：{errorMsg}\n\n" +
-                    $"请检查：\n" +
-                    $"1. API服务器是否正在运行 ({apiBase})\n" +
-                    $"2. 在浏览器中访问 {apiBase}/swagger 确认API是否可访问\n" +
-                    $"3. 网络连接是否正常\n" +
-                    $"4. API地址是否正确";
+                var fullErrorMsg = string.Format(I18n.T("ERR_SAVE_FAILED_ADMIN"), apiBase, adminUser, adminEmail, errorMsg);
                 
                 try
                 {
@@ -400,7 +391,7 @@
             try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
             try
             {
-                await Message.Success("设置已保存，正在跳转到首页...");
+                await Message.Success(I18n.T("MSG_SETTINGS_SAVED_REDIRECTING"));
             }
             catch (Exception msgEx)
             {
@@ -413,7 +404,7 @@
         {
             // Catch all unhandled exceptions
             System.Diagnostics.Debug.WriteLine($"[Setup] Unhandled exception in SaveAsync: {ex}");
-            var errorMsg = $"发生错误: {ex.Message}";
+            var errorMsg = string.Format(I18n.T("ERR_OCCURRED"), ex.Message);
             try
             {
                 await Message.Error(errorMsg);

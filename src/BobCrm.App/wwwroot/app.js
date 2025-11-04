@@ -48,6 +48,17 @@ window.bobcrm = {
   openUrl: function (url) {
     window.open(url, '_blank');
   },
+  // 获取元素的实际宽度
+  getElementWidth: function(element) {
+    if (!element) return 0;
+    const rect = element.getBoundingClientRect();
+    return rect.width || element.clientWidth || 0;
+  },
+  // 通过选择器获取元素宽度
+  getElementWidthBySelector: function(selector) {
+    const element = document.querySelector(selector);
+    return this.getElementWidth(element);
+  },
   getRect: function (el) {
     if (!el) return { left: 0, top: 0, width: 0, height: 0 };
     const r = el.getBoundingClientRect();
@@ -71,6 +82,16 @@ window.bobcrm = {
         expires = '; expires=' + d.toUTCString();
       }
       document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value || '') + expires + '; path=/';
+    } catch (e) { }
+  }
+  , registerCustomerEvents: function(dotnetRef){
+    try { this._customerRef = dotnetRef; } catch (e) { }
+  }
+  , customerUpdated: function(id, code, name){
+    try {
+      if (this._customerRef && this._customerRef.invokeMethodAsync) {
+        this._customerRef.invokeMethodAsync('OnCustomerUpdated', id | 0, code || '', name || '');
+      }
     } catch (e) { }
   }
   , fetchJson: async function (url) {
@@ -167,11 +188,14 @@ window.bobcrm = {
     if (!this._dragDropInitialized) {
       document.addEventListener('dragstart', function(e) {
         try {
+          // 添加dragging class到body，用于CSS控制子控件的pointer-events
+          document.body.classList.add('is-dragging');
+
           // Try to get data from the draggable element itself
           let dragElement = e.target;
           let dragType = dragElement.getAttribute('data-drag-type');
           let dragData = dragElement.getAttribute('data-drag-data');
-          
+
           // If not found on target, check parent elements (for nested content)
           if (!dragData) {
             let parent = dragElement.parentElement;
@@ -185,7 +209,7 @@ window.bobcrm = {
               parent = parent.parentElement;
             }
           }
-          
+
           if (dragData) {
             e.dataTransfer.setData('text/plain', dragData);
             e.dataTransfer.effectAllowed = 'move';
@@ -231,7 +255,10 @@ window.bobcrm = {
       const container = document.querySelector(containerSelector);
       if (!container) return -1;
 
-      const widgets = Array.from(container.querySelectorAll('.layout-widget'));
+      // 支持容器内的子控件（.container-child-widget）和主画布的控件（.layout-widget）
+      const isFrameDropZone = container.classList.contains('frame-drop-zone');
+      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgets = Array.from(container.querySelectorAll(widgetSelector));
       if (widgets.length === 0) return 0;
 
       // Group widgets by row with vertical tolerance
@@ -278,6 +305,30 @@ window.bobcrm = {
       return widgets.length; // default append
     } catch (e) { return -1; }
   }
+  , getInsertIndexStrict: function (containerSelector, x, y) {
+    // Strict: decide before/after relative to the item under pointer
+    try {
+      const container = document.querySelector(containerSelector);
+      if (!container) return -1;
+      const isFrameDropZone = container.classList.contains('frame-drop-zone');
+      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgets = Array.from(container.querySelectorAll(widgetSelector));
+      if (widgets.length === 0) return 0;
+
+      const targetEl = document.elementFromPoint(x, y);
+      const candidate = targetEl ? targetEl.closest(widgetSelector) : null;
+      if (candidate && container.contains(candidate)) {
+        const idx = widgets.indexOf(candidate);
+        if (idx < 0) return widgets.length;
+        const r = candidate.getBoundingClientRect();
+        return x > r.left + r.width / 2 ? idx + 1 : idx;
+      }
+      // Fallbacks: above first -> 0; otherwise append
+      const firstRect = widgets[0].getBoundingClientRect();
+      if (y < firstRect.top) return 0;
+      return widgets.length;
+    } catch (e) { return -1; }
+  }
   , getDropPosition: function (containerSelector, clientX, clientY, grid) {
     try {
       const container = document.querySelector(containerSelector);
@@ -295,17 +346,28 @@ window.bobcrm = {
     try {
       const container = document.querySelector(containerSelector);
       if (!container) return;
-      const widgets = Array.from(container.querySelectorAll('.layout-widget'));
-      if (!this._marker) {
-        const m = document.createElement('div');
-        m.className = 'drop-marker';
-        m.style.position = 'absolute';
-        m.style.width = '0px';
-        m.style.borderLeft = '3px solid var(--primary)';
-        m.style.pointerEvents = 'none';
-        m.style.zIndex = '10';
-        this._marker = m;
+
+      // 支持容器内的子控件（.container-child-widget）和主画布的控件（.layout-widget）
+      const isFrameDropZone = container.classList.contains('frame-drop-zone');
+      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgets = Array.from(container.querySelectorAll(widgetSelector));
+
+      // 为每个container使用独立的marker，通过data属性关联
+      const containerId = containerSelector;
+      let marker = container.querySelector('.drop-marker[data-container="' + containerId.replace(/[^\w-]/g, '_') + '"]');
+
+      if (!marker) {
+        marker = document.createElement('div');
+        marker.className = 'drop-marker';
+        marker.setAttribute('data-container', containerId.replace(/[^\w-]/g, '_'));
+        marker.style.position = 'absolute';
+        marker.style.width = '0px';
+        marker.style.borderLeft = '3px solid var(--primary)';
+        marker.style.pointerEvents = 'none';
+        marker.style.zIndex = '999';
+        container.appendChild(marker);
       }
+
       if (getComputedStyle(container).position === 'static') {
         container.style.position = 'relative';
       }
@@ -313,10 +375,10 @@ window.bobcrm = {
       // Compute row and target index similar to getInsertIndex
       if (widgets.length === 0) {
         // Place at top-left with minimal height
-        if (!this._marker.parentElement) container.appendChild(this._marker);
-        this._marker.style.left = '0px';
-        this._marker.style.top = '0px';
-        this._marker.style.height = '24px';
+        marker.style.left = '0px';
+        marker.style.top = '0px';
+        marker.style.height = '24px';
+        marker.style.display = 'block';
         return;
       }
 
@@ -364,16 +426,17 @@ window.bobcrm = {
         leftPx = (beforeRect.left - containerRect.left - 1) + 'px';
       }
 
-      if (!this._marker.parentElement) container.appendChild(this._marker);
-      this._marker.style.left = leftPx;
-      this._marker.style.top = topPx;
-      this._marker.style.height = heightPx;
+      marker.style.left = leftPx;
+      marker.style.top = topPx;
+      marker.style.height = heightPx;
+      marker.style.display = 'block';
     } catch (e) { }
   }
   , clearDropMarker: function () {
     try {
-      if (this._marker && this._marker.parentElement) this._marker.parentElement.removeChild(this._marker);
-      this._marker = null;
+      // 隐藏所有drop markers
+      const markers = document.querySelectorAll('.drop-marker');
+      markers.forEach(m => m.style.display = 'none');
     } catch (e) { }
   }
   , initTheme: function () {
@@ -715,24 +778,43 @@ window.bobcrm = {
       // TODO: Remove alignment guides
     }
   }
+  /**
+   * @deprecated 已弃用：请使用 dragManager.startResize() 替代
+   * 该方法保留用于向后兼容，将在下一版本移除
+   */
   , startWidgetResize: function (dotNetRef, widgetId, startX, initialWidth, widthUnit) {
     // 开始调整控件宽度
+    console.warn('[Deprecated] startWidgetResize is deprecated, use dragManager.startResize() instead');
     const resizeState = {
       dotNetRef,
       widgetId,
       startX,
       initialWidth,
       widthUnit,
-      containerWidth: null
+      containerWidth: null,
+      lastWidth: initialWidth
     };
 
+    // 动态查找控件所在的容器（可能是主画布或frame容器）
+    const widgetEl = document.querySelector(`[data-widget-id="${widgetId}"]`);
+    let container = null;
+    if (widgetEl) {
+      // 查找最近的容器：frame-drop-zone 或 layout-widgets-container
+      container = widgetEl.closest('.frame-drop-zone, .layout-widgets-container');
+    }
+
+    // 如果找不到，回退到主画布
+    if (!container) {
+      container = document.querySelector('.layout-widgets-container');
+    }
+
     // 获取容器宽度（用于计算百分比）
-    const container = document.querySelector('.layout-widgets-container');
     if (container && widthUnit === '%') {
       resizeState.containerWidth = container.getBoundingClientRect().width;
     }
 
     const onMouseMove = (e) => {
+      // 只响应横向移动，完全忽略纵向位置
       const deltaX = e.clientX - resizeState.startX;
 
       let newWidth;
@@ -745,17 +827,14 @@ window.bobcrm = {
         newWidth = Math.max(100, Math.round(resizeState.initialWidth + deltaX));
       }
 
-      // 实时更新控件宽度
-      const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
-      if (widgetElement) {
-        const flexBasis = resizeState.widthUnit === '%'
-          ? `calc(${newWidth}% - 6px)`
-          : `${newWidth}px`;
-        widgetElement.style.flexBasis = flexBasis;
-        widgetElement.style.maxWidth = flexBasis;
+      // 只有宽度真正变化时才更新
+      if (newWidth === resizeState.lastWidth) {
+        return;
       }
 
-      // 通知C#更新数据
+      resizeState.lastWidth = newWidth;
+
+      // 立即调用C#更新状态（这样才能真正改变属性）
       if (resizeState.dotNetRef && resizeState.dotNetRef.invokeMethodAsync) {
         resizeState.dotNetRef.invokeMethodAsync('OnWidgetResized', widgetId, newWidth, resizeState.widthUnit);
       }
@@ -766,6 +845,11 @@ window.bobcrm = {
       document.removeEventListener('mouseup', onMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+
+      // 确保最终宽度被保存到C#
+      if (resizeState.dotNetRef && resizeState.dotNetRef.invokeMethodAsync) {
+        resizeState.dotNetRef.invokeMethodAsync('OnWidgetResized', widgetId, resizeState.lastWidth, resizeState.widthUnit);
+      }
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -804,17 +888,37 @@ window.addEventListener('storage', (e) => {
     // Ensure browsers always show allowed drop over canvas
     document.addEventListener('dragover', function(e){
       try {
-        const target = e.target && e.target.closest ? e.target.closest('.abs-canvas, .layout-widgets-container') : null;
+        // 优先检查frame-drop-zone（容器内），然后才检查主画布
+        let target = e.target && e.target.closest ? e.target.closest('.frame-drop-zone') : null;
+        let sel = null;
+
         if (target) {
+          // 在容器内拖拽
           e.preventDefault();
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-          const sel = target.classList.contains('abs-canvas') ? '.abs-canvas' : '.layout-widgets-container';
+          const containerId = target.getAttribute('data-container-id');
+          sel = containerId ? `.frame-drop-zone[data-container-id="${containerId}"]` : '.frame-drop-zone';
+        } else {
+          // 不在容器内，检查主画布或abs-canvas
+          target = e.target && e.target.closest ? e.target.closest('.abs-canvas, .layout-widgets-container') : null;
+          if (target) {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+            sel = target.classList.contains('abs-canvas') ? '.abs-canvas' : '.layout-widgets-container';
+          }
+        }
+
+        if (sel) {
           try { window.bobcrm && window.bobcrm.updateDropMarker && window.bobcrm.updateDropMarker(sel, e.clientX, e.clientY); } catch(_){ }
         }
       } catch(_) {}
     }, { capture: true, passive: false });
     document.addEventListener('dragend', function(){
-      try { window.bobcrm && window.bobcrm.clearDropMarker && window.bobcrm.clearDropMarker(); } catch(_) {}
+      try {
+        // 移除dragging class
+        document.body.classList.remove('is-dragging');
+        window.bobcrm && window.bobcrm.clearDropMarker && window.bobcrm.clearDropMarker();
+      } catch(_) {}
     }, true);
   } catch(e) { }
 })();

@@ -1,39 +1,21 @@
 @using Microsoft.AspNetCore.Components
 @using System.Net.Http.Json
+@using BobCrm.App.Services
+@inject AuthService Auth
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@implements IDisposable
 
 @* Moved theme.css to App.razor <head> for stable load order *@
 
 <div class="app-shell">
     <div class="app-sider">
-        <div class="logo"></div>
+        <div class="logo-brand">
+            <h1 class="logo-text">OneCRM</h1>
+        </div>
         <CustomerSider />
     </div>
     <div class="app-main">
-        <div class="app-header">
-            <div class="brand">BobCRM</div>
-            <div class="toolbar">
-                <select onchange="bobcrm.setTheme(this.value)" id="theme-selector" class="w-220" style="height:28px">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                </select>
-                <div class="color-picker-group" style="display:flex; gap:4px; align-items:center; padding:4px 8px; background:rgba(0,0,0,.05); border-radius:4px">
-                    <button type="button" onclick="bobcrm.setPrimary('#3f7cff')" class="color-btn" data-color="#3f7cff" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#3f7cff; cursor:pointer" title="Blue"></button>
-                    <button type="button" onclick="bobcrm.setPrimary('#1890ff')" class="color-btn" data-color="#1890ff" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#1890ff; cursor:pointer" title="Sky Blue"></button>
-                    <button type="button" onclick="bobcrm.setPrimary('#52c41a')" class="color-btn" data-color="#52c41a" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#52c41a; cursor:pointer" title="Green"></button>
-                    <button type="button" onclick="bobcrm.setPrimary('#fa8c16')" class="color-btn" data-color="#fa8c16" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#fa8c16; cursor:pointer" title="Orange"></button>
-                    <button type="button" onclick="bobcrm.setPrimary('#f5222d')" class="color-btn" data-color="#f5222d" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#f5222d; cursor:pointer" title="Red"></button>
-                    <button type="button" onclick="bobcrm.setPrimary('#722ed1')" class="color-btn" data-color="#722ed1" style="width:24px; height:24px; border-radius:50%; border:2px solid transparent; background:#722ed1; cursor:pointer" title="Purple"></button>
-                </div>
-                <select onchange="window.changeLang && window.changeLang(this.value)" class="w-220" style="height:28px">
-                    <option value="zh">中文</option>
-                    <option value="ja" selected>日本語</option>
-                    <option value="en">English</option>
-                </select>
-                <button type="button" class="ant-btn ant-btn-default" onclick="logout()">ログアウト</button>
-            </div>
-        </div>
+        <AppHeader />
         <div class="app-content">
             <div class="app-card">
                 @Body
@@ -44,21 +26,28 @@
 
 @code {
     [Parameter] public RenderFragment? Body { get; set; }
-    private bool _navHooked;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (firstRender && !_navHooked)
+        // 全局订阅认证失败事件：当 token 过期且刷新失败时，统一跳转到登录页
+        Auth.OnUnauthorized += HandleUnauthorized;
+    }
+
+    private void HandleUnauthorized()
+    {
+        try
         {
-            _navHooked = true;
-            try
-            {
-                Nav.LocationChanged += async (_, __) =>
-                {
-                    try { await JS.InvokeVoidAsync("bobcrm.initTheme"); } catch { }
-                };
-            }
-            catch { }
+            // 强制导航到登录页（forceLoad 确保完全刷新）
+            Nav.NavigateTo("/login", forceLoad: true);
         }
+        catch
+        {
+            // 忽略导航错误
+        }
+    }
+
+    public void Dispose()
+    {
+        Auth.OnUnauthorized -= HandleUnauthorized;
     }
 }

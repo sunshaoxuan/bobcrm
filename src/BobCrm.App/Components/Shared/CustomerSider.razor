@@ -71,6 +71,18 @@
     {
       await JS.InvokeVoidAsync("console.log", "[CustomerSider] OnAfterRenderAsync started");
       
+      // 认证预检查：确保已登录，否则导航到登录页
+      var isAuthenticated = await Auth.EnsureAuthenticatedAsync();
+      if (!isAuthenticated)
+      {
+        await JS.InvokeVoidAsync("console.warn", "[CustomerSider] Not authenticated, redirecting to login");
+        Nav.NavigateTo("/login", forceLoad: true);
+        return;
+      }
+      
+      // Register for cross-component customer events
+      await JS.InvokeVoidAsync("bobcrm.registerCustomerEvents", DotNetObjectReference.Create(this));
+
       // Load i18n first
       var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
       var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
@@ -94,7 +106,7 @@
       }
       else 
       { 
-        error = $"Load customers failed: {(int)resp.StatusCode}"; 
+        error = I18n.T("ERR_LOGIN_EXPIRED");
         await JS.InvokeVoidAsync("console.error", $"[CustomerSider] Error: {error}");
       }
       
@@ -141,4 +153,21 @@
   }
 
   public class Item { public int id { get; set; } public string? code { get; set; } public string? name { get; set; } }
+
+  [JSInvokable]
+  public Task OnCustomerUpdated(int id, string code, string name)
+  {
+    try
+    {
+      var item = _data.FirstOrDefault(x => x.id == id);
+      if (item != null)
+      {
+        item.code = code;
+        item.name = name;
+        StateHasChanged();
+      }
+    }
+    catch { }
+    return Task.CompletedTask;
+  }
 }
