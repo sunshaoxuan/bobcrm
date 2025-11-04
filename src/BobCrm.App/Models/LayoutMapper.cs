@@ -95,8 +95,16 @@ public static class LayoutMapper
             "label" => new LabelWidget(),
             "calendar" => new CalendarWidget(),
             "listbox" => new ListboxWidget(),
+            "number" => new NumberWidget(),
+            "select" => new SelectWidget(),
+            "textarea" => new TextareaWidget(),
+            "button" => new ButtonWidget(),
             "frame" => new FrameWidget(),
             "section" or "block" => new SectionWidget(),
+            "panel" => new PanelWidget(),
+            "grid" => new GridWidget(),
+            "tabbox" => new TabContainerWidget(),
+            "tab" => new TabWidget(),
             _ => new TextboxWidget()
         };
 
@@ -118,11 +126,35 @@ public static class LayoutMapper
             case ListboxWidget listbox:
                 MapListboxProperties(element, listbox);
                 break;
+            case NumberWidget number:
+                MapNumberProperties(element, number);
+                break;
+            case SelectWidget select:
+                MapSelectProperties(element, select);
+                break;
+            case TextareaWidget textarea:
+                MapTextareaProperties(element, textarea);
+                break;
+            case ButtonWidget button:
+                MapButtonProperties(element, button);
+                break;
             case SectionWidget section:
                 MapSectionProperties(element, section);
                 break;
             case FrameWidget frame:
                 MapFrameProperties(element, frame);
+                break;
+            case PanelWidget panel:
+                MapPanelProperties(element, panel);
+                break;
+            case GridWidget grid:
+                MapGridProperties(element, grid);
+                break;
+            case TabContainerWidget tabContainer:
+                MapTabContainerProperties(element, tabContainer);
+                break;
+            case TabWidget tab:
+                MapTabProperties(element, tab);
                 break;
         }
 
@@ -268,8 +300,11 @@ public static class LayoutMapper
             "required", "readonly", "maxLength", "text", "bold", "format", 
             "showTime", "minDate", "maxDate", "multiSelect", "items", "allowSearch",
             "borderStyle", "borderColor", "borderWidth", "backgroundColor", "padding",
-            "title", "showTitle", "collapsible", "collapsed", "containerLayout",
-            "fontSize", "fontColor", "fontFamily", "fontWeight", "textAlign"
+            "gap", "title", "showTitle", "showHeader", "collapsible", "collapsed", "containerLayout",
+            "fontSize", "fontColor", "fontFamily", "fontWeight", "textAlign",
+            "minValue", "maxValue", "step", "allowDecimal", "showThousandsSeparator",
+            "rows", "autoSize", "variant", "size", "action", "actionPayload", "icon", "block",
+            "columns", "bordered", "tabId", "isDefault", "activeTabId", "animated", "centered"
         };
 
         // 自动加载所有未被基础属性覆盖的字段到 ExtendedProperties
@@ -359,6 +394,101 @@ public static class LayoutMapper
     }
 
     /// <summary>
+    /// 映射Number控件特定属性
+    /// </summary>
+    private static void MapNumberProperties(JsonElement element, NumberWidget number)
+    {
+        if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.Number)
+            number.DefaultValue = defaultValue.GetDouble();
+
+        if (element.TryGetProperty("MinValue", out var minValue) && minValue.ValueKind == JsonValueKind.Number)
+            number.MinValue = minValue.GetDouble();
+
+        if (element.TryGetProperty("MaxValue", out var maxValue) && maxValue.ValueKind == JsonValueKind.Number)
+            number.MaxValue = maxValue.GetDouble();
+
+        if (element.TryGetProperty("Step", out var step) && step.ValueKind == JsonValueKind.Number)
+            number.Step = step.GetDouble();
+
+        if (element.TryGetProperty("AllowDecimal", out var allowDecimal))
+            number.AllowDecimal = allowDecimal.GetBoolean();
+
+        if (element.TryGetProperty("ShowThousandsSeparator", out var thousands))
+            number.ShowThousandsSeparator = thousands.GetBoolean();
+    }
+
+    /// <summary>
+    /// 映射Select控件特定属性
+    /// </summary>
+    private static void MapSelectProperties(JsonElement element, SelectWidget select)
+    {
+        if (element.TryGetProperty("Items", out var items) && items.ValueKind == JsonValueKind.Array)
+        {
+            select.Items = items.EnumerateArray()
+                .Select(item => new ListItem
+                {
+                    Value = item.TryGetProperty("Value", out var val) ? (val.GetString() ?? "") : "",
+                    Label = item.TryGetProperty("Label", out var lbl) ? (lbl.GetString() ?? "") : ""
+                })
+                .ToList();
+        }
+
+        if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
+            select.DefaultValue = defaultValue.GetString();
+
+        if (element.TryGetProperty("Placeholder", out var placeholder))
+            select.Placeholder = placeholder.GetString();
+
+        if (element.TryGetProperty("AllowSearch", out var allowSearch))
+            select.AllowSearch = allowSearch.GetBoolean();
+    }
+
+    /// <summary>
+    /// 映射Textarea控件特定属性
+    /// </summary>
+    private static void MapTextareaProperties(JsonElement element, TextareaWidget textarea)
+    {
+        if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
+            textarea.DefaultValue = defaultValue.GetString();
+
+        if (element.TryGetProperty("Placeholder", out var placeholder))
+            textarea.Placeholder = placeholder.GetString();
+
+        if (element.TryGetProperty("MaxLength", out var maxLength) && maxLength.ValueKind == JsonValueKind.Number)
+            textarea.MaxLength = maxLength.GetInt32();
+
+        if (element.TryGetProperty("Rows", out var rows) && rows.ValueKind == JsonValueKind.Number)
+            textarea.Rows = rows.GetInt32();
+
+        if (element.TryGetProperty("AutoSize", out var autoSize))
+            textarea.AutoSize = autoSize.GetBoolean();
+    }
+
+    /// <summary>
+    /// 映射Button控件特定属性
+    /// </summary>
+    private static void MapButtonProperties(JsonElement element, ButtonWidget button)
+    {
+        if (element.TryGetProperty("Variant", out var variant))
+            button.Variant = variant.GetString() ?? "primary";
+
+        if (element.TryGetProperty("Size", out var size))
+            button.Size = size.GetString() ?? "default";
+
+        if (element.TryGetProperty("Action", out var action))
+            button.Action = action.GetString();
+
+        if (element.TryGetProperty("ActionPayload", out var payload))
+            button.ActionPayload = payload.GetString();
+
+        if (element.TryGetProperty("Icon", out var icon))
+            button.Icon = icon.GetString();
+
+        if (element.TryGetProperty("Block", out var block))
+            button.Block = block.GetBoolean();
+    }
+
+    /// <summary>
     /// 映射Frame特定属性（包括子控件）
     /// </summary>
     private static void MapFrameProperties(JsonElement element, FrameWidget frame)
@@ -371,6 +501,12 @@ public static class LayoutMapper
 
         if (element.TryGetProperty("BorderWidth", out var borderWidth))
             frame.BorderWidth = borderWidth.GetInt32();
+
+        if (element.TryGetProperty("BackgroundColor", out var backgroundColor))
+            frame.BackgroundColor = backgroundColor.GetString() ?? "#fafafa";
+
+        if (element.TryGetProperty("Padding", out var padding))
+            frame.Padding = padding.GetInt32();
 
         // 递归映射子控件（兼容大小写）
         if (element.TryGetProperty("Children", out var children) && children.ValueKind == JsonValueKind.Array)
@@ -455,6 +591,141 @@ public static class LayoutMapper
             section.Children = childrenLower.EnumerateArray()
                 .Select(child => FromJsonElement(child))
                 .ToList();
+        }
+    }
+
+    /// <summary>
+    /// 映射Panel特定属性
+    /// </summary>
+    private static void MapPanelProperties(JsonElement element, PanelWidget panel)
+    {
+        if (element.TryGetProperty("Title", out var title))
+            panel.Title = title.GetString();
+
+        if (element.TryGetProperty("ShowHeader", out var showHeader))
+            panel.ShowHeader = showHeader.GetBoolean();
+
+        if (element.TryGetProperty("ContainerLayout", out var containerLayout) || element.TryGetProperty("containerLayout", out containerLayout))
+        {
+            if (containerLayout.TryGetProperty("FlexDirection", out var flexDirection))
+                panel.ContainerLayout.FlexDirection = flexDirection.GetString() ?? panel.ContainerLayout.FlexDirection;
+
+            if (containerLayout.TryGetProperty("FlexWrap", out var flexWrap))
+                panel.ContainerLayout.FlexWrap = flexWrap.GetBoolean();
+
+            if (containerLayout.TryGetProperty("JustifyContent", out var justifyContent))
+                panel.ContainerLayout.JustifyContent = justifyContent.GetString() ?? panel.ContainerLayout.JustifyContent;
+
+            if (containerLayout.TryGetProperty("AlignItems", out var alignItems))
+                panel.ContainerLayout.AlignItems = alignItems.GetString() ?? panel.ContainerLayout.AlignItems;
+
+            if (containerLayout.TryGetProperty("Gap", out var gap))
+                panel.ContainerLayout.Gap = gap.GetInt32();
+
+            if (containerLayout.TryGetProperty("Padding", out var padding))
+                panel.ContainerLayout.Padding = padding.GetInt32();
+
+            if (containerLayout.TryGetProperty("BackgroundColor", out var bgColor))
+                panel.ContainerLayout.BackgroundColor = bgColor.GetString() ?? panel.ContainerLayout.BackgroundColor;
+
+            if (containerLayout.TryGetProperty("BorderRadius", out var borderRadius))
+                panel.ContainerLayout.BorderRadius = borderRadius.GetInt32();
+
+            if (containerLayout.TryGetProperty("BorderStyle", out var borderStyle))
+                panel.ContainerLayout.BorderStyle = borderStyle.GetString() ?? panel.ContainerLayout.BorderStyle;
+
+            if (containerLayout.TryGetProperty("BorderColor", out var borderColor))
+                panel.ContainerLayout.BorderColor = borderColor.GetString() ?? panel.ContainerLayout.BorderColor;
+
+            if (containerLayout.TryGetProperty("BorderWidth", out var borderWidth))
+                panel.ContainerLayout.BorderWidth = borderWidth.GetInt32();
+        }
+
+        if (element.TryGetProperty("Children", out var children) && children.ValueKind == JsonValueKind.Array)
+        {
+            panel.Children = children.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+        else if (element.TryGetProperty("children", out var lower) && lower.ValueKind == JsonValueKind.Array)
+        {
+            panel.Children = lower.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+    }
+
+    /// <summary>
+    /// 映射Grid特定属性
+    /// </summary>
+    private static void MapGridProperties(JsonElement element, GridWidget grid)
+    {
+        if (element.TryGetProperty("Columns", out var columns))
+            grid.Columns = columns.GetInt32();
+
+        if (element.TryGetProperty("Gap", out var gap))
+            grid.Gap = gap.GetInt32();
+
+        if (element.TryGetProperty("Padding", out var padding))
+            grid.Padding = padding.GetInt32();
+
+        if (element.TryGetProperty("BackgroundColor", out var backgroundColor))
+            grid.BackgroundColor = backgroundColor.GetString() ?? grid.BackgroundColor;
+
+        if (element.TryGetProperty("Bordered", out var bordered))
+            grid.Bordered = bordered.GetBoolean();
+
+        if (element.TryGetProperty("Children", out var children) && children.ValueKind == JsonValueKind.Array)
+        {
+            grid.Children = children.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+        else if (element.TryGetProperty("children", out var lower) && lower.ValueKind == JsonValueKind.Array)
+        {
+            grid.Children = lower.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+    }
+
+    /// <summary>
+    /// 映射Tab容器特定属性
+    /// </summary>
+    private static void MapTabContainerProperties(JsonElement element, TabContainerWidget tabContainer)
+    {
+        if (element.TryGetProperty("ActiveTabId", out var activeTabId) || element.TryGetProperty("activeTabId", out activeTabId))
+            tabContainer.ActiveTabId = activeTabId.GetString();
+
+        if (element.TryGetProperty("Animated", out var animated) || element.TryGetProperty("animated", out animated))
+            tabContainer.Animated = animated.GetBoolean();
+
+        if (element.TryGetProperty("Centered", out var centered) || element.TryGetProperty("centered", out centered))
+            tabContainer.Centered = centered.GetBoolean();
+
+        if (element.TryGetProperty("Children", out var children) && children.ValueKind == JsonValueKind.Array)
+        {
+            tabContainer.Children = children.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+        else if (element.TryGetProperty("children", out var lower) && lower.ValueKind == JsonValueKind.Array)
+        {
+            tabContainer.Children = lower.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+    }
+
+    /// <summary>
+    /// 映射单个Tab特定属性
+    /// </summary>
+    private static void MapTabProperties(JsonElement element, TabWidget tab)
+    {
+        if (element.TryGetProperty("TabId", out var tabId) || element.TryGetProperty("tabId", out tabId))
+            tab.TabId = tabId.GetString() ?? tab.TabId;
+
+        if (element.TryGetProperty("IsDefault", out var isDefault) || element.TryGetProperty("isDefault", out isDefault))
+            tab.IsDefault = isDefault.GetBoolean();
+
+        if (element.TryGetProperty("Icon", out var icon))
+            tab.Icon = icon.GetString();
+
+        if (element.TryGetProperty("Children", out var children) && children.ValueKind == JsonValueKind.Array)
+        {
+            tab.Children = children.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
+        }
+        else if (element.TryGetProperty("children", out var lower) && lower.ValueKind == JsonValueKind.Array)
+        {
+            tab.Children = lower.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
         }
     }
 
