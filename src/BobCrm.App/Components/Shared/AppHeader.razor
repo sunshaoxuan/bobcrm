@@ -1,0 +1,50 @@
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.I18nService I18n
+@inject IJSRuntime JS
+
+<div class="app-header">
+    <div class="header-nav">
+        <div class="nav-menu">
+            <a href="/settings" class="nav-item">@I18n.T("MENU_SETTINGS")</a>
+            <a href="/templates" class="nav-item">@I18n.T("MENU_TEMPLATES")</a>
+        </div>
+    </div>
+    <div class="header-toolbar">
+        <div class="toolbar-group">
+            <span class="user-info">@I18n.T("LBL_USER")</span>
+            <button type="button" class="btn-logout" onclick="logout()">@I18n.T("BTN_LOGOUT")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
+                await I18n.LoadAsync(langToLoad);
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
+        }
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+}

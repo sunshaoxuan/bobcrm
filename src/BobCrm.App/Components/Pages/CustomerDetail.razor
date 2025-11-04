@@ -2,6 +2,9 @@
 @rendermode RenderMode.InteractiveServer
 @implements IDisposable
 
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -73,19 +76,24 @@ else if (customer != null)
                 </div>
 
                 <!-- Center Canvas -->
-                <div class="designer-canvas" style="flex:1; overflow:auto; padding:24px; background:#f5f5f5;"
-                     @ondrop="OnDrop" @ondrop:preventDefault @ondragover="OnDragOver" @ondragover:preventDefault>
-                    <div style="padding:24px; min-height:100%">
-                        <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; min-height:calc(100vh - 160px); background:#fff; border-radius:8px; padding:16px; position:relative">
+                <div class="designer-canvas" style="flex:1; overflow:auto; background-image:radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size:5px 5px; background-color:#fafafa;"
+                     @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault>
+                    <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; padding:24px; position:relative">
                             @foreach (var widget in layoutWidgets)
                             {
+                                @* 如果控件设置了新行，插入一个宽度100%的占位符来强制换行 *@
+                                @if (widget.NewLine)
+                                {
+                                    <div style="width:100%; height:0; flex-basis:100%"></div>
+                                }
+
                                 <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
-                                     draggable="true"
+                                     draggable="@(resizingIds.Contains(widget.Id) ? "false" : "true")"
                                      data-drag-type="widget"
                                      data-drag-data="@widget.Id"
                                      data-widget-id="@widget.Id"
                                      @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
-                                     @ondragstart:preventDefault="false"
+                                     @ondragstart:preventDefault="@(resizingIds.Contains(widget.Id))"
                                      @ondragend="OnDragEnd"
                                      @onclick="@(() => SelectWidget(widget))"
                                      style="@GetFlowWidgetStyle(widget)">
@@ -94,10 +102,12 @@ else if (customer != null)
                                     @if (selectedWidget == widget)
                                     {
                                         <div class="resize-handle"
+                                             draggable="false"
                                              @onmousedown="@((e) => OnResizeStart(e, widget))"
                                              @onmousedown:stopPropagation
-                                             style="position:absolute; right:0; top:0; bottom:0; width:8px; cursor:ew-resize; background:transparent; z-index:10;">
-                                            <div style="position:absolute; right:2px; top:50%; transform:translateY(-50%); width:4px; height:24px; background:#1890ff; border-radius:2px"></div>
+                                             @onmousedown:preventDefault
+                                             @ondragstart:preventDefault="true"
+                                             style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:4px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); opacity:0.8;">
                                         </div>
                                     }
 
@@ -144,10 +154,107 @@ else if (customer != null)
                                         }
                                         else if (widget.Type == "frame")
                                         {
-                                            <div style="border:2px dashed #d9d9d9; border-radius:4px; padding:12px; min-height:80px; background:#fafafa; width:100%">
-                                                <div style="color:#999; font-size:12px; display:flex; align-items:center">
+                                            var isFrameDragOver = dragOverContainer == widget;
+                                            var frameBorder = isFrameDragOver ? "border:2px solid #1890ff;" : "border:2px dashed #d9d9d9;";
+                                            var frameBackground = isFrameDragOver ? "background:#e6f7ff;" : "background:#fafafa;";
+
+                                            <div style="@frameBorder border-radius:4px; padding:8px; @frameBackground width:100%; transition:all 0.2s ease; @(widget.Children == null || !widget.Children.Any() ? "min-height:80px;" : "")">
+                                                <div style="color:#999; font-size:12px; display:flex; align-items:center; margin-bottom:8px">
                                                     <Icon Type="@IconType.Outline.BorderOuter" Style="margin-right:4px" />
-                                                    <span>@widget.Label</span>
+                                                    <span>@GetWidgetDisplayLabel(widget)</span>
+                                                </div>
+                                                <!-- 容器内部可拖放区域 -->
+                                                <div class="frame-drop-zone"
+                                                     data-container-id="@widget.Id"
+                                                     @ondrop="@((e) => OnContainerDrop(e, widget))"
+                                                     @ondrop:preventDefault
+                                                     @ondrop:stopPropagation
+                                                     @ondragover="@((e) => OnContainerDragOver(e, widget))"
+                                                     @ondragover:preventDefault
+                                                     @ondragleave="@((e) => OnContainerDragLeave(e, widget))"
+                                                     style="background:#fff; border-radius:4px; padding:8px; display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; gap:8px; pointer-events:auto; @(widget.Children == null || !widget.Children.Any() ? "min-height:48px;" : "")">
+                                                    @if (widget.Children != null && widget.Children.Any())
+                                                    {
+                                                        @foreach (var child in widget.Children)
+                                                        {
+                                                            @* 如果控件设置了新行，插入一个宽度100%的占位符来强制换行 *@
+                                                            @if (child.NewLine)
+                                                            {
+                                                                <div style="width:100%; height:0; flex-basis:100%"></div>
+                                                            }
+
+                                                            var isChildSelected = selectedWidget == child;
+
+                                                            <div class="container-child-widget"
+                                                                 data-widget-id="@child.Id"
+                                                                 draggable="@(resizingIds.Contains(child.Id) ? "false" : "true")"
+                                                                 @ondragstart="@((e) => OnChildDragStart(e, child, widget))"
+                                                                 @ondragstart:preventDefault="@(resizingIds.Contains(child.Id))"
+                                                                 @ondragend="OnDragEnd"
+                                                                 @onclick="@(() => SelectWidget(child))"
+                                                                 @onclick:stopPropagation
+                                                                 style="@GetFlowWidgetStyle(child)">
+
+                                                                @* Resize Handle *@
+                                                                @if (isChildSelected)
+                                                                {
+                                                                    <div class="resize-handle"
+                                                                         draggable="false"
+                                                                         @onmousedown="@((e) => OnResizeStart(e, child))"
+                                                                         @onmousedown:stopPropagation
+                                                                         @onmousedown:preventDefault
+                                                                         @ondragstart:preventDefault="true"
+                                                                         style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:4px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); opacity:0.8;">
+                                                                    </div>
+                                                                }
+
+                                                                @* Widget Content *@
+                                                                <div class="widget-content" style="width:100%; pointer-events:none">
+                                                                    @if (child.Type == "label")
+                                                                    {
+                                                                        <div style="padding:8px; font-weight:500; @GetWidgetTextStyle(child)">@child.Label</div>
+                                                                    }
+                                                                    else if (child.Type == "textbox")
+                                                                    {
+                                                                        <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:@GetWidgetBackgroundColor(child); width:100%">
+                                                                            <div style="@GetWidgetTextStyle(child) margin-bottom:4px">@child.Label</div>
+                                                                            <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
+                                                                        </div>
+                                                                    }
+                                                                    else if (child.Type == "calendar")
+                                                                    {
+                                                                        <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa; width:100%">
+                                                                            <div style="font-size:12px; color:#666; margin-bottom:4px">@child.Label</div>
+                                                                            <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px">
+                                                                                <Icon Type="@IconType.Outline.Calendar" />
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                    else if (child.Type == "listbox")
+                                                                    {
+                                                                        <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa; width:100%">
+                                                                            <div style="font-size:12px; color:#666; margin-bottom:4px">@child.Label</div>
+                                                                            <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px">
+                                                                                <Icon Type="@IconType.Outline.UnorderedList" />
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <div style="padding:8px; background:#fafafa">
+                                                                            <div style="font-size:12px; color:#666">@child.Type</div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div style="width:100%; text-align:center; padding:20px; color:#ccc; font-size:12px; pointer-events:none">
+                                                            拖放控件到此处
+                                                        </div>
+                                                    }
                                                 </div>
                                             </div>
                                         }
@@ -166,7 +273,6 @@ else if (customer != null)
                                 </div>
                             }
                         </div>
-                    </div>
                 </div>
 
                 <!-- Right Properties Panel -->
@@ -190,9 +296,14 @@ else if (customer != null)
                                 <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_WIDTH")</label>
                                 <InputGroup Compact>
                                     <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="100" Style="width:70%" OnChange="@(value => UpdateWidget())" />
-                                    <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.WidthUnit" Style="width:30%" OnSelectedItemChanged="@(item => UpdateWidget())">
-                                        <SelectOption Value="@("%")" Label="@("%")" />
-                                        <SelectOption Value="@("px")" Label="@("px")" />
+                                    <Select TItemValue="string" TItem="string" 
+                                           Value="@selectedWidget.WidthUnit" 
+                                           Style="width:30%" 
+                                           OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
+                                        <SelectOptions>
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%" />
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                        </SelectOptions>
                                     </Select>
                                 </InputGroup>
                             </div>
@@ -202,10 +313,15 @@ else if (customer != null)
                                 <InputGroup Compact>
                                     <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Height" Min="20" Max="500" Style="width:70%"
                                                           Disabled="@(!selectedWidget.CanEditProperty("Height"))" OnChange="@(value => UpdateWidget())" />
-                                    <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.HeightUnit" Style="width:30%"
-                                           Disabled="@(!selectedWidget.CanEditProperty("Height"))" OnSelectedItemChanged="@(item => UpdateWidget())">
-                                        <SelectOption Value="@("px")" Label="@("px")" />
-                                        <SelectOption Value="@("auto")" Label="@("auto")" />
+                                    <Select TItemValue="string" TItem="string" 
+                                           Value="@selectedWidget.HeightUnit" 
+                                           Style="width:30%"
+                                           Disabled="@(!selectedWidget.CanEditProperty("Height"))" 
+                                           OnSelectedItemChanged="@(value => { selectedWidget.HeightUnit = value; UpdateWidget(); })">
+                                        <SelectOptions>
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("auto")" Label="auto" />
+                                        </SelectOptions>
                                     </Select>
                                 </InputGroup>
                             </div>
@@ -225,46 +341,47 @@ else if (customer != null)
 
                             <Divider Style="margin:12px 0" />
 
-                            <div style="margin-bottom:16px">
-                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DEFAULT_VALUE")</label>
-                                <Input @bind-Value="selectedWidget.DefaultValue"
-                                      Disabled="@(!selectedWidget.CanEditProperty("DefaultValue"))"
-                                      OnChange="@((string value) => UpdateWidget())" />
-                            </div>
+                            @if (selectedWidget is TextboxWidget)
+                            {
+                                <div style="margin-bottom:16px">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DEFAULT_VALUE")</label>
+                                    <Input @bind-Value="SelectedWidgetDefaultValue" />
+                                </div>
 
-                            <div style="margin-bottom:16px">
-                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_PLACEHOLDER")</label>
-                                <Input @bind-Value="selectedWidget.Placeholder"
-                                      Disabled="@(!selectedWidget.CanEditProperty("Placeholder"))"
-                                      OnChange="@((string value) => UpdateWidget())" />
-                            </div>
+                                <div style="margin-bottom:16px">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_PLACEHOLDER")</label>
+                                    <Input @bind-Value="SelectedWidgetPlaceholder" />
+                                </div>
+                            }
 
-                            <div style="margin-bottom:16px">
-                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_MAX_LENGTH")</label>
-                                <AntDesign.InputNumber TValue="int?" @bind-Value="selectedWidget.MaxLength" Min="1" Max="10000"
-                                                      Disabled="@(!selectedWidget.CanEditProperty("MaxLength"))"
-                                                      OnChange="@(value => UpdateWidget())" />
-                            </div>
+                            @if (selectedWidget is TextboxWidget)
+                            {
+                                <div style="margin-bottom:16px">
+                                    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_MAX_LENGTH")</label>
+                                    <AntDesign.InputNumber TValue="int?" @bind-Value="SelectedWidgetMaxLength" Min="1" Max="10000" />
+                                </div>
 
-                            <Divider Style="margin:12px 0" />
+                                <Divider Style="margin:12px 0" />
 
-                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
-                                <label style="font-size:12px; color:#666">@I18n.T("LBL_REQUIRED")</label>
-                                <Switch @bind-Value="selectedWidget.Required"
-                                       Disabled="@(!selectedWidget.CanEditProperty("Required"))"
-                                       OnChange="@(value => UpdateWidget())" />
-                            </div>
+                                <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                    <label style="font-size:12px; color:#666">@I18n.T("LBL_REQUIRED")</label>
+                                    <Switch @bind-Value="SelectedWidgetRequired" />
+                                </div>
 
-                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
-                                <label style="font-size:12px; color:#666">@I18n.T("LBL_READONLY")</label>
-                                <Switch @bind-Value="selectedWidget.Readonly"
-                                       Disabled="@(!selectedWidget.CanEditProperty("Readonly"))"
-                                       OnChange="@(value => UpdateWidget())" />
-                            </div>
+                                <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                    <label style="font-size:12px; color:#666">@I18n.T("LBL_READONLY")</label>
+                                    <Switch @bind-Value="SelectedWidgetReadonly" />
+                                </div>
+                            }
 
                             <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
                                 <label style="font-size:12px; color:#666">@I18n.T("LBL_VISIBLE")</label>
                                 <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                                <label style="font-size:12px; color:#666">@I18n.T("LBL_NEW_LINE")</label>
+                                <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
                             </div>
 
                             <Divider />
@@ -314,42 +431,249 @@ else if (customer != null)
                 <div style="color:var(--muted); font-size:14px; margin-top:4px">@I18n.T("COL_CODE"): @customer.code</div>
             </div>
 
-            <div style="display:flex; gap:8px">
-                <Button Type="@(mode == ViewMode.Browse ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Browse))">
-                    @I18n.T("MODE_BROWSE")
-                </Button>
-                <Button Type="@(mode == ViewMode.Edit ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Edit))">
+            @if (mode == ViewMode.Browse)
+            {
+                <Button Type="@ButtonType.Primary" OnClick="GoEdit">
                     @I18n.T("MODE_EDIT")
                 </Button>
-                <Button Type="@(mode == ViewMode.Design ? ButtonType.Primary : ButtonType.Default)" OnClick="@(() => SwitchMode(ViewMode.Design))">
-                    @I18n.T("MODE_DESIGN")
-                </Button>
-            </div>
+            }
+            else if (mode == ViewMode.Edit)
+            {
+                <div style="display:flex; gap:8px">
+                    <Button Type="@ButtonType.Primary" OnClick="@SaveChanges" Loading="@saving">
+                        @I18n.T("BTN_SAVE")
+                    </Button>
+                    <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">
+                        @I18n.T("BTN_CANCEL")
+                    </Button>
+                </div>
+            }
         </div>
 
-        @if (mode == ViewMode.Browse)
+        @if (mode == ViewMode.Edit)
         {
-            <!-- Browse Mode: WYSIWYG display using saved layout -->
-            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+            <!-- Edit basic info: AntD Grid -->
+            <AntDesign.Row Gutter="12">
+                <AntDesign.Col Span="6">
+                    <div style="font-size:12px; color:#666; margin-bottom:4px">@I18n.T("COL_CODE")</div>
+                    <Input TValue="string" @bind-Value="editCode" />
+                </AntDesign.Col>
+                <AntDesign.Col Span="12">
+                    <div style="font-size:12px; color:#666; margin-bottom:4px">@I18n.T("COL_NAME")</div>
+                    <Input TValue="string" @bind-Value="editName" />
+                </AntDesign.Col>
+            </AntDesign.Row>
+
+            <!-- Edit Mode: AntD Grid (no Form to avoid generic inference) -->
+            <AntDesign.Row Gutter="12">
                 @foreach (var widget in layoutWidgets.Where(w => w.Visible))
                 {
-                    <div style="@GetWidgetStyle(widget)">
+                    if (widget.NewLine)
+                    {
+                        <AntDesign.Col Span="24"></AntDesign.Col>
+                    }
+
+                    var fieldData = widget.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == widget.DataField) : null;
+                    var span = GetSpan(widget);
+
+                    if (widget.Type == "frame")
+                    {
+                        <AntDesign.Col Span="24">
+                            <AntDesign.Card Title="@GetWidgetDisplayLabel(widget)">
+                                <AntDesign.Row Gutter="8">
+                                    @if (widget.Children != null)
+                                    {
+                                        @foreach (var child in widget.Children.Where(c => c.Visible))
+                                        {
+                                            if (child.NewLine)
+                                            {
+                                                <AntDesign.Col Span="24"></AntDesign.Col>
+                                            }
+                                            var childSpan = GetSpan(child);
+                                            var childFieldData = child.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == child.DataField) : null;
+                                            <AntDesign.Col Span="@childSpan">
+                                                <div data-widget-id="@child.Id">
+                                                @if (child is LabelWidget)
+                                                {
+                                                    <div style="font-weight:600">@child.Label</div>
+                                                }
+                                                else if (child is TextboxWidget)
+                                                {
+                                                    <div style="font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</div>
+                                                    <Input TValue="string"
+                                                           Value="@GetEditValue(child.DataField ?? child.Id)"
+                                                           ValueChanged="@(v => SetEditValue(child.DataField ?? child.Id, v))" />
+                                                }
+                                                else if (child is CalendarWidget)
+                                                {
+                                                    <div style="font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</div>
+                                                    <DatePicker TValue="DateTime?" Style="width:100%" />
+                                                }
+                                                else if (child is ListboxWidget)
+                                                {
+                                                    <div style="font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</div>
+                                                    <Select TItem="string" TItemValue="string" Style="width:100%">
+                                                        <SelectOptions>
+                                                            <SelectOption TItem="string" TItemValue="string" Value="@("option1")" Label="Option 1" />
+                                                            <SelectOption TItem="string" TItemValue="string" Value="@("option2")" Label="Option 2" />
+                                                        </SelectOptions>
+                                                    </Select>
+                                                }
+                                                else
+                                                {
+                                                    <div style="font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</div>
+                                                    <Input TValue="string"
+                                                           Value="@GetEditValue(child.DataField ?? child.Id)"
+                                                           ValueChanged="@(v => SetEditValue(child.DataField ?? child.Id, v))" />
+                                                }
+                                                </div>
+                                            </AntDesign.Col>
+                                        }
+                                    }
+                                </AntDesign.Row>
+                            </AntDesign.Card>
+                        </AntDesign.Col>
+                    }
+                    else if (widget is LabelWidget)
+                    {
+                        <AntDesign.Col Span="@span">
+                            <div data-widget-id="@widget.Id" style="font-weight:600; @GetWidgetTextStyle(widget)">@widget.Label</div>
+                        </AntDesign.Col>
+                    }
+                    else if (widget is TextboxWidget)
+                    {
+                        <AntDesign.Col Span="@span">
+                            <div data-widget-id="@widget.Id">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <Input TValue="string"
+                                       Value="@GetEditValue(widget.DataField ?? widget.Id)"
+                                       ValueChanged="@(v => SetEditValue(widget.DataField ?? widget.Id, v))" />
+                            </div>
+                        </AntDesign.Col>
+                    }
+                    else if (widget is CalendarWidget)
+                    {
+                        <AntDesign.Col Span="@span">
+                            <div data-widget-id="@widget.Id">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <DatePicker TValue="DateTime?" Style="width:100%" />
+                            </div>
+                        </AntDesign.Col>
+                    }
+                    else if (widget is ListboxWidget)
+                    {
+                        <AntDesign.Col Span="@span">
+                            <div data-widget-id="@widget.Id">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <Select TItem="string" TItemValue="string" Style="width:100%">
+                                    <SelectOptions>
+                                        <SelectOption TItem="string" TItemValue="string" Value="@("option1")" Label="Option 1" />
+                                        <SelectOption TItem="string" TItemValue="string" Value="@("option2")" Label="Option 2" />
+                                    </SelectOptions>
+                                </Select>
+                            </div>
+                        </AntDesign.Col>
+                    }
+                    else
+                    {
+                        <AntDesign.Col Span="@span">
+                            <div data-widget-id="@widget.Id">
+                                <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+                                <Input TValue="string"
+                                       Value="@GetEditValue(widget.DataField ?? widget.Id)"
+                                       ValueChanged="@(v => SetEditValue(widget.DataField ?? widget.Id, v))" />
+                            </div>
+                        </AntDesign.Col>
+                    }
+                }
+            </AntDesign.Row>
+        }
+        else if (mode == ViewMode.Browse)
+        {
+            <!-- Browse Mode: WYSIWYG display using saved layout -->
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; align-items:flex-start">
+                @foreach (var widget in layoutWidgets.Where(w => w.Visible))
+                {
+                    @* 如果控件设置了新行，插入换行符 *@
+                    @if (widget.NewLine)
+                    {
+                        <div style="width:100%; height:0; flex-basis:100%"></div>
+                    }
+
+                    <div style="@GetFlowWidgetStyle(widget)">
                         @{
                             var fieldData = widget.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == widget.DataField) : null;
                             var displayValue = fieldData?.value ?? widget.Label;
                         }
-                        @if (widget.Type == "textbox" || widget.Type == "label")
+                        @if (widget.Type == "label")
                         {
-                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa">
-                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
-                                <div>@displayValue</div>
+                            <div style="padding:8px; font-weight:500; @GetWidgetTextStyle(widget)">@widget.Label</div>
+                        }
+                        else if (widget.Type == "textbox")
+                        {
+                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:@GetWidgetBackgroundColor(widget)">
+                                <div style="@GetWidgetTextStyle(widget) margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <div style="min-height:20px">@displayValue</div>
                             </div>
                         }
                         else if (widget.Type == "calendar")
                         {
-                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:#fafafa">
-                                <div style="font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
-                                <div>@displayValue</div>
+                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:@GetWidgetBackgroundColor(widget)">
+                                <div style="@GetWidgetTextStyle(widget) margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <div style="min-height:20px">@displayValue</div>
+                            </div>
+                        }
+                        else if (widget.Type == "listbox")
+                        {
+                            <div style="padding:8px; border:1px solid #d9d9d9; border-radius:4px; background:@GetWidgetBackgroundColor(widget)">
+                                <div style="@GetWidgetTextStyle(widget) margin-bottom:4px">@(fieldData?.label ?? widget.Label)</div>
+                                <div style="min-height:20px">@displayValue</div>
+                            </div>
+                        }
+                        else if (widget.Type == "tabbox")
+                        {
+                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px; background:#fafafa">
+                                <div style="display:flex; gap:8px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; margin-bottom:8px">
+                                    <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:2px; font-size:12px">Tab 1</div>
+                                    <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:2px; font-size:12px">Tab 2</div>
+                                </div>
+                                <div style="padding:8px; color:#666; font-size:13px">@widget.Label</div>
+                            </div>
+                        }
+                        else if (widget.Type == "frame")
+                        {
+                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px; background:#fafafa; width:100%">
+                                <div style="font-size:13px; font-weight:500; color:#333; margin-bottom:8px">@GetWidgetDisplayLabel(widget)</div>
+                                @if (widget.Children != null && widget.Children.Any())
+                                {
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px; background:#fff; border-radius:4px; padding:8px">
+                                        @foreach (var child in widget.Children.Where(c => c.Visible))
+                                        {
+                                            @* 如果控件设置了新行，插入换行符 *@
+                                            @if (child.NewLine)
+                                            {
+                                                <div style="width:100%; height:0; flex-basis:100%"></div>
+                                            }
+
+                                            var childFieldData = child.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == child.DataField) : null;
+                                            var childDisplayValue = childFieldData?.value ?? child.Label;
+
+                                            <div style="@GetFlowWidgetStyle(child)">
+                                                @if (child.Type == "label")
+                                                {
+                                                    <div style="padding:8px; font-weight:500; color:#333">@child.Label</div>
+                                                }
+                                                else
+                                                {
+                                                    <div style="padding:8px; border:1px solid #e0e0e0; border-radius:4px; background:#fafafa;">
+                                                        <div style="font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</div>
+                                                        <div style="font-size:13px; min-height:20px">@childDisplayValue</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
@@ -359,18 +683,30 @@ else if (customer != null)
         else if (mode == ViewMode.Edit)
         {
             <!-- Edit Mode: WYSIWYG editable fields -->
-            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start">
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; align-items:flex-start">
                 @foreach (var widget in layoutWidgets.Where(w => w.Visible))
                 {
-                    <div style="@GetWidgetStyle(widget)">
+                    @* 如果控件设置了新行，插入换行符 *@
+                    @if (widget.NewLine)
+                    {
+                        <div style="width:100%; height:0; flex-basis:100%"></div>
+                    }
+
+                    <div style="@GetFlowWidgetStyle(widget)">
                         @{
                             var fieldData = widget.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == widget.DataField) : null;
                         }
-                        @if (widget.Type == "textbox")
+                        @if (widget.Type == "label")
                         {
-                            <div style="padding:8px">
-                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</label>
-                                <Input @bind-Value="editValues[widget.DataField ?? widget.Id]" />
+                            <div style="padding:8px; font-weight:500; @GetWidgetTextStyle(widget)">@widget.Label</div>
+                        }
+                        else if (widget.Type == "textbox")
+                        {
+                            <div style="padding:8px; background:@GetWidgetBackgroundColor(widget)">
+                                <label style="display:block; @GetWidgetTextStyle(widget) margin-bottom:4px">@(fieldData?.label ?? widget.Label)</label>
+                                <Input TValue="string"
+                                       Value="@GetEditValue(widget.DataField ?? widget.Id)"
+                                       ValueChanged="@(v => SetEditValue(widget.DataField ?? widget.Id, v))" />
                             </div>
                         }
                         else if (widget.Type == "calendar")
@@ -380,12 +716,91 @@ else if (customer != null)
                                 <DatePicker TValue="DateTime?" style="width:100%" />
                             </div>
                         }
+                        else if (widget.Type == "listbox")
+                        {
+                            <div style="padding:8px">
+                                <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(fieldData?.label ?? widget.Label)</label>
+                                <Select TItem="string" TItemValue="string" Style="width:100%">
+                                    <SelectOptions>
+                                        <SelectOption TItem="string" TItemValue="string" Value="@("option1")" Label="Option 1" />
+                                        <SelectOption TItem="string" TItemValue="string" Value="@("option2")" Label="Option 2" />
+                                    </SelectOptions>
+                                </Select>
+                            </div>
+                        }
+                        else if (widget.Type == "tabbox")
+                        {
+                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px">
+                                <div style="display:flex; gap:8px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; margin-bottom:8px">
+                                    <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:2px; font-size:12px; cursor:pointer">Tab 1</div>
+                                    <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:2px; font-size:12px; cursor:pointer">Tab 2</div>
+                                </div>
+                                <div style="padding:8px">@widget.Label</div>
+                            </div>
+                        }
+                        else if (widget.Type == "frame")
+                        {
+                            <div style="border:1px solid #d9d9d9; border-radius:4px; padding:12px; background:#fafafa; width:100%">
+                                <div style="font-size:13px; font-weight:500; color:#333; margin-bottom:8px">@GetWidgetDisplayLabel(widget)</div>
+                                @if (widget.Children != null && widget.Children.Any())
+                                {
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px; background:#fff; border-radius:4px; padding:8px">
+                                        @foreach (var child in widget.Children.Where(c => c.Visible))
+                                        {
+                                            @* 如果控件设置了新行，插入换行符 *@
+                                            @if (child.NewLine)
+                                            {
+                                                <div style="width:100%; height:0; flex-basis:100%"></div>
+                                            }
+
+                                            var childFieldData = child.DataField != null ? customer.fields?.FirstOrDefault(f => f.key == child.DataField) : null;
+                        <div style="@GetFlowWidgetStyle(child)">
+                                                @if (child.Type == "label")
+                                                {
+                                                    <div style="padding:8px; font-weight:500; color:#333">@child.Label</div>
+                                                }
+                                                else if (child.Type == "textbox")
+                                                {
+                                                    <div style="padding:8px">
+                                                        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</label>
+                                                        <Input TValue="string"
+                                                               Value="@GetEditValue(child.DataField ?? child.Id)"
+                                                               ValueChanged="@(v => SetEditValue(child.DataField ?? child.Id, v))" />
+                                                    </div>
+                                                }
+                                                else if (child.Type == "calendar")
+                                                {
+                                                    <div style="padding:8px">
+                                                        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</label>
+                                                        <DatePicker TValue="DateTime?" style="width:100%" />
+                                                    </div>
+                                                }
+                                                else if (child.Type == "listbox")
+                                                {
+                                                    <div style="padding:8px">
+                                                        <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@(childFieldData?.label ?? child.Label)</label>
+                                                        <Select TItem="string" TItemValue="string" Style="width:100%">
+                                                            <SelectOptions>
+                                                                <SelectOption TItem="string" TItemValue="string" Value="@("option1")" Label="Option 1" />
+                                                                <SelectOption TItem="string" TItemValue="string" Value="@("option2")" Label="Option 2" />
+                                                            </SelectOptions>
+                                                        </Select>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div style="padding:8px; border:1px solid #e0e0e0; border-radius:4px; background:#fafafa">
+                                                        <div style="font-size:12px; color:#666">@(childFieldData?.label ?? child.Label)</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 }
-            </div>
-            <div style="margin-top:20px; display:flex; gap:12px">
-                <Button Type="@ButtonType.Primary" OnClick="SaveChanges">@I18n.T("BTN_SAVE")</Button>
-                <Button OnClick="@(() => SwitchMode(ViewMode.Browse))">@I18n.T("BTN_CANCEL")</Button>
             </div>
         }
 
@@ -408,16 +823,22 @@ else
 
     private CustomerDetailModel? customer;
     private bool loading = true;
+    private bool saving = false;
     private string? error;
     private Dictionary<string, string> editValues = new();
+    private string editCode = string.Empty;
+    private string editName = string.Empty;
 
     // Designer state
-    private List<LayoutWidget> layoutWidgets = new();
-    private LayoutWidget? selectedWidget = null;
+    private List<DraggableWidget> layoutWidgets = new();
+    private DraggableWidget? selectedWidget = null;
     private ComponentDefinition? draggedComponent = null;
-    private LayoutWidget? draggedWidget = null;
+    private DraggableWidget? draggedWidget = null;
+    private DraggableWidget? draggedParentContainer = null; // 拖放子控件时，记录其父容器
+    private DraggableWidget? dragOverContainer = null; // 当前拖拽悬停的容器
     private bool dropSucceeded = false;
     private ElementReference canvasRef;
+    private HashSet<string> resizingIds = new();  // 正在调整大小的控件ID集合
 
     // Component definitions
     private List<ComponentDefinition> basicComponents = new()
@@ -437,6 +858,7 @@ else
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
+        try { Nav.LocationChanged += HandleLocationChanged; } catch { }
         InitializeDefaultLayout();
     }
 
@@ -447,16 +869,9 @@ else
         {
             foreach (var field in customer.fields)
             {
-                layoutWidgets.Add(new LayoutWidget
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Type = "textbox",
-                    Label = field.label ?? field.key ?? "",
-                    DataField = field.key,
-                    Width = 48,
-                    WidthUnit = "%",
-                    Visible = true
-                });
+                var widget = CreateWidgetByType("textbox", field.label ?? field.key ?? "");
+                widget.DataField = field.key;
+                layoutWidgets.Add(widget);
             }
         }
     }
@@ -464,10 +879,22 @@ else
     private void InitializeEditValues()
     {
         editValues.Clear();
-        foreach (var widget in layoutWidgets.Where(w => !string.IsNullOrEmpty(w.DataField)))
+        InitializeEditValuesRecursive(layoutWidgets);
+    }
+
+    private void InitializeEditValuesRecursive(IEnumerable<DraggableWidget> widgets)
+    {
+        foreach (var w in widgets)
         {
-            var field = customer?.fields?.FirstOrDefault(f => f.key == widget.DataField);
-            editValues[widget.DataField!] = field?.value ?? "";
+            if (!string.IsNullOrWhiteSpace(w.DataField))
+            {
+                var field = customer?.fields?.FirstOrDefault(f => f.key == w.DataField);
+                editValues[w.DataField!] = field?.value ?? string.Empty;
+            }
+            if (w.Children != null && w.Children.Count > 0)
+            {
+                InitializeEditValuesRecursive(w.Children);
+            }
         }
     }
 
@@ -482,13 +909,20 @@ else
         {
             try
             {
-                // Initialize drag and drop support
-                await JS.InvokeVoidAsync("bobcrm.initDragDrop");
-
+                // 首先加载语言资源（确保在任何UI渲染之前完成）
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
-                await InvokeAsync(StateHasChanged);
+
+                // Initialize drag and drop support
+                await JS.InvokeVoidAsync("bobcrm.initDragDrop");
+
+                // Check URL query parameters for mode
+                var uri = new Uri(Nav.Uri);
+                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                var modeParam = query["mode"];
+                if (modeParam == "design") mode = ViewMode.Design;
+                else if (modeParam == "edit") mode = ViewMode.Edit;
 
                 var resp = await Auth.GetWithRefreshAsync($"/api/customers/{Id}");
                 if (!resp.IsSuccessStatusCode)
@@ -503,43 +937,168 @@ else
                     await LoadLayoutFromServer();
                     InitializeEditValues();
                 }
+
+                // 所有数据加载完成后，一次性更新UI
                 loading = false;
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
             }
             catch { loading = false; error = "Load error"; StateHasChanged(); }
         }
 
     }
 
+    protected override void OnParametersSet()
+    {
+        // 允许通过查询参数切换模式（不依赖首次渲染）
+        try
+        {
+            var uri = new Uri(Nav.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var modeParam = query["mode"];
+            var desired = modeParam switch
+            {
+                "design" => ViewMode.Design,
+                "edit" => ViewMode.Edit,
+                _ => ViewMode.Browse
+            };
+
+            if (desired != mode)
+            {
+                mode = desired;
+                if (mode == ViewMode.Edit)
+                {
+                    InitializeEditValues();
+                    editCode = customer?.code ?? string.Empty;
+                    editName = customer?.name ?? string.Empty;
+                }
+            }
+        }
+        catch { }
+    }
+
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
+        try { Nav.LocationChanged -= HandleLocationChanged; } catch { }
     }
 
     private void GoBack() => Nav.NavigateTo("/customers");
 
-    private void SwitchMode(ViewMode newMode)
+    private async Task SwitchMode(ViewMode newMode)
     {
         if (newMode == ViewMode.Edit)
         {
             InitializeEditValues();
+            // prime basic fields
+            editCode = customer?.code ?? string.Empty;
+            editName = customer?.name ?? string.Empty;
+        }
+        else if (mode == ViewMode.Design && newMode == ViewMode.Browse)
+        {
+            // 退出设计模式时，重新加载布局以放弃未保存的更改
+            await LoadLayoutFromServer();
         }
         mode = newMode;
-        StateHasChanged();
+        try { await JS.InvokeVoidAsync("console.log", $"[SwitchMode] => {newMode}"); } catch { }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GoEdit()
+    {
+        try { await JS.InvokeVoidAsync("console.log", "[GoEdit] navigate to ?mode=edit"); } catch { }
+        // 在某些开发场景（HMR/断路）下，直接切换可能失败；通过带查询参数的导航强制重新绑定事件
+        Nav.NavigateTo($"/customer/{Id}?mode=edit", forceLoad: false);
+    }
+
+    private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        try
+        {
+            var uri = new Uri(e.Location);
+            var q = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var modeParam = q["mode"];
+            var desired = modeParam switch
+            {
+                "design" => ViewMode.Design,
+                "edit" => ViewMode.Edit,
+                _ => ViewMode.Browse
+            };
+            if (desired != mode)
+            {
+                mode = desired;
+                if (mode == ViewMode.Edit)
+                {
+                    InitializeEditValues();
+                    editCode = customer?.code ?? string.Empty;
+                    editName = customer?.name ?? string.Empty;
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { }
     }
 
     private async Task SaveChanges()
     {
-        // TODO: Implement save
-        await Task.CompletedTask;
-        SwitchMode(ViewMode.Browse);
+        if (customer == null) return;
+        try
+        {
+            saving = true; await InvokeAsync(StateHasChanged);
+            // Build fields payload recursively (include container children)
+            var fieldList = new List<FieldPayload>();
+            var allowedKeys = new HashSet<string>(customer.fields?.Select(f => f.key!) ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            CollectFieldPayloadsRecursive(layoutWidgets, allowedKeys, fieldList);
+            var body = new UpdatePayload
+            {
+                fields = fieldList,
+                expectedVersion = customer.version,
+                code = editCode,
+                name = editName
+            };
+            var resp = await Auth.PutAsJsonWithRefreshAsync($"/api/customers/{customer.id}", body);
+            if (resp.IsSuccessStatusCode)
+            {
+                // Update local state
+                customer.code = editCode;
+                customer.name = editName;
+                try
+                {
+                    var obj = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    if (obj.TryGetProperty("newVersion", out var v)) customer.version = v.GetInt32();
+                }
+                catch { }
+                try { await JS.InvokeVoidAsync("bobcrm.customerUpdated", customer.id, editCode, editName); } catch { }
+                await SwitchMode(ViewMode.Browse);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.error", $"[Save] failed: {(int)resp.StatusCode}");
+            }
+        }
+        finally { saving = false; await InvokeAsync(StateHasChanged); }
+    }
+
+    private void CollectFieldPayloadsRecursive(IEnumerable<DraggableWidget> widgets, HashSet<string> allowedKeys, List<FieldPayload> output)
+    {
+        foreach (var w in widgets)
+        {
+            if (!string.IsNullOrWhiteSpace(w.DataField) && allowedKeys.Contains(w.DataField!) && editValues.TryGetValue(w.DataField!, out var val))
+            {
+                output.Add(new FieldPayload { key = w.DataField!, value = val });
+            }
+            if (w.Children != null && w.Children.Count > 0)
+            {
+                CollectFieldPayloadsRecursive(w.Children, allowedKeys, output);
+            }
+        }
     }
 
     private async Task LoadLayoutFromServer()
     {
         try
         {
-            var resp = await Auth.GetWithRefreshAsync($"/api/layout/{Id}?scope=effective");
+            // 加载用户级通用模板（不是客户档案级别的）
+            var resp = await Auth.GetWithRefreshAsync($"/api/layout/customer?scope=effective");
             if (resp.IsSuccessStatusCode)
             {
                 var layoutJson = await resp.Content.ReadAsStringAsync();
@@ -570,45 +1129,44 @@ else
                         for (int i = 0; i < sortedItems.Count; i++)
                         {
                             var (key, item) = sortedItems[i];
-                            var colWidth = item.TryGetProperty("w", out var wEl) ? wEl.GetInt32() : 6;
-                            var visible = item.TryGetProperty("visible", out var vEl) ? vEl.GetBoolean() : true;
-                            var label = item.TryGetProperty("label", out var lEl) ? lEl.GetString() : key;
-                            var type = item.TryGetProperty("type", out var tEl) ? tEl.GetString() : "textbox";
 
-                            // 读取扩展属性
-                            var height = item.TryGetProperty("height", out var hEl) ? hEl.GetInt32() : 40;
-                            var heightUnit = item.TryGetProperty("heightUnit", out var huEl) ? huEl.GetString() : "px";
-                            var defaultValue = item.TryGetProperty("defaultValue", out var dvEl) ? dvEl.GetString() : null;
-                            var placeholder = item.TryGetProperty("placeholder", out var phEl) ? phEl.GetString() : null;
-                            var required = item.TryGetProperty("required", out var rqEl) ? rqEl.GetBoolean() : false;
-                            var readOnly = item.TryGetProperty("readonly", out var roEl) ? roEl.GetBoolean() : false;
-                            var disabled = item.TryGetProperty("disabled", out var dsEl) ? dsEl.GetBoolean() : false;
-                            int? minValue = item.TryGetProperty("minValue", out var mnEl) ? mnEl.GetInt32() : null;
-                            int? maxValue = item.TryGetProperty("maxValue", out var mxEl) ? mxEl.GetInt32() : null;
-                            int? maxLength = item.TryGetProperty("maxLength", out var mlEl) ? mlEl.GetInt32() : null;
-
-                            layoutWidgets.Add(new LayoutWidget
+                            // 诊断：记录原始节点的键集合与关键字段是否存在（用于比对“原生字段 vs 新增控件”差异）
+                            try
                             {
-                                Id = Guid.NewGuid().ToString(),
-                                Type = type ?? "textbox",
-                                Label = label ?? key,
-                                DataField = key,
-                                Width = (int)Math.Round(colWidth * 8.33), // 1-12列转换为百分比
-                                WidthUnit = "%",
-                                Height = height,
-                                HeightUnit = heightUnit ?? "px",
-                                X = i * 10, // Use order as X for sorting
-                                Visible = visible,
-                                DefaultValue = defaultValue,
-                                Placeholder = placeholder,
-                                Required = required,
-                                Readonly = readOnly,
-                                Disabled = disabled,
-                                MinValue = minValue,
-                                MaxValue = maxValue,
-                                MaxLength = maxLength
-                            });
+                                await LogWidgetDiagnostics(item, $"root[{i}] key={key}");
+                            }
+                            catch { }
+
+                            // 使用 LayoutMapper 加载基础属性
+                            // 使用 LayoutMapper 加载（自动推断具体类型并加载特定属性）
+                            var widget = LayoutMapper.FromJsonElement(item);
+
+                            // 设置特定属性
+                            if (string.IsNullOrEmpty(widget.Id))
+                                widget.Id = Guid.NewGuid().ToString();
+                            if (string.IsNullOrEmpty(widget.DataField))
+                                widget.DataField = key;
+                            if (string.IsNullOrEmpty(widget.Label))
+                                widget.Label = key;
+
+                            // LayoutMapper 已通过反射加载特定控件的属性（DefaultValue, Placeholder 等）
+                            // 无需再次从 ExtendedProperties 提取
+
+                            // 处理子控件（递归加载已在 LayoutMapper.MapCommonProperties 中处理）
+                            // 无需手动处理 children，LayoutMapper 已递归加载
+                            
+                            // LayoutMapper 已递归加载 children，无需手动处理
+                            
+                            // 调试输出：检查加载的控件信息
+                            var childCount = widget.Children?.Count ?? 0;
+                            await JS.InvokeVoidAsync("console.debug", 
+                                $"[LoadLayout] Loaded widget: type={widget.Type}, label={widget.Label}, width={widget.Width}{widget.WidthUnit}, " +
+                                $"height={widget.Height}{widget.HeightUnit}, visible={widget.Visible}, dataField={widget.DataField}, childrenCount={childCount}");
+
+                            layoutWidgets.Add(widget);
                         }
+                        
+                        await JS.InvokeVoidAsync("console.log", $"[LoadLayout] Total widgets loaded: {layoutWidgets.Count}");
                         return;
                     }
                 }
@@ -623,50 +1181,67 @@ else
             InitializeDefaultLayout();
         }
     }
+    
+    /// <summary>
+    /// 诊断：输出一个原始 JsonElement 的键集合与关键字段（递归 children）
+    /// 用于定位“预置字段控件”和“新加控件”在模板结构上的差异
+    /// </summary>
+    private async Task LogWidgetDiagnostics(System.Text.Json.JsonElement el, string path)
+    {
+        try
+        {
+            string getStr(string name)
+            {
+                return el.TryGetProperty(name, out var v) ? (v.ValueKind == System.Text.Json.JsonValueKind.String ? (v.GetString() ?? "") : v.ToString()) : "";
+            }
+            bool has(string name) => el.TryGetProperty(name, out _);
+            var type = getStr("type");
+            var dataField = getStr("dataField");
+            var hasW = has("w");
+            var hasWidth = has("Width");
+            var hasWidthUnit = has("WidthUnit");
+            var hasHeight = has("Height");
+            var hasHeightUnit = has("HeightUnit");
+            var hasNewLine = has("newLine") || has("NewLine");
+            var hasChildren = has("children") || has("Children");
+            var keys = new List<string>();
+            foreach (var p in el.EnumerateObject()) keys.Add(p.Name);
+            await JS.InvokeVoidAsync("console.log",
+                $"[Diag] {path}: type={type}, df={dataField}, keys={string.Join("|", keys)}, flags=(w:{hasW}, W:{hasWidth}, WU:{hasWidthUnit}, H:{hasHeight}, HU:{hasHeightUnit}, NL:{hasNewLine}, CH:{hasChildren})");
+
+            // children 递归
+            System.Text.Json.JsonElement childrenEl;
+            if ((el.TryGetProperty("children", out childrenEl) || el.TryGetProperty("Children", out childrenEl)) && childrenEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                int idx = 0;
+                foreach (var c in childrenEl.EnumerateArray())
+                {
+                    await LogWidgetDiagnostics(c, path + $".children[{idx++}]" );
+                }
+            }
+        }
+        catch { }
+    }
 
     private async Task SaveLayout()
     {
         try
         {
-            // Build flow layout JSON (列表顺序即为显示顺序)
+            // 全量快照保存：重建整个树（顶层 + 任意层 children）
             var items = new Dictionary<string, object>();
+            
+            // 保存前摘要（用于验证）
+            var beforeSummary = $"Items: {layoutWidgets.Count}, Children: {string.Join(", ", layoutWidgets.Select(w => $"{w.Type}:{w.Children?.Count ?? 0}"))}";
+            await JS.InvokeVoidAsync("console.log", $"[SaveLayout] Before save: {beforeSummary}");
+            
             for (int i = 0; i < layoutWidgets.Count; i++)
             {
                 var w = layoutWidgets[i];
+                // 顶层 items 的 key = w.DataField ?? w.Id（字段控件优先 dataField；其他用 id）
                 var key = w.DataField ?? w.Id;
 
-                // 构建基础属性
-                var itemData = new Dictionary<string, object>
-                {
-                    ["order"] = i,
-                    ["w"] = (int)Math.Round(w.Width / 8.33), // 转换为1-12列
-                    ["visible"] = w.Visible,
-                    ["label"] = w.Label,
-                    ["type"] = w.Type,
-                    ["height"] = w.Height,
-                    ["heightUnit"] = w.HeightUnit
-                };
-
-                // 添加可选属性（非默认值时才保存）
-                if (!string.IsNullOrWhiteSpace(w.DefaultValue))
-                    itemData["defaultValue"] = w.DefaultValue;
-                if (!string.IsNullOrWhiteSpace(w.Placeholder))
-                    itemData["placeholder"] = w.Placeholder;
-                if (w.Required)
-                    itemData["required"] = w.Required;
-                if (w.Readonly)
-                    itemData["readonly"] = w.Readonly;
-                if (w.Disabled)
-                    itemData["disabled"] = w.Disabled;
-                if (w.MinValue.HasValue)
-                    itemData["minValue"] = w.MinValue.Value;
-                if (w.MaxValue.HasValue)
-                    itemData["maxValue"] = w.MaxValue.Value;
-                if (w.MaxLength.HasValue)
-                    itemData["maxLength"] = w.MaxLength.Value;
-                if (w.ExtendedProperties != null && w.ExtendedProperties.Any())
-                    itemData["extended"] = w.ExtendedProperties;
-
+                // 序列化单个 widget（递归处理子控件）
+                var itemData = SerializeWidget(w, i);
                 items[key] = itemData;
             }
 
@@ -676,15 +1251,35 @@ else
                 items = items
             };
 
-            var resp = await Auth.PostAsJsonWithRefreshAsync($"/api/layout/{Id}", layout);
+            // 保存用户级通用模板（使用 /api/layout/customer 别名）
+            await JS.InvokeVoidAsync("console.log", $"[SaveLayout] Saving {layoutWidgets.Count} widgets");
+            
+            var resp = await Auth.PostAsJsonWithRefreshAsync($"/api/layout/customer?scope=user", layout);
             if (resp.IsSuccessStatusCode)
             {
-                // Success - show notification
-                await JS.InvokeVoidAsync("console.log", "[SaveLayout] Success");
+                await JS.InvokeVoidAsync("console.log", "[SaveLayout] Success, performing Round-Trip validation");
+                
+                // 保存成功后强制 Round-Trip：立刻再 GET 最新布局并重渲染
+                await LoadLayoutFromServer();
+                
+                // 保存后摘要（用于对比）
+                var afterSummary = $"Items: {layoutWidgets.Count}, Children: {string.Join(", ", layoutWidgets.Select(w => $"{w.Type}:{w.Children?.Count ?? 0}"))}";
+                await JS.InvokeVoidAsync("console.log", $"[SaveLayout] After reload: {afterSummary}");
+                
+                // 对比保存前后
+                if (beforeSummary == afterSummary)
+                {
+                    await JS.InvokeVoidAsync("console.log", "[SaveLayout] ✓ Round-Trip validation passed");
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("console.warn", $"[SaveLayout] ⚠ Round-Trip mismatch:\n  Before: {beforeSummary}\n  After: {afterSummary}");
+                }
+                
+                StateHasChanged();
             }
             else
             {
-                // Error - show notification
                 await JS.InvokeVoidAsync("console.error", $"[SaveLayout] Failed: {resp.StatusCode}");
             }
         }
@@ -693,7 +1288,109 @@ else
             await JS.InvokeVoidAsync("console.error", $"[SaveLayout] Exception: {ex.Message}");
         }
 
-        SwitchMode(ViewMode.Browse);
+        await SwitchMode(ViewMode.Browse);
+    }
+
+    /// <summary>
+    /// 序列化单个 widget 为字典（全量快照，包含所有必写字段）
+    /// </summary>
+    private Dictionary<string, object> SerializeWidget(DraggableWidget w, int order)
+    {
+        // 必写字段：type, label, visible, id, dataField?, Width, WidthUnit, Height, HeightUnit, NewLine
+        var data = new Dictionary<string, object>
+        {
+            ["order"] = order,
+            ["id"] = w.Id,
+            ["type"] = w.Type,
+            ["label"] = w.Label ?? "",
+            ["visible"] = w.Visible,
+            ["Width"] = w.Width,
+            ["WidthUnit"] = w.WidthUnit ?? "%",
+            ["Height"] = w.Height,
+            ["HeightUnit"] = w.HeightUnit ?? "auto",
+            ["newLine"] = w.NewLine,
+            // 保留 w（1-12列兼容）
+            ["w"] = (int)Math.Round(w.Width / 8.33)
+        };
+        // dataField（字段控件优先），缺失则回退到 id
+        data["dataField"] = string.IsNullOrWhiteSpace(w.DataField) ? w.Id : w.DataField;
+
+        // 特定控件属性
+        switch (w)
+        {
+            case TextboxWidget textbox:
+                if (!string.IsNullOrWhiteSpace(textbox.DefaultValue))
+                    data["defaultValue"] = textbox.DefaultValue;
+                if (!string.IsNullOrWhiteSpace(textbox.Placeholder))
+                    data["placeholder"] = textbox.Placeholder;
+                if (textbox.Required)
+                    data["required"] = textbox.Required;
+                if (textbox.Readonly)
+                    data["readonly"] = textbox.Readonly;
+                if (textbox.MaxLength.HasValue)
+                    data["maxLength"] = textbox.MaxLength.Value;
+                break;
+            
+            case LabelWidget label:
+                if (!string.IsNullOrWhiteSpace(label.Text))
+                    data["text"] = label.Text;
+                if (label.Bold)
+                    data["bold"] = label.Bold;
+                break;
+            
+            case CalendarWidget calendar:
+                data["format"] = calendar.Format ?? "yyyy-MM-dd";
+                if (calendar.ShowTime)
+                    data["showTime"] = calendar.ShowTime;
+                break;
+            
+            case ListboxWidget listbox:
+                if (listbox.MultiSelect)
+                    data["multiSelect"] = listbox.MultiSelect;
+                if (listbox.Items != null && listbox.Items.Any())
+                    data["items"] = listbox.Items;
+                break;
+            
+            case FrameWidget frame:
+                data["borderStyle"] = frame.BorderStyle ?? "solid";
+                data["borderColor"] = frame.BorderColor ?? "#d9d9d9";
+                data["borderWidth"] = frame.BorderWidth;
+                data["backgroundColor"] = frame.BackgroundColor ?? "#fafafa";
+                data["padding"] = frame.Padding;
+                break;
+            
+            case SectionWidget section:
+                if (!string.IsNullOrWhiteSpace(section.Title))
+                    data["title"] = section.Title;
+                if (section.ShowTitle)
+                    data["showTitle"] = section.ShowTitle;
+                if (section.Collapsible)
+                    data["collapsible"] = section.Collapsible;
+                if (section.Collapsed)
+                    data["collapsed"] = section.Collapsed;
+                if (section.ContainerLayout != null)
+                    data["containerLayout"] = section.ContainerLayout;
+                break;
+        }
+
+        // 扩展属性（存在才写）
+        if (w.ExtendedProperties != null && w.ExtendedProperties.Any())
+        {
+            data["extended"] = w.ExtendedProperties;
+        }
+
+        // 容器节点写 children（递归保存，子节点同样规则）
+        if (w.Children != null && w.Children.Any())
+        {
+            var children = new List<Dictionary<string, object>>();
+            for (int i = 0; i < w.Children.Count; i++)
+            {
+                children.Add(SerializeWidget(w.Children[i], i));
+            }
+            data["children"] = children;
+        }
+
+        return data;
     }
 
     // Drag and drop handlers
@@ -709,10 +1406,11 @@ else
         // dataTransfer is set via data-* attributes and global dragstart handler in app.js
     }
 
-    private async Task OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, LayoutWidget widget)
+    private async Task OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget widget)
     {
         dropSucceeded = false;  // Reset flag at start of drag
         draggedWidget = widget;
+        draggedParentContainer = FindParentContainer(widget);
         try
         {
             await JS.InvokeVoidAsync("console.log", $"[C#] OnWidgetDragStart: {widget.Id}");
@@ -721,10 +1419,17 @@ else
         // dataTransfer is set via data-* attributes and global dragstart handler in app.js
     }
 
-    private void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    private async void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
         // Allow drop by preventing default behavior
         // This method is explicitly called to ensure dragover events are handled correctly
+
+        // Show drop marker to indicate where the component will be placed
+        try
+        {
+            await JS.InvokeVoidAsync("bobcrm.updateDropMarker", ".layout-widgets-container", e.ClientX, e.ClientY);
+        }
+        catch { /* Ignore JS errors */ }
     }
 
     private async Task OnDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
@@ -732,27 +1437,58 @@ else
         try
         {
             await JS.InvokeVoidAsync("console.log",
-                $"[C#] OnDrop: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, count={layoutWidgets.Count}, pos=({e.ClientX},{e.ClientY})");
+                $"[C#] OnDrop: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, childWidget={draggedChildWidget?.Id ?? "null"}, count={layoutWidgets.Count}, pos=({e.ClientX},{e.ClientY})");
         }
         catch { /* Ignore JS errors */ }
+
+        // 优先处理从容器拖回根的情况
+        if (draggedChildWidget != null)
+        {
+            // 从容器拖回根：从 Parent.Children 移除 → 计算根插入索引 → 插入
+            try
+            {
+                await JS.InvokeVoidAsync("console.log", $"[C#] OnDrop: Moving child widget from container to root");
+                
+                // 从父容器移除
+                if (draggedChildParent != null && draggedChildParent.Children != null)
+                {
+                    draggedChildParent.Children.Remove(draggedChildWidget);
+                }
+                
+                // 计算插入位置（与 getInsertIndexStrict 逻辑一致）
+                var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".layout-widgets-container", e.ClientX, e.ClientY);
+                
+                if (insertIndex >= 0 && insertIndex <= layoutWidgets.Count)
+                {
+                    layoutWidgets.Insert(insertIndex, draggedChildWidget);
+                }
+                else
+                {
+                    layoutWidgets.Add(draggedChildWidget);
+                }
+                
+                selectedWidget = draggedChildWidget;
+                dropSucceeded = true;
+                draggedChildWidget = null;
+                draggedChildParent = null;
+                StateHasChanged();
+                return;
+            }
+            catch (Exception ex)
+            {
+                await JS.InvokeVoidAsync("console.error", $"[OnDrop] Failed to move child to root: {ex.Message}");
+            }
+        }
 
         if (draggedComponent != null)
         {
             // New component from toolbox
-            var newWidget = new LayoutWidget
-            {
-                Id = Guid.NewGuid().ToString(),
-                Type = draggedComponent.Type,
-                Label = I18n.T(draggedComponent.Label),
-                Width = 48,
-                WidthUnit = "%",
-                Visible = true
-            };
+            var newWidget = CreateWidgetByType(draggedComponent.Type, I18n.T(draggedComponent.Label));
 
-            // Get drop coordinates and calculate insertion index
+            // Get drop coordinates and calculate insertion index (使用统一的 getInsertIndexStrict 逻辑)
             try
             {
-                var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", ".layout-widgets-container", e.ClientX, e.ClientY);
+                var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".layout-widgets-container", e.ClientX, e.ClientY);
                 if (insertIndex >= 0 && insertIndex < layoutWidgets.Count)
                 {
                     layoutWidgets.Insert(insertIndex, newWidget);
@@ -804,16 +1540,16 @@ else
         }
         else if (draggedWidget != null)
         {
-            // Reorder existing widget
+            // Reorder existing widget（根内移动）
             var widgetToMove = draggedWidget;
             var originalIndex = layoutWidgets.IndexOf(widgetToMove);
 
             if (originalIndex >= 0)
             {
-                // Get drop coordinates and calculate insertion index
+                // Get drop coordinates and calculate insertion index (使用统一的 getInsertIndexStrict 逻辑)
                 try
                 {
-                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", ".layout-widgets-container", e.ClientX, e.ClientY);
+                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".layout-widgets-container", e.ClientX, e.ClientY);
 
                     if (insertIndex >= 0)
                     {
@@ -863,7 +1599,7 @@ else
         {
             try
             {
-                await JS.InvokeVoidAsync("console.log", "  ⚠ No draggedComponent or draggedWidget - drop ignored");
+                await JS.InvokeVoidAsync("console.log", "  ⚠ No draggedComponent, draggedWidget or draggedChildWidget - drop ignored");
             }
             catch { /* Ignore JS errors */ }
         }
@@ -888,6 +1624,9 @@ else
             await JS.InvokeVoidAsync("console.log",
                 $"[C#] OnDragEnd: component={draggedComponent?.Type ?? "null"}, widget={draggedWidget?.Id ?? "null"}, dropSucceeded={dropSucceeded}");
 
+            // Remove drop marker
+            await JS.InvokeVoidAsync("bobcrm.clearDropMarker");
+
             // Delay to allow OnDrop to complete first
             // (dragend can fire before drop in some browsers)
             await Task.Delay(50);
@@ -898,11 +1637,14 @@ else
             {
                 draggedComponent = null;
                 draggedWidget = null;
+                draggedChildWidget = null;
+                draggedChildParent = null;
                 StateHasChanged();
             }
 
-            // Always reset the flag for next drag
+            // Always reset the flag and states for next drag
             dropSucceeded = false;
+            dragOverContainer = null;
         }
         catch
         {
@@ -910,11 +1652,207 @@ else
             // Just clean up the state
             draggedComponent = null;
             draggedWidget = null;
+            draggedChildWidget = null;
+            draggedChildParent = null;
             dropSucceeded = false;
         }
     }
 
-    private void SelectWidget(LayoutWidget widget)
+    // 容器拖放处理
+    private DraggableWidget? draggedChildWidget = null;
+    private DraggableWidget? draggedChildParent = null;
+
+    private async Task OnContainerDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget container)
+    {
+        // 允许在容器内拖放，并高亮显示容器
+        if (dragOverContainer != container)
+        {
+            dragOverContainer = container;
+            StateHasChanged();
+        }
+        await Task.CompletedTask;
+    }
+
+    private void OnContainerDragLeave(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget container)
+    {
+        // 离开容器时取消高亮
+        if (dragOverContainer == container)
+        {
+            dragOverContainer = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnContainerDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget container)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("console.log", $"[C#] OnContainerDrop: container={container.Id}");
+
+            // 清除拖拽悬停状态
+            dragOverContainer = null;
+
+            if (draggedComponent != null)
+            {
+                // 从工具箱拖入新控件到容器
+                var newWidget = CreateWidgetByType(draggedComponent.Type, I18n.T(draggedComponent.Label));
+                newWidget.Width = 100;  // 容器内控件默认全宽
+
+                if (container.Children == null)
+                {
+                    container.Children = new List<DraggableWidget>();
+                }
+
+                // 计算插入位置
+                try
+                {
+                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".frame-drop-zone[data-container-id='" + container.Id + "']", e.ClientX, e.ClientY);
+                    if (insertIndex >= 0 && insertIndex < container.Children.Count)
+                    {
+                        container.Children.Insert(insertIndex, newWidget);
+                    }
+                    else
+                    {
+                        container.Children.Add(newWidget);
+                    }
+                }
+                catch
+                {
+                    container.Children.Add(newWidget);
+                }
+
+                dropSucceeded = true;
+                draggedComponent = null;
+                selectedWidget = newWidget;
+                StateHasChanged();
+            }
+            else if (draggedChildWidget != null)
+            {
+                // 从容器内部或外部拖动已有控件到容器
+                var originalIndex = -1;
+
+                // 如果是同一个容器内移动，记录原始位置
+                if (draggedChildParent == container && container.Children != null)
+                {
+                    originalIndex = container.Children.IndexOf(draggedChildWidget);
+                }
+
+                // 如果是从其他容器拖来的，先从原容器移除
+                if (draggedChildParent != null && draggedChildParent != container)
+                {
+                    draggedChildParent.Children?.Remove(draggedChildWidget);
+                }
+                else if (draggedChildParent == null)
+                {
+                    // 从画布主区域拖到容器，从layoutWidgets移除
+                    layoutWidgets.Remove(draggedChildWidget);
+                }
+
+                // 确保容器有Children列表
+                if (container.Children == null)
+                {
+                    container.Children = new List<DraggableWidget>();
+                }
+
+                // 如果是同一个容器内移动，先移除
+                if (draggedChildParent == container)
+                {
+                    container.Children.Remove(draggedChildWidget);
+                }
+
+                // 计算插入位置
+                try
+                {
+                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".frame-drop-zone[data-container-id='" + container.Id + "']", e.ClientX, e.ClientY);
+
+                    // 如果是同一个容器内移动，需要调整索引
+                    if (draggedChildParent == container && originalIndex >= 0 && insertIndex > originalIndex)
+                    {
+                        insertIndex--;
+                    }
+
+                    if (insertIndex >= 0 && insertIndex < container.Children.Count)
+                    {
+                        container.Children.Insert(insertIndex, draggedChildWidget);
+                    }
+                    else
+                    {
+                        container.Children.Add(draggedChildWidget);
+                    }
+                }
+                catch
+                {
+                    container.Children.Add(draggedChildWidget);
+                }
+
+                dropSucceeded = true;
+                var movedWidget = draggedChildWidget;
+                draggedChildWidget = null;
+                draggedChildParent = null;
+                selectedWidget = movedWidget;
+                StateHasChanged();
+            }
+            else if (draggedWidget != null)
+            {
+                // 从画布拖入已有控件到容器
+                layoutWidgets.Remove(draggedWidget);
+
+                if (container.Children == null)
+                {
+                    container.Children = new List<DraggableWidget>();
+                }
+
+                // 计算插入位置
+                try
+                {
+                    var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndexStrict", ".frame-drop-zone[data-container-id='" + container.Id + "']", e.ClientX, e.ClientY);
+                    if (insertIndex >= 0 && insertIndex < container.Children.Count)
+                    {
+                        container.Children.Insert(insertIndex, draggedWidget);
+                    }
+                    else
+                    {
+                        container.Children.Add(draggedWidget);
+                    }
+                }
+                catch
+                {
+                    container.Children.Add(draggedWidget);
+                }
+
+                dropSucceeded = true;
+                var movedWidget = draggedWidget;
+                draggedWidget = null;
+                selectedWidget = movedWidget;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[OnContainerDrop] Error: {ex.Message}");
+            // 确保即使出错也清理状态
+            dragOverContainer = null;
+            draggedComponent = null;
+            draggedWidget = null;
+            draggedChildWidget = null;
+            draggedChildParent = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnChildDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget child, DraggableWidget parent)
+    {
+        dropSucceeded = false;
+        draggedChildWidget = child;
+        draggedChildParent = parent;
+        try
+        {
+            await JS.InvokeVoidAsync("console.log", $"[C#] OnChildDragStart: {child.Id} from {parent.Id}");
+        }
+        catch { /* Ignore JS errors */ }
+    }
+
+    private void SelectWidget(DraggableWidget widget)
     {
         selectedWidget = widget;
         StateHasChanged();
@@ -925,13 +1863,32 @@ else
         StateHasChanged();
     }
 
-    private async Task OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, LayoutWidget widget)
+    // ===== 事件驱动的调整大小机制 =====
+
+    private async Task OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, DraggableWidget widget)
     {
         try
         {
-            // 启动调整大小模式
+            // 0. 标记为正在调整大小，禁止原生拖拽
+            resizingIds.Add(widget.Id);
+            await InvokeAsync(StateHasChanged);
+            
+            // 1. 让控件保存初始状态
+            widget.OnResizeStart();
+
+            // 2. 获取控件所在容器的宽度
+            var containerWidth = await GetWidgetContainerWidth(widget.Id);
+
+            // 3. 存储容器宽度供后续使用
+            if (!string.IsNullOrEmpty(widget.Id))
+            {
+                widgetContainerWidths[widget.Id] = containerWidth;
+            }
+
+            // 4. 启动通用拖拽管理器，只负责鼠标事件和坐标计算
             var dotNetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("bobcrm.startWidgetResize", dotNetRef, widget.Id, e.ClientX, widget.Width, widget.WidthUnit);
+            await JS.InvokeVoidAsync("dragManager.registerCallback", dotNetRef);
+            await JS.InvokeVoidAsync("dragManager.startResize", widget.Id, e.ClientX, e.ClientY, "horizontal");
         }
         catch (Exception ex)
         {
@@ -939,29 +1896,173 @@ else
         }
     }
 
-    [JSInvokable]
-    public void OnWidgetResized(string widgetId, int newWidth, string unit)
+    private Dictionary<string, double> widgetContainerWidths = new();
+
+    /// <summary>
+    /// 查找控件并获取其容器宽度（支持嵌套容器）
+    /// </summary>
+    private async Task<double> GetWidgetContainerWidth(string widgetId)
     {
-        var widget = layoutWidgets.FirstOrDefault(w => w.Id == widgetId);
+        try
+        {
+            var selector = $"[data-widget-id='{widgetId}']";
+            var width = await JS.InvokeAsync<double>("eval",
+                $@"(function(){{
+                    var el = document.querySelector('{selector}');
+                    if(!el) {{
+                        console.error('[GetContainerWidth] Element not found:', '{selector}');
+                        return 0;
+                    }}
+                    var container = el.closest('.frame-drop-zone, .layout-widgets-container');
+                    if(!container) {{
+                        console.error('[GetContainerWidth] Container not found for:', '{selector}');
+                        return 0;
+                    }}
+                    var w = container.getBoundingClientRect().width;
+                    console.log('[GetContainerWidth]', '{widgetId}', 'container:', container.className, 'width:', w);
+                    return w;
+                }})()");
+
+            // 如果获取失败，尝试使用画布的宽度作为保底
+            if (width <= 0)
+            {
+                await JS.InvokeVoidAsync("console.warn", $"[GetContainerWidth] Got 0 width for widget {widgetId}, trying canvas fallback");
+                width = await JS.InvokeAsync<double>("bobcrm.getElementWidth", canvasRef);
+            }
+
+            // 最后的保底值
+            if (width <= 0)
+            {
+                width = 1200;
+                await JS.InvokeVoidAsync("console.error", $"[GetContainerWidth] Still 0 width, using fallback 1200px for widget {widgetId}");
+            }
+
+            return width;
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[GetContainerWidth] Exception: {ex.Message}");
+            // 发生异常时使用画布宽度作为保底
+            try
+            {
+                var fallbackWidth = await JS.InvokeAsync<double>("bobcrm.getElementWidth", canvasRef);
+                return fallbackWidth > 0 ? fallbackWidth : 1200;
+            }
+            catch
+            {
+                return 1200;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 响应拖拽管理器的resize事件
+    /// 这是事件驱动的核心：控件响应事件，自主决定如何调整
+    /// </summary>
+    [JSInvokable]
+    public async Task OnResizeDrag(string widgetId, string direction, int deltaX, int deltaY, int totalDeltaX, int totalDeltaY)
+    {
+        // 查找目标控件
+        var widget = FindWidget(widgetId);
+        if (widget == null)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[OnResizeDrag] Widget not found: {widgetId}");
+            return;
+        }
+
+        // 获取容器宽度
+        var containerWidth = widgetContainerWidths.GetValueOrDefault(widgetId, 0);
+
+        await JS.InvokeVoidAsync("console.log", $"[OnResizeDrag] Before: Widget {widgetId} Width={widget.Width}{widget.WidthUnit}, totalDeltaX={totalDeltaX}, containerWidth={containerWidth}");
+
+        // 让控件自己响应调整大小事件（传入总增量！）
+        widget.OnResize(direction, deltaX, deltaY, totalDeltaX, totalDeltaY, containerWidth);
+
+        await JS.InvokeVoidAsync("console.log", $"[OnResizeDrag] After: Widget {widgetId} Width={widget.Width}{widget.WidthUnit}");
+
+        // 更新UI
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 调整大小结束事件
+    /// </summary>
+    [JSInvokable]
+    public async Task OnResizeEnd(string widgetId, string direction, int totalDeltaX, int totalDeltaY)
+    {
+        var widget = FindWidget(widgetId);
         if (widget != null)
         {
-            widget.Width = newWidth;
-            widget.WidthUnit = unit;
-            StateHasChanged();
+            widget.OnResizeEnd();
+            widgetContainerWidths.Remove(widgetId);
+            resizingIds.Remove(widgetId);  // 恢复可拖拽状态
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    /// <summary>
+    /// 通用控件查找方法
+    /// </summary>
+    private DraggableWidget? FindWidget(string widgetId)
+    {
+        // 先在主布局中查找
+        var widget = layoutWidgets.FirstOrDefault(w => w.Id == widgetId);
+
+        // 如果没找到，递归在容器的Children中查找
+        if (widget == null)
+        {
+            widget = FindWidgetInContainers(layoutWidgets, widgetId);
+        }
+
+        return widget;
+    }
+
+    /// <summary>
+    /// 递归在容器中查找控件
+    /// </summary>
+    private DraggableWidget? FindWidgetInContainers(List<DraggableWidget> widgets, string widgetId)
+    {
+        foreach (var w in widgets)
+        {
+            if (w.Children != null)
+            {
+                var found = w.Children.FirstOrDefault(c => c.Id == widgetId);
+                if (found != null) return found;
+
+                // 递归查找嵌套容器
+                found = FindWidgetInContainers(w.Children, widgetId);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private void DeleteSelectedWidget()
     {
         if (selectedWidget != null)
         {
-            layoutWidgets.Remove(selectedWidget);
-            selectedWidget = null;
-            StateHasChanged();
+            // 尝试从主布局中删除
+            if (layoutWidgets.Remove(selectedWidget))
+            {
+                selectedWidget = null;
+                StateHasChanged();
+                return;
+            }
+
+            // 如果不在主布局中，尝试从容器的子控件中删除
+            foreach (var widget in layoutWidgets)
+            {
+                if (widget.Children != null && widget.Children.Remove(selectedWidget))
+                {
+                    selectedWidget = null;
+                    StateHasChanged();
+                    return;
+                }
+            }
         }
     }
 
-    private string GetWidgetStyle(LayoutWidget widget)
+    private string GetWidgetStyle(DraggableWidget widget)
     {
         var width = widget.WidthUnit == "%"
             ? $"calc({widget.Width}% - 6px)"
@@ -972,20 +2073,108 @@ else
         return $"width:{width}; {border}";
     }
 
-    private string GetFlowWidgetStyle(LayoutWidget widget)
+    private string GetWidgetDisplayLabel(DraggableWidget widget)
     {
-        // 使用Width作为flex-basis的百分比 (1-12列，每列约8.33%)
+        // 处理旧数据中可能存在的中文"容器"标签
+        if (widget.Type == "frame" && (widget.Label == "容器" || widget.Label == "LBL_FRAME"))
+        {
+            return I18n.T("LBL_FRAME");
+        }
+        // 如果Label是翻译键，尝试翻译
+        if (widget.Label?.StartsWith("LBL_") == true)
+        {
+            return I18n.T(widget.Label);
+        }
+        return widget.Label ?? "";
+    }
+
+    private string GetFlowWidgetStyle(DraggableWidget widget)
+    {
+        // 计算宽度，考虑margin
+        var widthValue = widget.Width;
         var flexBasis = widget.WidthUnit == "%"
-            ? $"calc({widget.Width}% - 6px)"
-            : $"{widget.Width}px";
+            ? $"calc({widthValue}% - 8px)"  // 减去左右margin
+            : $"{widthValue}px";
 
-        var height = widget.HeightUnit == "auto" || widget.HeightUnit == "px"
-            ? (widget.HeightUnit == "auto" ? "auto" : $"{widget.Height}px")
-            : $"{widget.Height}px";
+        var isSelected = selectedWidget == widget;
 
-        var border = selectedWidget == widget ? "2px solid #1890ff" : "1px solid #e0e0e0";
+        // 使用真正的border，选中时2px，未选中时1px
+        var border = isSelected
+            ? "border:2px solid #1890ff;"
+            : "border:1px solid #e0e0e0;";
 
-        return $"flex:0 0 {flexBasis}; max-width:{flexBasis}; min-height:{height}; background:#fff; border-radius:4px; border:{border}; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:move; user-select:none; transition: all 0.2s ease; position:relative;";
+        var boxShadow = "box-shadow:0 1px 3px rgba(0,0,0,0.1);";
+
+        // 提高选中控件的z-index以确保完整显示边框
+        var zIndex = isSelected ? "z-index:100;" : "z-index:1;";
+
+        // 高度策略：只有显式 px 时才输出 height；auto 时不设高度，让内容决定
+        // 叶子控件使用 min-height 避免裁切内容；auto 时不设高度
+        var heightStyle = widget.HeightUnit == "px"
+            ? $"min-height:{Math.Max(widget.Height, 32)}px;"
+            : "";
+
+        // 使用margin创建间距，不依赖gap；限制最大宽度避免溢出导致重叠
+        return $"flex:0 0 {flexBasis}; max-width:{flexBasis}; {heightStyle} background:#fff; border-radius:4px; {border} {boxShadow} user-select:none; position:relative; box-sizing:border-box; margin:4px; {zIndex}; display:flex; flex-direction:column;".Replace("  ", " ");
+    }
+
+    // 24-column grid span from widget width
+    private int GetSpan(DraggableWidget w)
+    {
+        double pct = w.WidthUnit == "%" ? w.Width : Math.Min(100.0, (w.Width / 1200.0) * 100.0);
+        var span = (int)Math.Round((pct / 100.0) * 24.0);
+        return Math.Max(1, Math.Min(24, span));
+    }
+    
+    /// <summary>
+    /// 获取控件文本样式（从 ExtendedProperties）
+    /// </summary>
+    private string GetWidgetTextStyle(DraggableWidget widget)
+    {
+        if (widget?.ExtendedProperties == null)
+            return "font-size:12px; color:#666;";
+        
+        var parts = new List<string>();
+        
+        if (widget.ExtendedProperties.TryGetValue("fontFamily", out var ff) && ff != null)
+            parts.Add($"font-family:{ff}");
+        if (widget.ExtendedProperties.TryGetValue("fontSize", out var fs) && fs != null)
+            parts.Add($"font-size:{fs}");
+        else
+            parts.Add("font-size:12px");
+        
+        if (widget.ExtendedProperties.TryGetValue("fontColor", out var fc) && fc != null)
+            parts.Add($"color:{fc}");
+        else
+            parts.Add("color:#666");
+        
+        return string.Join("; ", parts) + ";";
+    }
+
+    // ---- Edit value helpers (avoid KeyNotFound on bindings) ----
+    private string GetEditValue(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return string.Empty;
+        return editValues.TryGetValue(key, out var v) ? v : string.Empty;
+    }
+    private void SetEditValue(string? key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return;
+        editValues[key] = value ?? string.Empty;
+    }
+    
+    /// <summary>
+    /// 获取控件背景颜色（从 ExtendedProperties）
+    /// </summary>
+    private string GetWidgetBackgroundColor(DraggableWidget widget)
+    {
+        if (widget?.ExtendedProperties == null)
+            return "#fafafa";
+        
+        if (widget.ExtendedProperties.TryGetValue("backgroundColor", out var bg) && bg != null)
+            return bg.ToString() ?? "#fafafa";
+        
+        return "#fafafa";
     }
 
     // Models
@@ -997,6 +2186,15 @@ else
         public int version { get; set; }
         public FieldDetail[]? fields { get; set; }
     }
+
+    private class UpdatePayload
+    {
+        public List<FieldPayload> fields { get; set; } = new();
+        public int? expectedVersion { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
+    }
+    private class FieldPayload { public string key { get; set; } = string.Empty; public object? value { get; set; } }
 
     private class FieldDetail
     {
@@ -1015,52 +2213,124 @@ else
         public string Icon { get; set; } = "";
     }
 
-    private class LayoutWidget
+    // ===== 控件工厂方法 =====
+    
+    /// <summary>
+    /// 根据类型字符串创建具体控件实例
+    /// </summary>
+    private DraggableWidget CreateWidgetByType(string type, string label)
     {
-        public string Id { get; set; } = "";
-        public string Type { get; set; } = "";
-        public string Label { get; set; } = "";
-        public string? DataField { get; set; }
-        public int Width { get; set; } = 48;
-        public string WidthUnit { get; set; } = "%";
-        public int Height { get; set; } = 40; // 控件高度（像素）
-        public string HeightUnit { get; set; } = "px";
-        public bool Visible { get; set; } = true;
-        public string? DefaultValue { get; set; } // 默认值
-        public string? Placeholder { get; set; } // 占位符
-        public bool Required { get; set; } = false; // 是否必填
-        public bool Readonly { get; set; } = false; // 是否只读
-        public bool Disabled { get; set; } = false; // 是否禁用
-        public int? MinValue { get; set; } // 最小值（数字类型）
-        public int? MaxValue { get; set; } // 最大值（数字类型）
-        public int? MaxLength { get; set; } // 最大长度（文本类型）
-
-        // 位置属性（保留用于其他布局模式）
-        public int X { get; set; } = 24;
-        public int Y { get; set; } = 24;
-        public int W { get; set; } = 360;
-        public int H { get; set; } = 56;
-
-        // 扩展属性（用于未来扩展，以JSON格式存储）
-        public Dictionary<string, object>? ExtendedProperties { get; set; }
-
-        // 判断某个属性是否可编辑（根据控件类型）
-        public bool CanEditProperty(string propertyName)
+        DraggableWidget widget = type.ToLower() switch
         {
-            return propertyName switch
-            {
-                "Height" => Type != "section" && Type != "divider", // 分组和分隔线不能调整高度
-                "DefaultValue" => Type == "textbox" || Type == "number" || Type == "textarea" || Type == "select",
-                "Placeholder" => Type == "textbox" || Type == "number" || Type == "textarea",
-                "Required" => Type != "section" && Type != "divider" && Type != "label",
-                "Readonly" => Type == "textbox" || Type == "number" || Type == "textarea",
-                "MinValue" => Type == "number",
-                "MaxValue" => Type == "number",
-                "MaxLength" => Type == "textbox" || Type == "textarea",
-                _ => true
-            };
+            "textbox" => new TextboxWidget(),
+            "label" => new LabelWidget(),
+            "calendar" => new CalendarWidget(),
+            "listbox" => new ListboxWidget(),
+            "frame" => new FrameWidget(),
+            "section" => new SectionWidget(),
+            _ => new TextboxWidget()
+        };
+        
+        widget.Id = Guid.NewGuid().ToString();
+        widget.Type = type;
+        widget.Label = label;
+        widget.Width = 48;
+        widget.WidthUnit = "%";
+        widget.Visible = true;
+        
+        if (type == "frame" || type == "section" || type == "tabbox")
+        {
+            widget.Children = new List<DraggableWidget>();
         }
+        
+        return widget;
+    }
+    
+    // ===== 属性面板辅助属性（桥接 DraggableWidget 和具体控件类型） =====
+    
+    private string? SelectedWidgetDefaultValue
+    {
+        get => selectedWidget is TextboxWidget tb ? tb.DefaultValue : null;
+        set { if (selectedWidget is TextboxWidget tb) tb.DefaultValue = value; }
+    }
+    
+    private string? SelectedWidgetPlaceholder
+    {
+        get => selectedWidget is TextboxWidget tb ? tb.Placeholder : null;
+        set { if (selectedWidget is TextboxWidget tb) tb.Placeholder = value; }
+    }
+    
+    private int? SelectedWidgetMaxLength
+    {
+        get => selectedWidget is TextboxWidget tb ? tb.MaxLength : null;
+        set { if (selectedWidget is TextboxWidget tb) tb.MaxLength = value; }
+    }
+    
+    private bool SelectedWidgetRequired
+    {
+        get => selectedWidget is TextboxWidget tb ? tb.Required : false;
+        set { if (selectedWidget is TextboxWidget tb) tb.Required = value; }
+    }
+    
+    private bool SelectedWidgetReadonly
+    {
+        get => selectedWidget is TextboxWidget tb ? tb.Readonly : false;
+        set { if (selectedWidget is TextboxWidget tb) tb.Readonly = value; }
+    }
+    
+    // Disabled, MinValue, MaxValue 不是 TextboxWidget 的属性，已移除
+    
+    /// <summary>
+    /// 查找控件的父容器
+    /// </summary>
+    private DraggableWidget? FindParentContainer(DraggableWidget widget)
+    {
+        foreach (var container in layoutWidgets.Where(w => w.Children != null))
+        {
+            if (container.Children!.Contains(widget))
+                return container;
+                
+            var parent = FindParentInContainer(container, widget);
+            if (parent != null)
+                return parent;
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// 递归在容器中查找父容器
+    /// </summary>
+    private DraggableWidget? FindParentInContainer(DraggableWidget container, DraggableWidget widget)
+    {
+        if (container.Children == null)
+            return null;
+            
+        foreach (var child in container.Children)
+        {
+            if (child.Children != null)
+            {
+                if (child.Children.Contains(widget))
+                    return child;
+                    
+                var parent = FindParentInContainer(child, widget);
+                if (parent != null)
+                    return parent;
+            }
+        }
+        return null;
     }
 
     private record Position(int x, int y);
 }
+
+<style>
+    /* 拖拽时禁用容器内子控件的pointer-events，让拖拽事件可以穿透到容器 */
+    body.is-dragging .container-child-widget {
+        pointer-events: none !important;
+    }
+
+    /* 保持frame-drop-zone的pointer-events为auto */
+    body.is-dragging .frame-drop-zone {
+        pointer-events: auto !important;
+    }
+</style>

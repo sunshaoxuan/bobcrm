@@ -1,8 +1,31 @@
+@implements IDisposable
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+
+<BobCrm.App.Components.Shared.PreferencesManager />
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(BobCrm.App.Components.Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
-<BobCrm.App.Components.Shared.PreferencesManager />
 @* 初次运行引导：如果未配置，建议用户访问 /setup *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        // 订阅全局未授权事件，统一跳转登录页
+        Auth.OnUnauthorized += HandleUnauthorized;
+    }
+
+    private void HandleUnauthorized()
+    {
+        // 跳转到登录页并强制刷新，确保清理所有状态
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        Auth.OnUnauthorized -= HandleUnauthorized;
+    }
+}

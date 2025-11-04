@@ -1,0 +1,375 @@
+@page "/templates"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>@I18n.T("MENU_TEMPLATES") - OneCRM</PageTitle>
+
+<div style="max-width:1200px; margin:0 auto">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
+        <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">@I18n.T("MENU_TEMPLATES")</h2>
+    </div>
+
+    @if (loading)
+    {
+        <div style="padding:48px; text-align:center; color:var(--muted)">
+            @I18n.T("LBL_LOADING")...
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div style="padding:48px; text-align:center">
+            <div style="color:#f5222d; font-size:16px; margin-bottom:16px">
+                ⚠️ @error
+            </div>
+            <button @onclick="@(() => Nav.NavigateTo("/login", forceLoad: true))" 
+                    style="padding:8px 24px; background:var(--primary); color:#fff; border:none; border-radius:4px; cursor:pointer">
+                去登录
+            </button>
+        </div>
+    }
+    else
+    {
+        <div style="display:grid; gap:20px">
+            <!-- Current User Template -->
+            <div class="template-section">
+                <h3 class="section-title">@I18n.T("LBL_CURRENT_USER_TEMPLATE")</h3>
+                <div class="template-card">
+                    <div class="template-info">
+                        <div class="template-name">@I18n.T("LBL_CUSTOMER_LAYOUT")</div>
+                        <div class="template-desc">@I18n.T("LBL_DEFAULT_LAYOUT_DESC")</div>
+                        <div class="template-meta">
+                            <span class="meta-item">@I18n.T("LBL_LAST_UPDATED"): @lastUpdated</span>
+                            <span class="meta-item">@widgetCount @I18n.T("LBL_WIDGET_COUNT")</span>
+                        </div>
+                    </div>
+                    <div class="template-actions">
+                        <button @onclick="EditTemplate" class="btn-primary-custom">
+                            @I18n.T("BTN_EDIT_TEMPLATE")
+                        </button>
+                        <button @onclick="ResetTemplate" class="btn-secondary-custom">
+                            @I18n.T("BTN_RESET_TO_DEFAULT")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Info -->
+            <div class="info-section">
+                <div class="info-card">
+                    <div class="info-icon">ℹ️</div>
+                    <div class="info-content">
+                        <div class="info-title">@I18n.T("LBL_ABOUT_TEMPLATE")</div>
+                        <div class="info-text">
+                            @I18n.T("LBL_TEMPLATE_INFO")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <div class="message-box @(messageSuccess ? "success" : "error")">
+                    @message
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .template-section {
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .template-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .template-info {
+        flex: 1;
+    }
+
+    .template-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .template-desc {
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+
+    .template-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--muted);
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+    }
+
+    .template-actions {
+        display: flex;
+        gap: 12px;
+        flex-direction: column;
+    }
+
+    .info-section {
+        margin-top: 20px;
+    }
+
+    .info-card {
+        background: linear-gradient(135deg, rgba(63, 124, 255, 0.05) 0%, rgba(63, 124, 255, 0.02) 100%);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--primary);
+        border-radius: 8px;
+        padding: 20px;
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .theme-dark .info-card {
+        background: linear-gradient(135deg, rgba(63, 124, 255, 0.1) 0%, rgba(63, 124, 255, 0.05) 100%);
+    }
+
+    .info-icon {
+        font-size: 24px;
+        line-height: 1;
+    }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .info-text {
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.6;
+    }
+
+    .message-box {
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        text-align: center;
+        animation: slideIn 0.3s ease;
+    }
+
+    .message-box.success {
+        background: #f0f9ff;
+        color: #0c4a6e;
+        border: 1px solid #7dd3fc;
+    }
+
+    .message-box.error {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    .theme-dark .message-box.success {
+        background: rgba(14, 165, 233, 0.1);
+        color: #7dd3fc;
+    }
+
+    .theme-dark .message-box.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #fca5a5;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+@code {
+    private bool loading = true;
+    private string lastUpdated = "";
+    private int widgetCount = 0;
+    private string message = "";
+    private bool messageSuccess = false;
+    private string? error = null;
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("console.log", "[Templates] Starting initialization");
+            
+            // 认证预检查：确保已登录，否则导航到登录页
+            var isAuthenticated = await Auth.EnsureAuthenticatedAsync();
+            await JS.InvokeVoidAsync("console.log", $"[Templates] Authentication check: {isAuthenticated}");
+            
+            if (!isAuthenticated)
+            {
+                await JS.InvokeVoidAsync("console.warn", "[Templates] Not authenticated, redirecting to login");
+                Nav.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+
+            // Load template info（独立于客户数据，使用全局模板 customerId=0）
+            await JS.InvokeVoidAsync("console.log", "[Templates] Fetching layout data");
+            var resp = await Auth.GetWithRefreshAsync("/api/layout/customer?scope=effective");
+            await JS.InvokeVoidAsync("console.log", $"[Templates] Response status: {resp.StatusCode}");
+            
+            if (resp.IsSuccessStatusCode)
+            {
+                var content = await resp.Content.ReadAsStringAsync();
+                
+                // 处理空响应或无效 JSON
+                if (!string.IsNullOrWhiteSpace(content) && content != "{}" && content != "null")
+                {
+                    try
+                    {
+                        var doc = System.Text.Json.JsonDocument.Parse(content);
+                        if (doc.RootElement.TryGetProperty("items", out var items))
+                        {
+                            widgetCount = items.EnumerateObject().Count();
+                            lastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                        }
+                    }
+                    catch
+                    {
+                        // JSON 解析失败，使用默认值
+                        widgetCount = 0;
+                        lastUpdated = I18n.T("LBL_NOT_SET");
+                    }
+                }
+                else
+                {
+                    // 无模板，使用默认值
+                    widgetCount = 0;
+                    lastUpdated = I18n.T("LBL_NOT_SET");
+                }
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                error = I18n.T("ERR_LOGIN_EXPIRED");
+            }
+            else
+            {
+                // 其他错误，但不阻止页面显示
+                widgetCount = 0;
+                lastUpdated = I18n.T("LBL_NOT_SET");
+            }
+
+            await JS.InvokeVoidAsync("console.log", $"[Templates] Loaded: widgetCount={widgetCount}, lastUpdated={lastUpdated}");
+            loading = false;
+            await JS.InvokeVoidAsync("console.log", "[Templates] Setting loading=false, calling StateHasChanged");
+            await InvokeAsync(StateHasChanged);
+            await JS.InvokeVoidAsync("console.log", "[Templates] Initialization complete");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Error: {ex.Message}\nStack: {ex.StackTrace}");
+            error = $"Error: {ex.Message}";
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void EditTemplate()
+    {
+        // Navigate to template designer (不依赖具体客户)
+        Nav.NavigateTo("/template-designer");
+    }
+
+    private async Task ResetTemplate()
+    {
+        try
+        {
+            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_CONFIRM_RESET_TEMPLATE"));
+            if (!confirm) return;
+
+            // Delete the user template
+            var resp = await Auth.DeleteWithRefreshAsync("/api/layout/customer");
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage(I18n.T("MSG_TEMPLATE_RESET_SUCCESS"), true);
+                // Reload template info
+                await OnAfterRenderAsync(true);
+            }
+            else
+            {
+                ShowMessage(I18n.T("MSG_TEMPLATE_RESET_FAILED"), false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Reset error: {ex.Message}");
+            ShowMessage(I18n.T("MSG_TEMPLATE_RESET_FAILED") + ": " + ex.Message, false);
+        }
+    }
+
+    private void ShowMessage(string msg, bool success)
+    {
+        message = msg;
+        messageSuccess = success;
+        StateHasChanged();
+
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            message = "";
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+}

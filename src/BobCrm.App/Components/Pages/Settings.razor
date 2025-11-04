@@ -1,0 +1,420 @@
+@page "/settings"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>@I18n.T("MENU_SETTINGS") - OneCRM</PageTitle>
+
+<div style="max-width:1200px; margin:0 auto">
+    <h2 style="margin-bottom:24px; color:var(--text); font-size:24px; font-weight:600">@I18n.T("MENU_SETTINGS")</h2>
+
+    @if (loading)
+    {
+        <div style="padding:48px; text-align:center; color:var(--muted)">
+            @I18n.T("LBL_LOADING")...
+        </div>
+    }
+    else
+    {
+        <div style="display:grid; gap:24px">
+            <!-- Theme Settings -->
+            <div class="settings-section">
+                <h3 class="section-title">@I18n.T("LBL_THEME")</h3>
+                <div class="settings-card">
+                    <div class="setting-item">
+                        <label class="setting-label">@I18n.T("LBL_THEME")</label>
+                        <select @bind="currentTheme" @bind:after="SaveThemePreference" class="setting-input">
+                            <option value="light">@I18n.T("THEME_LIGHT")</option>
+                            <option value="dark">@I18n.T("THEME_DARK")</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">@I18n.T("LBL_COLOR")</label>
+                        <div class="color-palette">
+                            @foreach (var color in primaryColors)
+                            {
+                                <button type="button"
+                                        class="color-palette-btn @(currentColor == color.Value ? "active" : "")"
+                                        style="background:@color.Value"
+                                        @onclick="() => SelectColor(color.Value)"
+                                        title="@color.Name">
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Language Settings -->
+            <div class="settings-section">
+                <h3 class="section-title">@I18n.T("LBL_LANGUAGE")</h3>
+                <div class="settings-card">
+                    <div class="setting-item">
+                        <label class="setting-label">@I18n.T("LBL_LANGUAGE")</label>
+                        <select @bind="currentLanguage" @bind:after="SaveLanguagePreference" class="setting-input">
+                            <option value="zh">中文</option>
+                            <option value="ja">日本語</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Information -->
+            <div class="settings-section">
+                <h3 class="section-title">@I18n.T("LBL_USER")</h3>
+                <div class="settings-card">
+                    <div class="setting-item">
+                        <label class="setting-label">@I18n.T("LBL_USERNAME")</label>
+                        <div class="setting-value">@userName</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Status -->
+            @if (!string.IsNullOrWhiteSpace(saveMessage))
+            {
+                <div class="save-message @(saveSuccess ? "success" : "error")">
+                    @saveMessage
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .settings-section {
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .settings-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+    }
+
+    .setting-item {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 16px;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .setting-item:last-child {
+        border-bottom: none;
+    }
+
+    .setting-label {
+        font-weight: 500;
+        color: var(--text);
+        font-size: 14px;
+    }
+
+    .setting-input {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--card-bg);
+        color: var(--text);
+        font-size: 14px;
+        max-width: 300px;
+        transition: border-color 0.2s ease;
+    }
+
+    .setting-input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .setting-value {
+        color: var(--text);
+        font-size: 14px;
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.02);
+        border-radius: 6px;
+        max-width: 300px;
+    }
+
+    .theme-dark .setting-value {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .color-palette {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        max-width: 400px;
+    }
+
+    .color-palette-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .color-palette-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .color-palette-btn.active {
+        border-color: var(--text);
+        transform: scale(1.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .save-message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        text-align: center;
+        animation: slideIn 0.3s ease;
+    }
+
+    .save-message.success {
+        background: #f0f9ff;
+        color: #0c4a6e;
+        border: 1px solid #7dd3fc;
+    }
+
+    .save-message.error {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    .theme-dark .save-message.success {
+        background: rgba(14, 165, 233, 0.1);
+        color: #7dd3fc;
+    }
+
+    .theme-dark .save-message.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #fca5a5;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+@code {
+    private bool loading = true;
+    private string currentTheme = "light";
+    private string currentLanguage = "ja";
+    private string currentColor = "#3f7cff";
+    private string userName = "";
+    private string saveMessage = "";
+    private bool saveSuccess = false;
+
+    private List<(string Name, string Value)> primaryColors = new()
+    {
+        ("Blue", "#3f7cff"),
+        ("Sky Blue", "#1890ff"),
+        ("Green", "#52c41a"),
+        ("Orange", "#fa8c16"),
+        ("Red", "#f5222d"),
+        ("Purple", "#722ed1")
+    };
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            // 预检查：确保已认证，触发单飞刷新机制，避免并发刷新
+            var authenticated = await Auth.EnsureAuthenticatedAsync();
+            if (!authenticated)
+            {
+                // 全局 OnUnauthorized 事件会处理跳转
+                loading = false;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            // Load current preferences from server (database)
+            var prefsResp = await Auth.GetWithRefreshAsync("/api/user/preferences");
+            if (prefsResp.IsSuccessStatusCode)
+            {
+                var prefs = await prefsResp.Content.ReadFromJsonAsync<UserPreferencesDto>();
+                currentTheme = prefs?.theme ?? "light";
+                currentLanguage = prefs?.language ?? "ja";
+                currentColor = prefs?.udfColor ?? "#3f7cff";
+
+                await JS.InvokeVoidAsync("console.log", $"[Settings] Loaded from server: theme={currentTheme}, language={currentLanguage}, color={currentColor}");
+            }
+            else
+            {
+                // Fallback to local storage if server fails
+                currentTheme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light";
+                currentLanguage = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
+                currentColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff";
+            }
+
+            // Get user name from auth
+            var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
+            if (resp.IsSuccessStatusCode)
+            {
+                var data = await resp.Content.ReadFromJsonAsync<UserInfo>();
+                userName = data?.UserName ?? "Unknown";
+            }
+
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Settings] Error: {ex.Message}");
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SaveThemePreference()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("bobcrm.setTheme", currentTheme);
+            await SaveToServer();
+            ShowMessage("Theme saved successfully", true);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Settings] Save theme error: {ex.Message}");
+            ShowMessage("Failed to save theme", false);
+        }
+    }
+
+    private async Task SaveLanguagePreference()
+    {
+        try
+        {
+            // 保存语言到cookie（365天有效期）
+            await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", currentLanguage, 365);
+            // 加载新语言资源
+            await I18n.LoadAsync(currentLanguage);
+            // 保存到服务器
+            await SaveToServer();
+            ShowMessage("Language saved successfully", true);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Settings] Save language error: {ex.Message}");
+            ShowMessage("Failed to save language", false);
+        }
+    }
+
+    private async Task SelectColor(string color)
+    {
+        try
+        {
+            currentColor = color;
+            // setPrimary会自动保存到localStorage和cookie
+            await JS.InvokeVoidAsync("bobcrm.setPrimary", color);
+            await SaveToServer();
+            ShowMessage("Color saved successfully", true);
+            // 强制UI更新以显示选中状态
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Settings] Select color error: {ex.Message}");
+            ShowMessage("Failed to save color", false);
+        }
+    }
+
+    private async Task SaveToServer()
+    {
+        try
+        {
+            var prefs = new
+            {
+                theme = currentTheme,
+                udfColor = currentColor,  // 使用 udfColor（用户自定义颜色）
+                language = currentLanguage
+            };
+            var resp = await Auth.PutAsJsonWithRefreshAsync("/api/user/preferences", prefs);
+            if (!resp.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("console.error", $"[Settings] Server save failed: {resp.StatusCode}");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.log", $"[Settings] Preferences saved to server: theme={currentTheme}, color={currentColor}, language={currentLanguage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Settings] SaveToServer error: {ex.Message}");
+        }
+    }
+
+    private void ShowMessage(string message, bool success)
+    {
+        saveMessage = message;
+        saveSuccess = success;
+        StateHasChanged();
+
+        // Clear message after 3 seconds
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            saveMessage = "";
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+
+    private class UserInfo
+    {
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+    }
+
+    private class UserPreferencesDto
+    {
+        public string? theme { get; set; }
+        public string? udfColor { get; set; }  // 用户自定义颜色
+        public string? language { get; set; }
+    }
+}
