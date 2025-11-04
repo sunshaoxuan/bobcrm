@@ -25,6 +25,34 @@
 - 后端：ASP.NET Core Web API（.NET 8）、EF Core + SQLite、ASP.NET Identity + JWT。
 - 运行平台：Windows 优先（便于 RDP/文件动作联动）。
 
+## TODO（按设计文档拆分的执行计划）
+
+### 1. 设计器控件矩阵补齐（优先级高）
+- [x] **模型定义**：在 `src/BobCrm.App/Models/Widgets/` 下补充 Number/Select/Textarea/Button/Panel/Grid/TabContainer/Tab 等 Widget 类，并扩展 `LayoutMapper` 读写逻辑。
+- [ ] **设计器拖拽视图**：更新 `TemplateDesigner.razor`，让以上控件正确渲染（包括 Tab 结构的切换、容器嵌套、新增/删除 Tab 子节点）。
+  - [x] 抽取叶子控件设计态渲染服务（`DesignWidgetContentRenderer`）并在 `TemplateDesigner` 使用，统一样式输出。
+  - [ ] 提炼容器/Tab 渲染到可复用组件（避免页面内大量 `if`/`else`）。
+  - [ ] 将运行态页面（`CustomerDetail` 等）切换至同一渲染管线，验证拖拽视图与运行视图一致。
+- [ ] **属性面板**：为新增控件提供属性编辑项（默认值、选项、步长、动作配置等），同步更新 `GetStyleValue/SetStyleValue` 及绑定逻辑。
+- [ ] **运行态呈现**：在 `CustomerDetail.razor`/`Templates.razor` 中补齐控件渲染与编辑体验，保持设计/运行一致。
+- [ ] **序列化与测试**：扩展布局保存逻辑、集成测试（tests/BobCrm.App 或 API 序列化测试）覆盖新控件的 JSON 结构。
+- [ ] **文档同步**：确认 `docs/客户信息管理系统设计文档.md` 的控件能力描述与实现一致，新增控件的行为差异需在文档中登记。
+- [ ] **渲染抽象**：将控件设计态/运行态渲染、属性面板逻辑封装到 Widget/Renderer 层，页面只负责绑定数据，防止重复 if/else。
+
+### 2. 拖拽吸附与对齐线（在设计器完成后推进）
+- [ ] **需求梳理**：重新整理 `docs/客户信息管理系统设计文档.md` 中对齐/吸附要求，形成算法要点（容器边界、比例栅格、跨容器行为）。
+- [ ] **前端实现**：在 `src/BobCrm.App/wwwroot/app.js` 的 `dragManager` 中实现实时吸附、对齐线计算与可视化，替换现有 TODO。
+- [ ] **性能与开关**：评估对齐线性能（大量控件场景），必要时增加节流或开关控制。
+- [ ] **验证用例**：补充 UI 自动化或手工测试用例，记录在 `docs/客户系统开发任务与接口文档.md` 或测试计划中。
+
+### 3. 字段动作与 RDP/文件处理（完成前两项后）
+- [ ] **后端接口**：在 `CustomerEndpoints`/`LayoutEndpoints` 之外实现字段动作 API（RDP 下载、文件跳转、mailto 等），补充 DTO 与权限校验。
+- [ ] **前端交互**：在客户详情及设计器属性面板中，配置动作列表（图标、触发方式、参数），并落地按钮/字段动作执行逻辑。
+- [ ] **多端协同**：更新 `docs/客户系统开发任务与接口文档.md` 中的动作调用示例，确保 QA 能按文档验证。
+- [ ] **自动化测试**：为关键动作编写集成测试（API + UI），验证安全和可用性。
+
+> 每个阶段完成后请同步勾选上述任务，并在提交描述/CHANGELOG 中记录变更。必要的设计澄清或差异分析请持续写入 `docs/` 目录，以保证文档与实现保持闭环。
+
 **目录结构（默认最小）**
 - 单项目优先：`src/BobCrm.App`（Blazor Server + Minimal API + EF Core + Identity）
   - UI 与 API 同进程、同端口，前端无需跨域，运行更简单。
