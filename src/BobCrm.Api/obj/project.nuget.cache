@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "MFQY/MpYZeo=",
+  "dgSpecHash": "kA8ASB6t2yo=",
   "success": true,
-  "projectFilePath": "c:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+  "projectFilePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\X02851\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.21\\microsoft.aspnetcore.authentication.jwtbearer.8.0.21.nupkg.sha512",

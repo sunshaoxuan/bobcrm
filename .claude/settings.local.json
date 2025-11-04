@@ -3,7 +3,21 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(taskkill:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(dotnet build:*)",
+      "Bash(node stop.js:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Read(//c/**)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(dir:*)",
+      "Bash(git reset:*)",
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet tool install:*)",
+      "Bash(node .dev/start.js:*)",
+      "Bash(dotnet run)",
+      "Bash(timeout /t 10 /nobreak)"
     ],
     "deny": [],
     "ask": []

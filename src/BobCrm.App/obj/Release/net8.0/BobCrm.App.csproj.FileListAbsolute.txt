@@ -31,6 +31,7 @@ C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\rjsmrazor.dswa.cache.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\rjsmcshtml.dswa.cache.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\jsmodules\jsmodules.build.manifest.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\scopedcss\Components\Layout\MainLayout.razor.rz.scp.css
+C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\scopedcss\Components\Pages\CustomerDetail.razor.rz.scp.css
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\scopedcss\bundle\BobCrm.App.styles.css
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\scopedcss\projectbundle\BobCrm.App.bundle.scp.css
 C:\workspace\bobcrm\src\BobCrm.App\obj\Release\net8.0\staticwebassets.build.json

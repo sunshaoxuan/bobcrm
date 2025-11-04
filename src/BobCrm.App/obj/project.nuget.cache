@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "t/zdbKPOQWo=",
+  "dgSpecHash": "F+GgWazaH6w=",
   "success": true,
-  "projectFilePath": "c:\\workspace\\bobcrm\\src\\BobCrm.App\\BobCrm.App.csproj",
+  "projectFilePath": "C:\\workspace\\bobcrm\\src\\BobCrm.App\\BobCrm.App.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\X02851\\.nuget\\packages\\antdesign\\0.17.4\\antdesign.0.17.4.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.21\\microsoft.aspnetcore.authentication.jwtbearer.8.0.21.nupkg.sha512",

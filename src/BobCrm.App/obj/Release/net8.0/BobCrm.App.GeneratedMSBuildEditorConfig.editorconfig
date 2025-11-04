@@ -32,6 +32,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBY3RpdmF0ZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/CustomerNew.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDdXN0b21lck5ldy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Customers.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDdXN0b21lcnMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -52,12 +56,40 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xSZWdpc3Rlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Settings.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Setup.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR1cC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/TemplateDesigner.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZURlc2lnbmVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Templates.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/AppHeader.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQXBwSGVhZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/AuthChecker.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQXV0aENoZWNrZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/CustomerSider.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQ3VzdG9tZXJTaWRlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/PreferencesManager.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcUHJlZmVyZW5jZXNNYW5hZ2VyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/workspace/bobcrm/src/BobCrm.App/Components/_Imports.razor]

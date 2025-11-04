@@ -9,81 +9,101 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = BobCrm.App
 build_property.RootNamespace = BobCrm.App
-build_property.ProjectDir = c:\workspace\bobcrm\src\BobCrm.App\
+build_property.ProjectDir = C:\workspace\bobcrm\src\BobCrm.App\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 8.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = c:\workspace\bobcrm\src\BobCrm.App
+build_property.MSBuildProjectDirectory = C:\workspace\bobcrm\src\BobCrm.App
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 8.0
 build_property.EnableCodeStyleSeverity = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/App.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/App.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Layout/EmptyLayout.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Layout/EmptyLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRW1wdHlMYXlvdXQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Activate.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Activate.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBY3RpdmF0ZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/CustomerNew.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/CustomerNew.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDdXN0b21lck5ldy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Customers.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Customers.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDdXN0b21lcnMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Error.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Home.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Login.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Login.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xMb2dpbi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Register.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Register.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xSZWdpc3Rlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Setup.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Settings.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR0aW5ncy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Setup.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR1cC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Routes.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/TemplateDesigner.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZURlc2lnbmVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Templates.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Shared/AuthChecker.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/AppHeader.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQXBwSGVhZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/AuthChecker.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQXV0aENoZWNrZXIucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Shared/CustomerSider.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/CustomerSider.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcQ3VzdG9tZXJTaWRlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Shared/PreferencesManager.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/PreferencesManager.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcUHJlZmVyZW5jZXNNYW5hZ2VyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/_Imports.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Shared/WidgetHost.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcV2lkZ2V0SG9zdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Layout/MainLayout.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Layout/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-xjbtu6gvh5
 
-[c:/workspace/bobcrm/src/BobCrm.App/Components/Pages/CustomerDetail.razor]
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/CustomerDetail.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDdXN0b21lckRldGFpbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-key4fbds5m
