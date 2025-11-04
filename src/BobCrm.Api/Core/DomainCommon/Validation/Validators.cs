@@ -1,5 +1,6 @@
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
+using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Core.DomainCommon.Validation;
 
@@ -8,15 +9,22 @@ public class UpdateCustomerBusinessValidator : IBusinessValidator<UpdateCustomer
 {
     public IEnumerable<ValidationError> Validate(UpdateCustomerDto model)
     {
-        if (model.fields == null || model.fields.Count == 0)
-            yield return new ValidationError("fields", "FieldsRequired", "");
-        else
+        // 允许仅更新基础属性（code/name），此时 fields 可为空
+        var hasBasicChange = !(string.IsNullOrWhiteSpace(model.Code) && string.IsNullOrWhiteSpace(model.Name));
+        if ((model.Fields == null || model.Fields.Count == 0))
         {
-            foreach (var f in model.fields)
+            if (!hasBasicChange)
             {
-                if (string.IsNullOrWhiteSpace(f.key))
-                    yield return new ValidationError("key", "Required", "");
+                // 既无字段也无基础属性修改 -> 无事可做
+                yield return new ValidationError("fields", "FieldsRequired", "");
             }
+            yield break;
+        }
+
+        foreach (var f in model.Fields)
+        {
+            if (string.IsNullOrWhiteSpace(f.Key))
+                yield return new ValidationError("key", "Required", "");
         }
     }
 }
@@ -28,13 +36,13 @@ public class UpdateCustomerPersistenceValidator : IPersistenceValidator<UpdateCu
     public Task<IEnumerable<ValidationError>> ValidateAsync(UpdateCustomerDto model, CancellationToken ct = default)
     {
         var errors = new List<ValidationError>();
-        if (model.fields != null && model.fields.Count > 0)
+        if (model.Fields != null && model.Fields.Count > 0)
         {
             var defs = _repoDef.Query().ToDictionary(d => d.Key, d => d);
-            foreach (var f in model.fields)
+            foreach (var f in model.Fields)
             {
-                if (!defs.ContainsKey(f.key))
-                    errors.Add(new ValidationError("key", "UnknownField", f.key));
+                if (!defs.ContainsKey(f.Key))
+                    errors.Add(new ValidationError("key", "UnknownField", f.Key));
             }
         }
         return Task.FromResult<IEnumerable<ValidationError>>(errors);
@@ -50,7 +58,7 @@ public class UpdateCustomerCommonValidator : ICommonValidator<UpdateCustomerDto>
     public IEnumerable<ValidationError> Validate(UpdateCustomerDto model)
     {
         var defs = _repoDef.Query().ToList();
-        var byKey = (model.fields ?? new List<FieldDto>()).ToDictionary(x => x.key, x => x.value);
+        var byKey = (model.Fields ?? new List<FieldDto>()).ToDictionary(x => x.Key, x => x.Value);
         foreach (var d in defs)
         {
             if (d.Required)

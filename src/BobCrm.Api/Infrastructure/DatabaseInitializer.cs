@@ -9,24 +9,22 @@ public static class DatabaseInitializer
 {
     public static async Task InitializeAsync(DbContext db)
     {
-        try { await db.Database.EnsureCreatedAsync(); } catch { }
-        try { await db.Set<Customer>().CountAsync(); }
-        catch
+        // 使用 EF Core Migrations 替代 EnsureCreated
+        // 这样可以支持数据库架构的演进和版本控制
+        try
         {
-            try { var creator = db.Database.GetService<IRelationalDatabaseCreator>(); await creator.CreateTablesAsync(); } catch { }
+            await db.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            // 如果迁移失败，记录错误但继续运行（开发环境友好）
+            Console.WriteLine($"[DatabaseInitializer] Migration failed: {ex.Message}");
         }
 
         var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
-        if (isNpgsql)
-        {
-            try
-            {
-                await db.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS \"LocalizationLanguages\" (\"Id\" SERIAL PRIMARY KEY, \"Code\" text NOT NULL, \"NativeName\" text NOT NULL);");
-            }
-            catch { }
-        }
 
-        if (!await db.Set<Customer>().AnyAsync())
+        // 初始化期间禁用查询过滤器，避免权限检查干扰
+        if (!await db.Set<Customer>().IgnoreQueryFilters().AnyAsync())
         {
             var customer1 = new Customer { Code = "C001", Name = "示例客户A", Version = 1 };
             var customer2 = new Customer { Code = "C002", Name = "示例客户B", Version = 1 };
@@ -44,7 +42,7 @@ public static class DatabaseInitializer
             );
         }
 
-        if (!await db.Set<FieldDefinition>().AnyAsync())
+        if (!await db.Set<FieldDefinition>().IgnoreQueryFilters().AnyAsync())
         {
             await db.Set<FieldDefinition>().AddRangeAsync(
                 new FieldDefinition
@@ -101,7 +99,7 @@ public static class DatabaseInitializer
             );
         }
 
-        if (!await db.Set<LocalizationLanguage>().AnyAsync())
+        if (!await db.Set<LocalizationLanguage>().IgnoreQueryFilters().AnyAsync())
         {
             await db.Set<LocalizationLanguage>().AddRangeAsync(
                 new LocalizationLanguage { Code = "ja", NativeName = "日本語" },
@@ -110,7 +108,7 @@ public static class DatabaseInitializer
             );
         }
 
-        if (!await db.Set<LocalizationResource>().AnyAsync())
+        if (!await db.Set<LocalizationResource>().IgnoreQueryFilters().AnyAsync())
         {
             await db.Set<LocalizationResource>().AddRangeAsync(
                 new LocalizationResource { Key = "LBL_CUSTOMER", ZH = "客户", JA = "顧客", EN = "Customer" },
@@ -163,7 +161,7 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "MSG_REGISTER_SUCCESS", ZH = "注册成功，请进行邮箱激活（开发环境查看 API 控制台）", JA = "登録成功。メール認証を実施してください（開発環境は API コンソール参照）", EN = "Registered. Please verify by email (check API console in dev)." },
                 new LocalizationResource { Key = "TXT_REGISTER_HELP", ZH = "注册成功后，请在 API 控制台查看激活链接，或前往激活页面手动激活。", JA = "登録後、APIコンソールの有効化リンクを確認するか、アクティベートページで手動有効化してください。", EN = "After registering, check activation link in API console or activate manually on the activate page." },
                 new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
-                new LocalizationResource { Key = "LBL_WELCOME", ZH = "欢迎使用 BobCRM", JA = "BobCRM へようこそ", EN = "Welcome to BobCRM" },
+                new LocalizationResource { Key = "LBL_WELCOME", ZH = "欢迎使用 OneCRM", JA = "OneCRM へようこそ", EN = "Welcome to OneCRM" },
                 new LocalizationResource { Key = "LBL_USER_ID", ZH = "用户ID", JA = "ユーザーID", EN = "User ID" },
                 new LocalizationResource { Key = "LBL_CODE", ZH = "代码", JA = "コード", EN = "Code" },
                 new LocalizationResource { Key = "LBL_CUSTOMER_DETAIL", ZH = "客户详情", JA = "顧客詳細", EN = "Customer Detail" },
@@ -218,25 +216,93 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_LABEL", ZH = "标签", JA = "ラベル", EN = "Label" },
                 new LocalizationResource { Key = "LBL_CALENDAR", ZH = "日历", JA = "カレンダー", EN = "Calendar" },
                 new LocalizationResource { Key = "LBL_LISTBOX", ZH = "列表框", JA = "リストボックス", EN = "Listbox" },
+                new LocalizationResource { Key = "LBL_SECTION", ZH = "分组", JA = "セクション", EN = "Section" },
                 new LocalizationResource { Key = "LBL_FRAME", ZH = "容器", JA = "フレーム", EN = "Frame" },
                 new LocalizationResource { Key = "LBL_TABBOX", ZH = "标签页", JA = "タブボックス", EN = "Tabbox" },
                 new LocalizationResource { Key = "LBL_DRAG_COMPONENT_HERE", ZH = "拖拽组件到这里", JA = "コンポーネントをここにドラッグ", EN = "Drag component here" },
                 new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
                 new LocalizationResource { Key = "LBL_WIDTH", ZH = "宽度", JA = "幅", EN = "Width" },
+                new LocalizationResource { Key = "LBL_HEIGHT", ZH = "高度", JA = "高さ", EN = "Height" },
                 new LocalizationResource { Key = "LBL_DATA_SOURCE", ZH = "数据源", JA = "データソース", EN = "Data Source" },
                 new LocalizationResource { Key = "LBL_VISIBLE", ZH = "可见", JA = "表示", EN = "Visible" },
+                new LocalizationResource { Key = "LBL_DEFAULT_VALUE", ZH = "默认值", JA = "デフォルト値", EN = "Default Value" },
+                new LocalizationResource { Key = "LBL_PLACEHOLDER", ZH = "占位符", JA = "プレースホルダー", EN = "Placeholder" },
+                new LocalizationResource { Key = "LBL_REQUIRED", ZH = "必填", JA = "必須", EN = "Required" },
+                new LocalizationResource { Key = "LBL_READONLY", ZH = "只读", JA = "読み取り専用", EN = "Read Only" },
+                new LocalizationResource { Key = "LBL_MAX_LENGTH", ZH = "最大长度", JA = "最大長", EN = "Max Length" },
                 new LocalizationResource { Key = "BTN_DELETE", ZH = "删除", JA = "削除", EN = "Delete" },
-                new LocalizationResource { Key = "LBL_SELECT_COMPONENT", ZH = "选择一个组件", JA = "コンポーネントを選択", EN = "Select a component" }
+                new LocalizationResource { Key = "LBL_SELECT_COMPONENT", ZH = "选择一个组件", JA = "コンポーネントを選択", EN = "Select a component" },
+                // Menu and navigation keys
+                new LocalizationResource { Key = "MENU_SETTINGS", ZH = "系统设置", JA = "システム設定", EN = "Settings" },
+                new LocalizationResource { Key = "MENU_TEMPLATES", ZH = "模板管理", JA = "テンプレート管理", EN = "Templates" },
+                new LocalizationResource { Key = "LBL_THEME", ZH = "主题", JA = "テーマ", EN = "Theme" },
+                new LocalizationResource { Key = "LBL_COLOR", ZH = "颜色", JA = "カラー", EN = "Color" },
+                new LocalizationResource { Key = "LBL_LANGUAGE", ZH = "语言", JA = "言語", EN = "Language" },
+                new LocalizationResource { Key = "LBL_USER", ZH = "用户", JA = "ユーザー", EN = "User" },
+                new LocalizationResource { Key = "THEME_LIGHT", ZH = "明亮", JA = "ライト", EN = "Light" },
+                new LocalizationResource { Key = "THEME_DARK", ZH = "暗黑", JA = "ダーク", EN = "Dark" },
+                // Template designer specific keys
+                new LocalizationResource { Key = "LBL_STYLE_SETTINGS", ZH = "样式设置", JA = "スタイル設定", EN = "Style Settings" },
+                new LocalizationResource { Key = "LBL_FONT_FAMILY", ZH = "字体", JA = "フォント", EN = "Font" },
+                new LocalizationResource { Key = "LBL_FONT_SIZE", ZH = "字号", JA = "フォントサイズ", EN = "Font Size" },
+                new LocalizationResource { Key = "LBL_FONT_COLOR", ZH = "字体颜色", JA = "フォントカラー", EN = "Font Color" },
+                new LocalizationResource { Key = "LBL_BG_COLOR", ZH = "背景色", JA = "背景色", EN = "Background Color" },
+                new LocalizationResource { Key = "LBL_WIDTH_UNIT", ZH = "宽度单位", JA = "幅の単位", EN = "Width Unit" },
+                new LocalizationResource { Key = "LBL_HEIGHT_UNIT", ZH = "高度单位", JA = "高さの単位", EN = "Height Unit" },
+                new LocalizationResource { Key = "LBL_NEW_LINE", ZH = "换行（新行开始）", JA = "改行（新しい行で開始）", EN = "New Line (Start New Row)" },
+                new LocalizationResource { Key = "PH_DEFAULT_FONT", ZH = "默认字体", JA = "デフォルトフォント", EN = "Default Font" },
+                new LocalizationResource { Key = "PH_DEFAULT", ZH = "默认", JA = "デフォルト", EN = "Default" },
+                new LocalizationResource { Key = "PH_TRANSPARENT", ZH = "透明", JA = "透明", EN = "Transparent" },
+                new LocalizationResource { Key = "FONT_MICROSOFT_YAHEI", ZH = "微软雅黑", JA = "Microsoft YaHei", EN = "Microsoft YaHei" },
+                new LocalizationResource { Key = "FONT_SIMHEI", ZH = "黑体", JA = "SimHei", EN = "SimHei" },
+                new LocalizationResource { Key = "FONT_SIMSUN", ZH = "宋体", JA = "SimSun", EN = "SimSun" },
+                new LocalizationResource { Key = "FONT_MONOSPACE", ZH = "等宽字体", JA = "等幅フォント", EN = "Monospace" },
+                new LocalizationResource { Key = "MSG_DEFAULT_TEMPLATE_SAVED_SHORT", ZH = "默认模板已保存", JA = "デフォルトテンプレートが保存されました", EN = "Default template saved" },
+                new LocalizationResource { Key = "MSG_TEMPLATE_SAVED_SHORT", ZH = "模板已保存", JA = "テンプレートが保存されました", EN = "Template saved" },
+                new LocalizationResource { Key = "MSG_SAVE_FAILED_STATUS", ZH = "保存失败: {0}", JA = "保存に失敗: {0}", EN = "Save failed: {0}" },
+                new LocalizationResource { Key = "MSG_SAVE_FAILED_ERROR", ZH = "保存失败: {0}", JA = "保存に失敗: {0}", EN = "Save failed: {0}" },
+                // Color preset keys
+                new LocalizationResource { Key = "COLOR_LIGHT_GRAY", ZH = "浅灰", JA = "ライトグレー", EN = "Light Gray" },
+                new LocalizationResource { Key = "COLOR_LIGHT_BLUE", ZH = "浅蓝", JA = "ライトブルー", EN = "Light Blue" },
+                new LocalizationResource { Key = "COLOR_LIGHT_YELLOW", ZH = "浅黄", JA = "ライトイエロー", EN = "Light Yellow" },
+                new LocalizationResource { Key = "COLOR_LIGHT_GREEN", ZH = "浅绿", JA = "ライトグリーン", EN = "Light Green" },
+                // Additional UI keys
+                new LocalizationResource { Key = "LBL_NOT_SET", ZH = "未设置", JA = "未設定", EN = "Not Set" },
+                new LocalizationResource { Key = "ERR_LOGIN_EXPIRED", ZH = "登录过期，请重新登录", JA = "ログインの有効期限が切れました。再度ログインしてください", EN = "Login expired, please log in again" },
+                // Setup page specific keys
+                new LocalizationResource { Key = "LBL_OPTIONAL_DEFAULT", ZH = "可选，默认", JA = "オプション、デフォルト", EN = "Optional, default" },
+                new LocalizationResource { Key = "PH_DEFAULT_VALUE", ZH = "默认: {0}", JA = "デフォルト: {0}", EN = "Default: {0}" },
+                new LocalizationResource { Key = "ERR_INVALID_API_BASE", ZH = "API Base地址格式不正确：{0}。请输入有效的URL（如：http://localhost:5200）", JA = "API Baseアドレスの形式が正しくありません: {0}。有効なURLを入力してください（例: http://localhost:5200）", EN = "Invalid API Base address: {0}. Please enter a valid URL (e.g., http://localhost:5200)" },
+                new LocalizationResource { Key = "ERR_ADMIN_USERNAME_EMPTY", ZH = "管理员用户名不能为空", JA = "管理者ユーザー名は空にできません", EN = "Admin username cannot be empty" },
+                new LocalizationResource { Key = "ERR_ADMIN_EMAIL_EMPTY", ZH = "管理员邮箱不能为空", JA = "管理者メールは空にできません", EN = "Admin email cannot be empty" },
+                new LocalizationResource { Key = "ERR_ADMIN_PASSWORD_EMPTY", ZH = "管理员密码不能为空", JA = "管理者パスワードは空にできません", EN = "Admin password cannot be empty" },
+                new LocalizationResource { Key = "ERR_REQUEST_TIMEOUT", ZH = "请求超时（超过15秒）。请检查API服务器 {0} 是否正在运行。\n\n请确认：\n1. API服务器已启动\n2. 在浏览器中访问 {0}/swagger 确认API可访问", JA = "リクエストタイムアウト（15秒超過）。APIサーバー {0} が実行中か確認してください。\n\n確認事項：\n1. APIサーバーが起動している\n2. ブラウザで {0}/swagger にアクセスしてAPIにアクセス可能か確認", EN = "Request timeout (over 15 seconds). Please check if API server {0} is running.\n\nPlease verify:\n1. API server is started\n2. Access {0}/swagger in browser to confirm API is accessible" },
+                new LocalizationResource { Key = "ERR_CANNOT_CONNECT_API", ZH = "无法连接到API服务器 {0}：{1}\n\n请确认：\n1. API服务器已启动（运行 BobCrm.Api 项目）\n2. API地址正确：{0}\n3. 网络连接正常\n4. 防火墙允许访问该端口", JA = "APIサーバー {0} に接続できません: {1}\n\n確認事項：\n1. APIサーバーが起動している（BobCrm.Apiプロジェクトを実行）\n2. APIアドレスが正しい: {0}\n3. ネットワーク接続が正常\n4. ファイアウォールがポートへのアクセスを許可している", EN = "Cannot connect to API server {0}: {1}\n\nPlease verify:\n1. API server is started (run BobCrm.Api project)\n2. API address is correct: {0}\n3. Network connection is normal\n4. Firewall allows access to the port" },
+                new LocalizationResource { Key = "ERR_EXCEPTION_OCCURRED", ZH = "发生错误：{0} - {1}\n\n堆栈跟踪：{2}", JA = "エラーが発生しました: {0} - {1}\n\nスタックトレース: {2}", EN = "Error occurred: {0} - {1}\n\nStack trace: {2}" },
+                new LocalizationResource { Key = "ERR_SAVE_FAILED_ADMIN", ZH = "无法保存管理员账户到 {0}\n\n尝试保存的用户信息：\n  用户名: {1}\n  邮箱: {2}\n\n错误详情：{3}\n\n请检查：\n1. API服务器是否正在运行 ({0})\n2. 在浏览器中访问 {0}/swagger 确认API是否可访问\n3. 网络连接是否正常\n4. API地址是否正确", JA = "管理者アカウントを {0} に保存できません\n\n保存しようとしたユーザー情報：\n  ユーザー名: {1}\n  メール: {2}\n\nエラー詳細: {3}\n\n確認事項：\n1. APIサーバーが実行中か ({0})\n2. ブラウザで {0}/swagger にアクセスしてAPIにアクセス可能か確認\n3. ネットワーク接続が正常か\n4. APIアドレスが正しいか", EN = "Cannot save admin account to {0}\n\nAttempted user info:\n  Username: {1}\n  Email: {2}\n\nError details: {3}\n\nPlease check:\n1. Is API server running ({0})\n2. Access {0}/swagger in browser to confirm API is accessible\n3. Is network connection normal\n4. Is API address correct" },
+                new LocalizationResource { Key = "MSG_SETTINGS_SAVED_REDIRECTING", ZH = "设置已保存，正在跳转到首页...", JA = "設定が保存されました。ホームページにリダイレクトしています...", EN = "Settings saved, redirecting to home..." },
+                new LocalizationResource { Key = "ERR_OCCURRED", ZH = "发生错误: {0}", JA = "エラーが発生しました: {0}", EN = "Error occurred: {0}" }
             );
         }
         else
         {
-            // Best-effort backfill: ensure critical UI keys exist
+            // Best-effort backfill: ensure critical UI keys exist and update if needed
             void Ensure(string key, string zh, string ja, string en)
             {
                 var set = db.Set<LocalizationResource>();
-                if (!set.Any(x => x.Key == key)) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+                var existing = set.FirstOrDefault(x => x.Key == key);
+                if (existing == null)
+                {
+                    set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+                }
+                else
+                {
+                    // Update existing translations
+                    existing.ZH = zh;
+                    existing.JA = ja;
+                    existing.EN = en;
+                }
             }
             Ensure("MENU_CUSTOMERS", "客户", "顧客", "Customers");
             Ensure("COL_CODE", "编码", "コード", "Code");
@@ -264,7 +330,7 @@ public static class DatabaseInitializer
             Ensure("LBL_SEARCH", "搜索", "検索", "Search");
             Ensure("BTN_LOGOUT", "退出", "ログアウト", "Logout");
             Ensure("LBL_HOME", "首页", "ホーム", "Home");
-            Ensure("LBL_WELCOME", "欢迎使用 BobCRM", "BobCRM へようこそ", "Welcome to BobCRM");
+            Ensure("LBL_WELCOME", "欢迎使用 OneCRM", "OneCRM へようこそ", "Welcome to OneCRM");
             Ensure("LBL_CUSTOMER_DETAIL", "客户详情", "顧客詳細", "Customer Detail");
             Ensure("LBL_LOADING", "加载中", "読み込み中", "Loading");
             Ensure("LBL_FIELDS", "字段", "フィールド", "Fields");
@@ -319,6 +385,7 @@ public static class DatabaseInitializer
             Ensure("LBL_LABEL", "标签", "ラベル", "Label");
             Ensure("LBL_CALENDAR", "日历", "カレンダー", "Calendar");
             Ensure("LBL_LISTBOX", "列表框", "リストボックス", "Listbox");
+            Ensure("LBL_SECTION", "分组", "セクション", "Section");
             Ensure("LBL_FRAME", "容器", "フレーム", "Frame");
             Ensure("LBL_TABBOX", "标签页", "タブボックス", "Tabbox");
             Ensure("LBL_DRAG_COMPONENT_HERE", "拖拽组件到这里", "コンポーネントをここにドラッグ", "Drag component here");
@@ -329,9 +396,174 @@ public static class DatabaseInitializer
             Ensure("LBL_VISIBLE", "可见", "表示", "Visible");
             Ensure("BTN_DELETE", "删除", "削除", "Delete");
             Ensure("LBL_SELECT_COMPONENT", "选择一个组件", "コンポーネントを選択", "Select a component");
+            // Menu and navigation keys
+            Ensure("MENU_SETTINGS", "系统设置", "システム設定", "Settings");
+            Ensure("MENU_TEMPLATES", "模板管理", "テンプレート管理", "Templates");
+            Ensure("LBL_THEME", "主题", "テーマ", "Theme");
+            Ensure("LBL_COLOR", "颜色", "カラー", "Color");
+            Ensure("LBL_LANGUAGE", "语言", "言語", "Language");
+            Ensure("LBL_USER", "用户", "ユーザー", "User");
+            Ensure("THEME_LIGHT", "明亮", "ライト", "Light");
+            Ensure("THEME_DARK", "暗黑", "ダーク", "Dark");
+            Ensure("LBL_HEIGHT", "高度", "高さ", "Height");
+            Ensure("LBL_DEFAULT_VALUE", "默认值", "デフォルト値", "Default Value");
+            Ensure("LBL_PLACEHOLDER", "占位符", "プレースホルダー", "Placeholder");
+            Ensure("LBL_REQUIRED", "必填", "必須", "Required");
+            Ensure("LBL_READONLY", "只读", "読み取り専用", "Read Only");
+            Ensure("LBL_MAX_LENGTH", "最大长度", "最大長", "Max Length");
+            Ensure("LBL_NEW_LINE", "换行（新行开始）", "改行（新しい行で開始）", "New Line (Start New Row)");
+            Ensure("LBL_FRAME", "框架", "フレーム", "Frame");
+            // Template designer specific keys
+            Ensure("LBL_STYLE_SETTINGS", "样式设置", "スタイル設定", "Style Settings");
+            Ensure("LBL_FONT_FAMILY", "字体", "フォント", "Font");
+            Ensure("LBL_FONT_SIZE", "字号", "フォントサイズ", "Font Size");
+            Ensure("LBL_FONT_COLOR", "字体颜色", "フォントカラー", "Font Color");
+            Ensure("LBL_BG_COLOR", "背景色", "背景色", "Background Color");
+            Ensure("LBL_WIDTH_UNIT", "宽度单位", "幅の単位", "Width Unit");
+            Ensure("LBL_HEIGHT_UNIT", "高度单位", "高さの単位", "Height Unit");
+            Ensure("PH_DEFAULT_FONT", "默认字体", "デフォルトフォント", "Default Font");
+            Ensure("PH_DEFAULT", "默认", "デフォルト", "Default");
+            Ensure("PH_TRANSPARENT", "透明", "透明", "Transparent");
+            Ensure("FONT_MICROSOFT_YAHEI", "微软雅黑", "Microsoft YaHei", "Microsoft YaHei");
+            Ensure("FONT_SIMHEI", "黑体", "SimHei", "SimHei");
+            Ensure("FONT_SIMSUN", "宋体", "SimSun", "SimSun");
+            Ensure("FONT_MONOSPACE", "等宽字体", "等幅フォント", "Monospace");
+            Ensure("MSG_DEFAULT_TEMPLATE_SAVED_SHORT", "默认模板已保存", "デフォルトテンプレートが保存されました", "Default template saved");
+            Ensure("MSG_TEMPLATE_SAVED_SHORT", "模板已保存", "テンプレートが保存されました", "Template saved");
+            Ensure("MSG_SAVE_FAILED_STATUS", "保存失败: {0}", "保存に失敗: {0}", "Save failed: {0}");
+            Ensure("MSG_SAVE_FAILED_ERROR", "保存失败: {0}", "保存に失敗: {0}", "Save failed: {0}");
+            // Save scope toggles
+            Ensure("BTN_SAVE_AS_MINE", "保存为我的", "自分用に保存", "Save as Mine");
+            Ensure("BTN_SAVE_AS_DEFAULT", "保存为默认", "デフォルトとして保存", "Save as Default");
+            // Color preset keys
+            Ensure("COLOR_LIGHT_GRAY", "浅灰", "ライトグレー", "Light Gray");
+            Ensure("COLOR_LIGHT_BLUE", "浅蓝", "ライトブルー", "Light Blue");
+            Ensure("COLOR_LIGHT_YELLOW", "浅黄", "ライトイエロー", "Light Yellow");
+            Ensure("COLOR_LIGHT_GREEN", "浅绿", "ライトグリーン", "Light Green");
+            // Additional UI keys
+            Ensure("LBL_NOT_SET", "未设置", "未設定", "Not Set");
+            Ensure("ERR_LOGIN_EXPIRED", "登录过期，请重新登录", "ログインの有効期限が切れました。再度ログインしてください", "Login expired, please log in again");
+            // Setup page specific keys
+            Ensure("LBL_OPTIONAL_DEFAULT", "可选，默认", "オプション、デフォルト", "Optional, default");
+            Ensure("PH_DEFAULT_VALUE", "默认: {0}", "デフォルト: {0}", "Default: {0}");
+            Ensure("ERR_INVALID_API_BASE", "API Base地址格式不正确：{0}。请输入有效的URL（如：http://localhost:5200）", "API Baseアドレスの形式が正しくありません: {0}。有効なURLを入力してください（例: http://localhost:5200）", "Invalid API Base address: {0}. Please enter a valid URL (e.g., http://localhost:5200)");
+            Ensure("ERR_ADMIN_USERNAME_EMPTY", "管理员用户名不能为空", "管理者ユーザー名は空にできません", "Admin username cannot be empty");
+            Ensure("ERR_ADMIN_EMAIL_EMPTY", "管理员邮箱不能为空", "管理者メールは空にできません", "Admin email cannot be empty");
+            Ensure("ERR_ADMIN_PASSWORD_EMPTY", "管理员密码不能为空", "管理者パスワードは空にできません", "Admin password cannot be empty");
+            Ensure("ERR_REQUEST_TIMEOUT", "请求超时（超过15秒）。请检查API服务器 {0} 是否正在运行。\n\n请确认：\n1. API服务器已启动\n2. 在浏览器中访问 {0}/swagger 确认API可访问", "リクエストタイムアウト（15秒超過）。APIサーバー {0} が実行中か確認してください。\n\n確認事項：\n1. APIサーバーが起動している\n2. ブラウザで {0}/swagger にアクセスしてAPIにアクセス可能か確認", "Request timeout (over 15 seconds). Please check if API server {0} is running.\n\nPlease verify:\n1. API server is started\n2. Access {0}/swagger in browser to confirm API is accessible");
+            Ensure("ERR_CANNOT_CONNECT_API", "无法连接到API服务器 {0}：{1}\n\n请确认：\n1. API服务器已启动（运行 BobCrm.Api 项目）\n2. API地址正确：{0}\n3. 网络连接正常\n4. 防火墙允许访问该端口", "APIサーバー {0} に接続できません: {1}\n\n確認事項：\n1. APIサーバーが起動している（BobCrm.Apiプロジェクトを実行）\n2. APIアドレスが正しい: {0}\n3. ネットワーク接続が正常\n4. ファイアウォールがポートへのアクセスを許可している", "Cannot connect to API server {0}: {1}\n\nPlease verify:\n1. API server is started (run BobCrm.Api project)\n2. API address is correct: {0}\n3. Network connection is normal\n4. Firewall allows access to the port");
+            Ensure("ERR_EXCEPTION_OCCURRED", "发生错误：{0} - {1}\n\n堆栈跟踪：{2}", "エラーが発生しました: {0} - {1}\n\nスタックトレース: {2}", "Error occurred: {0} - {1}\n\nStack trace: {2}");
+            Ensure("ERR_SAVE_FAILED_ADMIN", "无法保存管理员账户到 {0}\n\n尝试保存的用户信息：\n  用户名: {1}\n  邮箱: {2}\n\n错误详情：{3}\n\n请检查：\n1. API服务器是否正在运行 ({0})\n2. 在浏览器中访问 {0}/swagger 确认API是否可访问\n3. 网络连接是否正常\n4. API地址是否正确", "管理者アカウントを {0} に保存できません\n\n保存しようとしたユーザー情報：\n  ユーザー名: {1}\n  メール: {2}\n\nエラー詳細: {3}\n\n確認事項：\n1. APIサーバーが実行中か ({0})\n2. ブラウザで {0}/swagger にアクセスしてAPIにアクセス可能か確認\n3. ネットワーク接続が正常か\n4. APIアドレスが正しいか", "Cannot save admin account to {0}\n\nAttempted user info:\n  Username: {1}\n  Email: {2}\n\nError details: {3}\n\nPlease check:\n1. Is API server running ({0})\n2. Access {0}/swagger in browser to confirm API is accessible\n3. Is network connection normal\n4. Is API address correct");
+            Ensure("MSG_SETTINGS_SAVED_REDIRECTING", "设置已保存，正在跳转到首页...", "設定が保存されました。ホームページにリダイレクトしています...", "Settings saved, redirecting to home...");
+            Ensure("ERR_OCCURRED", "发生错误: {0}", "エラーが発生しました: {0}", "Error occurred: {0}");
+            // Templates page
+            Ensure("LBL_CURRENT_USER_TEMPLATE", "当前用户模板", "現在のユーザーテンプレート", "Current User Template");
+            Ensure("LBL_CUSTOMER_LAYOUT", "客户详情页布局", "顧客詳細ページレイアウト", "Customer Detail Layout");
+            Ensure("LBL_DEFAULT_LAYOUT_DESC", "当前用户的默认客户详情页布局模板，应用于所有客户档案", "現在のユーザーのデフォルト顧客詳細ページレイアウトテンプレート、すべての顧客に適用", "Default customer detail layout template for current user, applies to all customers");
+            Ensure("LBL_LAST_UPDATED", "最后更新", "最終更新", "Last Updated");
+            Ensure("LBL_WIDGET_COUNT", "个控件", "個のウィジェット", "widgets");
+            Ensure("BTN_EDIT_TEMPLATE", "编辑模板", "テンプレートを編集", "Edit Template");
+            Ensure("BTN_RESET_TO_DEFAULT", "重置为默认", "デフォルトにリセット", "Reset to Default");
+            Ensure("LBL_ABOUT_TEMPLATE", "关于模板", "テンプレートについて", "About Template");
+            Ensure("LBL_TEMPLATE_INFO", "模板是用户级别的布局配置，保存了您自定义的字段排列、宽度、高度等属性。编辑模板后，所有客户档案都会使用新的布局。未来版本将支持多模板管理功能。", "テンプレートはユーザーレベルのレイアウト設定で、カスタマイズしたフィールドの配置、幅、高さなどの属性を保存します。テンプレート編集後、すべての顧客がこの新しいレイアウトを使用します。今後のバージョンでは複数テンプレート管理をサポートします。", "Templates are user-level layout configurations that save your customized field arrangements, widths, heights and other properties. After editing the template, all customer records will use the new layout. Future versions will support multi-template management.");
+            Ensure("MSG_CONFIRM_RESET_TEMPLATE", "确定要重置为默认模板吗？这将删除您的所有自定义布局设置。", "デフォルトテンプレートにリセットしますか？すべてのカスタムレイアウト設定が削除されます。", "Are you sure you want to reset to default template? This will delete all your custom layout settings.");
+            Ensure("MSG_TEMPLATE_RESET_SUCCESS", "模板已重置为默认设置", "テンプレートがデフォルト設定にリセットされました", "Template has been reset to default settings");
+            Ensure("MSG_TEMPLATE_RESET_FAILED", "重置失败，请稍后重试", "リセットに失敗しました。後でもう一度お試しください", "Reset failed, please try again later");
+            Ensure("LBL_NOT_FOUND", "未找到", "見つかりません", "Not Found");
+            Ensure("LBL_NO_TEMPLATE", "暂无模板", "テンプレートがありません", "No Template");
+            Ensure("MSG_DEFAULT_TEMPLATE_SAVED", "默认模板已保存，所有用户将使用此模板", "デフォルトテンプレートが保存されました。すべてのユーザーがこのテンプレートを使用します", "Default template saved. All users will use this template.");
+            Ensure("MSG_USER_TEMPLATE_SAVED", "您的模板已保存", "テンプレートが保存されました", "Your template has been saved");
         }
 
         await db.SaveChangesAsync();
+
+        // 创建默认客户档案显示模板（customerId = 0 表示全局模板，不绑定具体客户）
+        // 所有用户默认使用此模板，除非他们保存了自己的模板
+        if (!await db.Set<UserLayout>().IgnoreQueryFilters().AnyAsync(l => l.UserId == "__default__" && l.CustomerId == 0))
+        {
+            var defaultTemplate = new
+            {
+                mode = "flow",
+                items = new Dictionary<string, object>
+                {
+                    // email 字段 - 必填，占半行
+                    ["email"] = new
+                    {
+                        order = 0,
+                        w = 6,  // 向后兼容
+                        Width = 50,
+                        WidthUnit = "%",
+                        Height = 32,
+                        HeightUnit = "px",
+                        visible = true,
+                        label = "LBL_EMAIL",
+                        type = "textbox"
+                    },
+                    // link 字段 - 网址链接，占半行
+                    ["link"] = new
+                    {
+                        order = 1,
+                        w = 6,
+                        Width = 50,
+                        WidthUnit = "%",
+                        Height = 32,
+                        HeightUnit = "px",
+                        visible = true,
+                        label = "LBL_LINK",
+                        type = "textbox"
+                    },
+                    // file 字段 - 文件路径，占半行
+                    ["file"] = new
+                    {
+                        order = 2,
+                        w = 6,
+                        Width = 50,
+                        WidthUnit = "%",
+                        Height = 32,
+                        HeightUnit = "px",
+                        visible = true,
+                        label = "LBL_FILE_PATH",
+                        type = "textbox"
+                    },
+                    // rds 字段 - 远程桌面连接，占半行
+                    ["rds"] = new
+                    {
+                        order = 3,
+                        w = 6,
+                        Width = 50,
+                        WidthUnit = "%",
+                        Height = 32,
+                        HeightUnit = "px",
+                        visible = true,
+                        label = "LBL_RDS",
+                        type = "textbox"
+                    },
+                    // priority 字段 - 优先级数字，占1/4行
+                    ["priority"] = new
+                    {
+                        order = 4,
+                        w = 3,
+                        Width = 25,
+                        WidthUnit = "%",
+                        Height = 32,
+                        HeightUnit = "px",
+                        visible = true,
+                        label = "LBL_PRIORITY",
+                        type = "textbox"
+                    }
+                }
+            };
+
+            var templateJson = System.Text.Json.JsonSerializer.Serialize(defaultTemplate);
+            db.Set<UserLayout>().Add(new UserLayout
+            {
+                UserId = "__default__",
+                CustomerId = 0,  // 0 表示全局用户级模板
+                LayoutJson = templateJson
+            });
+
+            await db.SaveChangesAsync();
+        }
 
         if (isNpgsql)
         {

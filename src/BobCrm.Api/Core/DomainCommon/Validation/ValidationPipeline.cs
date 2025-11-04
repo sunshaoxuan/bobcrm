@@ -43,7 +43,7 @@ public class ValidationPipeline : IValidationPipeline
             }
         }
 
-        // Persistence validators
+        // Persistence validators (map to Validation 400 to avoid 500 for user input issues)
         var pValidators = _sp.GetServices<IPersistenceValidator<T>>();
         foreach (var v in pValidators)
         {
@@ -52,9 +52,9 @@ public class ValidationPipeline : IValidationPipeline
             {
                 var loc = _sp.GetRequiredService<ILocalization>();
                 var lang = LangHelper.GetLang(http);
-                var msg = loc.T("ERR_PERSISTENCE_VALIDATION_FAILED", lang);
+                var msg = loc.T("ERR_VALIDATION_FAILED", lang);
                 var details = LocalizeErrors(errs, http, loc, lang);
-                return ApiErrors.Persistence(msg, details);
+                return ApiErrors.Validation(msg, details);
             }
         }
 
