@@ -1,0 +1,177 @@
+using Microsoft.AspNetCore.Identity;
+using BobCrm.Api.Contracts.DTOs;
+
+namespace BobCrm.Api.Endpoints;
+
+/// <summary>
+/// 系统初始化设置相关端点
+/// </summary>
+public static class SetupEndpoints
+{
+    public static IEndpointRouteBuilder MapSetupEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/setup")
+            .WithTags("系统设置")
+            .WithOpenApi();
+
+        // 获取当前管理员信息
+        group.MapGet("/admin", async (
+            UserManager<IdentityUser> um,
+            RoleManager<IdentityRole> rm,
+            ILogger<Program> logger) =>
+        {
+            logger.LogDebug("[Setup] Admin info requested");
+            
+            var adminRole = await rm.FindByNameAsync("admin");
+            if (adminRole == null)
+            {
+                logger.LogInformation("[Setup] Admin role does not exist");
+                return Results.Ok(new { username = "", email = "", exists = false });
+            }
+
+            // 查找管理员角色中的任何用户
+            var adminUsers = await um.GetUsersInRoleAsync("admin");
+            var admin = adminUsers.FirstOrDefault();
+
+            if (admin == null)
+            {
+                logger.LogInformation("[Setup] No admin user found");
+                return Results.Ok(new { username = "", email = "", exists = false });
+            }
+
+            logger.LogInformation("[Setup] Admin user exists: {Username}", admin.UserName);
+            return Results.Ok(new
+            {
+                username = admin.UserName ?? "",
+                email = admin.Email ?? "",
+                exists = true
+            });
+        })
+        .WithName("GetAdminInfo")
+        .WithSummary("获取管理员信息")
+        .WithDescription("检查系统是否已初始化管理员账户")
+        .AllowAnonymous();
+
+        // 首次运行管理员设置
+        group.MapPost("/admin", async (
+            UserManager<IdentityUser> um,
+            RoleManager<IdentityRole> rm,
+            SignInManager<IdentityUser> sm,
+            AdminSetupDto dto,
+            ILogger<Program> logger) =>
+        {
+            logger.LogInformation("[Setup] Admin configuration request: username={Username}, email={Email}", dto.Username, dto.Email);
+            
+            if (!await rm.RoleExistsAsync("admin"))
+            {
+                await rm.CreateAsync(new IdentityRole("admin"));
+                logger.LogInformation("[Setup] Admin role created");
+            }
+
+            // 检查是否已存在管理员用户（使用默认凭据）
+            var existingAdmin = await um.FindByNameAsync("admin");
+            IdentityUser? adminUser = null;
+
+            if (existingAdmin != null)
+            {
+                // 检查是否为未初始化的默认管理员（email = admin@local 且默认密码有效）
+                var isDefaultAdmin = existingAdmin.Email == "admin@local";
+                var defaultPasswordWorks = false;
+                if (isDefaultAdmin)
+                {
+                    defaultPasswordWorks = (await sm.CheckPasswordSignInAsync(existingAdmin, "Admin@12345", false)).Succeeded;
+                }
+
+                // 如果是默认管理员且未自定义，允许更新
+                if (isDefaultAdmin && defaultPasswordWorks)
+                {
+                    adminUser = existingAdmin;
+                    logger.LogInformation("[Setup] Found default admin, will update");
+                }
+                else if (isDefaultAdmin && !defaultPasswordWorks)
+                {
+                    // 默认管理员存在但密码已更改 - 如果邮箱仍是 admin@local 则允许更新
+                    adminUser = existingAdmin;
+                    logger.LogInformation("[Setup] Found modified default admin, will update");
+                }
+                else
+                {
+                    // 管理员存在但已自定义 - 检查是否可以覆盖
+                    var canOverride = (await sm.CheckPasswordSignInAsync(existingAdmin, "Admin@12345", false)).Succeeded;
+                    if (!canOverride)
+                    {
+                        logger.LogWarning("[Setup] Override denied: existing admin not default and default password invalid");
+                        return Results.StatusCode(403); // 无法更新 - 管理员已配置
+                    }
+                    adminUser = existingAdmin;
+                    logger.LogInformation("[Setup] Found customized admin with default password, will update");
+                }
+            }
+
+            if (adminUser == null)
+            {
+                // 不存在管理员用户，创建新的
+                adminUser = new IdentityUser { UserName = dto.Username, Email = dto.Email, EmailConfirmed = true };
+                var cr = await um.CreateAsync(adminUser, dto.Password);
+                if (!cr.Succeeded)
+                {
+                    var errors = string.Join("; ", cr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                    logger.LogError("[Setup] Failed to create admin: {Errors}", errors);
+                    return Results.BadRequest(new { error = "创建管理员用户失败", details = errors });
+                }
+                await um.AddToRoleAsync(adminUser, "admin");
+                logger.LogInformation("[Setup] Admin created successfully: {Username}", dto.Username);
+                return Results.Ok(ApiResponseExtensions.SuccessResponse("管理员账户创建成功"));
+            }
+            else
+            {
+                // 更新现有管理员用户
+                adminUser.UserName = dto.Username;
+                adminUser.Email = dto.Email;
+                adminUser.EmailConfirmed = true;
+                // 重置锁定计数器以避免意外的登录失败
+                adminUser.AccessFailedCount = 0;
+                adminUser.LockoutEnabled = false;
+                adminUser.LockoutEnd = null;
+                var ur = await um.UpdateAsync(adminUser);
+                if (!ur.Succeeded)
+                {
+                    var errors = string.Join("; ", ur.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                    logger.LogError("[Setup] Failed to update admin profile: {Errors}", errors);
+                    return Results.BadRequest(new { error = "更新管理员用户失败", details = errors });
+                }
+
+                // 更新密码
+                if (await um.HasPasswordAsync(adminUser))
+                {
+                    var removeResult = await um.RemovePasswordAsync(adminUser);
+                    if (!removeResult.Succeeded)
+                    {
+                        var errors = string.Join("; ", removeResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                        logger.LogError("[Setup] Failed to remove old password: {Errors}", errors);
+                        return Results.BadRequest(new { error = "移除旧密码失败", details = errors });
+                    }
+                }
+
+                var pr = await um.AddPasswordAsync(adminUser, dto.Password);
+                if (!pr.Succeeded)
+                {
+                    var errors = string.Join("; ", pr.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                    logger.LogError("[Setup] Failed to set new password: {Errors}", errors);
+                    return Results.BadRequest(new { error = "设置新密码失败", details = errors });
+                }
+                await um.UpdateSecurityStampAsync(adminUser);
+                logger.LogInformation("[Setup] Admin updated successfully: {Username}", dto.Username);
+                return Results.Ok(ApiResponseExtensions.SuccessResponse("管理员账户更新成功"));
+            }
+        })
+        .WithName("SetupAdmin")
+        .WithSummary("配置管理员账户")
+        .WithDescription("创建或更新系统管理员账户")
+        .AllowAnonymous();
+
+        return app;
+    }
+}
+
+public record AdminSetupDto(string Username, string Email, string Password);
