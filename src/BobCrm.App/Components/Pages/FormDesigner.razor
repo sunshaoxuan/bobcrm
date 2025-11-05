@@ -312,10 +312,14 @@ else
             var resp = await Auth.GetWithRefreshAsync("/api/entities");
             if (resp.IsSuccessStatusCode)
             {
-                var entities = await resp.Content.ReadFromJsonAsync<List<EntityTypeItem>>();
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true  // ⭐ 不区分大小写
+                };
+                var entities = await resp.Content.ReadFromJsonAsync<List<EntityTypeItem>>(jsonOptions);
                 availableEntityTypes = entities ?? new();
                 
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {availableEntityTypes.Count} entity types");
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {availableEntityTypes.Count} entity types", availableEntityTypes);
             }
             else
             {

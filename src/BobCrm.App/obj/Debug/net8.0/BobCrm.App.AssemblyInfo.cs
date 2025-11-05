@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BobCrm.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8fdee27c4c7d3fc77e01800e064efe570ff2c06e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cee4fd57d70b3fc0fb496aff5d024a44e3aeca08")]
 [assembly: System.Reflection.AssemblyProductAttribute("BobCrm.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BobCrm.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
