@@ -4,6 +4,14 @@
    - Primary color is controlled by CSS variable --primary
 */
 
+/* 全局样式：防止 html/body 产生滚动条 */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
 /* Base variables (defaults) */
 :root {
   --primary: #3f7cff;
@@ -37,8 +45,8 @@
   --shadow: 0 6px 24px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.25);
 }
 
-/* App shell */
-.app-shell { min-height: 100vh; display: flex; background: var(--bg); color: var(--text); }
+/* App shell - 固定高度，防止页面滚动 */
+.app-shell { height: 100vh; overflow: hidden; display: flex; background: var(--bg); color: var(--text); }
 .app-sider { width: 240px; background: var(--sider-bg); color: #fff; padding: 12px 12px; }
 .app-sider a { color: #fff; opacity: .92; }
 
@@ -63,7 +71,7 @@
 }
 
 /* App Main and Header */
-.app-main { flex: 1; display: flex; flex-direction: column; }
+.app-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .app-header {
   background: var(--header-bg);
   border-bottom: 1px solid var(--border);
@@ -211,8 +219,8 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
-.app-content { padding: 16px; }
-.app-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-height: 360px; box-shadow: var(--shadow); }
+.app-content { padding: 16px; flex: 1; overflow-y: auto; }
+.app-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
 
 /* Ant Design quick theming overrides */
 .ant-btn-primary { background-color: var(--primary) !important; border-color: var(--primary) !important; color: var(--primary-contrast) !important; }
