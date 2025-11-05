@@ -421,6 +421,27 @@ public static class DatabaseInitializer
             Ensure("BTN_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
             Ensure("LBL_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
             Ensure("LBL_CUSTOMER_CODE_HINT", "唯一标识，例如: C001", "一意の識別子、例: C001", "Unique identifier, e.g. C001");
+            // Profile page keys
+            Ensure("MENU_PROFILE", "个人中心", "プロフィール", "Profile");
+            Ensure("LBL_USER_INFORMATION", "用户信息", "ユーザー情報", "User Information");
+            Ensure("LBL_USERNAME", "用户名", "ユーザー名", "Username");
+            Ensure("LBL_EMAIL", "邮箱", "メール", "Email");
+            Ensure("LBL_ROLE", "角色", "役割", "Role");
+            Ensure("LBL_CHANGE_PASSWORD", "修改密码", "パスワード変更", "Change Password");
+            Ensure("LBL_CURRENT_PASSWORD", "当前密码", "現在のパスワード", "Current Password");
+            Ensure("LBL_NEW_PASSWORD", "新密码", "新しいパスワード", "New Password");
+            Ensure("LBL_CONFIRM_PASSWORD", "确认密码", "パスワード確認", "Confirm Password");
+            Ensure("LBL_ENTER_CURRENT_PASSWORD", "请输入当前密码", "現在のパスワードを入力してください", "Enter current password");
+            Ensure("LBL_ENTER_NEW_PASSWORD", "请输入新密码", "新しいパスワードを入力してください", "Enter new password");
+            Ensure("LBL_ENTER_CONFIRM_PASSWORD", "请再次输入新密码", "新しいパスワードを再入力してください", "Re-enter new password");
+            Ensure("BTN_CHANGE_AVATAR", "更换头像", "アバター変更", "Change Avatar");
+            Ensure("BTN_LOGIN", "登录", "ログイン", "Login");
+            Ensure("MSG_CURRENT_PASSWORD_REQUIRED", "请输入当前密码", "現在のパスワードを入力してください", "Current password is required");
+            Ensure("MSG_PASSWORD_TOO_SHORT", "密码长度不能少于6个字符", "パスワードは6文字以上である必要があります", "Password must be at least 6 characters");
+            Ensure("MSG_PASSWORD_NOT_MATCH", "两次输入的密码不一致", "パスワードが一致しません", "Passwords do not match");
+            Ensure("MSG_PASSWORD_CHANGED_SUCCESS", "密码修改成功", "パスワードが正常に変更されました", "Password changed successfully");
+            Ensure("MSG_CHANGE_PASSWORD_FAILED", "密码修改失败", "パスワードの変更に失敗しました", "Failed to change password");
+            Ensure("MSG_FEATURE_COMING_SOON", "该功能即将上线", "この機能は近日公開予定です", "This feature is coming soon");
             Ensure("BTN_CANCEL", "取消", "キャンセル", "Cancel");
             Ensure("LBL_SAVING", "保存中", "保存中", "Saving");
             Ensure("LBL_SAVE_FAILED", "保存失败", "保存に失敗", "Save failed");
