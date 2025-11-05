@@ -15,13 +15,14 @@ public static class EntityMetadataEndpoints
             
             return Results.Ok(entities.Select(e => new
             {
-                e.EntityType,
-                e.DisplayNameKey,
-                e.DescriptionKey,
-                e.ApiEndpoint,
-                e.Icon,
-                e.Category,
-                e.Order
+                entityType = e.EntityRoute,      // 前端使用EntityRoute（customer）
+                entityName = e.EntityName,       // Customer
+                displayNameKey = e.DisplayNameKey,
+                descriptionKey = e.DescriptionKey,
+                apiEndpoint = e.ApiEndpoint,
+                icon = e.Icon,
+                category = e.Category,
+                order = e.Order
             }));
         })
         .WithName("GetAvailableEntities")
@@ -50,25 +51,26 @@ public static class EntityMetadataEndpoints
         .WithTags("Entities")
         .WithOpenApi();
 
-        // 验证实体类型是否有效
-        group.MapGet("/{entityType}/validate", async (string entityType, EntityMetadataService entityService) =>
+        // 验证实体路由是否有效
+        group.MapGet("/{entityRoute}/validate", async (string entityRoute, EntityMetadataService entityService) =>
         {
-            var isValid = await entityService.IsValidEntityTypeAsync(entityType);
-            var entity = await entityService.GetEntityMetadataAsync(entityType);
+            var isValid = await entityService.IsValidEntityRouteAsync(entityRoute);
+            var entity = await entityService.GetEntityMetadataByRouteAsync(entityRoute);
             
             return Results.Ok(new
             {
                 isValid,
-                entityType,
+                entityRoute,
                 entity = entity != null ? new
                 {
+                    entity.EntityName,
                     entity.DisplayNameKey,
                     entity.ApiEndpoint,
                     entity.IsEnabled
                 } : null
             });
         })
-        .WithName("ValidateEntityType")
+        .WithName("ValidateEntityRoute")
         .WithTags("Entities")
         .WithOpenApi();
     }

@@ -39,20 +39,29 @@ public class EntityMetadataService
     }
 
     /// <summary>
-    /// 根据类型获取实体元数据
+    /// 根据路由名获取实体元数据
+    /// </summary>
+    public async Task<Data.Entities.EntityMetadata?> GetEntityMetadataByRouteAsync(string entityRoute)
+    {
+        return await _db.EntityMetadata
+            .FirstOrDefaultAsync(e => e.EntityRoute == entityRoute.ToLowerInvariant());
+    }
+
+    /// <summary>
+    /// 根据类型（类全名）获取实体元数据
     /// </summary>
     public async Task<Data.Entities.EntityMetadata?> GetEntityMetadataAsync(string entityType)
     {
         return await _db.EntityMetadata
-            .FirstOrDefaultAsync(e => e.EntityType == entityType.ToLowerInvariant());
+            .FirstOrDefaultAsync(e => e.EntityType == entityType);
     }
 
     /// <summary>
-    /// 验证实体类型是否可用于创建模板
+    /// 验证实体路由是否可用于创建模板
     /// </summary>
-    public async Task<bool> IsValidEntityTypeAsync(string entityType)
+    public async Task<bool> IsValidEntityRouteAsync(string entityRoute)
     {
-        var entity = await GetEntityMetadataAsync(entityType);
+        var entity = await GetEntityMetadataByRouteAsync(entityRoute);
         return entity != null && entity.IsRootEntity && entity.IsEnabled;
     }
 

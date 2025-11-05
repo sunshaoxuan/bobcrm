@@ -25,10 +25,12 @@ public class Customer : IEntityMetadataProvider
     /// </summary>
     public static Data.Entities.EntityMetadata GetMetadata()
     {
+        var type = typeof(Customer);
         return new Data.Entities.EntityMetadata
         {
-            EntityType = "customer",
-            EntityClassName = typeof(Customer).FullName ?? "BobCrm.Api.Domain.Customer",
+            EntityType = type.FullName ?? "BobCrm.Api.Domain.Customer",  // 类全名作为主键
+            EntityName = type.Name,                                       // 类本名：Customer
+            EntityRoute = "customer",                                     // URL路径：customer（小写）
             DisplayNameKey = "ENTITY_CUSTOMER",
             DescriptionKey = "ENTITY_CUSTOMER_DESC",
             ApiEndpoint = "/api/customers",

@@ -466,7 +466,8 @@ else
 
     private class EntityTypeItem
     {
-        public string EntityType { get; set; } = string.Empty;
+        public string EntityType { get; set; } = string.Empty;  // 路由名（customer）
+        public string EntityName { get; set; } = string.Empty;  // 类名（Customer）
         public string DisplayNameKey { get; set; } = string.Empty;
         public string? DescriptionKey { get; set; }
         public string? Icon { get; set; }

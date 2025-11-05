@@ -656,9 +656,8 @@ public static class DatabaseInitializer
 
             Console.WriteLine($"[EntityMetadata] Step 1: Found {entityTypes.Count} entity types implementing IEntityMetadataProvider");
 
-            // 记录有效的实体类型名和类全名的映射
-            var validEntityTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var validEntityClassNames = new HashSet<string>(StringComparer.Ordinal);
+            // 记录有效的实体类型（类全名）
+            var validEntityTypes = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var entityType in entityTypes)
             {
@@ -682,9 +681,8 @@ public static class DatabaseInitializer
                         continue;
                     }
 
-                    // 记录有效的实体类型名和类全名
-                    validEntityTypeNames.Add(metadata.EntityType);
-                    validEntityClassNames.Add(entityType.FullName ?? entityType.Name);
+                    // 记录有效的实体类型（类全名）
+                    validEntityTypes.Add(metadata.EntityType);
 
                     // 检查数据库中是否已存在
                     var existing = await db.Set<Data.Entities.EntityMetadata>()
@@ -700,24 +698,13 @@ public static class DatabaseInitializer
                     {
                         // 之前被禁用，现在重新启用
                         existing.IsEnabled = true;
-                        existing.EntityClassName = metadata.EntityClassName; // 更新类名（可能被移动或重命名）
                         existing.UpdatedAt = DateTime.UtcNow;
-                        Console.WriteLine($"[EntityMetadata] ✓ Re-enabled: {existing.EntityType} (class: {metadata.EntityClassName})");
+                        Console.WriteLine($"[EntityMetadata] ✓ Re-enabled: {existing.EntityName} ({existing.EntityType})");
                     }
                     else
                     {
                         // 已存在且启用，跳过（保持用户可能的修改）
-                        // 但仍然更新EntityClassName（以防类被移动）
-                        if (existing.EntityClassName != metadata.EntityClassName)
-                        {
-                            existing.EntityClassName = metadata.EntityClassName;
-                            existing.UpdatedAt = DateTime.UtcNow;
-                            Console.WriteLine($"[EntityMetadata] ↻ Updated class name: {metadata.EntityType} → {metadata.EntityClassName}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"[EntityMetadata] - Already exists: {metadata.EntityType}");
-                        }
+                        Console.WriteLine($"[EntityMetadata] - Already exists: {metadata.EntityName}");
                     }
                 }
                 catch (Exception ex)
@@ -740,24 +727,11 @@ public static class DatabaseInitializer
                 
                 foreach (var registered in allRegistered)
                 {
-                    // 检查方式：
-                    // 1. 优先使用EntityClassName反射查找类
-                    // 2. 回退使用EntityType匹配
-                    bool isValid = false;
-                    
-                    if (!string.IsNullOrWhiteSpace(registered.EntityClassName))
-                    {
-                        // 通过类全名反射查找
-                        var classType = assembly.GetType(registered.EntityClassName);
-                        isValid = classType != null && 
-                                 providerInterface.IsAssignableFrom(classType) &&
-                                 validEntityClassNames.Contains(registered.EntityClassName);
-                    }
-                    else
-                    {
-                        // 回退：通过EntityType匹配（兼容旧数据）
-                        isValid = validEntityTypeNames.Contains(registered.EntityType);
-                    }
+                    // 使用EntityType（类全名）直接反射查找
+                    var classType = assembly.GetType(registered.EntityType);
+                    bool isValid = classType != null && 
+                                  providerInterface.IsAssignableFrom(classType) &&
+                                  validEntityTypes.Contains(registered.EntityType);
 
                     if (!isValid)
                     {
@@ -767,21 +741,21 @@ public static class DatabaseInitializer
                             registered.IsEnabled = false;
                             registered.UpdatedAt = DateTime.UtcNow;
                             deactivatedCount++;
-                            Console.WriteLine($"[EntityMetadata] ✗ Disabled (entity class not found): {registered.EntityType} ({registered.EntityClassName})");
+                            Console.WriteLine($"[EntityMetadata] ✗ Disabled (class not found or invalid): {registered.EntityName} ({registered.EntityType})");
                         }
                         else
                         {
-                            Console.WriteLine($"[EntityMetadata] - Already disabled: {registered.EntityType}");
+                            Console.WriteLine($"[EntityMetadata] - Already disabled: {registered.EntityName}");
                         }
                     }
-                    else if (!registered.IsEnabled && validEntityClassNames.Contains(registered.EntityClassName))
+                    else if (!registered.IsEnabled)
                     {
                         // 实体类存在且有效，但之前被禁用了，重新启用
                         // 注意：这个逻辑已经在步骤1中处理了，这里是双保险
                         registered.IsEnabled = true;
                         registered.UpdatedAt = DateTime.UtcNow;
                         reactivatedCount++;
-                        Console.WriteLine($"[EntityMetadata] ✓ Re-enabled (entity class found): {registered.EntityType}");
+                        Console.WriteLine($"[EntityMetadata] ✓ Re-enabled (class restored): {registered.EntityName} ({registered.EntityType})");
                     }
                 }
 

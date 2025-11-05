@@ -6,11 +6,14 @@ namespace BobCrm.Api.Data.Entities;
 /// </summary>
 public class EntityMetadata
 {
-    /// <summary>实体类型标识（主键，如：customer, product）</summary>
+    /// <summary>实体类型（主键）- 类的全名（如：BobCrm.Api.Domain.Customer）</summary>
     public string EntityType { get; set; } = string.Empty;
 
-    /// <summary>实体类的全名（如：BobCrm.Api.Domain.Customer）- 用于反向检查</summary>
-    public string EntityClassName { get; set; } = string.Empty;
+    /// <summary>实体名称 - 类的本名（如：Customer，保持原始大小写）</summary>
+    public string EntityName { get; set; } = string.Empty;
+
+    /// <summary>实体URL路径名 - 用于路由（如：customer，小写）</summary>
+    public string EntityRoute { get; set; } = string.Empty;
 
     /// <summary>实体显示名称的多语键（如：ENTITY_CUSTOMER）</summary>
     public string DisplayNameKey { get; set; } = string.Empty;
