@@ -208,10 +208,17 @@ else
                             <Select TItemValue="string" TItem="string" @bind-Value="entityType" Style="width:100%">
                                 @foreach (var entity in availableEntityTypes)
                                 {
-                                    <SelectOption Value="@entity.Value" Label="@I18n.T(entity.LabelKey)" />
+                                    <SelectOption Value="@entity.EntityType" Label="@I18n.T(entity.DisplayNameKey)" />
                                 }
                             </Select>
-                            <div style="margin-top:4px; font-size:11px; color:#999">@I18n.T("LBL_ENTITY_TYPE_HINT")</div>
+                            @if (!availableEntityTypes.Any())
+                            {
+                                <div style="margin-top:4px; font-size:11px; color:#ff4d4f">⚠️ 无可用实体类型</div>
+                            }
+                            else
+                            {
+                                <div style="margin-top:4px; font-size:11px; color:#999">@I18n.T("LBL_ENTITY_TYPE_HINT")</div>
+                            }
                         </div>
 
                         <Divider />
@@ -246,15 +253,8 @@ else
     // ⭐ 可用字段列表（从FieldDefinitions API加载）
     private List<FieldDefinitionItem> availableFields = new();
 
-    // ⭐ 可用实体类型列表
-    private readonly List<(string Value, string LabelKey)> availableEntityTypes = new()
-    {
-        ("customer", "ENTITY_CUSTOMER"),
-        ("product", "ENTITY_PRODUCT"),
-        ("order", "ENTITY_ORDER"),
-        ("contact", "ENTITY_CONTACT"),
-        ("opportunity", "ENTITY_OPPORTUNITY"),
-    };
+    // ⭐ 可用实体类型列表（从API动态加载）
+    private List<EntityTypeItem> availableEntityTypes = new();
 
     // 拖放状态
     private WidgetRegistry.WidgetDefinition? draggedDefinition;
@@ -277,10 +277,13 @@ else
 
         try
         {
-            // 1. 加载可用字段列表
+            // 1. 加载可用实体类型列表
+            await LoadAvailableEntities();
+
+            // 2. 加载可用字段列表
             await LoadAvailableFields();
 
-            // 2. 加载模板
+            // 3. 加载模板
             if (string.IsNullOrWhiteSpace(TemplateId))
             {
                 InitializeEmptyTemplate();
@@ -298,6 +301,40 @@ else
             error = ex.Message;
             loading = false;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadAvailableEntities()
+    {
+        try
+        {
+            // 从API加载可用的根实体列表
+            var resp = await Auth.GetWithRefreshAsync("/api/entities");
+            if (resp.IsSuccessStatusCode)
+            {
+                var entities = await resp.Content.ReadFromJsonAsync<List<EntityTypeItem>>();
+                availableEntityTypes = entities ?? new();
+                
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {availableEntityTypes.Count} entity types");
+            }
+            else
+            {
+                // API调用失败，使用回退默认值（只有customer）
+                availableEntityTypes = new List<EntityTypeItem>
+                {
+                    new EntityTypeItem { EntityType = "customer", DisplayNameKey = "ENTITY_CUSTOMER" }
+                };
+                await JS.InvokeVoidAsync("console.warn", "[FormDesigner] Failed to load entities, using fallback");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load entities: {ex.Message}");
+            // 使用回退默认值
+            availableEntityTypes = new List<EntityTypeItem>
+            {
+                new EntityTypeItem { EntityType = "customer", DisplayNameKey = "ENTITY_CUSTOMER" }
+            };
         }
     }
 
@@ -425,6 +462,15 @@ else
     {
         public string Key { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+    }
+
+    private class EntityTypeItem
+    {
+        public string EntityType { get; set; } = string.Empty;
+        public string DisplayNameKey { get; set; } = string.Empty;
+        public string? DescriptionKey { get; set; }
+        public string? Icon { get; set; }
+        public string? Category { get; set; }
     }
 
     private async Task SaveLayout()
