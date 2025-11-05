@@ -9,6 +9,9 @@ public class EntityMetadata
     /// <summary>实体类型标识（主键，如：customer, product）</summary>
     public string EntityType { get; set; } = string.Empty;
 
+    /// <summary>实体类的全名（如：BobCrm.Api.Domain.Customer）- 用于反向检查</summary>
+    public string EntityClassName { get; set; } = string.Empty;
+
     /// <summary>实体显示名称的多语键（如：ENTITY_CUSTOMER）</summary>
     public string DisplayNameKey { get; set; } = string.Empty;
 

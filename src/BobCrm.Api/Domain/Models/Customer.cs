@@ -28,6 +28,7 @@ public class Customer : IEntityMetadataProvider
         return new Data.Entities.EntityMetadata
         {
             EntityType = "customer",
+            EntityClassName = typeof(Customer).FullName ?? "BobCrm.Api.Domain.Customer",
             DisplayNameKey = "ENTITY_CUSTOMER",
             DescriptionKey = "ENTITY_CUSTOMER_DESC",
             ApiEndpoint = "/api/customers",
