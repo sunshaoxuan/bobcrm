@@ -1,0 +1,48 @@
+@using BobCrm.App.Models.Widgets
+@inject BobCrm.App.Services.I18nService I18n
+
+<Divider Plain>框架属性</Divider>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">边框样式</label>
+    <Select TItemValue="string" TItem="string" @bind-Value="Widget.BorderStyle" Style="width:100%" OnSelectedItemChanged="@((_) => HandleChange())">
+        <SelectOption Value="@("solid")" Label="实线" />
+        <SelectOption Value="@("dashed")" Label="虚线" />
+        <SelectOption Value="@("dotted")" Label="点线" />
+        <SelectOption Value="@("none")" Label="无边框" />
+    </Select>
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">边框颜色</label>
+    <Input @bind-Value="Widget.BorderColor" Placeholder="#d9d9d9" OnChange="@((string _) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">边框宽度 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.BorderWidth" Min="0" Max="10" Style="width:100%" OnChange="@((_) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">背景色</label>
+    <Input @bind-Value="Widget.BackgroundColor" Placeholder="#fafafa" OnChange="@((string _) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">内边距 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.Padding" Min="0" Max="48" Style="width:100%" OnChange="@((_) => HandleChange())" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public FrameWidget Widget { get; set; } = default!;
+
+    [Parameter]
+    public Action? OnPropertyChanged { get; set; }
+
+    private void HandleChange()
+    {
+        OnPropertyChanged?.Invoke();
+    }
+}
+

@@ -1,0 +1,43 @@
+@using BobCrm.App.Models.Widgets
+@inject BobCrm.App.Services.I18nService I18n
+
+<Divider Plain>网格属性</Divider>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">列数</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.Columns" Min="1" Max="12" Style="width:100%" OnChange="@HandleChange" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">间距 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.Gap" Min="0" Max="48" Style="width:100%" OnChange="@HandleChange" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">内边距 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.Padding" Min="0" Max="48" Style="width:100%" OnChange="@HandleChange" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">背景色</label>
+    <Input @bind-Value="Widget.BackgroundColor" Placeholder="#fafafa" OnChange="@((string _) => HandleChange(0))" />
+</div>
+
+<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+    <label style="font-size:12px; color:#666">显示边框</label>
+    <Switch @bind-Value="Widget.Bordered" OnChange="@((_) => HandleChange(0))" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public GridWidget Widget { get; set; } = default!;
+
+    [Parameter]
+    public Action? OnPropertyChanged { get; set; }
+
+    private void HandleChange(int value)
+    {
+        OnPropertyChanged?.Invoke();
+    }
+}
+

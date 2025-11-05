@@ -8,6 +8,7 @@
 @using BobCrm.App.Services.Widgets
 @using BobCrm.App.Services.Widgets.Rendering
 @using Microsoft.AspNetCore.Components.Rendering
+@using BobCrm.App.Components.Designer.PropertyPanels
 @using ListItem = BobCrm.App.Models.Widgets.ListItem;
 
 @inject BobCrm.App.Services.AuthService Auth
@@ -187,6 +188,9 @@ else
                             <label style="font-size:12px; color:#666">@I18n.T("LBL_NEW_LINE")</label>
                             <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
                         </div>
+
+                        @* ===== 特定类型属性面板 ===== *@
+                        @RenderTypeSpecificPropertyPanel(selectedWidget)
 
                         <Divider />
 
@@ -610,6 +614,34 @@ else
             await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Save failed: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// 根据组件类型动态渲染对应的属性面板组件
+    /// </summary>
+    private RenderFragment RenderTypeSpecificPropertyPanel(DraggableWidget widget) => __builder =>
+    {
+        // 根据组件类型渲染对应的属性面板组件
+        if (widget is GridWidget gridWidget)
+        {
+            <GridWidgetPropertyPanel Widget="@gridWidget" OnPropertyChanged="UpdateWidget" />
+        }
+        else if (widget is PanelWidget panelWidget)
+        {
+            <PanelWidgetPropertyPanel Widget="@panelWidget" OnPropertyChanged="UpdateWidget" />
+        }
+        else if (widget is SectionWidget sectionWidget)
+        {
+            <SectionWidgetPropertyPanel Widget="@sectionWidget" OnPropertyChanged="UpdateWidget" />
+        }
+        else if (widget is FrameWidget frameWidget)
+        {
+            <FrameWidgetPropertyPanel Widget="@frameWidget" OnPropertyChanged="UpdateWidget" />
+        }
+        else if (widget is TabContainerWidget tabWidget)
+        {
+            <TabContainerPropertyPanel Widget="@tabWidget" OnPropertyChanged="UpdateWidget" />
+        }
+    };
 
     private RenderFragment RenderDesignWidget(DraggableWidget widget) => builder =>
     {

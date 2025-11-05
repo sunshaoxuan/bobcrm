@@ -1,0 +1,53 @@
+@using BobCrm.App.Models.Widgets
+@inject BobCrm.App.Services.I18nService I18n
+
+<Divider Plain>面板属性</Divider>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">标题</label>
+    <Input @bind-Value="Widget.Title" Placeholder="面板标题" OnChange="@((string _) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+    <label style="font-size:12px; color:#666">显示标题栏</label>
+    <Switch @bind-Value="Widget.ShowHeader" OnChange="@((_) => HandleChange())" />
+</div>
+
+<Divider Plain Style="margin:12px 0 8px 0; font-size:11px">布局设置</Divider>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">间距 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.ContainerLayout.Gap" Min="0" Max="48" Style="width:100%" OnChange="@((_) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">内边距 (px)</label>
+    <AntDesign.InputNumber TValue="int" @bind-Value="Widget.ContainerLayout.Padding" Min="0" Max="48" Style="width:100%" OnChange="@((_) => HandleChange())" />
+</div>
+
+<div style="margin-bottom:16px">
+    <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">排列方向</label>
+    <Select TItemValue="string" TItem="string" @bind-Value="Widget.ContainerLayout.FlexDirection" Style="width:100%" OnSelectedItemChanged="@((_) => HandleChange())">
+        <SelectOption Value="@("row")" Label="横向" />
+        <SelectOption Value="@("column")" Label="纵向" />
+    </Select>
+</div>
+
+<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+    <label style="font-size:12px; color:#666">自动换行</label>
+    <Switch @bind-Value="Widget.ContainerLayout.FlexWrap" OnChange="@((_) => HandleChange())" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PanelWidget Widget { get; set; } = default!;
+
+    [Parameter]
+    public Action? OnPropertyChanged { get; set; }
+
+    private void HandleChange()
+    {
+        OnPropertyChanged?.Invoke();
+    }
+}
+
