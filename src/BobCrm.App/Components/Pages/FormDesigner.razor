@@ -643,19 +643,182 @@ else
         }
     };
 
-    private RenderFragment RenderDesignWidget(DraggableWidget widget) => builder =>
+    private RenderFragment RenderDesignWidget(DraggableWidget widget) => __builder =>
     {
-        // 简化渲染，显示Widget类型和标签
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "style", "padding:8px");
-        builder.OpenElement(2, "div");
-        builder.AddAttribute(3, "style", "font-size:12px; color:#666; margin-bottom:4px");
-        builder.AddContent(4, widget.Label ?? widget.Type);
-        builder.CloseElement();
-        builder.OpenElement(5, "div");
-        builder.AddAttribute(6, "style", "height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px");
-        builder.CloseElement();
-        builder.CloseElement();
+        // 根据组件类型渲染不同的外观
+        if (widget is ContainerWidget container)
+        {
+            // 渲染容器组件
+            <div style="width:100%; height:100%">
+                @RenderContainerDesign(container)
+            </div>
+        }
+        else
+        {
+            // 渲染普通组件（简化版）
+            <div style="padding:8px">
+                <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
+            </div>
+        }
+    };
+
+    /// <summary>
+    /// 渲染容器组件的设计态外观
+    /// </summary>
+    private RenderFragment RenderContainerDesign(ContainerWidget container) => __builder =>
+    {
+        if (container is GridWidget grid)
+        {
+            <div style="padding:@(grid.Padding)px; background:@grid.BackgroundColor; border:@(grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:120px">
+                <div style="display:grid; grid-template-columns:repeat(@grid.Columns, 1fr); gap:@(grid.Gap)px; min-height:100px"
+                     @ondrop="@((e) => OnContainerDrop(e, grid))" @ondrop:preventDefault @ondrop:stopPropagation
+                     @ondragover="OnDragOver" @ondragover:preventDefault>
+                    @if (grid.Children?.Any() == true)
+                    {
+                        @foreach (var child in grid.Children)
+                        {
+                            <div class="grid-cell" style="border:1px dashed #d9d9d9; padding:8px; background:#fff">
+                                @RenderDesignWidget(child)
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="grid-column:1/-1; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                            拖入组件到网格
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (container is PanelWidget panel)
+        {
+            <div style="border:@(panel.ContainerLayout.BorderWidth)px @(panel.ContainerLayout.BorderStyle) @(panel.ContainerLayout.BorderColor); border-radius:@(panel.ContainerLayout.BorderRadius)px; background:@(panel.ContainerLayout.BackgroundColor); min-height:100px">
+                @if (panel.ShowHeader)
+                {
+                    <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px">
+                        @(string.IsNullOrWhiteSpace(panel.Title) ? "面板标题" : panel.Title)
+                    </div>
+                }
+                <div style="padding:@(panel.ContainerLayout.Padding)px; display:flex; flex-direction:@(panel.ContainerLayout.FlexDirection); flex-wrap:@(panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(panel.ContainerLayout.Gap)px; min-height:60px"
+                     @ondrop="@((e) => OnContainerDrop(e, panel))" @ondrop:preventDefault @ondrop:stopPropagation
+                     @ondragover="OnDragOver" @ondragover:preventDefault>
+                    @if (panel.Children?.Any() == true)
+                    {
+                        @foreach (var child in panel.Children)
+                        {
+                            @RenderDesignWidget(child)
+                        }
+                    }
+                    else
+                    {
+                        <div style="width:100%; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                            拖入组件到面板
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (container is SectionWidget section)
+        {
+            <div style="border:@(section.ContainerLayout.BorderWidth)px @(section.ContainerLayout.BorderStyle) @(section.ContainerLayout.BorderColor); border-radius:@(section.ContainerLayout.BorderRadius)px; background:@(section.ContainerLayout.BackgroundColor); min-height:100px">
+                @if (section.ShowTitle)
+                {
+                    <div style="padding:8px 12px; border-bottom:1px solid #d9d9d9; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center">
+                        <span>@(string.IsNullOrWhiteSpace(section.Title) ? "分组标题" : section.Title)</span>
+                        @if (section.Collapsible)
+                        {
+                            <span style="font-size:10px; color:#999">[可折叠]</span>
+                        }
+                    </div>
+                }
+                <div style="padding:@(section.ContainerLayout.Padding)px; display:flex; flex-direction:@(section.ContainerLayout.FlexDirection); flex-wrap:@(section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(section.ContainerLayout.Gap)px; min-height:60px"
+                     @ondrop="@((e) => OnContainerDrop(e, section))" @ondrop:preventDefault @ondrop:stopPropagation
+                     @ondragover="OnDragOver" @ondragover:preventDefault>
+                    @if (section.Children?.Any() == true)
+                    {
+                        @foreach (var child in section.Children)
+                        {
+                            @RenderDesignWidget(child)
+                        }
+                    }
+                    else
+                    {
+                        <div style="width:100%; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                            拖入组件到分组
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (container is FrameWidget frame)
+        {
+            <div style="border:@(frame.BorderWidth)px @(frame.BorderStyle) @(frame.BorderColor); background:@(frame.BackgroundColor); padding:@(frame.Padding)px; min-height:100px"
+                 @ondrop="@((e) => OnContainerDrop(e, frame))" @ondrop:preventDefault @ondrop:stopPropagation
+                 @ondragover="OnDragOver" @ondragover:preventDefault>
+                @if (frame.Children?.Any() == true)
+                {
+                    @foreach (var child in frame.Children)
+                    {
+                        @RenderDesignWidget(child)
+                    }
+                }
+                else
+                {
+                    <div style="text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                        拖入组件到框架
+                    </div>
+                }
+            </div>
+        }
+        else if (container is TabContainerWidget tabbox)
+        {
+            <div style="border:1px solid #e5e5e5; background:#fff; min-height:120px">
+                <div style="border-bottom:1px solid #e5e5e5; padding:8px 12px; background:#fafafa; display:flex; gap:8px; pointer-events:none">
+                    <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:4px 4px 0 0; font-size:12px">标签1</div>
+                    <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签2</div>
+                    <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签3</div>
+                </div>
+                <div style="padding:16px; min-height:60px"
+                     @ondrop="@((e) => OnContainerDrop(e, tabbox))" @ondrop:preventDefault @ondrop:stopPropagation
+                     @ondragover="OnDragOver" @ondragover:preventDefault>
+                    @if (tabbox.Children?.Any() == true)
+                    {
+                        @foreach (var child in tabbox.Children)
+                        {
+                            @RenderDesignWidget(child)
+                        }
+                    }
+                    else
+                    {
+                        <div style="text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                            拖入Tab组件到标签容器
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            // 通用容器渲染
+            <div style="border:1px dashed #ccc; padding:12px; background:#fafafa; min-height:80px">
+                <div style="font-size:11px; color:#999; margin-bottom:8px">容器: @container.Type</div>
+                @if (container.Children?.Any() == true)
+                {
+                    @foreach (var child in container.Children)
+                    {
+                        @RenderDesignWidget(child)
+                    }
+                }
+                else
+                {
+                    <div style="text-align:center; padding:20px; color:#999; font-size:12px">
+                        拖入组件到此容器
+                    </div>
+                }
+            </div>
+        }
     };
 
     // 拖放处理方法（从CustomerDetail复制）
@@ -701,6 +864,68 @@ else
         }
         dropSucceeded = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 处理容器内的拖放事件
+    /// </summary>
+    private async Task OnContainerDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ContainerWidget targetContainer)
+    {
+        try
+        {
+            // 从工具箱拖入新组件
+            if (draggedDefinition != null)
+            {
+                var newWidget = WidgetRegistry.Create(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
+                
+                // 初始化 Children 列表
+                if (targetContainer.Children == null)
+                {
+                    targetContainer.Children = new List<DraggableWidget>();
+                }
+                
+                targetContainer.Children.Add(newWidget);
+                selectedWidget = newWidget;
+                dropSucceeded = true;
+                draggedDefinition = null;
+                
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added new widget to container: {targetContainer.Type}");
+                await InvokeAsync(StateHasChanged);
+            }
+            // 移动已有组件到容器
+            else if (draggedWidget != null)
+            {
+                // 从父容器中移除（如果有父容器）
+                if (draggedParentContainer != null && draggedParentContainer.Children != null)
+                {
+                    draggedParentContainer.Children.Remove(draggedWidget);
+                }
+                // 从顶层 layoutWidgets 中移除
+                else
+                {
+                    layoutWidgets.Remove(draggedWidget);
+                }
+                
+                // 初始化 Children 列表
+                if (targetContainer.Children == null)
+                {
+                    targetContainer.Children = new List<DraggableWidget>();
+                }
+                
+                // 添加到目标容器
+                targetContainer.Children.Add(draggedWidget);
+                dropSucceeded = true;
+                draggedWidget = null;
+                draggedParentContainer = null;
+                
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Moved widget to container: {targetContainer.Type}");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] OnContainerDrop error: {ex.Message}");
+        }
     }
 
     private void SelectWidget(DraggableWidget widget)
