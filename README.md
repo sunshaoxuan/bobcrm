@@ -31,8 +31,9 @@
 - [x] **模型定义**：在 `src/BobCrm.App/Models/Widgets/` 下补充 Number/Select/Textarea/Button/Panel/Grid/TabContainer/Tab 等 Widget 类，并扩展 `LayoutMapper` 读写逻辑。
 - [ ] **设计器拖拽视图**：更新 `TemplateDesigner.razor`，让以上控件正确渲染（包括 Tab 结构的切换、容器嵌套、新增/删除 Tab 子节点）。
   - [x] 抽取叶子控件设计态渲染服务（`DesignWidgetContentRenderer`）并在 `TemplateDesigner` 使用，统一样式输出。
-  - [ ] 提炼容器/Tab 渲染到可复用组件（避免页面内大量 `if`/`else`）。
-  - [ ] 将运行态页面（`CustomerDetail` 等）切换至同一渲染管线，验证拖拽视图与运行视图一致。
+  - [x] 提炼容器/Tab 渲染到可复用组件（`DesignContainerRenderer`），集中封装拖拽与激活逻辑。
+  - [x] 客户详情设计模式复用渲染服务与控件注册（`CustomerDetail.razor`）。
+  - [x] 将运行态页面（`CustomerDetail` 等）切换至同一渲染管线，验证拖拽视图与运行视图一致。
 - [ ] **属性面板**：为新增控件提供属性编辑项（默认值、选项、步长、动作配置等），同步更新 `GetStyleValue/SetStyleValue` 及绑定逻辑。
 - [ ] **运行态呈现**：在 `CustomerDetail.razor`/`Templates.razor` 中补齐控件渲染与编辑体验，保持设计/运行一致。
 - [ ] **序列化与测试**：扩展布局保存逻辑、集成测试（tests/BobCrm.App 或 API 序列化测试）覆盖新控件的 JSON 结构。
