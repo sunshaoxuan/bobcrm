@@ -215,6 +215,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_TEXTBOX", ZH = "文本框", JA = "テキストボックス", EN = "Textbox" },
                 new LocalizationResource { Key = "LBL_NUMBER", ZH = "数字框", JA = "数値", EN = "Number" },
                 new LocalizationResource { Key = "LBL_SELECT", ZH = "下拉选择", JA = "選択", EN = "Select" },
+                new LocalizationResource { Key = "LBL_CHECKBOX", ZH = "复选框", JA = "チェックボックス", EN = "Checkbox" },
+                new LocalizationResource { Key = "LBL_RADIO", ZH = "单选按钮", JA = "ラジオボタン", EN = "Radio" },
                 new LocalizationResource { Key = "LBL_TEXTAREA", ZH = "文本区域", JA = "テキストエリア", EN = "Textarea" },
                 new LocalizationResource { Key = "LBL_BUTTON", ZH = "按钮", JA = "ボタン", EN = "Button" },
                 new LocalizationResource { Key = "LBL_LABEL", ZH = "标签", JA = "ラベル", EN = "Label" },
@@ -391,6 +393,8 @@ public static class DatabaseInitializer
             Ensure("LBL_TEXTBOX", "文本框", "テキストボックス", "Textbox");
             Ensure("LBL_NUMBER", "数字框", "数値", "Number");
             Ensure("LBL_SELECT", "下拉选择", "選択", "Select");
+            Ensure("LBL_CHECKBOX", "复选框", "チェックボックス", "Checkbox");
+            Ensure("LBL_RADIO", "单选按钮", "ラジオボタン", "Radio");
             Ensure("LBL_TEXTAREA", "文本区域", "テキストエリア", "Textarea");
             Ensure("LBL_BUTTON", "按钮", "ボタン", "Button");
             Ensure("LBL_LABEL", "标签", "ラベル", "Label");

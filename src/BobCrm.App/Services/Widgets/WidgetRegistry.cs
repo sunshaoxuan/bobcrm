@@ -31,8 +31,10 @@ public static class WidgetRegistry
         var defs = new[]
         {
             new WidgetDefinition("textbox", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
-            new WidgetDefinition("number", "LBL_NUMBER", IconType.Outline.Edit, WidgetCategory.Basic, () => new NumberWidget()),
+            new WidgetDefinition("number", "LBL_NUMBER", IconType.Outline.FieldNumber, WidgetCategory.Basic, () => new NumberWidget()),
             new WidgetDefinition("select", "LBL_SELECT", IconType.Outline.Select, WidgetCategory.Basic, () => new SelectWidget()),
+            new WidgetDefinition("checkbox", "LBL_CHECKBOX", IconType.Outline.CheckSquare, WidgetCategory.Basic, () => new CheckboxWidget()),
+            new WidgetDefinition("radio", "LBL_RADIO", IconType.Outline.DotChart, WidgetCategory.Basic, () => new RadioWidget()),
             new WidgetDefinition("listbox", "LBL_LISTBOX", IconType.Outline.UnorderedList, WidgetCategory.Basic, () => new ListboxWidget()),
             new WidgetDefinition("textarea", "LBL_TEXTAREA", IconType.Outline.FileText, WidgetCategory.Basic, () => new TextareaWidget()),
             new WidgetDefinition("calendar", "LBL_CALENDAR", IconType.Outline.Calendar, WidgetCategory.Basic, () => new CalendarWidget()),
