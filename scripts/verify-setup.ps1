@@ -107,7 +107,7 @@ if ($dockerInstalled) {
     if ($pgRunning) {
         # 测试数据库连接
         try {
-            $testResult = docker exec bobcrm-pg pg_isready -U postgres 2>$null
+            docker exec bobcrm-pg pg_isready -U postgres 2>$null | Out-Null
             $dbReady = $?
             Write-Check "数据库就绪" $dbReady
         } catch {
@@ -172,7 +172,6 @@ if ((Test-Path "tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj")) {
 # 7. 总结
 Write-Section "验证总结"
 
-$totalChecks = $script:errors.Count + $script:warnings.Count
 if ($script:errors.Count -eq 0 -and $script:warnings.Count -eq 0) {
     Write-Host "✓ 所有检查通过！系统已就绪。" -ForegroundColor Green
     Write-Host "`n下一步：" -ForegroundColor Cyan
