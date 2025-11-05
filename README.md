@@ -2,15 +2,15 @@
 
 一个基于 Blazor Server 的 CRM 系统，具有动态表单设计、多语言支持和丰富的字段动作功能。
 
-## 📝 最新更新（v0.5.2，2025-11-05）
+## 📝 最新更新（v0.5.3，2025-11-05）
 
-- ✅ **新增Checkbox和Radio组件** - 支持单选/多选、按钮样式、横向/纵向布局
-- ✅ **模板实体类型可选择** - 支持5种实体（Customer/Product/Order/Contact/Opportunity）
-- ✅ **实现模板加载功能** - 修复Templates页与FormDesigner的逻辑矛盾
-- ✅ **补充30+多语资源** - FormDesigner界面完全支持多语切换
-- ✅ **改进环境验证脚本** - 支持.NET 9等更高版本
+- ✅ **EntitySelector 通用选择器组件** - 输入框+放大镜图标，Modal卡片式选择界面
+- ✅ **EntityMetadata 结构规范化** - EntityType(类全名)/EntityName(短名)/EntityRoute(路由名)
+- ✅ **实体类型锁定机制** - 已有组件的模板不可修改实体类型
+- ✅ **全局布局滚动条修复** - 页面整体不滚动，各区域独立滚动
+- ✅ **创建 CHANGELOG.md** - 统一管理所有版本更新历史
 
-详见：[更新说明 v0.5.2](docs/更新说明-v0.5.2.md)
+详见：[CHANGELOG.md](CHANGELOG.md)
 
 ## 🚀 快速开始（5分钟上手）
 
@@ -81,9 +81,9 @@ pwsh scripts/dev.ps1 -Action stop
 
 - [设计文档](docs/客户信息管理系统设计文档.md)
 - [接口文档](docs/接口文档.md)
+- [CHANGELOG](CHANGELOG.md) ⭐ 版本历史
 - [架构重构总结](docs/架构重构总结-v0.5.md)
 - [测试指南](docs/测试指南.md)
-- [更新说明 v0.5.2](docs/更新说明-v0.5.2.md) ⭐ 最新
 
 ---
 
