@@ -230,10 +230,21 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_TAB", ZH = "标签页", JA = "タブ", EN = "Tab" },
                 new LocalizationResource { Key = "LBL_DRAG_COMPONENT_HERE", ZH = "拖拽组件到这里", JA = "コンポーネントをここにドラッグ", EN = "Drag component here" },
                 new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
+                new LocalizationResource { Key = "LBL_TEMPLATE_PROPERTIES", ZH = "模板属性", JA = "テンプレートプロパティ", EN = "Template Properties" },
+                new LocalizationResource { Key = "LBL_WIDGET_PROPERTIES", ZH = "组件属性", JA = "コンポーネントプロパティ", EN = "Widget Properties" },
                 new LocalizationResource { Key = "LBL_TEMPLATE", ZH = "模板", JA = "テンプレート", EN = "Template" },
+                new LocalizationResource { Key = "LBL_TEMPLATE_NAME", ZH = "模板名称", JA = "テンプレート名", EN = "Template Name" },
+                new LocalizationResource { Key = "LBL_ENTER_TEMPLATE_NAME", ZH = "请输入模板名称", JA = "テンプレート名を入力してください", EN = "Enter template name" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE", ZH = "实体类型", JA = "エンティティタイプ", EN = "Entity Type" },
+                new LocalizationResource { Key = "LBL_ENTITY_TYPE_HINT", ZH = "此模板将用于哪种实体的数据展示", JA = "このテンプレートはどのエンティティのデータ表示に使用されますか", EN = "Which entity will this template be used for" },
+                new LocalizationResource { Key = "LBL_TEMPLATE_INFO_HINT", ZH = "点击画布背景可返回模板属性；点击组件可编辑组件属性", JA = "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", EN = "Click canvas background to return to template properties; Click component to edit properties" },
                 new LocalizationResource { Key = "LBL_NEW_TEMPLATE", ZH = "新建模板", JA = "新しいテンプレート", EN = "New Template" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
+                new LocalizationResource { Key = "ENTITY_CUSTOMER", ZH = "客户", JA = "顧客", EN = "Customer" },
+                new LocalizationResource { Key = "ENTITY_PRODUCT", ZH = "产品", JA = "製品", EN = "Product" },
+                new LocalizationResource { Key = "ENTITY_ORDER", ZH = "订单", JA = "注文", EN = "Order" },
+                new LocalizationResource { Key = "ENTITY_CONTACT", ZH = "联系人", JA = "連絡先", EN = "Contact" },
+                new LocalizationResource { Key = "ENTITY_OPPORTUNITY", ZH = "商机", JA = "商談", EN = "Opportunity" },
                 new LocalizationResource { Key = "LBL_WIDTH", ZH = "宽度", JA = "幅", EN = "Width" },
                 new LocalizationResource { Key = "LBL_HEIGHT", ZH = "高度", JA = "高さ", EN = "Height" },
                 new LocalizationResource { Key = "LBL_DATA_SOURCE", ZH = "数据源", JA = "データソース", EN = "Data Source" },
@@ -411,10 +422,21 @@ public static class DatabaseInitializer
             Ensure("LBL_TAB", "标签页", "タブ", "Tab");
             Ensure("LBL_DRAG_COMPONENT_HERE", "拖拽组件到这里", "コンポーネントをここにドラッグ", "Drag component here");
             Ensure("LBL_PROPERTIES", "属性", "プロパティ", "Properties");
+            Ensure("LBL_TEMPLATE_PROPERTIES", "模板属性", "テンプレートプロパティ", "Template Properties");
+            Ensure("LBL_WIDGET_PROPERTIES", "组件属性", "コンポーネントプロパティ", "Widget Properties");
             Ensure("LBL_TEMPLATE", "模板", "テンプレート", "Template");
+            Ensure("LBL_TEMPLATE_NAME", "模板名称", "テンプレート名", "Template Name");
+            Ensure("LBL_ENTER_TEMPLATE_NAME", "请输入模板名称", "テンプレート名を入力してください", "Enter template name");
             Ensure("LBL_ENTITY_TYPE", "实体类型", "エンティティタイプ", "Entity Type");
+            Ensure("LBL_ENTITY_TYPE_HINT", "此模板将用于哪种实体的数据展示", "このテンプレートはどのエンティティのデータ表示に使用されますか", "Which entity will this template be used for");
+            Ensure("LBL_TEMPLATE_INFO_HINT", "点击画布背景可返回模板属性；点击组件可编辑组件属性", "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", "Click canvas background to return to template properties; Click component to edit properties");
             Ensure("LBL_NEW_TEMPLATE", "新建模板", "新しいテンプレート", "New Template");
             Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
+            Ensure("ENTITY_CUSTOMER", "客户", "顧客", "Customer");
+            Ensure("ENTITY_PRODUCT", "产品", "製品", "Product");
+            Ensure("ENTITY_ORDER", "订单", "注文", "Order");
+            Ensure("ENTITY_CONTACT", "联系人", "連絡先", "Contact");
+            Ensure("ENTITY_OPPORTUNITY", "商机", "商談", "Opportunity");
             Ensure("LBL_WIDTH", "宽度", "幅", "Width");
             Ensure("LBL_DATA_SOURCE", "数据源", "データソース", "Data Source");
             Ensure("LBL_VISIBLE", "可见", "表示", "Visible");

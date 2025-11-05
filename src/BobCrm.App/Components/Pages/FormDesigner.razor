@@ -84,8 +84,10 @@ else
 
             <!-- Center Canvas -->
             <div class="designer-canvas" style="flex:1; overflow:auto; background-image:radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size:5px 5px; background-color:#fafafa;"
-                 @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault>
-                <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; padding:24px; position:relative">
+                 @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault
+                 @onclick="OnCanvasBackgroundClick">
+                <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; padding:24px; position:relative"
+                     @onclick:stopPropagation>
                     @foreach (var widget in layoutWidgets)
                     {
                         @if (widget.NewLine)
@@ -132,11 +134,12 @@ else
             </div>
 
             <!-- Right Properties Panel -->
-            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; background:#fafafa">
+            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; background:#fafafa"
+                 @onclick="OnCanvasBackgroundClick">
                 @if (selectedWidget != null)
                 {
-                    <div style="padding:16px">
-                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
+                    <div style="padding:16px" @onclick:stopPropagation>
+                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_WIDGET_PROPERTIES")</h3>
 
                         <div style="margin-bottom:16px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENT_TYPE")</label>
@@ -192,27 +195,33 @@ else
                 }
                 else
                 {
-                    <div style="padding:16px">
-                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
-                        <div style="padding:20px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; margin-bottom:16px">
-                            <div style="margin-bottom:12px">
-                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_TEMPLATE")</div>
-                                <div style="font-weight:500">@templateName</div>
-                            </div>
-                            <div style="margin-bottom:12px">
-                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</div>
-                                <div style="font-weight:500">@entityType</div>
-                            </div>
-                            <Divider Style="margin:12px 0" />
-                            <div style="margin-bottom:12px">
-                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</div>
-                                <div style="font-weight:500">@layoutWidgets.Count</div>
-                            </div>
+                    <div style="padding:16px" @onclick:stopPropagation>
+                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
+                        
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_TEMPLATE_NAME")</label>
+                            <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" />
                         </div>
-                        <div style="text-align:center; padding:40px 20px; color:#999; border:2px dashed #d9d9d9; border-radius:4px">
-                            <Icon Type="@IconType.Outline.Select" Style="font-size:36px; margin-bottom:8px" />
-                            <div style="font-size:12px">@I18n.T("LBL_SELECT_COMPONENT")</div>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</label>
+                            <Select TItemValue="string" TItem="string" @bind-Value="entityType" Style="width:100%">
+                                @foreach (var entity in availableEntityTypes)
+                                {
+                                    <SelectOption Value="@entity.Value" Label="@I18n.T(entity.LabelKey)" />
+                                }
+                            </Select>
+                            <div style="margin-top:4px; font-size:11px; color:#999">@I18n.T("LBL_ENTITY_TYPE_HINT")</div>
                         </div>
+
+                        <Divider />
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</label>
+                            <div style="font-size:20px; font-weight:600; color:#1890ff">@layoutWidgets.Count</div>
+                        </div>
+
+                        <Alert Type="AlertType.Info" ShowIcon="true" Message="@I18n.T("LBL_TEMPLATE_INFO_HINT")" Style="margin-top:16px" />
                     </div>
                 }
             </div>
@@ -236,6 +245,16 @@ else
 
     // ⭐ 可用字段列表（从FieldDefinitions API加载）
     private List<FieldDefinitionItem> availableFields = new();
+
+    // ⭐ 可用实体类型列表
+    private readonly List<(string Value, string LabelKey)> availableEntityTypes = new()
+    {
+        ("customer", "ENTITY_CUSTOMER"),
+        ("product", "ENTITY_PRODUCT"),
+        ("order", "ENTITY_ORDER"),
+        ("contact", "ENTITY_CONTACT"),
+        ("opportunity", "ENTITY_OPPORTUNITY"),
+    };
 
     // 拖放状态
     private WidgetRegistry.WidgetDefinition? draggedDefinition;
@@ -302,8 +321,15 @@ else
     private void InitializeEmptyTemplate()
     {
         templateName = I18n.T("LBL_NEW_TEMPLATE");
-        entityType = "customer"; // 默认客户实体
+        entityType = "customer"; // 默认选择customer，但用户可以在属性面板中更改
         layoutWidgets = new();
+    }
+
+    private void OnCanvasBackgroundClick()
+    {
+        // 点击画布背景时，取消选中Widget，显示模板属性
+        selectedWidget = null;
+        StateHasChanged();
     }
 
     private async Task LoadTemplate()
