@@ -97,6 +97,8 @@ public static class LayoutMapper
             "listbox" => new ListboxWidget(),
             "number" => new NumberWidget(),
             "select" => new SelectWidget(),
+            "checkbox" => new CheckboxWidget(),
+            "radio" => new RadioWidget(),
             "textarea" => new TextareaWidget(),
             "button" => new ButtonWidget(),
             "frame" => new FrameWidget(),
@@ -131,6 +133,12 @@ public static class LayoutMapper
                 break;
             case SelectWidget select:
                 MapSelectProperties(element, select);
+                break;
+            case CheckboxWidget checkbox:
+                MapCheckboxProperties(element, checkbox);
+                break;
+            case RadioWidget radio:
+                MapRadioProperties(element, radio);
                 break;
             case TextareaWidget textarea:
                 MapTextareaProperties(element, textarea);
@@ -727,6 +735,58 @@ public static class LayoutMapper
         {
             tab.Children = lower.EnumerateArray().Select(child => FromJsonElement(child)).ToList();
         }
+    }
+
+    /// <summary>
+    /// 映射Checkbox控件特定属性
+    /// </summary>
+    private static void MapCheckboxProperties(JsonElement element, CheckboxWidget checkbox)
+    {
+        if (element.TryGetProperty("Items", out var items) && items.ValueKind == JsonValueKind.Array)
+        {
+            checkbox.Items = items.EnumerateArray()
+                .Select(item => new ListItem
+                {
+                    Value = item.TryGetProperty("Value", out var val) ? (val.GetString() ?? "") : "",
+                    Label = item.TryGetProperty("Label", out var lbl) ? (lbl.GetString() ?? "") : ""
+                })
+                .ToList();
+        }
+
+        if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
+            checkbox.DefaultValue = defaultValue.GetString();
+
+        if (element.TryGetProperty("ButtonStyle", out var buttonStyle))
+            checkbox.ButtonStyle = buttonStyle.GetBoolean();
+
+        if (element.TryGetProperty("Direction", out var direction))
+            checkbox.Direction = direction.GetString() ?? "horizontal";
+    }
+
+    /// <summary>
+    /// 映射Radio控件特定属性
+    /// </summary>
+    private static void MapRadioProperties(JsonElement element, RadioWidget radio)
+    {
+        if (element.TryGetProperty("Items", out var items) && items.ValueKind == JsonValueKind.Array)
+        {
+            radio.Items = items.EnumerateArray()
+                .Select(item => new ListItem
+                {
+                    Value = item.TryGetProperty("Value", out var val) ? (val.GetString() ?? "") : "",
+                    Label = item.TryGetProperty("Label", out var lbl) ? (lbl.GetString() ?? "") : ""
+                })
+                .ToList();
+        }
+
+        if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
+            radio.DefaultValue = defaultValue.GetString();
+
+        if (element.TryGetProperty("ButtonStyle", out var buttonStyle))
+            radio.ButtonStyle = buttonStyle.GetBoolean();
+
+        if (element.TryGetProperty("Direction", out var direction))
+            radio.Direction = direction.GetString() ?? "horizontal";
     }
 
     /// <summary>

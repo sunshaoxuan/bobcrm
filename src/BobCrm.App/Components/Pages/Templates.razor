@@ -324,8 +324,9 @@
 
     private void EditTemplate()
     {
-        // ⭐ 导航到通用表单设计器
-        Nav.NavigateTo("/designer");
+        // ⭐ 导航到通用表单设计器，编辑客户的用户模板
+        // 使用特殊ID "user-customer" 表示编辑当前用户的客户模板
+        Nav.NavigateTo("/designer/user-customer");
     }
 
     private async Task ResetTemplate()

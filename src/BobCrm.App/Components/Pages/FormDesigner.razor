@@ -334,8 +334,91 @@ else
 
     private async Task LoadTemplate()
     {
-        // TODO: 从API加载模板
-        await Task.CompletedTask;
+        try
+        {
+            // 解析TemplateId（如"user-customer"表示用户的客户模板）
+            string scope = "effective"; // 默认加载有效布局
+            int customerId = 0; // 默认为模板
+            
+            if (TemplateId?.StartsWith("user-") == true)
+            {
+                // user-customer表示用户的客户模板
+                scope = "user";
+                entityType = TemplateId.Substring(5); // 去掉"user-"前缀
+            }
+            else if (TemplateId?.StartsWith("default-") == true)
+            {
+                // default-customer表示系统默认客户模板
+                scope = "default";
+                entityType = TemplateId.Substring(8); // 去掉"default-"前缀
+            }
+            else if (!string.IsNullOrWhiteSpace(TemplateId))
+            {
+                // 如果是纯实体名，加载该实体的有效模板
+                entityType = TemplateId;
+            }
+
+            // 从API加载布局
+            var resp = await Auth.GetWithRefreshAsync($"/api/layout/{customerId}?scope={scope}");
+            
+            if (!resp.IsSuccessStatusCode)
+            {
+                // 加载失败，初始化空模板
+                InitializeEmptyTemplate();
+                return;
+            }
+
+            var content = await resp.Content.ReadAsStringAsync();
+            
+            // 处理空响应
+            if (string.IsNullOrWhiteSpace(content) || content == "{}" || content == "null")
+            {
+                InitializeEmptyTemplate();
+                return;
+            }
+
+            // 解析布局JSON
+            var doc = System.Text.Json.JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            // 设置模板名称
+            templateName = scope == "user" ? I18n.T("LBL_USER_TEMPLATE") : 
+                          scope == "default" ? I18n.T("LBL_DEFAULT_TEMPLATE") : 
+                          I18n.T("LBL_TEMPLATE");
+
+            // 解析items（Widget列表）
+            if (root.TryGetProperty("items", out var itemsEl))
+            {
+                layoutWidgets = new List<DraggableWidget>();
+                
+                foreach (var item in itemsEl.EnumerateObject())
+                {
+                    try
+                    {
+                        var widget = LayoutMapper.FromJsonElement(item.Value);
+                        layoutWidgets.Add(widget);
+                    }
+                    catch (Exception ex)
+                    {
+                        await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to parse widget: {ex.Message}");
+                    }
+                }
+
+                // 保持JSON中的顺序（设计器中用户可以手动拖拽调整）
+            }
+            else
+            {
+                // 没有items属性，可能是旧格式或空模板
+                layoutWidgets = new List<DraggableWidget>();
+            }
+
+            await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template: {layoutWidgets.Count} widgets");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] LoadTemplate failed: {ex.Message}");
+            InitializeEmptyTemplate();
+        }
     }
 
     private class FieldDefinitionItem

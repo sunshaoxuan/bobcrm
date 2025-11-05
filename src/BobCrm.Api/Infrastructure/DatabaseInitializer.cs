@@ -234,6 +234,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_WIDGET_PROPERTIES", ZH = "组件属性", JA = "コンポーネントプロパティ", EN = "Widget Properties" },
                 new LocalizationResource { Key = "LBL_TEMPLATE", ZH = "模板", JA = "テンプレート", EN = "Template" },
                 new LocalizationResource { Key = "LBL_TEMPLATE_NAME", ZH = "模板名称", JA = "テンプレート名", EN = "Template Name" },
+                new LocalizationResource { Key = "LBL_USER_TEMPLATE", ZH = "用户模板", JA = "ユーザーテンプレート", EN = "User Template" },
+                new LocalizationResource { Key = "LBL_DEFAULT_TEMPLATE", ZH = "默认模板", JA = "デフォルトテンプレート", EN = "Default Template" },
                 new LocalizationResource { Key = "LBL_ENTER_TEMPLATE_NAME", ZH = "请输入模板名称", JA = "テンプレート名を入力してください", EN = "Enter template name" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE", ZH = "实体类型", JA = "エンティティタイプ", EN = "Entity Type" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE_HINT", ZH = "此模板将用于哪种实体的数据展示", JA = "このテンプレートはどのエンティティのデータ表示に使用されますか", EN = "Which entity will this template be used for" },
@@ -426,6 +428,8 @@ public static class DatabaseInitializer
             Ensure("LBL_WIDGET_PROPERTIES", "组件属性", "コンポーネントプロパティ", "Widget Properties");
             Ensure("LBL_TEMPLATE", "模板", "テンプレート", "Template");
             Ensure("LBL_TEMPLATE_NAME", "模板名称", "テンプレート名", "Template Name");
+            Ensure("LBL_USER_TEMPLATE", "用户模板", "ユーザーテンプレート", "User Template");
+            Ensure("LBL_DEFAULT_TEMPLATE", "默认模板", "デフォルトテンプレート", "Default Template");
             Ensure("LBL_ENTER_TEMPLATE_NAME", "请输入模板名称", "テンプレート名を入力してください", "Enter template name");
             Ensure("LBL_ENTITY_TYPE", "实体类型", "エンティティタイプ", "Entity Type");
             Ensure("LBL_ENTITY_TYPE_HINT", "此模板将用于哪种实体的数据展示", "このテンプレートはどのエンティティのデータ表示に使用されますか", "Which entity will this template be used for");
