@@ -246,10 +246,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE_LOCKED", ZH = "实体类型已锁定，不可修改", JA = "エンティティタイプはロック済み、変更不可", EN = "Entity type is locked and cannot be changed" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE_NOT_SET", ZH = "未设置", JA = "未設定", EN = "Not Set" },
                 new LocalizationResource { Key = "LBL_CHANGE_ENTITY_TYPE", ZH = "更换实体类型", JA = "エンティティタイプを変更", EN = "Change Entity Type" },
-                new LocalizationResource { Key = "LBL_LOADING", ZH = "加载中...", JA = "読み込み中...", EN = "Loading..." },
                 new LocalizationResource { Key = "LBL_NO_AVAILABLE_ENTITIES", ZH = "暂无可用实体类型", JA = "利用可能なエンティティタイプがありません", EN = "No available entity types" },
                 new LocalizationResource { Key = "LBL_CLICK_TO_SELECT_ENTITY", ZH = "点击选择实体类型", JA = "クリックしてエンティティタイプを選択", EN = "Click to select entity type" },
-                new LocalizationResource { Key = "LBL_LOAD_FAILED", ZH = "加载失败", JA = "読み込み失敗", EN = "Load Failed" },
                 new LocalizationResource { Key = "LBL_RETRY", ZH = "重试", JA = "再試行", EN = "Retry" },
                 new LocalizationResource { Key = "LBL_SEARCH_PLACEHOLDER", ZH = "搜索...", JA = "検索...", EN = "Search..." },
                 new LocalizationResource { Key = "LBL_SHOWING", ZH = "显示", JA = "表示中", EN = "Showing" },
@@ -260,8 +258,6 @@ public static class DatabaseInitializer
                 // Profile page keys
                 new LocalizationResource { Key = "MENU_PROFILE", ZH = "个人中心", JA = "プロフィール", EN = "Profile" },
                 new LocalizationResource { Key = "LBL_USER_INFORMATION", ZH = "用户信息", JA = "ユーザー情報", EN = "User Information" },
-                new LocalizationResource { Key = "LBL_USERNAME", ZH = "用户名", JA = "ユーザー名", EN = "Username" },
-                new LocalizationResource { Key = "LBL_EMAIL", ZH = "邮箱", JA = "メール", EN = "Email" },
                 new LocalizationResource { Key = "LBL_ROLE", ZH = "角色", JA = "役割", EN = "Role" },
                 new LocalizationResource { Key = "LBL_CHANGE_PASSWORD", ZH = "修改密码", JA = "パスワード変更", EN = "Change Password" },
                 new LocalizationResource { Key = "LBL_CURRENT_PASSWORD", ZH = "当前密码", JA = "現在のパスワード", EN = "Current Password" },
@@ -424,8 +420,6 @@ public static class DatabaseInitializer
             // Profile page keys
             Ensure("MENU_PROFILE", "个人中心", "プロフィール", "Profile");
             Ensure("LBL_USER_INFORMATION", "用户信息", "ユーザー情報", "User Information");
-            Ensure("LBL_USERNAME", "用户名", "ユーザー名", "Username");
-            Ensure("LBL_EMAIL", "邮箱", "メール", "Email");
             Ensure("LBL_ROLE", "角色", "役割", "Role");
             Ensure("LBL_CHANGE_PASSWORD", "修改密码", "パスワード変更", "Change Password");
             Ensure("LBL_CURRENT_PASSWORD", "当前密码", "現在のパスワード", "Current Password");
