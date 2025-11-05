@@ -108,6 +108,27 @@ public static class DatabaseInitializer
             );
         }
 
+        // EntityMetadata 预置数据（只添加已实现的customer实体）
+        if (!await db.Set<Data.Entities.EntityMetadata>().IgnoreQueryFilters().AnyAsync())
+        {
+            await db.Set<Data.Entities.EntityMetadata>().AddAsync(
+                new Data.Entities.EntityMetadata
+                {
+                    EntityType = "customer",
+                    DisplayNameKey = "ENTITY_CUSTOMER",
+                    DescriptionKey = "ENTITY_CUSTOMER_DESC",
+                    ApiEndpoint = "/api/customers",
+                    IsRootEntity = true,
+                    IsEnabled = true,
+                    Order = 1,
+                    Icon = "user",
+                    Category = "core",
+                    CreatedAt = DateTime.UtcNow
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
         if (!await db.Set<LocalizationResource>().IgnoreQueryFilters().AnyAsync())
         {
             await db.Set<LocalizationResource>().AddRangeAsync(
@@ -242,16 +263,9 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_TEMPLATE_INFO_HINT", ZH = "点击画布背景可返回模板属性；点击组件可编辑组件属性", JA = "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", EN = "Click canvas background to return to template properties; Click component to edit properties" },
                 new LocalizationResource { Key = "LBL_NEW_TEMPLATE", ZH = "新建模板", JA = "新しいテンプレート", EN = "New Template" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
+                // Entity types - 只预置已实现的实体，新实体由用户添加时自动创建多语资源
                 new LocalizationResource { Key = "ENTITY_CUSTOMER", ZH = "客户", JA = "顧客", EN = "Customer" },
                 new LocalizationResource { Key = "ENTITY_CUSTOMER_DESC", ZH = "客户信息管理", JA = "顧客情報管理", EN = "Customer information management" },
-                new LocalizationResource { Key = "ENTITY_PRODUCT", ZH = "产品", JA = "製品", EN = "Product" },
-                new LocalizationResource { Key = "ENTITY_PRODUCT_DESC", ZH = "产品目录管理", JA = "製品カタログ管理", EN = "Product catalog management" },
-                new LocalizationResource { Key = "ENTITY_ORDER", ZH = "订单", JA = "注文", EN = "Order" },
-                new LocalizationResource { Key = "ENTITY_ORDER_DESC", ZH = "订单处理和跟踪", JA = "注文処理と追跡", EN = "Order processing and tracking" },
-                new LocalizationResource { Key = "ENTITY_CONTACT", ZH = "联系人", JA = "連絡先", EN = "Contact" },
-                new LocalizationResource { Key = "ENTITY_CONTACT_DESC", ZH = "联系人信息管理", JA = "連絡先情報管理", EN = "Contact information management" },
-                new LocalizationResource { Key = "ENTITY_OPPORTUNITY", ZH = "商机", JA = "商談", EN = "Opportunity" },
-                new LocalizationResource { Key = "ENTITY_OPPORTUNITY_DESC", ZH = "销售商机跟踪", JA = "営業案件追跡", EN = "Sales opportunity tracking" },
                 new LocalizationResource { Key = "LBL_WIDTH", ZH = "宽度", JA = "幅", EN = "Width" },
                 new LocalizationResource { Key = "LBL_HEIGHT", ZH = "高度", JA = "高さ", EN = "Height" },
                 new LocalizationResource { Key = "LBL_DATA_SOURCE", ZH = "数据源", JA = "データソース", EN = "Data Source" },
@@ -441,16 +455,9 @@ public static class DatabaseInitializer
             Ensure("LBL_TEMPLATE_INFO_HINT", "点击画布背景可返回模板属性；点击组件可编辑组件属性", "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", "Click canvas background to return to template properties; Click component to edit properties");
             Ensure("LBL_NEW_TEMPLATE", "新建模板", "新しいテンプレート", "New Template");
             Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
+            // Entity types - 只预置已实现的实体
             Ensure("ENTITY_CUSTOMER", "客户", "顧客", "Customer");
             Ensure("ENTITY_CUSTOMER_DESC", "客户信息管理", "顧客情報管理", "Customer information management");
-            Ensure("ENTITY_PRODUCT", "产品", "製品", "Product");
-            Ensure("ENTITY_PRODUCT_DESC", "产品目录管理", "製品カタログ管理", "Product catalog management");
-            Ensure("ENTITY_ORDER", "订单", "注文", "Order");
-            Ensure("ENTITY_ORDER_DESC", "订单处理和跟踪", "注文処理と追跡", "Order processing and tracking");
-            Ensure("ENTITY_CONTACT", "联系人", "連絡先", "Contact");
-            Ensure("ENTITY_CONTACT_DESC", "联系人信息管理", "連絡先情報管理", "Contact information management");
-            Ensure("ENTITY_OPPORTUNITY", "商机", "商談", "Opportunity");
-            Ensure("ENTITY_OPPORTUNITY_DESC", "销售商机跟踪", "営業案件追跡", "Sales opportunity tracking");
             Ensure("LBL_WIDTH", "宽度", "幅", "Width");
             Ensure("LBL_DATA_SOURCE", "数据源", "データソース", "Data Source");
             Ensure("LBL_VISIBLE", "可见", "表示", "Visible");

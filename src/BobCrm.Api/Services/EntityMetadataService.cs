@@ -1,122 +1,94 @@
-using BobCrm.Api.Models;
+using BobCrm.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
 
 /// <summary>
-/// 实体元数据服务 - 管理可用于创建模板的根实体
-/// 采用配置化方式，而非完全动态反射，以便精确控制哪些实体可用
+/// 实体元数据服务 - 从数据库动态加载可用于创建模板的根实体
+/// 原则：只有根实体（非聚合子实体）才能创建独立模板
 /// </summary>
 public class EntityMetadataService
 {
-    private readonly List<EntityMetadata> _entities;
+    private readonly AppDbContext _db;
 
-    public EntityMetadataService()
+    public EntityMetadataService(AppDbContext db)
     {
-        // 初始化实体元数据列表
-        // 原则：只有根实体（非聚合子实体）才能创建独立模板
-        _entities = new List<EntityMetadata>
-        {
-            new EntityMetadata
-            {
-                EntityType = "customer",
-                DisplayNameKey = "ENTITY_CUSTOMER",
-                DescriptionKey = "ENTITY_CUSTOMER_DESC",
-                ApiEndpoint = "/api/customers",
-                IsRootEntity = true,
-                IsEnabled = true,
-                Order = 1,
-                Icon = "user",
-                Category = "core"
-            },
-            new EntityMetadata
-            {
-                EntityType = "product",
-                DisplayNameKey = "ENTITY_PRODUCT",
-                DescriptionKey = "ENTITY_PRODUCT_DESC",
-                ApiEndpoint = "/api/products",
-                IsRootEntity = true,
-                IsEnabled = false, // 暂未实现Product API，标记为禁用
-                Order = 2,
-                Icon = "shopping",
-                Category = "sales"
-            },
-            new EntityMetadata
-            {
-                EntityType = "order",
-                DisplayNameKey = "ENTITY_ORDER",
-                DescriptionKey = "ENTITY_ORDER_DESC",
-                ApiEndpoint = "/api/orders",
-                IsRootEntity = true,
-                IsEnabled = false, // 暂未实现Order API
-                Order = 3,
-                Icon = "file-text",
-                Category = "sales"
-            },
-            new EntityMetadata
-            {
-                EntityType = "contact",
-                DisplayNameKey = "ENTITY_CONTACT",
-                DescriptionKey = "ENTITY_CONTACT_DESC",
-                ApiEndpoint = "/api/contacts",
-                IsRootEntity = true,
-                IsEnabled = false, // 暂未实现Contact API
-                Order = 4,
-                Icon = "contacts",
-                Category = "core"
-            },
-            new EntityMetadata
-            {
-                EntityType = "opportunity",
-                DisplayNameKey = "ENTITY_OPPORTUNITY",
-                DescriptionKey = "ENTITY_OPPORTUNITY_DESC",
-                ApiEndpoint = "/api/opportunities",
-                IsRootEntity = true,
-                IsEnabled = false, // 暂未实现Opportunity API
-                Order = 5,
-                Icon = "dollar",
-                Category = "sales"
-            }
-        };
+        _db = db;
     }
 
     /// <summary>
     /// 获取所有可用的根实体（已启用且为根实体）
     /// </summary>
-    public List<EntityMetadata> GetAvailableRootEntities()
+    public async Task<List<Data.Entities.EntityMetadata>> GetAvailableRootEntitiesAsync()
     {
-        return _entities
+        return await _db.EntityMetadata
             .Where(e => e.IsRootEntity && e.IsEnabled)
             .OrderBy(e => e.Order)
-            .ToList();
+            .ToListAsync();
     }
 
     /// <summary>
     /// 获取所有根实体（包括未启用的）
     /// </summary>
-    public List<EntityMetadata> GetAllRootEntities()
+    public async Task<List<Data.Entities.EntityMetadata>> GetAllRootEntitiesAsync()
     {
-        return _entities
+        return await _db.EntityMetadata
             .Where(e => e.IsRootEntity)
             .OrderBy(e => e.Order)
-            .ToList();
+            .ToListAsync();
     }
 
     /// <summary>
     /// 根据类型获取实体元数据
     /// </summary>
-    public EntityMetadata? GetEntityMetadata(string entityType)
+    public async Task<Data.Entities.EntityMetadata?> GetEntityMetadataAsync(string entityType)
     {
-        return _entities.FirstOrDefault(e => 
-            e.EntityType.Equals(entityType, StringComparison.OrdinalIgnoreCase));
+        return await _db.EntityMetadata
+            .FirstOrDefaultAsync(e => e.EntityType == entityType.ToLowerInvariant());
     }
 
     /// <summary>
     /// 验证实体类型是否可用于创建模板
     /// </summary>
-    public bool IsValidEntityType(string entityType)
+    public async Task<bool> IsValidEntityTypeAsync(string entityType)
     {
-        var entity = GetEntityMetadata(entityType);
+        var entity = await GetEntityMetadataAsync(entityType);
         return entity != null && entity.IsRootEntity && entity.IsEnabled;
     }
-}
 
+    /// <summary>
+    /// 添加新的实体元数据（管理员功能）
+    /// </summary>
+    public async Task<Data.Entities.EntityMetadata> AddEntityAsync(Data.Entities.EntityMetadata entity)
+    {
+        entity.EntityType = entity.EntityType.ToLowerInvariant();
+        entity.CreatedAt = DateTime.UtcNow;
+        
+        _db.EntityMetadata.Add(entity);
+        await _db.SaveChangesAsync();
+        
+        return entity;
+    }
+
+    /// <summary>
+    /// 更新实体元数据（管理员功能）
+    /// </summary>
+    public async Task<bool> UpdateEntityAsync(string entityType, Data.Entities.EntityMetadata updatedEntity)
+    {
+        var existing = await GetEntityMetadataAsync(entityType);
+        if (existing == null) return false;
+
+        existing.DisplayNameKey = updatedEntity.DisplayNameKey;
+        existing.DescriptionKey = updatedEntity.DescriptionKey;
+        existing.ApiEndpoint = updatedEntity.ApiEndpoint;
+        existing.IsRootEntity = updatedEntity.IsRootEntity;
+        existing.IsEnabled = updatedEntity.IsEnabled;
+        existing.Order = updatedEntity.Order;
+        existing.Icon = updatedEntity.Icon;
+        existing.Category = updatedEntity.Category;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return true;
+    }
+}

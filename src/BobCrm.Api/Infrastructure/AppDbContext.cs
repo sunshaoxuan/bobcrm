@@ -40,6 +40,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
 
+    // 元数据
+    public DbSet<Data.Entities.EntityMetadata> EntityMetadata => Set<Data.Entities.EntityMetadata>();
+
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
 
@@ -107,6 +110,13 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // FieldValue 索引
         b.Entity<FieldValue>()
             .HasIndex(fv => new { fv.CustomerId, fv.FieldDefinitionId });
+
+        // EntityMetadata 配置
+        b.Entity<Data.Entities.EntityMetadata>()
+            .HasKey(em => em.EntityType);
+        
+        b.Entity<Data.Entities.EntityMetadata>()
+            .HasIndex(em => new { em.IsRootEntity, em.IsEnabled, em.Order });
     }
 
     private AppDbContext db => this;

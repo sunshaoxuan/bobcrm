@@ -9,9 +9,9 @@ public static class EntityMetadataEndpoints
         var group = app.MapGroup("/api/entities");
 
         // 获取所有可用的根实体（用于模板创建）
-        group.MapGet("/", (EntityMetadataService entityService) =>
+        group.MapGet("/", async (EntityMetadataService entityService) =>
         {
-            var entities = entityService.GetAvailableRootEntities();
+            var entities = await entityService.GetAvailableRootEntitiesAsync();
             
             return Results.Ok(entities.Select(e => new
             {
@@ -29,9 +29,9 @@ public static class EntityMetadataEndpoints
         .WithOpenApi();
 
         // 获取所有根实体（包括未启用的，仅管理员）
-        group.MapGet("/all", (EntityMetadataService entityService) =>
+        group.MapGet("/all", async (EntityMetadataService entityService) =>
         {
-            var entities = entityService.GetAllRootEntities();
+            var entities = await entityService.GetAllRootEntitiesAsync();
             
             return Results.Ok(entities.Select(e => new
             {
@@ -51,10 +51,10 @@ public static class EntityMetadataEndpoints
         .WithOpenApi();
 
         // 验证实体类型是否有效
-        group.MapGet("/{entityType}/validate", (string entityType, EntityMetadataService entityService) =>
+        group.MapGet("/{entityType}/validate", async (string entityType, EntityMetadataService entityService) =>
         {
-            var isValid = entityService.IsValidEntityType(entityType);
-            var entity = entityService.GetEntityMetadata(entityType);
+            var isValid = await entityService.IsValidEntityTypeAsync(entityType);
+            var entity = await entityService.GetEntityMetadataAsync(entityType);
             
             return Results.Ok(new
             {

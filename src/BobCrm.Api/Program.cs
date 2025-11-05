@@ -102,8 +102,8 @@ builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 // ILocalization as Singleton with IMemoryCache for cross-request caching
 builder.Services.AddSingleton<ILocalization, EfLocalization>();
 
-// Entity Metadata Service (Singleton - 元数据在应用生命周期内不变)
-builder.Services.AddSingleton<BobCrm.Api.Services.EntityMetadataService>();
+// Entity Metadata Service (Scoped - 需要访问数据库)
+builder.Services.AddScoped<BobCrm.Api.Services.EntityMetadataService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
