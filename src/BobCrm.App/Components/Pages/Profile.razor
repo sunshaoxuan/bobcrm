@@ -1,0 +1,317 @@
+@page "/profile"
+@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>@I18n.T("MENU_PROFILE") - OneCRM</PageTitle>
+
+<div style="max-width:900px; margin:0 auto">
+    <h2 style="margin-bottom:24px; color:var(--text); font-size:24px; font-weight:600">@I18n.T("MENU_PROFILE")</h2>
+
+    @if (loading)
+    {
+        <div style="padding:48px; text-align:center; color:var(--muted)">
+            @I18n.T("LBL_LOADING")...
+        </div>
+    }
+    else
+    {
+        <div style="display:grid; gap:24px">
+            <!-- User Information -->
+            <div class="profile-section">
+                <h3 class="section-title">@I18n.T("LBL_USER_INFORMATION")</h3>
+                <div class="profile-card">
+                    <div class="profile-avatar-section">
+                        <div class="avatar-circle">
+                            @if (string.IsNullOrWhiteSpace(avatarUrl))
+                            {
+                                <Icon Type="@IconType.Outline.User" Style="font-size:48px; color:#fff" />
+                            }
+                            else
+                            {
+                                <img src="@avatarUrl" alt="Avatar" style="width:100%; height:100%; object-fit:cover" />
+                            }
+                        </div>
+                        <div style="margin-top:12px; text-align:center">
+                            <Button Type="@ButtonType.Link" Size="@ButtonSize.Small" OnClick="UploadAvatar">
+                                @I18n.T("BTN_CHANGE_AVATAR")
+                            </Button>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-info-section">
+                        <div class="info-item">
+                            <label class="info-label">@I18n.T("LBL_USERNAME")</label>
+                            <div class="info-value">@userName</div>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">@I18n.T("LBL_EMAIL")</label>
+                            <div class="info-value">@email</div>
+                        </div>
+                        <div class="info-item">
+                            <label class="info-label">@I18n.T("LBL_ROLE")</label>
+                            <div class="info-value">
+                                <Tag Color="@(role == "Admin" ? "blue" : "default")">@role</Tag>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="profile-section">
+                <h3 class="section-title">@I18n.T("LBL_CHANGE_PASSWORD")</h3>
+                <div class="profile-card">
+                    <Form Model="passwordForm" OnFinish="HandlePasswordChange">
+                        <FormItem Label="@I18n.T("LBL_CURRENT_PASSWORD")">
+                            <Input Type="password" @bind-Value="passwordForm.CurrentPassword" Placeholder="@I18n.T("LBL_ENTER_CURRENT_PASSWORD")" />
+                        </FormItem>
+                        <FormItem Label="@I18n.T("LBL_NEW_PASSWORD")">
+                            <Input Type="password" @bind-Value="passwordForm.NewPassword" Placeholder="@I18n.T("LBL_ENTER_NEW_PASSWORD")" />
+                        </FormItem>
+                        <FormItem Label="@I18n.T("LBL_CONFIRM_PASSWORD")">
+                            <Input Type="password" @bind-Value="passwordForm.ConfirmPassword" Placeholder="@I18n.T("LBL_ENTER_CONFIRM_PASSWORD")" />
+                        </FormItem>
+                        <FormItem>
+                            <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@changingPassword">
+                                @I18n.T("BTN_CHANGE_PASSWORD")
+                            </Button>
+                        </FormItem>
+                    </Form>
+                </div>
+            </div>
+
+            <!-- Status Messages -->
+            @if (!string.IsNullOrWhiteSpace(message))
+            {
+                <Alert Type="@(messageType)" Message="@message" ShowIcon="true" Closable OnClose="@(() => message = "")" />
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .profile-section {
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .profile-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+    }
+
+    .profile-avatar-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 20px;
+    }
+
+    .avatar-circle {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary) 0%, #722ed1 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .profile-info-section {
+        display: grid;
+        gap: 16px;
+    }
+
+    .info-item {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 16px;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 500;
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .info-value {
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private bool loading = true;
+    private bool changingPassword = false;
+    private string userName = "";
+    private string email = "";
+    private string role = "";
+    private string? avatarUrl = null;
+    private string message = "";
+    private string messageType = "info";
+    
+    private PasswordChangeForm passwordForm = new();
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            // 确保已认证
+            var authenticated = await Auth.EnsureAuthenticatedAsync();
+            if (!authenticated)
+            {
+                loading = false;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            // 获取用户信息
+            var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
+            if (resp.IsSuccessStatusCode)
+            {
+                var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
+                userName = userInfo?.UserName ?? "Unknown";
+                email = userInfo?.Email ?? "未设置";
+                role = userInfo?.Role ?? "User";
+            }
+
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Profile] Error: {ex.Message}");
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task HandlePasswordChange()
+    {
+        // 验证
+        if (string.IsNullOrWhiteSpace(passwordForm.CurrentPassword))
+        {
+            ShowMessage(I18n.T("MSG_CURRENT_PASSWORD_REQUIRED"), "warning");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(passwordForm.NewPassword) || passwordForm.NewPassword.Length < 6)
+        {
+            ShowMessage(I18n.T("MSG_PASSWORD_TOO_SHORT"), "warning");
+            return;
+        }
+        
+        if (passwordForm.NewPassword != passwordForm.ConfirmPassword)
+        {
+            ShowMessage(I18n.T("MSG_PASSWORD_NOT_MATCH"), "warning");
+            return;
+        }
+
+        try
+        {
+            changingPassword = true;
+            StateHasChanged();
+
+            var payload = new
+            {
+                currentPassword = passwordForm.CurrentPassword,
+                newPassword = passwordForm.NewPassword
+            };
+
+            var resp = await Auth.PostAsJsonWithRefreshAsync("/api/auth/change-password", payload);
+            
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage(I18n.T("MSG_PASSWORD_CHANGED_SUCCESS"), "success");
+                passwordForm = new(); // 清空表单
+            }
+            else
+            {
+                var error = await resp.Content.ReadAsStringAsync();
+                ShowMessage(error, "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Profile] Change password error: {ex.Message}");
+            ShowMessage(I18n.T("MSG_CHANGE_PASSWORD_FAILED"), "error");
+        }
+        finally
+        {
+            changingPassword = false;
+            StateHasChanged();
+        }
+    }
+
+    private async void UploadAvatar()
+    {
+        // TODO: 实现头像上传功能
+        await JS.InvokeVoidAsync("alert", I18n.T("MSG_FEATURE_COMING_SOON"));
+    }
+
+    private void ShowMessage(string msg, string type)
+    {
+        message = msg;
+        messageType = type;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+
+    private class UserInfoDto
+    {
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+        public string? Role { get; set; }
+    }
+
+    private class PasswordChangeForm
+    {
+        public string CurrentPassword { get; set; } = "";
+        public string NewPassword { get; set; } = "";
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
+

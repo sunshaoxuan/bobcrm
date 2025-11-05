@@ -1,6 +1,9 @@
 @rendermode RenderMode.InteractiveServer
+@implements IDisposable
+@inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="app-header">
     <div class="header-nav">
@@ -10,14 +13,37 @@
         </div>
     </div>
     <div class="header-toolbar">
-        <div class="toolbar-group">
-            <span class="user-info">@I18n.T("LBL_USER")</span>
-            <button type="button" class="btn-logout" onclick="logout()">@I18n.T("BTN_LOGOUT")</button>
-        </div>
+        @if (isAuthenticated)
+        {
+            <div class="user-profile-group">
+                <a href="/profile" class="user-profile-link">
+                    <div class="user-avatar">
+                        @if (string.IsNullOrWhiteSpace(avatarUrl))
+                        {
+                            <Icon Type="@IconType.Outline.User" Style="font-size:18px; color:#fff" />
+                        }
+                        else
+                        {
+                            <img src="@avatarUrl" alt="@userName" style="width:100%; height:100%; object-fit:cover" />
+                        }
+                    </div>
+                    <span class="user-name">@userName</span>
+                </a>
+                <button type="button" class="btn-logout" onclick="logout()">@I18n.T("BTN_LOGOUT")</button>
+            </div>
+        }
+        else
+        {
+            <a href="/login" class="btn-login">@I18n.T("BTN_LOGIN")</a>
+        }
     </div>
 </div>
 
 @code {
+    private bool isAuthenticated = false;
+    private string userName = "";
+    private string? avatarUrl = null;
+
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
@@ -34,9 +60,25 @@
         {
             try
             {
+                // 加载语言
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
+                
+                // 检查登录状态并加载用户信息
+                isAuthenticated = await Auth.EnsureAuthenticatedAsync();
+                
+                if (isAuthenticated)
+                {
+                    var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
+                        userName = userInfo?.UserName ?? "User";
+                        // avatarUrl 暂时为空，未来支持头像上传
+                    }
+                }
+                
                 await InvokeAsync(StateHasChanged);
             }
             catch { }
@@ -46,5 +88,12 @@
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
+    }
+    
+    private class UserInfoDto
+    {
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+        public string? Role { get; set; }
     }
 }

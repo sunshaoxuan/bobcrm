@@ -195,6 +195,63 @@ html, body {
   white-space: nowrap;
 }
 
+/* User Profile Group */
+.user-profile-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  background: rgba(0,0,0,0.02);
+  border: 1px solid transparent;
+}
+
+.user-profile-link:hover {
+  background: rgba(0,0,0,0.06);
+  border-color: var(--border);
+  transform: translateY(-1px);
+}
+
+.theme-dark .user-profile-link {
+  background: rgba(255,255,255,0.05);
+}
+
+.theme-dark .user-profile-link:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, #722ed1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.user-name {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .btn-logout {
   padding: 8px 16px;
   background: transparent;
@@ -217,6 +274,26 @@ html, body {
 
 .theme-dark .btn-logout:hover {
   background: rgba(239, 68, 68, 0.15);
+}
+
+.btn-login {
+  padding: 8px 20px;
+  background: var(--primary);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-login:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .app-content { padding: 16px; flex: 1; overflow-y: auto; }

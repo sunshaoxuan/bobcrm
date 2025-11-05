@@ -228,16 +228,62 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 id = identityUser.Id,
-                username = identityUser.UserName,
+                userName = identityUser.UserName,
                 email = identityUser.Email,
                 emailConfirmed = identityUser.EmailConfirmed,
-                roles = roles.ToList()
+                role = roles.FirstOrDefault() ?? "User"
             });
         })
         .RequireAuthorization()
         .WithName("GetCurrentUser")
         .WithSummary("获取当前用户信息")
         .WithDescription("返回当前已认证用户的详细信息，包括ID、用户名、邮箱和角色");
+
+        // 修改密码
+        group.MapPost("/change-password", async (
+            ClaimsPrincipal user,
+            UserManager<IdentityUser> um,
+            ILogger<Program> logger,
+            ChangePasswordDto dto) =>
+        {
+            if (user?.Identity?.IsAuthenticated != true)
+            {
+                logger.LogWarning("[Auth] Change password failed: user not authenticated");
+                return Results.Unauthorized();
+            }
+
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(uid))
+            {
+                logger.LogWarning("[Auth] Change password failed: no user ID in token");
+                return Results.Unauthorized();
+            }
+
+            var identityUser = await um.FindByIdAsync(uid);
+            if (identityUser == null)
+            {
+                logger.LogWarning("[Auth] Change password failed: user not found, userId={UserId}", uid);
+                return Results.NotFound("用户不存在");
+            }
+
+            logger.LogInformation("[Auth] Change password attempt for user {UserName}", identityUser.UserName);
+
+            var result = await um.ChangePasswordAsync(identityUser, dto.CurrentPassword, dto.NewPassword);
+            
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                logger.LogWarning("[Auth] Change password failed for {UserName}: {Errors}", identityUser.UserName, errors);
+                return Results.BadRequest(errors);
+            }
+
+            logger.LogInformation("[Auth] Password changed successfully for user {UserName}", identityUser.UserName);
+            return Results.Ok(new { message = "密码修改成功" });
+        })
+        .RequireAuthorization()
+        .WithName("ChangePassword")
+        .WithSummary("修改密码")
+        .WithDescription("修改当前用户的密码");
 
         return app;
     }
