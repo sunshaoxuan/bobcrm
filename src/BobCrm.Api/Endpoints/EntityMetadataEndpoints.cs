@@ -13,7 +13,13 @@ public static class EntityMetadataEndpoints
         {
             var entities = await entityService.GetAvailableRootEntitiesAsync();
             
-            return Results.Ok(entities.Select(e => new
+            Console.WriteLine($"[EntityMetadataEndpoints] GET /api/entities - Found {entities.Count} entities");
+            foreach (var e in entities)
+            {
+                Console.WriteLine($"  - {e.EntityName} (route={e.EntityRoute}, displayKey={e.DisplayNameKey})");
+            }
+            
+            var result = entities.Select(e => new
             {
                 entityType = e.EntityRoute,      // 前端使用EntityRoute（customer）
                 entityName = e.EntityName,       // Customer
@@ -23,7 +29,10 @@ public static class EntityMetadataEndpoints
                 icon = e.Icon,
                 category = e.Category,
                 order = e.Order
-            }));
+            }).ToList();
+            
+            Console.WriteLine($"[EntityMetadataEndpoints] Returning {result.Count} items");
+            return Results.Ok(result);
         })
         .WithName("GetAvailableEntities")
         .WithTags("Entities")

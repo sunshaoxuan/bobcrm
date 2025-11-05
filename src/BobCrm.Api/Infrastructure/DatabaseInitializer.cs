@@ -241,7 +241,19 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_DEFAULT_TEMPLATE", ZH = "默认模板", JA = "デフォルトテンプレート", EN = "Default Template" },
                 new LocalizationResource { Key = "LBL_ENTER_TEMPLATE_NAME", ZH = "请输入模板名称", JA = "テンプレート名を入力してください", EN = "Enter template name" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE", ZH = "实体类型", JA = "エンティティタイプ", EN = "Entity Type" },
+                new LocalizationResource { Key = "LBL_SELECT_ENTITY_TYPE", ZH = "请选择实体类型", JA = "エンティティタイプを選択", EN = "Select entity type" },
                 new LocalizationResource { Key = "LBL_ENTITY_TYPE_HINT", ZH = "此模板将用于哪种实体的数据展示", JA = "このテンプレートはどのエンティティのデータ表示に使用されますか", EN = "Which entity will this template be used for" },
+                new LocalizationResource { Key = "LBL_ENTITY_TYPE_LOCKED", ZH = "实体类型已锁定，不可修改", JA = "エンティティタイプはロック済み、変更不可", EN = "Entity type is locked and cannot be changed" },
+                new LocalizationResource { Key = "LBL_ENTITY_TYPE_NOT_SET", ZH = "未设置", JA = "未設定", EN = "Not Set" },
+                new LocalizationResource { Key = "LBL_CHANGE_ENTITY_TYPE", ZH = "更换实体类型", JA = "エンティティタイプを変更", EN = "Change Entity Type" },
+                new LocalizationResource { Key = "LBL_LOADING", ZH = "加载中...", JA = "読み込み中...", EN = "Loading..." },
+                new LocalizationResource { Key = "LBL_NO_AVAILABLE_ENTITIES", ZH = "暂无可用实体类型", JA = "利用可能なエンティティタイプがありません", EN = "No available entity types" },
+                new LocalizationResource { Key = "LBL_CLICK_TO_SELECT_ENTITY", ZH = "点击选择实体类型", JA = "クリックしてエンティティタイプを選択", EN = "Click to select entity type" },
+                new LocalizationResource { Key = "LBL_LOAD_FAILED", ZH = "加载失败", JA = "読み込み失敗", EN = "Load Failed" },
+                new LocalizationResource { Key = "LBL_RETRY", ZH = "重试", JA = "再試行", EN = "Retry" },
+                new LocalizationResource { Key = "LBL_SEARCH_PLACEHOLDER", ZH = "搜索...", JA = "検索...", EN = "Search..." },
+                new LocalizationResource { Key = "LBL_SHOWING", ZH = "显示", JA = "表示中", EN = "Showing" },
+                new LocalizationResource { Key = "LBL_ITEMS", ZH = "项", JA = "件", EN = "items" },
                 new LocalizationResource { Key = "LBL_TEMPLATE_INFO_HINT", ZH = "点击画布背景可返回模板属性；点击组件可编辑组件属性", JA = "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", EN = "Click canvas background to return to template properties; Click component to edit properties" },
                 new LocalizationResource { Key = "LBL_NEW_TEMPLATE", ZH = "新建模板", JA = "新しいテンプレート", EN = "New Template" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
@@ -433,7 +445,19 @@ public static class DatabaseInitializer
             Ensure("LBL_DEFAULT_TEMPLATE", "默认模板", "デフォルトテンプレート", "Default Template");
             Ensure("LBL_ENTER_TEMPLATE_NAME", "请输入模板名称", "テンプレート名を入力してください", "Enter template name");
             Ensure("LBL_ENTITY_TYPE", "实体类型", "エンティティタイプ", "Entity Type");
+            Ensure("LBL_SELECT_ENTITY_TYPE", "请选择实体类型", "エンティティタイプを選択", "Select entity type");
             Ensure("LBL_ENTITY_TYPE_HINT", "此模板将用于哪种实体的数据展示", "このテンプレートはどのエンティティのデータ表示に使用されますか", "Which entity will this template be used for");
+            Ensure("LBL_ENTITY_TYPE_LOCKED", "实体类型已锁定，不可修改", "エンティティタイプはロック済み、変更不可", "Entity type is locked and cannot be changed");
+            Ensure("LBL_ENTITY_TYPE_NOT_SET", "未设置", "未設定", "Not Set");
+            Ensure("LBL_CHANGE_ENTITY_TYPE", "更换实体类型", "エンティティタイプを変更", "Change Entity Type");
+            Ensure("LBL_LOADING", "加载中...", "読み込み中...", "Loading...");
+            Ensure("LBL_NO_AVAILABLE_ENTITIES", "暂无可用实体类型", "利用可能なエンティティタイプがありません", "No available entity types");
+            Ensure("LBL_CLICK_TO_SELECT_ENTITY", "点击选择实体类型", "クリックしてエンティティタイプを選択", "Click to select entity type");
+            Ensure("LBL_LOAD_FAILED", "加载失败", "読み込み失敗", "Load Failed");
+            Ensure("LBL_RETRY", "重试", "再試行", "Retry");
+            Ensure("LBL_SEARCH_PLACEHOLDER", "搜索...", "検索...", "Search...");
+            Ensure("LBL_SHOWING", "显示", "表示中", "Showing");
+            Ensure("LBL_ITEMS", "项", "件", "items");
             Ensure("LBL_TEMPLATE_INFO_HINT", "点击画布背景可返回模板属性；点击组件可编辑组件属性", "キャンバスの背景をクリックしてテンプレートプロパティに戻る；コンポーネントをクリックしてプロパティを編集", "Click canvas background to return to template properties; Click component to edit properties");
             Ensure("LBL_NEW_TEMPLATE", "新建模板", "新しいテンプレート", "New Template");
             Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
