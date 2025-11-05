@@ -2,6 +2,16 @@
 
 一个基于 Blazor Server 的 CRM 系统，具有动态表单设计、多语言支持和丰富的字段动作功能。
 
+## 📝 最新更新（v0.5.2，2025-11-05）
+
+- ✅ **新增Checkbox和Radio组件** - 支持单选/多选、按钮样式、横向/纵向布局
+- ✅ **模板实体类型可选择** - 支持5种实体（Customer/Product/Order/Contact/Opportunity）
+- ✅ **实现模板加载功能** - 修复Templates页与FormDesigner的逻辑矛盾
+- ✅ **补充30+多语资源** - FormDesigner界面完全支持多语切换
+- ✅ **改进环境验证脚本** - 支持.NET 9等更高版本
+
+详见：[更新说明 v0.5.2](docs/更新说明-v0.5.2.md)
+
 ## 🚀 快速开始（5分钟上手）
 
 ### 前置条件
@@ -72,7 +82,8 @@ pwsh scripts/dev.ps1 -Action stop
 - [设计文档](docs/客户信息管理系统设计文档.md)
 - [接口文档](docs/接口文档.md)
 - [架构重构总结](docs/架构重构总结-v0.5.md)
-- [测试指南](docs/测试指南.md) ⭐ 新增
+- [测试指南](docs/测试指南.md)
+- [更新说明 v0.5.2](docs/更新说明-v0.5.2.md) ⭐ 最新
 
 ---
 
@@ -284,13 +295,16 @@ cd publish && ./BobCrm.App
 - ✅ 所有测试通过（64/64）
 
 **已完成的子任务**：
-- [x] Widget模型定义（17种控件）
+- [x] Widget模型定义（19种控件，含Checkbox和Radio）
 - [x] DesignRenderer/RuntimeRenderer渲染服务
 - [x] WidgetSerializationHelper序列化逻辑
-- [x] 属性面板完整实现
+- [x] 属性面板完整实现（模板属性+组件属性）
 - [x] 拖拽/吸附/对齐线功能
 - [x] 字段动作系统（RDP/文件/mailto）
 - [x] 代码质量优化（抽取14个helper类）
+- [x] 模板实体类型动态选择（5种实体）
+- [x] FormDesigner模板加载功能
+- [x] 完整多语资源（30+个新增键）
 
 ### 2. ✅ 拖拽吸附与对齐线（已完成）
 - [x] 在 `app.js` 中实现吸附与对齐线算法
