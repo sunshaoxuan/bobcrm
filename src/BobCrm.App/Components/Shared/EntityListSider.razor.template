@@ -1,0 +1,151 @@
+@*
+  ===============================================
+  实体列表侧边栏模板
+  ===============================================
+  
+  使用此模板创建新的实体列表侧边栏：
+  
+  1. 复制此文件为 [EntityName]Sider.razor
+  2. 替换所有 [EntityName] 为实际实体名（如 Product, Order）
+  3. 替换 [entity] 为小写实体名（如 product, order）
+  4. 修改 Item 类的属性以匹配后端API响应
+  5. 实现 FilterPredicate 方法定义搜索逻辑
+  
+  示例：
+  - ProductSider.razor -> 产品列表
+  - OrderSider.razor -> 订单列表
+  - ContractSider.razor -> 合同列表
+*@
+
+@using System.Net.Http.Json
+@inherits EntityListSiderBase
+@rendermode RenderMode.InteractiveServer
+
+<div class="customer-sider">
+  <div style="padding:8px">
+    <input type="text"
+           placeholder="@I18n.T(SearchPlaceholderKey)"
+           @bind="keyword"
+           style="width:100%; padding:6px; border:1px solid #d0d0d0; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; font-size:13px; margin-bottom:8px" />
+    <button @onclick="CreateNew" class="btn-new-customer">
+      + @I18n.T(NewButtonTextKey)
+    </button>
+  </div>
+  
+  @if (!string.IsNullOrWhiteSpace(error))
+  {
+    <div style="padding:8px; color:#ff6b6b; font-size:12px">@error</div>
+  }
+  
+  @if (loading)
+  {
+    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_LOADING")...</div>
+  }
+  
+  <ul class="sider-list" style="list-style:none; padding:0; margin:0; max-height:600px; overflow-y:auto">
+    @foreach (var item in FilteredItems())
+    {
+      var isSelected = IsSelected(item);
+      var cls = isSelected ? "sider-item selected" : "sider-item";
+      <li class="@cls" @onclick="(() => Go(item.id))" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.1)">
+        <div class="code" style="font-weight:600; font-size:13px; color:#fff; margin-bottom:2px">@item.code</div>
+        <div class="name" style="font-size:12px; color:rgba(255,255,255,0.7)">@item.name</div>
+      </li>
+    }
+  </ul>
+  
+  @if (!loading && _data.Count == 0 && string.IsNullOrWhiteSpace(error))
+  {
+    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_NOT_FOUND")</div>
+  }
+</div>
+
+@code {
+    // ===== 配置部分（必须修改）=====
+    
+    protected override string ApiEndpoint => "/api/[entity]s";  // 修改为实际API端点
+    protected override string NewButtonTextKey => "BTN_NEW_[ENTITY]";  // 修改为新建按钮翻译键
+    protected override string SearchPlaceholderKey => "LBL_SEARCH_[ENTITY]";  // 修改为搜索占位符翻译键
+    protected override string CreateNewPath => "/[entity]s/new";  // 修改为新建路径
+    protected override string GetItemPath(int id) => $"/[entity]/{id}";  // 修改为详情路径
+    
+    // 可选：跨组件事件注册
+    // protected override string? RegisterEventsJsMethod => "bobcrm.register[EntityName]Events";
+
+    // ===== 数据部分 =====
+    
+    private List<Item> _data = new();
+    private int selectedId;
+
+    // 修改 Item 类以匹配后端API响应
+    private class Item
+    {
+        public int id { get; set; }
+        public string? code { get; set; }
+        public string? name { get; set; }
+        // 根据需要添加其他字段
+    }
+
+    // ===== 必须实现的方法 =====
+
+    protected override async Task OnDataLoadedAsync(HttpResponseMessage response)
+    {
+        _data = await response.Content.ReadFromJsonAsync<List<Item>>() ?? new();
+        await JS.InvokeVoidAsync("console.log", $"[{GetType().Name}] Loaded {_data.Count} items");
+        TrySyncSelectedFromUrl();
+    }
+
+    // ===== 业务逻辑方法 =====
+
+    private IEnumerable<Item> FilteredItems()
+    {
+        if (string.IsNullOrWhiteSpace(keyword)) 
+            return _data;
+        
+        return _data.Where(FilterPredicate);
+    }
+
+    // 定义搜索过滤逻辑
+    private bool FilterPredicate(Item item)
+    {
+        return (item.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) 
+            || (item.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsSelected(Item item)
+    {
+        return item.id == selectedId;
+    }
+
+    private void TrySyncSelectedFromUrl()
+    {
+        try
+        {
+            var uri = new Uri(Nav.Uri);
+            var seg = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            // 修改路径匹配逻辑以适应实际路由
+            if (seg.Length >= 2 && seg[0] == "[entity]" && int.TryParse(seg[1], out var id)) 
+                selectedId = id;
+        }
+        catch { }
+    }
+
+    // 可选：实现跨组件事件回调
+    // [JSInvokable]
+    // public Task On[EntityName]Updated(int id, string code, string name)
+    // {
+    //     try
+    //     {
+    //         var item = _data.FirstOrDefault(x => x.id == id);
+    //         if (item != null)
+    //         {
+    //             item.code = code;
+    //             item.name = name;
+    //             StateHasChanged();
+    //         }
+    //     }
+    //     catch { }
+    //     return Task.CompletedTask;
+    // }
+}
+

@@ -1,0 +1,402 @@
+@page "/{EntityType}/{Id:int}"
+@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using BobCrm.App.Services.Widgets.Rendering
+@using Microsoft.AspNetCore.Components.Rendering
+
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.FieldActionService FieldActions
+@inject IRuntimeWidgetRenderer RuntimeRenderer
+
+<AuthChecker>
+@if (loading)
+{
+    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+}
+else if (error != null)
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+}
+else if (entityData != null)
+{
+    <!-- Browse and Edit Mode -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+        <div>
+            <h1 style="margin:0; font-size:24px">@GetEntityDisplayName()</h1>
+            <div style="color:var(--muted); font-size:14px; margin-top:4px">@I18n.T("COL_CODE"): @GetEntityCode()</div>
+        </div>
+
+        @if (!isEditMode)
+        {
+            <Button Type="@ButtonType.Primary" OnClick="EnterEditMode">
+                @I18n.T("MODE_EDIT")
+            </Button>
+        }
+        else
+        {
+            <div style="display:flex; gap:8px">
+                <Button Type="@ButtonType.Primary" OnClick="SaveChanges" Loading="@saving">
+                    @I18n.T("BTN_SAVE")
+                </Button>
+                <Button OnClick="CancelEdit">
+                    @I18n.T("BTN_CANCEL")
+                </Button>
+            </div>
+        }
+    </div>
+
+    @if (isEditMode)
+    {
+        <div class="runtime-basic-grid">
+            <div class="runtime-field-group">
+                <label class="runtime-field-label">@I18n.T("COL_CODE")</label>
+                <input class="runtime-field-input" value="@editCode" @oninput="e => editCode = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="runtime-field-group">
+                <label class="runtime-field-label">@I18n.T("COL_NAME")</label>
+                <input class="runtime-field-input" value="@editName" @oninput="e => editName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+        </div>
+    }
+
+    <!-- 渲染Widget布局 -->
+    <div class="runtime-layout @(isEditMode ? "edit-mode" : "")">
+        @foreach (var widget in layoutWidgets.Where(w => w.Visible))
+        {
+            @if (widget.NewLine)
+            {
+                <div style="width:100%; height:0; flex-basis:100%"></div>
+            }
+            <div style="@(WidgetStyleHelper.GetRuntimeWidgetStyle(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse))">
+                @RenderRuntimeWidget(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse)
+            </div>
+        }
+    </div>
+}
+</AuthChecker>
+
+@code {
+    [Parameter] public string EntityType { get; set; } = string.Empty;
+    [Parameter] public int Id { get; set; }
+
+    private bool loading = true;
+    private bool saving = false;
+    private string? error;
+    private bool isEditMode = false;
+
+    private System.Text.Json.JsonElement? entityData;
+    private List<DraggableWidget> layoutWidgets = new();
+
+    private readonly EditValueManager editValueManager = new();
+    private readonly TabStateManager tabStateManager = new();
+    
+    private string editCode = string.Empty;
+    private string editName = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!loading)  // 参数变化时重新加载
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true;
+            await InvokeAsync(StateHasChanged);
+
+            // 1. 加载模板元数据（暂时使用旧的Layout API）
+            var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/0");
+            string? layoutJson = null;
+            
+            if (layoutResp.IsSuccessStatusCode)
+            {
+                var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                layoutJson = layoutDoc.GetRawText();
+            }
+
+            // 2. 加载实体数据
+            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
+            if (!dataResp.IsSuccessStatusCode)
+            {
+                error = $"加载数据失败: {dataResp.StatusCode}";
+                loading = false;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            entityData = dataDoc;
+
+            // 3. 解析布局JSON
+            if (!string.IsNullOrWhiteSpace(layoutJson))
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
+                layoutWidgets = ParseLayoutFromJson(doc.RootElement);
+            }
+
+            // 4. 初始化编辑值
+            if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
+            {
+                editValueManager.Clear();
+                foreach (var field in fieldsElement.EnumerateArray())
+                {
+                    if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
+                        field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
+                    {
+                        editValueManager.SetValue(keyProp.GetString(), valueProp.GetString());
+                    }
+                }
+            }
+
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private async Task<FormTemplate?> LoadTemplateForEntity(string entityType)
+    {
+        // TODO: 从API加载模板，目前返回模拟数据
+        await Task.CompletedTask;
+        
+        return new FormTemplate
+        {
+            TemplateId = $"{entityType}-default",
+            Name = $"{entityType}默认模板",
+            EntityType = entityType,
+            EntityApi = $"/api/{entityType}s",
+            SiderComponent = entityType == "customer" ? "CustomerSider" : null,
+            LayoutJson = "{}"  // 将从UserLayouts表加载
+        };
+    }
+
+    private List<DraggableWidget> ParseLayoutFromJson(System.Text.Json.JsonElement root)
+    {
+        var widgets = new List<DraggableWidget>();
+        
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (prop.Name.StartsWith("item_") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    var widget = ParseWidgetFromJson(prop.Value);
+                    if (widget != null)
+                    {
+                        widgets.Add(widget);
+                    }
+                }
+            }
+        }
+        
+        return widgets.OrderBy(w => {
+            if (w.ExtendedProperties?.TryGetValue("order", out var orderObj) == true)
+            {
+                return Convert.ToInt32(orderObj);
+            }
+            return 0;
+        }).ToList();
+    }
+
+    private DraggableWidget? ParseWidgetFromJson(System.Text.Json.JsonElement element)
+    {
+        if (!element.TryGetProperty("type", out var typeElement))
+            return null;
+
+        var type = typeElement.GetString() ?? "";
+        var label = element.TryGetProperty("label", out var labelElement) ? labelElement.GetString() : "";
+        
+        var widget = WidgetRegistry.Create(type, label ?? "");
+        
+        // 解析基本属性
+        if (element.TryGetProperty("dataField", out var dataFieldElement))
+            widget.DataField = dataFieldElement.GetString();
+        if (element.TryGetProperty("Width", out var widthElement))
+            widget.Width = widthElement.GetInt32();
+        if (element.TryGetProperty("Height", out var heightElement))
+            widget.Height = heightElement.GetInt32();
+        if (element.TryGetProperty("visible", out var visibleElement))
+            widget.Visible = visibleElement.GetBoolean();
+        if (element.TryGetProperty("newLine", out var newLineElement))
+            widget.NewLine = newLineElement.GetBoolean();
+
+        return widget;
+    }
+
+    private string GetEntityDisplayName()
+    {
+        if (entityData.HasValue && entityData.Value.TryGetProperty("name", out System.Text.Json.JsonElement nameElement))
+        {
+            return nameElement.GetString() ?? "";
+        }
+        return "";
+    }
+
+    private string GetEntityCode()
+    {
+        if (entityData.HasValue && entityData.Value.TryGetProperty("code", out System.Text.Json.JsonElement codeElement))
+        {
+            return codeElement.GetString() ?? "";
+        }
+        return "";
+    }
+
+    private RenderFragment RenderRuntimeWidget(DraggableWidget widget, RuntimeWidgetRenderMode mode) => builder =>
+    {
+        var label = GetWidgetLabel(widget);
+        var fieldKey = widget.DataField ?? widget.Id;
+        
+        var request = new RuntimeWidgetRenderRequest
+        {
+            Widget = widget,
+            Mode = mode,
+            EventTarget = this,
+            Label = label,
+            ValueGetter = () => mode == RuntimeWidgetRenderMode.Edit ? editValueManager.GetValue(fieldKey) : GetFieldValue(fieldKey),
+            ValueSetter = mode == RuntimeWidgetRenderMode.Edit 
+                ? value => { editValueManager.SetValue(fieldKey, value); return Task.CompletedTask; } 
+                : null,
+            GetWidgetTextStyle = w => w is TextWidget tw ? WidgetStyleHelper.GetTextStyle(tw) : "font-size:12px; color:#666;",
+            GetWidgetBackground = w => WidgetStyleHelper.GetBackgroundColor(w)
+        };
+        RuntimeRenderer.Render(request)(builder);
+    };
+
+    private string GetWidgetLabel(DraggableWidget widget)
+    {
+        // 从entityData中查找字段的label
+        if (!string.IsNullOrWhiteSpace(widget.DataField) && entityData.HasValue)
+        {
+            if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
+            {
+                foreach (var field in fieldsElement.EnumerateArray())
+                {
+                    if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
+                        keyProp.GetString() == widget.DataField &&
+                        field.TryGetProperty("label", out System.Text.Json.JsonElement labelProp))
+                    {
+                        return labelProp.GetString() ?? widget.Label ?? widget.Type;
+                    }
+                }
+            }
+        }
+        return widget.Label ?? widget.Type;
+    }
+
+    private string GetFieldValue(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || !entityData.HasValue) return string.Empty;
+        
+        if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
+        {
+            foreach (var field in fieldsElement.EnumerateArray())
+            {
+                if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
+                    keyProp.GetString() == key &&
+                    field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
+                {
+                    return valueProp.GetString() ?? string.Empty;
+                }
+            }
+        }
+        return string.Empty;
+    }
+
+    private void EnterEditMode()
+    {
+        isEditMode = true;
+        
+        // 初始化编辑值
+        editCode = GetEntityCode();
+        editName = GetEntityDisplayName();
+        editValueManager.InitializeFromWidgets(layoutWidgets, GetFieldValue);
+        
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        isEditMode = false;
+        editValueManager.Clear();
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            saving = true;
+
+            // 收集所有字段值
+            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, new HashSet<string>());
+            
+            // 保存到API
+            var payload = new
+            {
+                code = editCode,
+                name = editName,
+                fields = fieldPayloads
+            };
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.PutAsJsonAsync($"/api/{EntityType}s/{Id}", payload);
+            
+            if (resp.IsSuccessStatusCode)
+            {
+                isEditMode = false;
+                await LoadData(); // 重新加载数据
+            }
+            else
+            {
+                error = $"保存失败: {resp.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            saving = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+}
+

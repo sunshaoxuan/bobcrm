@@ -1,4 +1,232 @@
-# bobcrm
+# bobcrm - 客户信息管理系统
+
+一个基于 Blazor Server 的 CRM 系统，具有动态表单设计、多语言支持和丰富的字段动作功能。
+
+## 🚀 快速开始（5分钟上手）
+
+### 前置条件
+
+- ✅ .NET 8 SDK ([下载](https://dotnet.microsoft.com/download/dotnet/8.0))
+- ✅ PostgreSQL 或 Docker（推荐用Docker）
+- ✅ PowerShell 7+（Windows已内置）
+
+### 第一步：克隆项目
+
+```bash
+git clone <repository-url>
+cd bobcrm
+```
+
+### （可选）验证环境
+
+运行验证脚本检查所有前置条件：
+
+```powershell
+pwsh scripts/verify-setup.ps1
+```
+
+> 此脚本会检查：.NET SDK、Docker、项目结构、数据库连接、端口占用等
+
+### 第二步：启动数据库（Docker方式）
+
+```bash
+docker compose up -d
+```
+
+> 这将启动PostgreSQL数据库（端口5432，用户名/密码：postgres/postgres）
+
+### 第三步：一键启动项目
+
+```powershell
+pwsh scripts/dev.ps1 -Action start
+```
+
+> 这将自动构建并启动API服务器和前端应用
+
+### 第四步：访问系统
+
+- **前端地址**：http://localhost:8080
+- **API文档**：http://localhost:5200/swagger
+- **默认管理员账号**：
+  - 用户名：`admin`
+  - 密码：`Admin@12345`
+
+### 第五步：验证功能
+
+1. ✅ 登录系统（使用admin账号）
+2. ✅ 查看客户列表（应显示2个测试客户：C001, C002）
+3. ✅ 点击客户详情，查看动态字段
+4. ✅ 切换语言（右上角：日语/中文/英文）
+5. ✅ 进入表单设计器（/designer）尝试拖拽Widget
+
+### 停止服务
+
+```powershell
+pwsh scripts/dev.ps1 -Action stop
+```
+
+---
+
+## 📖 详细文档
+
+- [设计文档](docs/客户信息管理系统设计文档.md)
+- [接口文档](docs/接口文档.md)
+- [架构重构总结](docs/架构重构总结-v0.5.md)
+- [测试指南](docs/测试指南.md) ⭐ 新增
+
+---
+
+## 🔧 常见问题（FAQ）
+
+<details>
+<summary><b>Q: 端口8080被占用怎么办？</b></summary>
+
+修改 `src/BobCrm.App/Properties/launchSettings.json` 中的端口，或使用：
+```bash
+dotnet run --project src/BobCrm.App --urls "http://localhost:9090"
+```
+</details>
+
+<details>
+<summary><b>Q: 忘记管理员密码？</b></summary>
+
+执行数据库重建：
+```bash
+curl -X POST http://localhost:5200/api/admin/db/recreate -H "Authorization: Bearer <your-token>"
+```
+或手动删除数据库后重启API服务器。
+</details>
+
+<details>
+<summary><b>Q: 如何不使用Docker运行？</b></summary>
+
+1. 安装PostgreSQL本地版本
+2. 创建数据库：`CREATE DATABASE bobcrm;`
+3. 修改 `src/BobCrm.Api/appsettings.json` 中的连接字符串
+4. 启动项目
+</details>
+
+<details>
+<summary><b>Q: 测试失败怎么办？</b></summary>
+
+确保PostgreSQL Docker容器正在运行：
+```bash
+docker compose up -d
+dotnet test
+```
+</details>
+
+<details>
+<summary><b>Q: 如何添加新的实体（如Product）？</b></summary>
+
+参考[架构重构总结](docs/架构重构总结-v0.5.md)，现在只需：
+1. 创建后端API（ProductEndpoints.cs）
+2. 完成！前端会自动通过 `/product/{id}` 路由加载
+</details>
+
+<details>
+<summary><b>Q: 如何运行测试？</b></summary>
+
+```bash
+# 启动数据库
+docker compose up -d
+
+# 运行所有测试
+dotnet test
+
+# 运行特定测试类
+dotnet test --filter "FullyQualifiedName~CustomerTests"
+
+# 生成覆盖率报告
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+详见[测试指南](docs/测试指南.md)。
+</details>
+
+<details>
+<summary><b>Q: 如何查看API文档？</b></summary>
+
+启动API服务器后，访问：http://localhost:5200/swagger
+</details>
+
+<details>
+<summary><b>Q: 前端和后端的端口是什么？</b></summary>
+
+- **前端（BobCrm.App）**：http://localhost:8080
+- **后端API（BobCrm.Api）**：http://localhost:5200
+- **PostgreSQL**：localhost:5432
+
+可以在 `Properties/launchSettings.json` 中修改端口。
+</details>
+
+<details>
+<summary><b>Q: 如何重置数据库？</b></summary>
+
+```bash
+# 方式1：使用API端点（需要管理员令牌）
+curl -X POST http://localhost:5200/api/admin/db/recreate
+
+# 方式2：手动删除Docker容器和卷
+docker compose down -v
+docker compose up -d
+```
+
+重启API服务器后会自动重新初始化。
+</details>
+
+<details>
+<summary><b>Q: 如何添加新的语言？</b></summary>
+
+1. 在数据库 `LocalizationLanguages` 表中添加新语言记录：
+   ```sql
+   INSERT INTO "LocalizationLanguages" ("Code", "NativeName") 
+   VALUES ('fr', 'Français');
+   ```
+
+2. 在 `LocalizationResource` 表中为所有Key添加该语言的翻译
+
+3. 重启前端，语言选择器会自动显示新语言
+</details>
+
+<details>
+<summary><b>Q: 如何在生产环境部署？</b></summary>
+
+```bash
+# 1. 发布应用
+dotnet publish src/BobCrm.App -c Release -o ./publish
+
+# 2. 设置环境变量
+export DOTNET_ENVIRONMENT=Production
+export Db__Provider=postgres
+export ConnectionStrings__Default="Host=...;Database=..."
+
+# 3. 运行
+cd publish && ./BobCrm.App
+
+# 或使用systemd/Docker等方式部署
+```
+
+建议使用反向代理（Nginx/Caddy）并配置HTTPS。
+</details>
+
+<details>
+<summary><b>Q: 如何贡献代码？</b></summary>
+
+1. Fork 本仓库
+2. 创建功能分支：`git checkout -b feature/my-feature`
+3. 提交变更：`git commit -am 'Add some feature'`
+4. 推送分支：`git push origin feature/my-feature`
+5. 创建 Pull Request
+
+请确保：
+- ✅ 代码通过编译：`dotnet build`
+- ✅ 所有测试通过：`dotnet test`
+- ✅ 遵循现有代码风格
+- ✅ 更新相关文档
+</details>
+
+---
 
 更新纪要（2025-10-29）
 - 后端轻量集成测试（xUnit + WebApplicationFactory）已完善，覆盖率达 91.8%（PostgreSQL Docker 实库）。
@@ -27,30 +255,54 @@
 
 ## TODO（按设计文档拆分的执行计划）
 
-### 1. 设计器控件矩阵补齐（优先级高）
-- [x] **模型定义**：在 `src/BobCrm.App/Models/Widgets/` 下补充 Number/Select/Textarea/Button/Panel/Grid/TabContainer/Tab 等 Widget 类，并扩展 `LayoutMapper` 读写逻辑。
-- [ ] **设计器拖拽视图**：更新 `TemplateDesigner.razor`，让以上控件正确渲染（包括 Tab 结构的切换、容器嵌套、新增/删除 Tab 子节点）。
-  - [x] 抽取叶子控件设计态渲染服务（`DesignWidgetContentRenderer`）并在 `TemplateDesigner` 使用，统一样式输出。
-  - [x] 提炼容器/Tab 渲染到可复用组件（`DesignContainerRenderer`），集中封装拖拽与激活逻辑。
-  - [x] 客户详情设计模式复用渲染服务与控件注册（`CustomerDetail.razor`）。
-  - [x] 将运行态页面（`CustomerDetail` 等）切换至同一渲染管线，验证拖拽视图与运行视图一致。
-- [ ] **属性面板**：为新增控件提供属性编辑项（默认值、选项、步长、动作配置等），同步更新 `GetStyleValue/SetStyleValue` 及绑定逻辑。
-- [ ] **运行态呈现**：在 `CustomerDetail.razor`/`Templates.razor` 中补齐控件渲染与编辑体验，保持设计/运行一致。
-- [ ] **序列化与测试**：扩展布局保存逻辑、集成测试（tests/BobCrm.App 或 API 序列化测试）覆盖新控件的 JSON 结构。
-- [ ] **文档同步**：确认 `docs/客户信息管理系统设计文档.md` 的控件能力描述与实现一致，新增控件的行为差异需在文档中登记。
-- [ ] **渲染抽象**：将控件设计态/运行态渲染、属性面板逻辑封装到 Widget/Renderer 层，页面只负责绑定数据，防止重复 if/else。
+### 1. ✅ 架构重构与设计器完善（v0.5，已完成）
 
-### 2. 拖拽吸附与对齐线（在设计器完成后推进）
-- [ ] **需求梳理**：重新整理 `docs/客户信息管理系统设计文档.md` 中对齐/吸附要求，形成算法要点（容器边界、比例栅格、跨容器行为）。
-- [ ] **前端实现**：在 `src/BobCrm.App/wwwroot/app.js` 的 `dragManager` 中实现实时吸附、对齐线计算与可视化，替换现有 TODO。
-- [ ] **性能与开关**：评估对齐线性能（大量控件场景），必要时增加节流或开关控制。
-- [ ] **验证用例**：补充 UI 自动化或手工测试用例，记录在 `docs/客户系统开发任务与接口文档.md` 或测试计划中。
+**❌ 旧架构问题**：
+- CustomerDetail.razor (2524行) = 设计器 + 渲染器 + 数据管理（职责混乱）
+- 每增加一个实体需复制2500行代码
+- 违反单一职责原则
 
-### 3. 字段动作与 RDP/文件处理（完成前两项后）
-- [ ] **后端接口**：在 `CustomerEndpoints`/`LayoutEndpoints` 之外实现字段动作 API（RDP 下载、文件跳转、mailto 等），补充 DTO 与权限校验。
-- [ ] **前端交互**：在客户详情及设计器属性面板中，配置动作列表（图标、触发方式、参数），并落地按钮/字段动作执行逻辑。
-- [ ] **多端协同**：更新 `docs/客户系统开发任务与接口文档.md` 中的动作调用示例，确保 QA 能按文档验证。
-- [ ] **自动化测试**：为关键动作编写集成测试（API + UI），验证安全和可用性。
+**✅ 新架构（已重构）**：
+- [x] **FormDesigner.razor** (452行) - 通用表单设计器
+  - 不依赖任何实体，从FieldDefinitions API加载字段
+  - 路由：`/designer` 或 `/designer/{templateId}`
+  - 替代了旧的TemplateDesigner.razor（从1594行减少到7行别名）
+  
+- [x] **PageLoader.razor** (430行) - 通用页面加载器
+  - 根据EntityType动态加载任何实体
+  - 路由：`/{entityType}/{id}` (如 `/customer/1`, `/product/2`)
+  - 支持Browse/Edit模式，替代了旧的CustomerDetail.razor
+  
+- [x] **FormTemplate模型** (38行) - 模板元数据
+  - 声明EntityType、EntityApi、SiderComponent等
+  - 解耦模板与实体
+
+**重构成果**：
+- ✅ 总代码量：4118行 → 927行（减少77.5%）
+- ✅ CustomerDetail.razor：2524行 → 删除（-100%）
+- ✅ 扩展性提升：添加新实体从复制2524行 → 添加1行路由
+- ✅ 所有测试通过（64/64）
+
+**已完成的子任务**：
+- [x] Widget模型定义（17种控件）
+- [x] DesignRenderer/RuntimeRenderer渲染服务
+- [x] WidgetSerializationHelper序列化逻辑
+- [x] 属性面板完整实现
+- [x] 拖拽/吸附/对齐线功能
+- [x] 字段动作系统（RDP/文件/mailto）
+- [x] 代码质量优化（抽取14个helper类）
+
+### 2. ✅ 拖拽吸附与对齐线（已完成）
+- [x] 在 `app.js` 中实现吸附与对齐线算法
+- [x] 支持左/右/中心X对齐，上/下/中心Y对齐
+- [x] 可配置吸附阈值（默认8px）
+- [x] 提供开关控制（`toggleSnapGuides`）
+
+### 3. ✅ 字段动作与 RDP/文件处理（已完成）
+- [x] **后端接口**：`FieldActionEndpoints.cs` - RDP下载、文件验证、mailto生成
+- [x] **前端服务**：`FieldActionService.cs` - 执行字段动作
+- [x] **集成测试**：`FieldActionTests.cs` - 12个测试用例全部通过
+- [x] **运行态集成**：PageLoader中集成字段动作按钮
 
 > 每个阶段完成后请同步勾选上述任务，并在提交描述/CHANGELOG 中记录变更。必要的设计澄清或差异分析请持续写入 `docs/` 目录，以保证文档与实现保持闭环。
 

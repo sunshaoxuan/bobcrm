@@ -1,0 +1,452 @@
+@page "/designer"
+@page "/designer/{TemplateId}"
+@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using BobCrm.App.Services.Widgets.Rendering
+@using Microsoft.AspNetCore.Components.Rendering
+@using ListItem = BobCrm.App.Models.Widgets.ListItem;
+
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+@inject IDesignWidgetContentRenderer DesignRenderer
+@inject IDesignContainerRenderer ContainerRenderer
+
+<AuthChecker>
+@if (loading)
+{
+    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+}
+else if (error != null)
+{
+    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+    <div style="margin-top:16px">
+        <Button OnClick="@(() => Nav.NavigateTo("/templates"))">@I18n.T("BTN_BACK")</Button>
+    </div>
+}
+else
+{
+    <!-- Full screen designer -->
+    <div class="designer-container" style="position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; z-index:1000; display:flex; flex-direction:column">
+        <!-- Designer Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card-bg)">
+            <div style="display:flex; align-items:center; gap:16px">
+                <h2 style="margin:0; font-size:18px">@I18n.T("MODE_DESIGN") - @templateName</h2>
+                <Tag Color="blue">@entityType</Tag>
+            </div>
+            <div style="display:flex; gap:8px">
+                <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
+                <Button OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
+            </div>
+        </div>
+
+        <!-- Designer Main Area -->
+        <div style="display:flex; flex:1; overflow:hidden">
+            <!-- Left Toolbox -->
+            <div class="designer-toolbox" style="width:240px; border-right:1px solid var(--border); overflow-y:auto; background:#fafafa">
+                <div style="padding:16px">
+                    <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_COMPONENTS")</h3>
+                    <Collapse Accordion="false" DefaultActiveKey="@(new[]{"1","2"})">
+                        <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
+                            <div style="display:flex; flex-direction:column; gap:8px">
+                                @foreach (var comp in WidgetRegistry.BasicWidgets)
+                                {
+                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" 
+                                         @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
+                                         style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
+                                        <Icon Type="@comp.Icon" />
+                                        <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
+                                    </div>
+                                }
+                            </div>
+                        </Panel>
+                        <Panel Header="@I18n.T("LBL_LAYOUT_COMPONENTS")" Key="2">
+                            <div style="display:flex; flex-direction:column; gap:8px">
+                                @foreach (var comp in WidgetRegistry.LayoutWidgets)
+                                {
+                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" 
+                                         @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
+                                         style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
+                                        <Icon Type="@comp.Icon" />
+                                        <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
+                                    </div>
+                                }
+                            </div>
+                        </Panel>
+                    </Collapse>
+                </div>
+            </div>
+
+            <!-- Center Canvas -->
+            <div class="designer-canvas" style="flex:1; overflow:auto; background-image:radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size:5px 5px; background-color:#fafafa;"
+                 @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault>
+                <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; padding:24px; position:relative">
+                    @foreach (var widget in layoutWidgets)
+                    {
+                        @if (widget.NewLine)
+                        {
+                            <div style="width:100%; height:0; flex-basis:100%"></div>
+                        }
+
+                        <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
+                             draggable="@(resizingIds.Contains(widget.Id) ? "false" : "true")"
+                             data-drag-type="widget"
+                             data-drag-data="@widget.Id"
+                             data-widget-id="@widget.Id"
+                             @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
+                             @ondragstart:preventDefault="@(resizingIds.Contains(widget.Id))"
+                             @ondragend="OnDragEnd"
+                             @onclick="@(() => SelectWidget(widget))"
+                             style="@(WidgetStyleHelper.GetFlowWidgetStyle(widget, selectedWidget == widget))">
+
+                            @if (selectedWidget == widget)
+                            {
+                                <div class="resize-handle"
+                                     draggable="false"
+                                     @onmousedown="@((e) => OnResizeStart(e, widget))"
+                                     @onmousedown:stopPropagation
+                                     @onmousedown:preventDefault
+                                     @ondragstart:preventDefault="true"
+                                     style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:4px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); opacity:0.8;">
+                                </div>
+                            }
+
+                            <div class="widget-content" style="width:100%; pointer-events:none">
+                                @RenderDesignWidget(widget)
+                            </div>
+                        </div>
+                    }
+                    @if (!layoutWidgets.Any())
+                    {
+                        <div style="width:100%; text-align:center; padding:60px 20px; color:#999; pointer-events:none">
+                            <Icon Type="@IconType.Outline.Inbox" Style="font-size:48px; margin-bottom:12px" />
+                            <div>@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Right Properties Panel -->
+            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; background:#fafafa">
+                @if (selectedWidget != null)
+                {
+                    <div style="padding:16px">
+                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENT_TYPE")</label>
+                            <Input Value="@selectedWidget.Type" Disabled />
+                        </div>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_LABEL")</label>
+                            <Input @bind-Value="selectedWidget.Label" OnChange="@((string value) => UpdateWidget())" />
+                        </div>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_WIDTH")</label>
+                            <InputGroup Compact>
+                                <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="100" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                <Select TItemValue="string" TItem="string" 
+                                       Value="@selectedWidget.WidthUnit" 
+                                       Style="width:30%" 
+                                       OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
+                                    <SelectOptions>
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                    </SelectOptions>
+                                </Select>
+                            </InputGroup>
+                        </div>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DATA_SOURCE")</label>
+                            <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear Style="width:100%" OnSelectedItemChanged="@(item => UpdateWidget())">
+                                @* ⭐ 从FieldDefinitions加载，不依赖特定实体数据 *@
+                                @foreach (var field in availableFields)
+                                {
+                                    <SelectOption Value="@field.Key" Label="@field.DisplayName" />
+                                }
+                            </Select>
+                        </div>
+
+                        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                            <label style="font-size:12px; color:#666">@I18n.T("LBL_VISIBLE")</label>
+                            <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
+                        </div>
+
+                        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
+                            <label style="font-size:12px; color:#666">@I18n.T("LBL_NEW_LINE")</label>
+                            <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
+                        </div>
+
+                        <Divider />
+
+                        <Button Danger Block OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
+                    </div>
+                }
+                else
+                {
+                    <div style="padding:16px">
+                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
+                        <div style="padding:20px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; margin-bottom:16px">
+                            <div style="margin-bottom:12px">
+                                <div style="font-size:12px; color:#999; margin-bottom:4px">模板</div>
+                                <div style="font-weight:500">@templateName</div>
+                            </div>
+                            <div style="margin-bottom:12px">
+                                <div style="font-size:12px; color:#999; margin-bottom:4px">实体类型</div>
+                                <div style="font-weight:500">@entityType</div>
+                            </div>
+                            <Divider Style="margin:12px 0" />
+                            <div style="margin-bottom:12px">
+                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</div>
+                                <div style="font-weight:500">@layoutWidgets.Count</div>
+                            </div>
+                        </div>
+                        <div style="text-align:center; padding:40px 20px; color:#999; border:2px dashed #d9d9d9; border-radius:4px">
+                            <Icon Type="@IconType.Outline.Select" Style="font-size:36px; margin-bottom:8px" />
+                            <div style="font-size:12px">@I18n.T("LBL_SELECT_COMPONENT")</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+</AuthChecker>
+
+@code {
+    [Parameter] public string? TemplateId { get; set; }
+
+    private string templateName = "新建模板";
+    private string entityType = "";
+    private bool loading = true;
+    private string? error;
+
+    private List<DraggableWidget> layoutWidgets = new();
+    private DraggableWidget? selectedWidget;
+    private HashSet<string> resizingIds = new();
+    private ElementReference canvasRef;
+
+    // ⭐ 可用字段列表（从FieldDefinitions API加载）
+    private List<FieldDefinitionItem> availableFields = new();
+
+    // 拖放状态
+    private WidgetRegistry.WidgetDefinition? draggedDefinition;
+    private DraggableWidget? draggedWidget;
+    private DraggableWidget? draggedParentContainer;
+    private bool dropSucceeded = false;
+
+    // Tab管理
+    private readonly TabStateManager tabStateManager = new();
+
+    protected override void OnInitialized()
+    {
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            // 1. 加载可用字段列表
+            await LoadAvailableFields();
+
+            // 2. 加载模板
+            if (string.IsNullOrWhiteSpace(TemplateId))
+            {
+                InitializeEmptyTemplate();
+            }
+            else
+            {
+                await LoadTemplate();
+            }
+            
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadAvailableFields()
+    {
+        try
+        {
+            var resp = await Auth.GetWithRefreshAsync("/api/fields");
+            if (resp.IsSuccessStatusCode)
+            {
+                var fields = await resp.Content.ReadFromJsonAsync<List<FieldDefinitionItem>>();
+                availableFields = fields ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load fields: {ex.Message}");
+        }
+    }
+
+    private void InitializeEmptyTemplate()
+    {
+        templateName = "新建模板";
+        entityType = "customer"; // 默认客户实体
+        layoutWidgets = new();
+    }
+
+    private async Task LoadTemplate()
+    {
+        // TODO: 从API加载模板
+        await Task.CompletedTask;
+    }
+
+    private class FieldDefinitionItem
+    {
+        public string Key { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+    }
+
+    private async Task SaveLayout()
+    {
+        try
+        {
+            // 序列化布局为JSON
+            var items = new Dictionary<string, object>();
+            for (int i = 0; i < layoutWidgets.Count; i++)
+            {
+                var key = $"item_{i}";
+                var itemData = WidgetSerializationHelper.SerializeWidget(layoutWidgets[i], i);
+                items[key] = itemData;
+            }
+
+            var layoutJson = System.Text.Json.JsonSerializer.Serialize(items);
+
+            // 保存到API（暂时使用旧的Layout API，后续会创建Template API）
+            var client = await Auth.CreateClientWithAuthAsync();
+            var payload = new { layoutJson };
+            var resp = await client.PostAsJsonAsync($"/api/layout/0", payload);
+            
+            if (resp.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "保存成功");
+            }
+            else
+            {
+                error = "保存失败";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Save failed: {ex.Message}");
+        }
+    }
+
+    private RenderFragment RenderDesignWidget(DraggableWidget widget) => builder =>
+    {
+        // 简化渲染，显示Widget类型和标签
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "padding:8px");
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "style", "font-size:12px; color:#666; margin-bottom:4px");
+        builder.AddContent(4, widget.Label ?? widget.Type);
+        builder.CloseElement();
+        builder.OpenElement(5, "div");
+        builder.AddAttribute(6, "style", "height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px");
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    // 拖放处理方法（从CustomerDetail复制）
+    private async Task OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, WidgetRegistry.WidgetDefinition definition)
+    {
+        dropSucceeded = false;
+        draggedDefinition = definition;
+        try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnDragStart: {definition.Type}"); } catch { }
+    }
+
+    private async Task OnWidgetDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget widget)
+    {
+        dropSucceeded = false;
+        draggedWidget = widget;
+        draggedParentContainer = WidgetNavigationHelper.FindParentContainer(layoutWidgets, widget);
+        try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnWidgetDragStart: {widget.Id}"); } catch { }
+    }
+
+    private void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        // Allow drop
+    }
+
+    private async Task OnDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        if (draggedDefinition != null)
+        {
+            var newWidget = WidgetRegistry.Create(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
+            layoutWidgets.Add(newWidget);
+            selectedWidget = newWidget;
+            dropSucceeded = true;
+            draggedDefinition = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        if (!dropSucceeded)
+        {
+            draggedDefinition = null;
+            draggedWidget = null;
+        }
+        dropSucceeded = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectWidget(DraggableWidget widget)
+    {
+        selectedWidget = widget;
+        StateHasChanged();
+    }
+
+    private void UpdateWidget()
+    {
+        StateHasChanged();
+    }
+
+    private void DeleteSelectedWidget()
+    {
+        if (selectedWidget != null)
+        {
+            layoutWidgets.Remove(selectedWidget);
+            selectedWidget = null;
+            StateHasChanged();
+        }
+    }
+
+    private void OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, DraggableWidget widget)
+    {
+        // TODO: 实现resize逻辑（可选功能）
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+}
+

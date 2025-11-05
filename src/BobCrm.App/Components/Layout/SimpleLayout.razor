@@ -1,0 +1,45 @@
+@using Microsoft.AspNetCore.Components
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
+@implements IDisposable
+
+@* 简单布局：只有Logo + Header + Body，无侧边栏 *@
+<div class="app-shell">
+    <div class="app-sider">
+        <div class="logo-brand">
+            <h1 class="logo-text">OneCRM</h1>
+        </div>
+    </div>
+    <div class="app-main">
+        <AppHeader />
+        <div class="app-content">
+            <div class="app-card">
+                @Body
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Body { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Auth.OnUnauthorized += HandleUnauthorized;
+    }
+
+    private void HandleUnauthorized()
+    {
+        try
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        Auth.OnUnauthorized -= HandleUnauthorized;
+    }
+}
+

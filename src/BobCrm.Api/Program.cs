@@ -212,6 +212,7 @@ app.MapUserEndpoints();
 app.MapI18nEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
+app.MapFieldActionEndpoints();
 
 // 管理和调试端点（仅开发环境）
 if (app.Environment.IsDevelopment())

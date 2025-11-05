@@ -17,6 +17,7 @@ builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
+builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
 builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
