@@ -1,0 +1,236 @@
+@typeparam TEntity where TEntity : BobCrm.App.Abstractions.ISelectableEntity
+@inject IJSRuntime JS
+@inject BobCrm.App.Services.I18nService I18n
+
+<div style="position:relative">
+    <Input Value="@DisplayText" 
+           Placeholder="@Placeholder" 
+           ReadOnly 
+           Style="@($"width:100%; padding-right:32px; cursor:pointer; {(Disabled ? "background:#f5f5f5" : "")}")"
+           Disabled="@Disabled"
+           @onclick="OpenSelector" />
+    <Icon Type="@IconType.Outline.Search" 
+          Style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:16px; color:#bfbfbf; cursor:pointer; pointer-events:auto"
+          @onclick="OpenSelector" />
+</div>
+
+<Modal Title="@Title"
+       Visible="@modalVisible"
+       OnOk="@(() => modalVisible = false)"
+       OnCancel="@(() => modalVisible = false)"
+       Footer="null"
+       Width="700">
+    @if (loading)
+    {
+        <div style="text-align:center; padding:60px 0">
+            <Spin Size="@("large")" />
+            <div style="margin-top:16px; color:#999; font-size:14px">@I18n.T("LBL_LOADING")</div>
+        </div>
+    }
+    else if (string.IsNullOrWhiteSpace(errorMessage) == false)
+    {
+        <Result Status="error" 
+                Title="@I18n.T("LBL_LOAD_FAILED")" 
+                SubTitle="@errorMessage">
+            <Extra>
+                <Button Type="@ButtonType.Primary" OnClick="ReloadData">@I18n.T("LBL_RETRY")</Button>
+            </Extra>
+        </Result>
+    }
+    else if (!dataSource.Any())
+    {
+        <Empty Description="@EmptyText" />
+    }
+    else
+    {
+        @if (EnableSearch && dataSource.Count > 5)
+        {
+            <div style="margin-bottom:16px">
+                <Input @bind-Value="searchKeyword" 
+                       Placeholder="@I18n.T("LBL_SEARCH_PLACEHOLDER")" 
+                       AllowClear 
+                       @bind-Value:after="FilterData" />
+            </div>
+        }
+        
+        <div style="max-height:450px; overflow-y:auto">
+            @foreach (var item in filteredData)
+            {
+                <div @onclick="@(() => SelectItem(item))" 
+                     class="entity-selector-item"
+                     style="cursor:pointer; padding:16px; border:1px solid #f0f0f0; margin-bottom:8px; border-radius:6px; display:flex; align-items:center; gap:16px; transition:all 0.2s; background:#fff"
+                     @onmouseenter="@((MouseEventArgs e) => {})"
+                     @onmouseleave="@((MouseEventArgs e) => {})">
+                    @if (IconRenderer != null)
+                    {
+                        <div style="flex-shrink:0">
+                            @IconRenderer(item)
+                        </div>
+                    }
+                    <div style="flex:1; min-width:0">
+                        @if (TitleRenderer != null)
+                        {
+                            <div style="font-weight:600; font-size:15px; color:#262626; margin-bottom:4px">
+                                @TitleRenderer(item)
+                            </div>
+                        }
+                        @if (DescriptionRenderer != null)
+                        {
+                            <div style="font-size:13px; color:#8c8c8c; margin-bottom:6px">
+                                @DescriptionRenderer(item)
+                            </div>
+                        }
+                        @if (MetadataRenderer != null)
+                        {
+                            <div style="font-size:12px; color:#bfbfbf">
+                                @MetadataRenderer(item)
+                            </div>
+                        }
+                    </div>
+                    <Icon Type="@IconType.Outline.Right" Style="color:#d9d9d9; flex-shrink:0" />
+                </div>
+            }
+        </div>
+        
+        @if (filteredData.Count < dataSource.Count)
+        {
+            <div style="margin-top:12px; padding:8px; text-align:center; color:#999; font-size:12px; background:#fafafa; border-radius:4px">
+                @I18n.T("LBL_SHOWING") @filteredData.Count / @dataSource.Count @I18n.T("LBL_ITEMS")
+            </div>
+        }
+    }
+</Modal>
+
+<style>
+    .entity-selector-item:hover {
+        border-color: #1890ff !important;
+        background: #f0f8ff !important;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1) !important;
+    }
+</style>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    
+    [Parameter] public string Title { get; set; } = "选择";
+    [Parameter] public string Placeholder { get; set; } = "请选择";
+    [Parameter] public string EmptyText { get; set; } = "暂无数据";
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool EnableSearch { get; set; } = true;
+    
+    [Parameter] public Func<Task<List<TEntity>>>? DataLoader { get; set; }
+    [Parameter] public Func<TEntity, string>? ValueGetter { get; set; }
+    [Parameter] public Func<TEntity, string>? DisplayTextGetter { get; set; }  // 获取显示文本
+    [Parameter] public RenderFragment<TEntity>? TitleRenderer { get; set; }
+    [Parameter] public RenderFragment<TEntity>? DescriptionRenderer { get; set; }
+    [Parameter] public RenderFragment<TEntity>? IconRenderer { get; set; }
+    [Parameter] public RenderFragment<TEntity>? MetadataRenderer { get; set; }
+    
+    private bool modalVisible = false;
+    private bool loading = false;
+    private bool dataLoaded = false;
+    private string? errorMessage = null;
+    private string searchKeyword = "";
+    
+    private List<TEntity> dataSource = new();
+    private List<TEntity> filteredData = new();
+    
+    private string DisplayText => string.IsNullOrWhiteSpace(Value) ? "" : GetDisplayTextForValue(Value);
+    
+    private async void OpenSelector()
+    {
+        if (Disabled) return;
+        
+        modalVisible = true;
+        StateHasChanged();
+        
+        if (!dataLoaded && DataLoader != null)
+        {
+            await LoadData();
+        }
+    }
+    
+    private async Task LoadData()
+    {
+        if (DataLoader == null) return;
+        
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            StateHasChanged();
+            
+            dataSource = await DataLoader() ?? new();
+            filteredData = dataSource;
+            dataLoaded = true;
+            
+            await JS.InvokeVoidAsync("console.log", $"[EntitySelector] Loaded {dataSource.Count} items");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            await JS.InvokeVoidAsync("console.error", $"[EntitySelector] Load failed: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async void ReloadData()
+    {
+        dataLoaded = false;
+        await LoadData();
+    }
+    
+    private void FilterData()
+    {
+        if (string.IsNullOrWhiteSpace(searchKeyword))
+        {
+            filteredData = dataSource;
+        }
+        else
+        {
+            // 简化搜索：只搜索 Value
+            var keyword = searchKeyword.ToLower();
+            filteredData = dataSource.Where(item =>
+            {
+                var value = ValueGetter?.Invoke(item) ?? "";
+                return value.ToLower().Contains(keyword);
+            }).ToList();
+        }
+        StateHasChanged();
+    }
+    
+    private async void SelectItem(TEntity item)
+    {
+        if (ValueGetter != null)
+        {
+            var value = ValueGetter(item);
+            Value = value;
+            await ValueChanged.InvokeAsync(value);
+        }
+        
+        modalVisible = false;
+        StateHasChanged();
+    }
+    
+    private string GetDisplayTextForValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        
+        // 从数据源中查找对应的项
+        var item = dataSource.FirstOrDefault(i => ValueGetter?.Invoke(i) == value);
+        
+        if (item != null && DisplayTextGetter != null)
+        {
+            return DisplayTextGetter(item);
+        }
+        
+        // 如果找不到或没有 DisplayTextGetter，返回 value 本身
+        return value ?? "";
+    }
+}
+
