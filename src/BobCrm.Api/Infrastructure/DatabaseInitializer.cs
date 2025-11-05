@@ -230,6 +230,9 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_TAB", ZH = "标签页", JA = "タブ", EN = "Tab" },
                 new LocalizationResource { Key = "LBL_DRAG_COMPONENT_HERE", ZH = "拖拽组件到这里", JA = "コンポーネントをここにドラッグ", EN = "Drag component here" },
                 new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
+                new LocalizationResource { Key = "LBL_TEMPLATE", ZH = "模板", JA = "テンプレート", EN = "Template" },
+                new LocalizationResource { Key = "LBL_ENTITY_TYPE", ZH = "实体类型", JA = "エンティティタイプ", EN = "Entity Type" },
+                new LocalizationResource { Key = "LBL_NEW_TEMPLATE", ZH = "新建模板", JA = "新しいテンプレート", EN = "New Template" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
                 new LocalizationResource { Key = "LBL_WIDTH", ZH = "宽度", JA = "幅", EN = "Width" },
                 new LocalizationResource { Key = "LBL_HEIGHT", ZH = "高度", JA = "高さ", EN = "Height" },
@@ -408,6 +411,9 @@ public static class DatabaseInitializer
             Ensure("LBL_TAB", "标签页", "タブ", "Tab");
             Ensure("LBL_DRAG_COMPONENT_HERE", "拖拽组件到这里", "コンポーネントをここにドラッグ", "Drag component here");
             Ensure("LBL_PROPERTIES", "属性", "プロパティ", "Properties");
+            Ensure("LBL_TEMPLATE", "模板", "テンプレート", "Template");
+            Ensure("LBL_ENTITY_TYPE", "实体类型", "エンティティタイプ", "Entity Type");
+            Ensure("LBL_NEW_TEMPLATE", "新建模板", "新しいテンプレート", "New Template");
             Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
             Ensure("LBL_WIDTH", "宽度", "幅", "Width");
             Ensure("LBL_DATA_SOURCE", "数据源", "データソース", "Data Source");

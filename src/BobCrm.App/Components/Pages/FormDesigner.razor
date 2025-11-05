@@ -196,11 +196,11 @@ else
                         <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_PROPERTIES")</h3>
                         <div style="padding:20px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; margin-bottom:16px">
                             <div style="margin-bottom:12px">
-                                <div style="font-size:12px; color:#999; margin-bottom:4px">模板</div>
+                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_TEMPLATE")</div>
                                 <div style="font-weight:500">@templateName</div>
                             </div>
                             <div style="margin-bottom:12px">
-                                <div style="font-size:12px; color:#999; margin-bottom:4px">实体类型</div>
+                                <div style="font-size:12px; color:#999; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</div>
                                 <div style="font-weight:500">@entityType</div>
                             </div>
                             <Divider Style="margin:12px 0" />
@@ -224,7 +224,7 @@ else
 @code {
     [Parameter] public string? TemplateId { get; set; }
 
-    private string templateName = "新建模板";
+    private string templateName = "";
     private string entityType = "";
     private bool loading = true;
     private string? error;
@@ -248,6 +248,7 @@ else
 
     protected override void OnInitialized()
     {
+        templateName = I18n.T("LBL_NEW_TEMPLATE");
         I18n.OnChanged += HandleI18nChanged;
     }
 
@@ -300,7 +301,7 @@ else
 
     private void InitializeEmptyTemplate()
     {
-        templateName = "新建模板";
+        templateName = I18n.T("LBL_NEW_TEMPLATE");
         entityType = "customer"; // 默认客户实体
         layoutWidgets = new();
     }
@@ -446,6 +447,11 @@ else
 
     private void HandleI18nChanged()
     {
+        // 语言切换时更新默认模板名称
+        if (templateName == I18n.T("LBL_NEW_TEMPLATE") || string.IsNullOrWhiteSpace(TemplateId))
+        {
+            templateName = I18n.T("LBL_NEW_TEMPLATE");
+        }
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 }
