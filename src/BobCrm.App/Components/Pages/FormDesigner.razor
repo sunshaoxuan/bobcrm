@@ -134,7 +134,7 @@ else
             </div>
 
             <!-- Right Properties Panel -->
-            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; background:#fafafa"
+            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; overflow-x:hidden; background:#fafafa"
                  @onclick="OnCanvasBackgroundClick">
                 @if (selectedWidget != null)
                 {
@@ -195,40 +195,74 @@ else
                 }
                 else
                 {
-                    <div style="padding:16px" @onclick:stopPropagation>
-                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
+                    <div style="padding:16px 16px 8px 16px" @onclick:stopPropagation>
+                        <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
                         
-                        <div style="margin-bottom:16px">
+                        <div style="margin-bottom:12px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_TEMPLATE_NAME")</label>
                             <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" />
                         </div>
 
-                        <div style="margin-bottom:16px">
+                        <div style="margin-bottom:12px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</label>
-                            <Select TItemValue="string" TItem="string" @bind-Value="entityType" Style="width:100%">
-                                @foreach (var entity in availableEntityTypes)
-                                {
-                                    <SelectOption Value="@entity.EntityType" Label="@I18n.T(entity.DisplayNameKey)" />
-                                }
-                            </Select>
-                            @if (!availableEntityTypes.Any())
+                            
+                            @if (isEntityTypeLocked)
                             {
-                                <div style="margin-top:4px; font-size:11px; color:#ff4d4f">⚠️ 无可用实体类型</div>
+                                <!-- 实体类型已锁定，不可修改 -->
+                                <Input Value="@GetEntityDisplayName()" Disabled Style="width:100%" />
+                                <div style="margin-top:4px; font-size:11px; color:#ff9800">
+                                    🔒 @I18n.T("LBL_ENTITY_TYPE_LOCKED")
+                                </div>
                             }
                             else
                             {
-                                <div style="margin-top:4px; font-size:11px; color:#999">@I18n.T("LBL_ENTITY_TYPE_HINT")</div>
+                                <!-- 未设置实体类型，使用通用实体选择器 -->
+                                <EntitySelector TEntity="EntityTypeItem"
+                                                @bind-Value="entityType"
+                                                Title="@I18n.T("LBL_SELECT_ENTITY_TYPE")"
+                                                Placeholder="@I18n.T("LBL_CLICK_TO_SELECT_ENTITY")"
+                                                EmptyText="@I18n.T("LBL_NO_AVAILABLE_ENTITIES")"
+                                                DataLoader="LoadAvailableEntitiesForSelector"
+                                                ValueGetter="@(e => e.EntityType)"
+                                                DisplayTextGetter="@(e => e.DisplayName)"
+                                                EnableSearch="true">
+                                    <TitleRenderer>
+                                        @context.DisplayName
+                                    </TitleRenderer>
+                                    <DescriptionRenderer>
+                                        @if (!string.IsNullOrWhiteSpace(context.Description))
+                                        {
+                                            @context.Description
+                                        }
+                                    </DescriptionRenderer>
+                                    <IconRenderer>
+                                        @if (!string.IsNullOrWhiteSpace(context.Icon))
+                                        {
+                                            <Icon Type="@context.Icon" Style="font-size:28px; color:#1890ff" />
+                                        }
+                                    </IconRenderer>
+                                    <MetadataRenderer>
+                                        <Tag Color="blue" Style="margin-right:8px">@context.EntityName</Tag>
+                                        <Tag Color="default">@context.ApiEndpoint</Tag>
+                                    </MetadataRenderer>
+                                </EntitySelector>
+                                <div style="margin-top:4px; font-size:11px; color:#999">
+                                    @I18n.T("LBL_ENTITY_TYPE_HINT")
+                                </div>
                             }
                         </div>
 
-                        <Divider />
+                        <Divider Style="margin:12px 0" />
 
-                        <div style="margin-bottom:16px">
+                        <div style="margin-bottom:12px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</label>
                             <div style="font-size:20px; font-weight:600; color:#1890ff">@layoutWidgets.Count</div>
                         </div>
 
-                        <Alert Type="AlertType.Info" ShowIcon="true" Message="@I18n.T("LBL_TEMPLATE_INFO_HINT")" Style="margin-top:16px" />
+                        <div style="margin-top:8px; padding:8px; background:#e6f7ff; border:1px solid #91d5ff; border-radius:4px; font-size:11px; color:#666; line-height:1.4">
+                            <Icon Type="@IconType.Outline.InfoCircle" Style="color:#1890ff; margin-right:4px" />
+                            @I18n.T("LBL_TEMPLATE_INFO_HINT")
+                        </div>
                     </div>
                 }
             </div>
@@ -242,6 +276,8 @@ else
 
     private string templateName = "";
     private string entityType = "";
+    private string? originalEntityType = null; // 模板原始的实体类型（用于判断是否锁定）
+    private bool isEntityTypeLocked = false; // 实体类型是否已锁定（已设置的模板不允许修改实体类型）
     private bool loading = true;
     private string? error;
 
@@ -253,7 +289,7 @@ else
     // ⭐ 可用字段列表（从FieldDefinitions API加载）
     private List<FieldDefinitionItem> availableFields = new();
 
-    // ⭐ 可用实体类型列表（从API动态加载）
+    // ⭐ 可用实体类型列表（供 EntitySelector 使用）
     private List<EntityTypeItem> availableEntityTypes = new();
 
     // 拖放状态
@@ -277,13 +313,10 @@ else
 
         try
         {
-            // 1. 加载可用实体类型列表
-            await LoadAvailableEntities();
-
-            // 2. 加载可用字段列表
+            // 1. 加载可用字段列表（设计器必需）
             await LoadAvailableFields();
 
-            // 3. 加载模板
+            // 2. 加载模板
             if (string.IsNullOrWhiteSpace(TemplateId))
             {
                 InitializeEmptyTemplate();
@@ -304,43 +337,54 @@ else
         }
     }
 
-    private async Task LoadAvailableEntities()
+    /// <summary>
+    /// EntitySelector 的数据加载器
+    /// </summary>
+    private async Task<List<EntityTypeItem>> LoadAvailableEntitiesForSelector()
     {
         try
         {
-            // 从API加载可用的根实体列表
+            await JS.InvokeVoidAsync("console.log", "[FormDesigner] Loading entities for selector...");
+            
             var resp = await Auth.GetWithRefreshAsync("/api/entities");
+            
             if (resp.IsSuccessStatusCode)
             {
+                var content = await resp.Content.ReadAsStringAsync();
                 var jsonOptions = new System.Text.Json.JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true  // ⭐ 不区分大小写
+                    PropertyNameCaseInsensitive = true
                 };
-                var entities = await resp.Content.ReadFromJsonAsync<List<EntityTypeItem>>(jsonOptions);
-                availableEntityTypes = entities ?? new();
                 
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {availableEntityTypes.Count} entity types", availableEntityTypes);
+                var entities = System.Text.Json.JsonSerializer.Deserialize<List<EntityTypeItem>>(content, jsonOptions) ?? new();
+                
+                // ⭐ 关键：翻译显示名称和描述，填充到实体对象中
+                foreach (var entity in entities)
+                {
+                    entity.DisplayName = I18n.T(entity.DisplayNameKey);
+                    if (!string.IsNullOrWhiteSpace(entity.DescriptionKey))
+                    {
+                        entity.Description = I18n.T(entity.DescriptionKey);
+                    }
+                }
+                
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {entities.Count} entity types for selector (with translations)");
+                
+                return entities;
             }
             else
             {
-                // API调用失败，使用回退默认值（只有customer）
-                availableEntityTypes = new List<EntityTypeItem>
-                {
-                    new EntityTypeItem { EntityType = "customer", DisplayNameKey = "ENTITY_CUSTOMER" }
-                };
-                await JS.InvokeVoidAsync("console.warn", "[FormDesigner] Failed to load entities, using fallback");
+                await JS.InvokeVoidAsync("console.error", $"[FormDesigner] API failed with status {resp.StatusCode}");
+                return new List<EntityTypeItem>();
             }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load entities: {ex.Message}");
-            // 使用回退默认值
-            availableEntityTypes = new List<EntityTypeItem>
-            {
-                new EntityTypeItem { EntityType = "customer", DisplayNameKey = "ENTITY_CUSTOMER" }
-            };
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Exception: {ex.Message}");
+            return new List<EntityTypeItem>();
         }
     }
+
 
     private async Task LoadAvailableFields()
     {
@@ -362,8 +406,33 @@ else
     private void InitializeEmptyTemplate()
     {
         templateName = I18n.T("LBL_NEW_TEMPLATE");
-        entityType = "customer"; // 默认选择customer，但用户可以在属性面板中更改
+        entityType = ""; // 新建模板，不设置默认实体类型
+        originalEntityType = null;
+        isEntityTypeLocked = false; // 新建模板，允许选择实体类型
         layoutWidgets = new();
+    }
+    
+    /// <summary>
+    /// 获取当前实体类型的显示名称（用于已锁定的实体类型显示）
+    /// </summary>
+    private string GetEntityDisplayName()
+    {
+        if (string.IsNullOrWhiteSpace(entityType))
+        {
+            return I18n.T("LBL_ENTITY_TYPE_NOT_SET");
+        }
+        
+        // 如果已经加载了实体列表，从列表中查找
+        var entity = availableEntityTypes.FirstOrDefault(e => e.EntityType == entityType);
+        if (entity != null)
+        {
+            return I18n.T(entity.DisplayNameKey);
+        }
+        
+        // 如果没有加载列表，根据实体类型推断显示名称
+        // 例如：customer -> ENTITY_CUSTOMER
+        var displayKey = $"ENTITY_{entityType.ToUpper()}";
+        return I18n.T(displayKey);
     }
 
     private void OnCanvasBackgroundClick()
@@ -453,6 +522,22 @@ else
                 layoutWidgets = new List<DraggableWidget>();
             }
 
+            // ⭐ 关键：判断是否锁定实体类型
+            // 如果模板已经有组件（layoutWidgets.Count > 0），说明是已设计的模板，锁定实体类型
+            // 如果模板为空但有明确的 entityType，也锁定（避免空模板修改实体类型导致混乱）
+            if (layoutWidgets.Count > 0 && !string.IsNullOrWhiteSpace(entityType))
+            {
+                originalEntityType = entityType;
+                isEntityTypeLocked = true;
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Entity type locked: {entityType} (has {layoutWidgets.Count} widgets)");
+            }
+            else
+            {
+                originalEntityType = null;
+                isEntityTypeLocked = false;
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Entity type unlocked: new or empty template");
+            }
+
             await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template: {layoutWidgets.Count} widgets");
         }
         catch (Exception ex)
@@ -468,14 +553,26 @@ else
         public string DisplayName { get; set; } = string.Empty;
     }
 
-    private class EntityTypeItem
+    /// <summary>
+    /// 实体类型项 - 实现 ISelectableEntity 接口，确保可用于 EntitySelector
+    /// </summary>
+    private class EntityTypeItem : BobCrm.App.Abstractions.ISelectableEntity
     {
         public string EntityType { get; set; } = string.Empty;  // 路由名（customer）
         public string EntityName { get; set; } = string.Empty;  // 类名（Customer）
-        public string DisplayNameKey { get; set; } = string.Empty;
+        public string DisplayNameKey { get; set; } = string.Empty;  // 多语言键
+        public string DisplayName { get; set; } = string.Empty;  // 翻译后的显示名称（由前端填充）
         public string? DescriptionKey { get; set; }
+        public string? Description { get; set; }  // 翻译后的描述（由前端填充）
+        public string? ApiEndpoint { get; set; }
         public string? Icon { get; set; }
         public string? Category { get; set; }
+        
+        // ISelectableEntity 接口实现
+        string BobCrm.App.Abstractions.ISelectableEntity.Value => EntityType;
+        string BobCrm.App.Abstractions.ISelectableEntity.DisplayName => DisplayName;
+        string? BobCrm.App.Abstractions.ISelectableEntity.Description => Description;
+        string? BobCrm.App.Abstractions.ISelectableEntity.Icon => Icon;
     }
 
     private async Task SaveLayout()
