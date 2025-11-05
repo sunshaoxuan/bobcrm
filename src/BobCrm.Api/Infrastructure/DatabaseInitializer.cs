@@ -108,26 +108,8 @@ public static class DatabaseInitializer
             );
         }
 
-        // EntityMetadata 预置数据（只添加已实现的customer实体）
-        if (!await db.Set<Data.Entities.EntityMetadata>().IgnoreQueryFilters().AnyAsync())
-        {
-            await db.Set<Data.Entities.EntityMetadata>().AddAsync(
-                new Data.Entities.EntityMetadata
-                {
-                    EntityType = "customer",
-                    DisplayNameKey = "ENTITY_CUSTOMER",
-                    DescriptionKey = "ENTITY_CUSTOMER_DESC",
-                    ApiEndpoint = "/api/customers",
-                    IsRootEntity = true,
-                    IsEnabled = true,
-                    Order = 1,
-                    Icon = "user",
-                    Category = "core",
-                    CreatedAt = DateTime.UtcNow
-                }
-            );
-            await db.SaveChangesAsync();
-        }
+        // EntityMetadata 自动注册（通过反射扫描所有实现IEntityMetadataProvider的实体）
+        await AutoRegisterEntityMetadataAsync(db);
 
         if (!await db.Set<LocalizationResource>().IgnoreQueryFilters().AnyAsync())
         {
@@ -649,5 +631,140 @@ public static class DatabaseInitializer
     {
         try { await db.Database.EnsureDeletedAsync(); } catch { }
         await InitializeAsync(db);
+    }
+
+    /// <summary>
+    /// 自动注册/反注册实体元数据
+    /// 正向：通过反射扫描所有实现IEntityMetadataProvider的实体，并自动注册到EntityMetadata表
+    /// 反向：检查已注册的元数据，验证对应实体类是否存在且实现接口，不存在则标记为失效
+    /// </summary>
+    /// <param name="db">数据库上下文</param>
+    /// <param name="enableAutoDeactivation">是否启用自动失效（默认true，可通过配置关闭）</param>
+    private static async Task AutoRegisterEntityMetadataAsync(DbContext db, bool enableAutoDeactivation = true)
+    {
+        try
+        {
+            var assembly = typeof(DatabaseInitializer).Assembly;
+            var providerInterface = typeof(BobCrm.Api.Abstractions.IEntityMetadataProvider);
+            
+            // ========================================
+            // 第一步：正向注册 - 扫描实现IEntityMetadataProvider的实体
+            // ========================================
+            var entityTypes = assembly.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && providerInterface.IsAssignableFrom(t))
+                .ToList();
+
+            Console.WriteLine($"[EntityMetadata] Step 1: Found {entityTypes.Count} entity types implementing IEntityMetadataProvider");
+
+            var validEntityTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entityType in entityTypes)
+            {
+                try
+                {
+                    // 调用静态方法GetMetadata()
+                    var getMetadataMethod = entityType.GetMethod("GetMetadata", 
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    
+                    if (getMetadataMethod == null)
+                    {
+                        Console.WriteLine($"[EntityMetadata] Warning: {entityType.Name} implements IEntityMetadataProvider but GetMetadata() not found");
+                        continue;
+                    }
+
+                    var metadata = getMetadataMethod.Invoke(null, null) as Data.Entities.EntityMetadata;
+                    
+                    if (metadata == null)
+                    {
+                        Console.WriteLine($"[EntityMetadata] Warning: {entityType.Name}.GetMetadata() returned null");
+                        continue;
+                    }
+
+                    // 记录有效的实体类型名
+                    validEntityTypeNames.Add(metadata.EntityType);
+
+                    // 检查数据库中是否已存在
+                    var existing = await db.Set<Data.Entities.EntityMetadata>()
+                        .FirstOrDefaultAsync(e => e.EntityType == metadata.EntityType);
+                    
+                    if (existing == null)
+                    {
+                        // 不存在，插入新记录
+                        db.Set<Data.Entities.EntityMetadata>().Add(metadata);
+                        Console.WriteLine($"[EntityMetadata] ✓ Registered: {metadata.EntityType} ({metadata.DisplayNameKey})");
+                    }
+                    else if (!existing.IsEnabled)
+                    {
+                        // 之前被禁用，现在重新启用
+                        existing.IsEnabled = true;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        Console.WriteLine($"[EntityMetadata] ✓ Re-enabled: {existing.EntityType}");
+                    }
+                    else
+                    {
+                        // 已存在且启用，跳过（保持用户可能的修改）
+                        Console.WriteLine($"[EntityMetadata] - Already exists: {metadata.EntityType}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[EntityMetadata] ✗ Error processing {entityType.Name}: {ex.Message}");
+                }
+            }
+
+            // ========================================
+            // 第二步：反向验证 - 检查已注册的元数据是否对应有效实体
+            // ========================================
+            if (enableAutoDeactivation)
+            {
+                Console.WriteLine($"[EntityMetadata] Step 2: Validating existing metadata records...");
+
+                var allRegistered = await db.Set<Data.Entities.EntityMetadata>().ToListAsync();
+                
+                int deactivatedCount = 0;
+                foreach (var registered in allRegistered)
+                {
+                    if (!validEntityTypeNames.Contains(registered.EntityType))
+                    {
+                        // 实体类不存在或未实现IEntityMetadataProvider接口
+                        if (registered.IsEnabled)
+                        {
+                            registered.IsEnabled = false;
+                            registered.UpdatedAt = DateTime.UtcNow;
+                            deactivatedCount++;
+                            Console.WriteLine($"[EntityMetadata] ✗ Disabled (entity not found or invalid): {registered.EntityType}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[EntityMetadata] - Already disabled: {registered.EntityType}");
+                        }
+                    }
+                }
+
+                if (deactivatedCount > 0)
+                {
+                    Console.WriteLine($"[EntityMetadata] ⚠️  Total {deactivatedCount} entities deactivated (entity class removed or changed)");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[EntityMetadata] Step 2: Auto-deactivation is disabled (skip validation)");
+            }
+
+            // 保存所有变更
+            var changes = await db.SaveChangesAsync();
+            if (changes > 0)
+            {
+                Console.WriteLine($"[EntityMetadata] ✓ Auto-registration/validation completed: {changes} changes saved");
+            }
+            else
+            {
+                Console.WriteLine($"[EntityMetadata] ✓ No changes needed (all in sync)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EntityMetadata] ✗ Auto-registration failed: {ex.Message}");
+        }
     }
 }
