@@ -38,13 +38,22 @@ Write-Section "检查前置条件"
 $dotnetVersion = $null
 try {
     $dotnetVersion = (dotnet --version 2>$null)
-    $isNet8 = $dotnetVersion -match '^8\.'
-    Write-Check ".NET 8 SDK" $isNet8 "版本: $dotnetVersion"
-    if (-not $isNet8) {
-        Write-Host "    请从 https://dotnet.microsoft.com/download/dotnet/8.0 下载安装" -ForegroundColor Yellow
+    # 提取主版本号
+    if ($dotnetVersion -match '^(\d+)\.') {
+        $majorVersion = [int]$Matches[1]
+        $isNet8Plus = $majorVersion -ge 8
+        Write-Check ".NET 8+ SDK" $isNet8Plus "版本: $dotnetVersion"
+        if (-not $isNet8Plus) {
+            Write-Host "    本项目需要 .NET 8 或更高版本" -ForegroundColor Yellow
+            Write-Host "    请从 https://dotnet.microsoft.com/download/dotnet 下载安装" -ForegroundColor Yellow
+        } elseif ($majorVersion -gt 8) {
+            Write-Host "    .NET $majorVersion 向后兼容 .NET 8 项目 ✓" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Check ".NET 8+ SDK" $false "版本格式无法识别: $dotnetVersion"
     }
 } catch {
-    Write-Check ".NET 8 SDK" $false "未安装"
+    Write-Check ".NET 8+ SDK" $false "未安装"
 }
 
 # 检查 PowerShell 版本

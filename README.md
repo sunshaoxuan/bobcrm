@@ -6,7 +6,7 @@
 
 ### 前置条件
 
-- ✅ .NET 8 SDK ([下载](https://dotnet.microsoft.com/download/dotnet/8.0))
+- ✅ .NET 8+ SDK ([下载](https://dotnet.microsoft.com/download/dotnet/8.0)) - .NET 9也可以，向后兼容
 - ✅ PostgreSQL 或 Docker（推荐用Docker）
 - ✅ PowerShell 7+（Windows已内置）
 
