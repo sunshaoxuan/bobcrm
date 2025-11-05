@@ -1,5 +1,6 @@
 @page "/settings"
 @rendermode RenderMode.InteractiveServer
+@implements IDisposable
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
@@ -58,17 +59,6 @@
                             <option value="ja">日本語</option>
                             <option value="en">English</option>
                         </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Information -->
-            <div class="settings-section">
-                <h3 class="section-title">@I18n.T("LBL_USER")</h3>
-                <div class="settings-card">
-                    <div class="setting-item">
-                        <label class="setting-label">@I18n.T("LBL_USERNAME")</label>
-                        <div class="setting-value">@userName</div>
                     </div>
                 </div>
             </div>
@@ -229,7 +219,6 @@
     private string currentTheme = "light";
     private string currentLanguage = "ja";
     private string currentColor = "#3f7cff";
-    private string userName = "";
     private string saveMessage = "";
     private bool saveSuccess = false;
 
@@ -286,14 +275,6 @@
                 currentTheme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light";
                 currentLanguage = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
                 currentColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff";
-            }
-
-            // Get user name from auth
-            var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
-            if (resp.IsSuccessStatusCode)
-            {
-                var data = await resp.Content.ReadFromJsonAsync<UserInfo>();
-                userName = data?.UserName ?? "Unknown";
             }
 
             loading = false;
@@ -403,12 +384,6 @@
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
-    }
-
-    private class UserInfo
-    {
-        public string? UserName { get; set; }
-        public string? Email { get; set; }
     }
 
     private class UserPreferencesDto
