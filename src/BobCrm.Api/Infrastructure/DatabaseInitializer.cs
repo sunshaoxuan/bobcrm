@@ -213,12 +213,19 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_BASIC_COMPONENTS", ZH = "基础组件", JA = "基本コンポーネント", EN = "Basic Components" },
                 new LocalizationResource { Key = "LBL_LAYOUT_COMPONENTS", ZH = "布局组件", JA = "レイアウトコンポーネント", EN = "Layout Components" },
                 new LocalizationResource { Key = "LBL_TEXTBOX", ZH = "文本框", JA = "テキストボックス", EN = "Textbox" },
+                new LocalizationResource { Key = "LBL_NUMBER", ZH = "数字框", JA = "数値", EN = "Number" },
+                new LocalizationResource { Key = "LBL_SELECT", ZH = "下拉选择", JA = "選択", EN = "Select" },
+                new LocalizationResource { Key = "LBL_TEXTAREA", ZH = "文本区域", JA = "テキストエリア", EN = "Textarea" },
+                new LocalizationResource { Key = "LBL_BUTTON", ZH = "按钮", JA = "ボタン", EN = "Button" },
                 new LocalizationResource { Key = "LBL_LABEL", ZH = "标签", JA = "ラベル", EN = "Label" },
                 new LocalizationResource { Key = "LBL_CALENDAR", ZH = "日历", JA = "カレンダー", EN = "Calendar" },
                 new LocalizationResource { Key = "LBL_LISTBOX", ZH = "列表框", JA = "リストボックス", EN = "Listbox" },
                 new LocalizationResource { Key = "LBL_SECTION", ZH = "分组", JA = "セクション", EN = "Section" },
-                new LocalizationResource { Key = "LBL_FRAME", ZH = "容器", JA = "フレーム", EN = "Frame" },
-                new LocalizationResource { Key = "LBL_TABBOX", ZH = "标签页", JA = "タブボックス", EN = "Tabbox" },
+                new LocalizationResource { Key = "LBL_PANEL", ZH = "面板", JA = "パネル", EN = "Panel" },
+                new LocalizationResource { Key = "LBL_GRID", ZH = "网格", JA = "グリッド", EN = "Grid" },
+                new LocalizationResource { Key = "LBL_FRAME", ZH = "框架", JA = "フレーム", EN = "Frame" },
+                new LocalizationResource { Key = "LBL_TABBOX", ZH = "标签容器", JA = "タブボックス", EN = "Tabbox" },
+                new LocalizationResource { Key = "LBL_TAB", ZH = "标签页", JA = "タブ", EN = "Tab" },
                 new LocalizationResource { Key = "LBL_DRAG_COMPONENT_HERE", ZH = "拖拽组件到这里", JA = "コンポーネントをここにドラッグ", EN = "Drag component here" },
                 new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
                 new LocalizationResource { Key = "LBL_COMPONENT_TYPE", ZH = "组件类型", JA = "コンポーネントタイプ", EN = "Component Type" },
@@ -382,12 +389,19 @@ public static class DatabaseInitializer
             Ensure("LBL_BASIC_COMPONENTS", "基础组件", "基本コンポーネント", "Basic Components");
             Ensure("LBL_LAYOUT_COMPONENTS", "布局组件", "レイアウトコンポーネント", "Layout Components");
             Ensure("LBL_TEXTBOX", "文本框", "テキストボックス", "Textbox");
+            Ensure("LBL_NUMBER", "数字框", "数値", "Number");
+            Ensure("LBL_SELECT", "下拉选择", "選択", "Select");
+            Ensure("LBL_TEXTAREA", "文本区域", "テキストエリア", "Textarea");
+            Ensure("LBL_BUTTON", "按钮", "ボタン", "Button");
             Ensure("LBL_LABEL", "标签", "ラベル", "Label");
             Ensure("LBL_CALENDAR", "日历", "カレンダー", "Calendar");
             Ensure("LBL_LISTBOX", "列表框", "リストボックス", "Listbox");
             Ensure("LBL_SECTION", "分组", "セクション", "Section");
-            Ensure("LBL_FRAME", "容器", "フレーム", "Frame");
-            Ensure("LBL_TABBOX", "标签页", "タブボックス", "Tabbox");
+            Ensure("LBL_PANEL", "面板", "パネル", "Panel");
+            Ensure("LBL_GRID", "网格", "グリッド", "Grid");
+            Ensure("LBL_FRAME", "框架", "フレーム", "Frame");
+            Ensure("LBL_TABBOX", "标签容器", "タブボックス", "Tabbox");
+            Ensure("LBL_TAB", "标签页", "タブ", "Tab");
             Ensure("LBL_DRAG_COMPONENT_HERE", "拖拽组件到这里", "コンポーネントをここにドラッグ", "Drag component here");
             Ensure("LBL_PROPERTIES", "属性", "プロパティ", "Properties");
             Ensure("LBL_COMPONENT_TYPE", "组件类型", "コンポーネントタイプ", "Component Type");
@@ -412,7 +426,6 @@ public static class DatabaseInitializer
             Ensure("LBL_READONLY", "只读", "読み取り専用", "Read Only");
             Ensure("LBL_MAX_LENGTH", "最大长度", "最大長", "Max Length");
             Ensure("LBL_NEW_LINE", "换行（新行开始）", "改行（新しい行で開始）", "New Line (Start New Row)");
-            Ensure("LBL_FRAME", "框架", "フレーム", "Frame");
             // Template designer specific keys
             Ensure("LBL_STYLE_SETTINGS", "样式设置", "スタイル設定", "Style Settings");
             Ensure("LBL_FONT_FAMILY", "字体", "フォント", "Font");
