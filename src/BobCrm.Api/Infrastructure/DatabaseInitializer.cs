@@ -546,6 +546,27 @@ public static class DatabaseInitializer
             // Property placeholders
             Ensure("PROP_PANEL_TITLE_PLACEHOLDER", "面板标题", "パネルタイトル", "Panel Title");
             Ensure("PROP_SECTION_TITLE_PLACEHOLDER", "分组标题", "セクションタイトル", "Section Title");
+            // Additional property keys for all widgets
+            Ensure("PROP_TEXT", "文本", "テキスト", "Text");
+            Ensure("PROP_BOLD", "加粗", "太字", "Bold");
+            Ensure("PROP_MIN_VALUE", "最小值", "最小値", "Min Value");
+            Ensure("PROP_MAX_VALUE", "最大值", "最大値", "Max Value");
+            Ensure("PROP_STEP", "步长", "ステップ", "Step");
+            Ensure("PROP_ALLOW_DECIMAL", "允许小数", "小数を許可", "Allow Decimal");
+            Ensure("PROP_DATE_FORMAT", "日期格式", "日付フォーマット", "Date Format");
+            Ensure("PROP_SHOW_TIME", "显示时间", "時間を表示", "Show Time");
+            Ensure("PROP_BUTTON_VARIANT", "按钮样式", "ボタンスタイル", "Button Variant");
+            Ensure("PROP_BUTTON_PRIMARY", "主要按钮", "プライマリ", "Primary");
+            Ensure("PROP_BUTTON_DEFAULT", "默认按钮", "デフォルト", "Default");
+            Ensure("PROP_BUTTON_DASHED", "虚线按钮", "破線", "Dashed");
+            Ensure("PROP_BUTTON_LINK", "链接按钮", "リンク", "Link");
+            Ensure("PROP_BUTTON_TEXT", "文本按钮", "テキスト", "Text");
+            Ensure("PROP_BUTTON_BLOCK", "块级按钮", "ブロックボタン", "Block Button");
+            Ensure("PROP_BUTTON_STYLE", "按钮样式", "ボタンスタイル", "Button Style");
+            Ensure("PROP_ALLOW_SEARCH", "允许搜索", "検索を許可", "Allow Search");
+            Ensure("PROP_MULTI_SELECT", "多选", "複数選択", "Multi Select");
+            Ensure("PROP_ROWS", "行数", "行数", "Rows");
+            Ensure("PROP_AUTO_SIZE", "自动调整大小", "自動サイズ調整", "Auto Size");
             Ensure("BTN_DELETE", "删除", "削除", "Delete");
             Ensure("LBL_SELECT_COMPONENT", "选择一个组件", "コンポーネントを選択", "Select a component");
             // Menu and navigation keys
