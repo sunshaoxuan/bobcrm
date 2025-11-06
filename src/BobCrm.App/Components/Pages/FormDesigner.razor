@@ -653,9 +653,12 @@ else
         
         // 计算宽度样式
         var widthStyle = "";
+        var displayStyle = "display:block;"; // 默认块级元素，占满父容器
+        
         if (widget is IFlowSized flowWidget && flowWidget.Width > 0)
         {
             widthStyle = $"width:{flowWidget.Width}{flowWidget.WidthUnit};";
+            displayStyle = "display:block;"; // 有明确宽度时也保持块级
         }
         
         // 根据组件类型渲染不同的外观
@@ -666,7 +669,7 @@ else
                  data-widget-id="@container.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle border:2px solid @borderColor; background:@backgroundColor; border-radius:4px; position:relative; cursor:move; margin:4px; display:inline-block;">
+                 style="@widthStyle @displayStyle border:2px solid @borderColor; background:@backgroundColor; border-radius:4px; position:relative; cursor:move; margin:4px;">
                 @if (isSelected)
                 {
                     <div style="position:absolute; top:-24px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10">
@@ -692,7 +695,7 @@ else
                  data-widget-id="@widget.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, widget))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(widget))" @onclick:stopPropagation
-                 style="@widthStyle border:2px solid @borderColor; background:@backgroundColor; padding:8px; border-radius:4px; position:relative; cursor:move; margin:4px; display:inline-block;">
+                 style="@widthStyle @displayStyle border:2px solid @borderColor; background:@backgroundColor; padding:8px; border-radius:4px; position:relative; cursor:move; margin:4px;">
                 @if (isSelected)
                 {
                     <div style="position:absolute; top:-24px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10">
