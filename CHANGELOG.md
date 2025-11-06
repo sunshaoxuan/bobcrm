@@ -76,7 +76,16 @@
   - ✅ 覆盖所有 Widget 类型的属性
 
 ### 修复 (Fixed)
-- **容器布局"内外分离"视觉BUG**：
+- **所有组件的"内外错位"视觉BUG（通用修复）**：
+  - **问题根源**：外层包裹 div（用于拖拽、选中）有 `border` + `background` + `padding`，内层容器又有自己的 `border` + `padding`，造成双层边框和视觉错位
+  - **影响范围**：所有组件（容器 + 普通组件）
+  - **修复方案**：
+    - 外层 div 改用 `outline`（不占布局空间）而非 `border`
+    - 去掉容器组件的中间 `padding:4px` 包裹层
+    - 直接渲染内层容器，让容器的真实边框完全可见
+    - 选中状态用 `outline` 高亮，不影响内部布局
+  - **视觉效果**：不再有双层边框，容器真实样式完全可见，所有组件视觉统一
+- **容器内容区域填充问题**：
   - 问题：容器内容区域使用 `min-height`，无法填充整个容器空间
   - 修复：所有容器改用 `display:flex; flex-direction:column;` + `flex:1` 布局
   - 影响：Grid, Panel, Section, Frame, TabContainer, GenericContainer
