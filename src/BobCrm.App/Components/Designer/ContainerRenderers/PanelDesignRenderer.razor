@@ -8,7 +8,8 @@
             @(string.IsNullOrWhiteSpace(Panel.Title) ? "面板标题" : Panel.Title)
         </div>
     }
-    <div style="flex:1; padding:@(Panel.ContainerLayout.Padding)px; display:flex; flex-direction:@(Panel.ContainerLayout.FlexDirection); flex-wrap:@(Panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Panel.ContainerLayout.Gap)px;"
+    @* 拖放区域：空状态时无padding，有子组件时有padding *@
+    <div style="flex:1; padding:@(Panel.Children?.Any() == true ? Panel.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Panel.ContainerLayout.FlexDirection); flex-wrap:@(Panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Panel.ContainerLayout.Gap)px;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (Panel.Children?.Any() == true)

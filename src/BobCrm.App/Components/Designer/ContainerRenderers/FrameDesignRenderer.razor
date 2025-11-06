@@ -1,7 +1,7 @@
 @using BobCrm.App.Models.Widgets
 
 @* Frame 容器的设计态渲染器 *@
-<div style="border:@(Frame.BorderWidth)px @(Frame.BorderStyle) @(Frame.BorderColor); background:@(Frame.BackgroundColor); padding:@(Frame.Padding)px; min-height:150px; display:flex; flex-direction:column;"
+<div style="border:@(Frame.BorderWidth)px @(Frame.BorderStyle) @(Frame.BorderColor); background:@(Frame.BackgroundColor); padding:@(Frame.Children?.Any() == true ? Frame.Padding : 0)px; min-height:150px; display:flex; flex-direction:column;"
      @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
      @ondragover="@OnDragOver" @ondragover:preventDefault>
     @if (Frame.Children?.Any() == true)

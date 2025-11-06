@@ -1,14 +1,14 @@
 @using BobCrm.App.Models.Widgets
 
 @* 通用容器的设计态渲染器（用于未知容器类型） *@
-<div style="border:1px dashed #ccc; padding:12px; background:#fafafa; min-height:150px; display:flex; flex-direction:column;"
+<div style="border:1px dashed #ccc; padding:@(Container.Children?.Any() == true ? 12 : 0)px; background:#fafafa; min-height:150px; display:flex; flex-direction:column;"
      @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
      @ondragover="@OnDragOver" @ondragover:preventDefault>
-    <div style="font-size:11px; color:#999; margin-bottom:8px; flex-shrink:0;">
-        容器: @Container.Type
-    </div>
     @if (Container.Children?.Any() == true)
     {
+        <div style="font-size:11px; color:#999; margin-bottom:8px; flex-shrink:0;">
+            容器: @Container.Type
+        </div>
         <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
             @foreach (var child in Container.Children)
             {
