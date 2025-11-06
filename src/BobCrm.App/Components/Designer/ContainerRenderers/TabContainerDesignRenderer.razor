@@ -1,7 +1,7 @@
 @using BobCrm.App.Models.Widgets
 
 @* TabContainer 容器的设计态渲染器 *@
-<div style="border:1px solid #e5e5e5; background:#fff; min-height:150px; display:flex; flex-direction:column;">
+<div style="border:1px solid #e5e5e5; background:#fff; min-height:150px; display:flex; flex-direction:column; pointer-events:auto;">
     <div style="border-bottom:1px solid #e5e5e5; padding:8px 12px; background:#fafafa; display:flex; gap:8px; pointer-events:none; flex-shrink:0;">
         <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:4px 4px 0 0; font-size:12px">标签1</div>
         <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签2</div>
@@ -9,7 +9,7 @@
     </div>
     @* 拖放区域：空状态时无padding，有子组件时有padding *@
     <div class="frame-drop-zone" data-container-id="@TabContainer.Id"
-         style="flex:1; padding:@(TabContainer.Children?.Any() == true ? 16 : 0)px; display:flex; flex-direction:column;"
+         style="flex:1; padding:@(TabContainer.Children?.Any() == true ? 16 : 0)px; display:flex; flex-direction:column; pointer-events:auto;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (TabContainer.Children?.Any() == true)

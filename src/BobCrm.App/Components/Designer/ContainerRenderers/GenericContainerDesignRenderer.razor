@@ -2,7 +2,7 @@
 
 @* 通用容器的设计态渲染器（用于未知容器类型） *@
 <div class="frame-drop-zone" data-container-id="@Container.Id"
-     style="border:1px dashed #ccc; padding:@(Container.Children?.Any() == true ? 12 : 0)px; background:#fafafa; min-height:150px; display:flex; flex-direction:column;"
+     style="border:1px dashed #ccc; padding:@(Container.Children?.Any() == true ? 12 : 0)px; background:#fafafa; min-height:150px; display:flex; flex-direction:column; pointer-events:auto;"
      @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
      @ondragover="@OnDragOver" @ondragover:preventDefault>
     @if (Container.Children?.Any() == true)

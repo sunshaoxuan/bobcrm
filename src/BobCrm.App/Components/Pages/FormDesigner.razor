@@ -696,14 +696,15 @@ else
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 外层 div 只负责交互（拖拽、选中），不添加视觉边框
-            <div draggable="true" 
+            // pointer-events:none 让拖放事件能穿透到内部的 frame-drop-zone
+            <div draggable="true"
                  data-widget-id="@container.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle @displayStyle position:relative; cursor:move; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
+                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:none;">
                 @if (isSelected)
                 {
-                    <div style="position:absolute; top:-28px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10">
+                    <div style="position:absolute; top:-28px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10; pointer-events:auto; cursor:pointer;">
                         @container.Label
                         <span @onclick="@(() => DeleteWidget(container))" @onclick:stopPropagation style="margin-left:8px; cursor:pointer; font-weight:bold">×</span>
                     </div>
@@ -711,7 +712,7 @@ else
                     <div draggable="false"
                          @onmousedown="@((e) => OnResizeStart(e, container))" @onmousedown:stopPropagation @onmousedown:preventDefault
                          @ondragstart:preventDefault="true"
-                         style="position:absolute; right:-6px; top:50%; transform:translateY(-50%); width:8px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6);">
+                         style="position:absolute; right:-6px; top:50%; transform:translateY(-50%); width:8px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); pointer-events:auto;">
                     </div>
                 }
                 @RenderContainerDesign(container)

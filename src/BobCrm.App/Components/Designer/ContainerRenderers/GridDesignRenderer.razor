@@ -1,9 +1,9 @@
 @using BobCrm.App.Models.Widgets
 
 @* Grid 容器的设计态渲染器 *@
-<div style="padding:@(Grid.Children?.Any() == true ? Grid.Padding : 0)px; background:@Grid.BackgroundColor; border:@(Grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:150px; display:flex; flex-direction:column;">
+<div style="padding:@(Grid.Children?.Any() == true ? Grid.Padding : 0)px; background:@Grid.BackgroundColor; border:@(Grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:150px; display:flex; flex-direction:column; pointer-events:auto;">
     <div class="frame-drop-zone" data-container-id="@Grid.Id"
-         style="flex:1; display:grid; grid-template-columns:repeat(@Grid.Columns, 1fr); gap:@(Grid.Gap)px;"
+         style="flex:1; display:grid; grid-template-columns:repeat(@Grid.Columns, 1fr); gap:@(Grid.Gap)px; pointer-events:auto;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (Grid.Children?.Any() == true)
