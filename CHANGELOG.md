@@ -7,7 +7,7 @@
 
 ---
 
-## [0.5.4] - 2025-11-05
+## [0.5.4] - 2025-11-06
 
 ### 新增 (Added)
 - **个人中心页面** (`/profile`)
@@ -22,21 +22,39 @@
 - **后端API支持**：
   - `POST /api/auth/change-password` - 修改密码端点
   - `GET /api/auth/me` 返回格式优化（`userName`, `role` 字段）
+- **表单设计器容器功能三步重构**：
+  - **属性面板组件化**：为每种容器创建独立属性面板组件（Grid/Panel/Section/Frame/TabContainer）
+  - **容器渲染差异化**：5种容器有完全不同的视觉外观和布局特性
+  - **容器拖放支持**：所有容器支持接收拖放，支持容器嵌套
+- **集成测试大幅扩充（+15个测试）**：
+  - EntityMetadataTests（6个）：测试实体元数据端点
+  - UserProfileTests（9个）：测试个人中心和密码修改功能
 
 ### 变更 (Changed)
 - **系统设置页面**：移除冗余的"用户信息"部分（用户相关功能迁移至个人中心）
 - **AppHeader 组件**：根据登录状态动态渲染用户区域UI
+- **FormDesigner**：属性面板从200+行if-else块重构为组件化设计
+- **EntityMetadataEndpoints**：`/api/entities/all` 补充返回 `entityName`, `entityRoute`, `isRootEntity` 字段
 
 ### 修复 (Fixed)
-- **多语言资源加载**：在 `DatabaseInitializer.cs` 的 `Ensure` 分支中补充个人中心相关的21个多语言键值
+- **多语言资源重复键值**：删除 `LBL_EMAIL`, `LBL_USERNAME`, `LBL_LOADING`, `LBL_LOAD_FAILED` 的重复定义（曾导致57个测试失败）
+- **测试密码错误**：修正测试中使用的密码为 `User@12345`（而非`Test@12345`）
 
 ### 样式 (Styling)
 - 新增用户头像和用户区域相关CSS样式
 - 个人中心页面卡片式布局和渐变色设计
 - 暗黑模式适配
 
+### 测试 (Testing)
+- **测试覆盖率提升**：从67个测试增加到82个测试（+15个，+22%）
+- **测试通过率**：100%（82个测试，0个失败，79个成功，3个跳过）
+- **新增测试文件**：
+  - `EntityMetadataTests.cs` - 实体元数据端点测试
+  - `UserProfileTests.cs` - 用户个人资料端点测试
+
 ### 文档 (Documentation)
 - 更新 `CHANGELOG.md` - 添加 v0.5.4 更新内容
+- 更新 `README.md` - 指向最新版本
 
 ---
 
