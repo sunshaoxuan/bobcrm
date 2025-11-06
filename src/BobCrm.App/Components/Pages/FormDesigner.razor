@@ -701,12 +701,14 @@ else
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 策略：
-            // - wrapper保持pointer-events:auto（或不设置），让它能接收点击和拖放事件
-            // - 依赖body.is-dragging CSS规则来禁用容器内子控件的pointer-events
-            // - 避免在wrapper上使用pointer-events:none，那会阻止所有后代接收事件
+            // - wrapper必须有@ondragover/@ondrop处理器，否则浏览器不允许drop
+            // - 当拖动到已有子控件上时，pointer在wrapper上，事件必须从wrapper开始处理
+            // - wrapper处理dragover/drop，然后事件冒泡到frame-drop-zone进行位置计算
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
                  data-widget-id="@container.Id"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
+                 @ondragover="OnDragOver" @ondragover:preventDefault
+                 @ondrop="@(e => OnContainerDrop(e, container))" @ondrop:preventDefault
                  style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
                 @if (isSelected)
                 {
@@ -877,6 +879,8 @@ else
     {
         try
         {
+            await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnContainerDrop start: container={targetContainer.Id}, type={targetContainer.Type}");
+
             // 使用 JavaScript 计算插入索引
             var containerSelector = $".frame-drop-zone[data-container-id=\"{targetContainer.Id}\"]";
             var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", containerSelector, e.ClientX, e.ClientY);
