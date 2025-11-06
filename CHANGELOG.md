@@ -92,6 +92,14 @@
   - 问题：空容器的 placeholder 被固定 padding（12-16px）挤压，内容区域比容器小
   - 修复：空状态时 `padding=0`，有子组件时 `padding=原值`（条件表达式）
   - 效果：空容器的 placeholder 填满整个容器，内外等宽等高
+  
+  **修复4 - 双层resize handle消除**：
+  - 问题：顶层包裹 div 有 resize handle，内部调用 `RenderDesignWidget` 又添加一个 resize handle，同一组件显示两个 handle
+  - 修复：职责分离
+    - 创建 `RenderWidgetVisual()` 方法：仅渲染视觉外观，无交互层
+    - 顶层包裹 div 内部调用 `RenderWidgetVisual`（纯视觉）
+    - `RenderDesignWidget` 保留完整交互层，用于容器内子组件递归渲染
+  - 效果：每个组件只有一个 resize handle，不再重复
 
 ### 文档 (Documentation)
 - 删除重复的模块级 README（`ContainerRenderers/README.md`）
