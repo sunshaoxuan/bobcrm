@@ -255,9 +255,9 @@ window.bobcrm = {
       const container = document.querySelector(containerSelector);
       if (!container) return -1;
 
-      // 支持容器内的子控件（.container-child-widget）和主画布的控件（.layout-widget）
+      // 支持容器内的子控件（.container-child-widget 或 .container-child-wrapper）和主画布的控件（.layout-widget）
       const isFrameDropZone = container.classList.contains('frame-drop-zone');
-      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgetSelector = isFrameDropZone ? '.container-child-widget, .container-child-wrapper' : '.layout-widget';
       const widgets = Array.from(container.querySelectorAll(widgetSelector));
       if (widgets.length === 0) return 0;
 
@@ -311,7 +311,7 @@ window.bobcrm = {
       const container = document.querySelector(containerSelector);
       if (!container) return -1;
       const isFrameDropZone = container.classList.contains('frame-drop-zone');
-      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgetSelector = isFrameDropZone ? '.container-child-widget, .container-child-wrapper' : '.layout-widget';
       const widgets = Array.from(container.querySelectorAll(widgetSelector));
       if (widgets.length === 0) return 0;
 
@@ -347,9 +347,9 @@ window.bobcrm = {
       const container = document.querySelector(containerSelector);
       if (!container) return;
 
-      // 支持容器内的子控件（.container-child-widget）和主画布的控件（.layout-widget）
+      // 支持容器内的子控件（.container-child-widget 或 .container-child-wrapper）和主画布的控件（.layout-widget）
       const isFrameDropZone = container.classList.contains('frame-drop-zone');
-      const widgetSelector = isFrameDropZone ? '.container-child-widget' : '.layout-widget';
+      const widgetSelector = isFrameDropZone ? '.container-child-widget, .container-child-wrapper' : '.layout-widget';
       const widgets = Array.from(container.querySelectorAll(widgetSelector));
 
       // 为每个container使用独立的marker，通过data属性关联
