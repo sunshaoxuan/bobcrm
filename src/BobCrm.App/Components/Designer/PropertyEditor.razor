@@ -1,0 +1,173 @@
+@using BobCrm.App.Models.Designer
+@using BobCrm.App.Models.Widgets
+@using System.Reflection
+@inject BobCrm.App.Services.I18nService I18n
+
+@* 通用属性编辑器 - 根据元数据动态渲染 *@
+
+@if (Properties != null && Properties.Any())
+{
+    string? currentGroup = null;
+    foreach (var prop in Properties)
+    {
+        @* 条件显示检查 *@
+        if (!string.IsNullOrEmpty(prop.VisibleWhen))
+        {
+            var conditionValue = GetPropertyValue(Widget, prop.VisibleWhen);
+            if (conditionValue == null || !conditionValue.Equals(prop.VisibleWhenValue))
+            {
+                continue;
+            }
+        }
+
+        @* 分组分隔线 *@
+        if (prop.Group != null && prop.Group != currentGroup)
+        {
+            currentGroup = prop.Group;
+            <Divider Plain Style="margin:12px 0 8px 0; font-size:11px">@currentGroup</Divider>
+        }
+
+        @* 渲染属性编辑器 *@
+        <div style="margin-bottom:16px; @(prop.EditorType == PropertyEditorType.Boolean ? "display:flex; justify-content:space-between; align-items:center" : "")">
+            <label style="@(prop.EditorType == PropertyEditorType.Boolean ? "font-size:12px; color:#666" : "display:block; font-size:12px; color:#666; margin-bottom:4px")">
+                @prop.Label
+            </label>
+            
+            @switch (prop.EditorType)
+            {
+                case PropertyEditorType.Text:
+                    <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
+                           Placeholder="@prop.Placeholder"
+                           OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+                
+                case PropertyEditorType.Number:
+                    <AntDesign.InputNumber TValue="int"
+                                          Value="@(Convert.ToInt32(GetPropertyValue(Widget, prop.PropertyPath) ?? 0))"
+                                          Min="@(prop.Min ?? 0)"
+                                          Max="@(prop.Max ?? 100)"
+                                          Style="width:100%"
+                                          OnChange="@((int val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+                
+                case PropertyEditorType.Boolean:
+                    <Switch Value="@(Convert.ToBoolean(GetPropertyValue(Widget, prop.PropertyPath) ?? false))"
+                            OnChange="@((bool val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+                
+                case PropertyEditorType.Color:
+                    <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
+                           Placeholder="@prop.Placeholder"
+                           OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+                
+                case PropertyEditorType.Select:
+                    {
+                        var currentValue = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
+                        <AntDesign.Select TItem="PropertyOption"
+                                         TItemValue="string"
+                                         Value="@currentValue"
+                                         Style="width:100%"
+                                         OnSelectedItemChanged="@((PropertyOption opt) => SetPropertyValue(Widget, prop.PropertyPath, opt.Value))">
+                            <SelectOptions>
+                                @if (prop.Options != null)
+                                {
+                                    @foreach (var opt in prop.Options)
+                                    {
+                                        <SelectOption TItem="PropertyOption" TItemValue="string" Value="@opt.Value" Label="@opt.Label" />
+                                    }
+                                }
+                            </SelectOptions>
+                        </AntDesign.Select>
+                    }
+                    break;
+                
+                case PropertyEditorType.Textarea:
+                    <AntDesign.TextArea Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
+                                       Placeholder="@prop.Placeholder"
+                                       Rows="3"
+                                       OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+            }
+            
+            @if (!string.IsNullOrEmpty(prop.HelpText))
+            {
+                <div style="font-size:11px; color:#999; margin-top:4px">@prop.HelpText</div>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public List<WidgetPropertyMetadata>? Properties { get; set; }
+
+    [Parameter, EditorRequired]
+    public DraggableWidget? Widget { get; set; }
+
+    [Parameter]
+    public Action? OnPropertyChanged { get; set; }
+
+    /// <summary>
+    /// 获取属性值（支持嵌套路径，如 "ContainerLayout.Gap"）
+    /// </summary>
+    private object? GetPropertyValue(object? obj, string propertyPath)
+    {
+        if (obj == null || string.IsNullOrEmpty(propertyPath))
+            return null;
+
+        var parts = propertyPath.Split('.');
+        object? current = obj;
+
+        foreach (var part in parts)
+        {
+            if (current == null)
+                return null;
+
+            var prop = current.GetType().GetProperty(part);
+            if (prop == null)
+                return null;
+
+            current = prop.GetValue(current);
+        }
+
+        return current;
+    }
+
+    /// <summary>
+    /// 设置属性值（支持嵌套路径）
+    /// </summary>
+    private void SetPropertyValue(object? obj, string propertyPath, object? value)
+    {
+        if (obj == null || string.IsNullOrEmpty(propertyPath))
+            return;
+
+        var parts = propertyPath.Split('.');
+        object? current = obj;
+
+        // 导航到倒数第二层
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (current == null)
+                return;
+
+            var prop = current.GetType().GetProperty(parts[i]);
+            if (prop == null)
+                return;
+
+            current = prop.GetValue(current);
+        }
+
+        if (current == null)
+            return;
+
+        // 设置最后一层属性
+        var targetProp = current.GetType().GetProperty(parts[^1]);
+        if (targetProp != null && targetProp.CanWrite)
+        {
+            targetProp.SetValue(current, value);
+            OnPropertyChanged?.Invoke();
+        }
+    }
+}
+

@@ -48,24 +48,8 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcVGFiQ29udGFpbmVyRGVzaWduUmVuZGVyZXIucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/FrameWidgetPropertyPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xGcmFtZVdpZGdldFByb3BlcnR5UGFuZWwucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/GridWidgetPropertyPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xHcmlkV2lkZ2V0UHJvcGVydHlQYW5lbC5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/PanelWidgetPropertyPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xQYW5lbFdpZGdldFByb3BlcnR5UGFuZWwucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/SectionWidgetPropertyPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xTZWN0aW9uV2lkZ2V0UHJvcGVydHlQYW5lbC5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/TabContainerPropertyPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xUYWJDb250YWluZXJQcm9wZXJ0eVBhbmVsLnJhem9y
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyEditor.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eUVkaXRvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Layout/EmptyLayout.razor]

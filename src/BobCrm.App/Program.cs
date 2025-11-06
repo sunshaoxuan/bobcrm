@@ -24,6 +24,7 @@ builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignWidgetContentRenderer, BobCrm.App.Services.Widgets.Rendering.DesignWidgetContentRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignContainerRenderer, BobCrm.App.Services.Widgets.Rendering.DesignContainerRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IRuntimeWidgetRenderer, BobCrm.App.Services.Widgets.Rendering.RuntimeWidgetRenderer>();
+builder.Services.AddSingleton<BobCrm.App.Services.Designer.IWidgetPropertyProvider, BobCrm.App.Services.Designer.WidgetPropertyProvider>();
 
 var app = builder.Build();
 

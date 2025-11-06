@@ -8,8 +8,9 @@
 @using BobCrm.App.Services.Widgets
 @using BobCrm.App.Services.Widgets.Rendering
 @using Microsoft.AspNetCore.Components.Rendering
-@using BobCrm.App.Components.Designer.PropertyPanels
 @using BobCrm.App.Components.Designer.ContainerRenderers
+@using BobCrm.App.Components.Designer
+@using BobCrm.App.Services.Designer
 @using ListItem = BobCrm.App.Models.Widgets.ListItem;
 
 @inject BobCrm.App.Services.AuthService Auth
@@ -18,6 +19,7 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject IDesignWidgetContentRenderer DesignRenderer
 @inject IDesignContainerRenderer ContainerRenderer
+@inject IWidgetPropertyProvider PropertyProvider
 
 <script src="/js/form-designer-resize.js"></script>
 
@@ -619,31 +621,13 @@ else
     }
 
     /// <summary>
-    /// 根据组件类型动态渲染对应的属性面板组件
+    /// 渲染控件特定的属性面板
+    /// 使用元数据驱动的通用属性编辑器
     /// </summary>
     private RenderFragment RenderTypeSpecificPropertyPanel(DraggableWidget widget) => __builder =>
     {
-        // 根据组件类型渲染对应的属性面板组件
-        if (widget is GridWidget gridWidget)
-        {
-            <GridWidgetPropertyPanel Widget="@gridWidget" OnPropertyChanged="UpdateWidget" />
-        }
-        else if (widget is PanelWidget panelWidget)
-        {
-            <PanelWidgetPropertyPanel Widget="@panelWidget" OnPropertyChanged="UpdateWidget" />
-        }
-        else if (widget is SectionWidget sectionWidget)
-        {
-            <SectionWidgetPropertyPanel Widget="@sectionWidget" OnPropertyChanged="UpdateWidget" />
-        }
-        else if (widget is FrameWidget frameWidget)
-        {
-            <FrameWidgetPropertyPanel Widget="@frameWidget" OnPropertyChanged="UpdateWidget" />
-        }
-        else if (widget is TabContainerWidget tabWidget)
-        {
-            <TabContainerPropertyPanel Widget="@tabWidget" OnPropertyChanged="UpdateWidget" />
-        }
+        var properties = PropertyProvider.GetProperties(widget);
+        <PropertyEditor Properties="@properties" Widget="@widget" OnPropertyChanged="UpdateWidget" />
     };
 
     private RenderFragment RenderDesignWidget(DraggableWidget widget) => __builder =>
