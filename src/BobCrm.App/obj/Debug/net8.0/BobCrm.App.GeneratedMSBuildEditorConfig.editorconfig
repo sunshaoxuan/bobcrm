@@ -148,10 +148,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXR1cC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/TemplateDesigner.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZURlc2lnbmVyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Pages/Templates.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xUZW1wbGF0ZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

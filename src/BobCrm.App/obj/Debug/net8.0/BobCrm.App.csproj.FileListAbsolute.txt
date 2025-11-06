@@ -1,11 +1,3 @@
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.csproj.AssemblyReference.cache
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\rpswa.dswa.cache.json
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.GeneratedMSBuildEditorConfig.editorconfig
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.AssemblyInfoInputs.cache
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.AssemblyInfo.cs
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.csproj.CoreCompileInputs.cache
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.MvcApplicationPartsAssemblyInfo.cache
-C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.sourcelink.json
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\appsettings.Development.json
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\appsettings.json
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\BobCrm.App.staticwebassets.runtime.json
@@ -26,6 +18,14 @@ C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\Microsoft.IdentityModel.Prot
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\OneOf.dll
 C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.csproj.AssemblyReference.cache
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.GeneratedMSBuildEditorConfig.editorconfig
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.AssemblyInfoInputs.cache
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.AssemblyInfo.cs
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.csproj.CoreCompileInputs.cache
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.MvcApplicationPartsAssemblyInfo.cache
+C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\BobCrm.App.sourcelink.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\rjimswa.dswa.cache.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 C:\workspace\bobcrm\src\BobCrm.App\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
