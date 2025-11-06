@@ -160,7 +160,17 @@ else
                         <div style="margin-bottom:16px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_WIDTH")</label>
                             <InputGroup Compact>
-                                <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="100" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                @{
+                                    var widthMax = selectedWidget.GetMaxWidth();
+                                }
+                                @if (widthMax.HasValue)
+                                {
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="@widthMax.Value" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                }
+                                else
+                                {
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                }
                                 <Select TItemValue="string" TItem="string" 
                                        Value="@selectedWidget.WidthUnit" 
                                        Style="width:30%" 
