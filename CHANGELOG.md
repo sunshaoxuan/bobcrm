@@ -103,13 +103,19 @@
 
 - **Width 最大值逻辑移至 Widget 类（面向对象修复）**：
   - 问题：所有 Widget 的 Width 属性 `Max=100`（硬编码），只适用于百分比，对像素单位不合理（超过100被截断）
-  - 错误尝试：在 PropertyEditor 中判断 WidthUnit（违反职责分离）
+  - 错误尝试1：在 PropertyEditor 中判断 WidthUnit（违反职责分离）
+  - 错误尝试2：硬编码 `px → 2000`（magic number，不知道屏幕实际宽度）
   - 正确方案：
     - 在 `DraggableWidget` 基类添加 `GetMaxWidth()` 虚方法
-    - 根据 `WidthUnit` 动态返回：`%` → 100，`px` → 2000
-    - 所有 Widget 的 `GetPropertyMetadata()` 使用 `Max = GetMaxWidth()`
-    - PropertyEditor 保持简洁，直接使用 `prop.Max`，无业务判断
-  - 效果：切换单位时自动调整最大值，封装在 Widget 类内部，符合面向对象原则
+    - 返回类型改为 `int?`（可空）
+    - `%` 模式：返回 `100`（硬约束，百分比不能超过100）
+    - `px` 模式：返回 `null`（不限制，由画布和浏览器自然约束）
+    - PropertyEditor 检查 `prop.Max.HasValue`，只在有值时设置 `Max` 属性
+  - 效果：
+    - ✅ 百分比模式：0-100 的硬约束
+    - ✅ 像素模式：自由输入，由实际渲染宽度约束
+    - ✅ 不再有 magic number（2000）
+    - ✅ 符合单位语义：百分比是相对单位（需约束），像素是绝对单位（灵活）
 
 ### 文档 (Documentation)
 - 删除重复的模块级 README（`ContainerRenderers/README.md`）
