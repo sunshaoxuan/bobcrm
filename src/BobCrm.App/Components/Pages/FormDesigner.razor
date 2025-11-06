@@ -696,20 +696,30 @@ else
         if (widget is ContainerWidget container)
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
-            // 外层 div 只负责交互（拖拽、选中），不添加视觉边框
-            // 注意：不使用 container-child-widget 类，避免 CSS 规则干扰内部 frame-drop-zone
-            // 移除 pointer-events:none，让外层div能正常接收拖拽事件
+            // 策略：
+            // - 未选中时：pointer-events:auto，可以点击选中容器，但会阻止内部drop（这是可接受的，因为用户看不到拖放区域）
+            // - 已选中时：pointer-events:none，拖放事件穿透到内部frame-drop-zone，但交互元素用auto保持功能
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
-                 draggable="true"
                  data-widget-id="@container.Id"
-                 @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
+                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:@(isSelected ? "none" : "auto");">
                 @if (isSelected)
                 {
-                    <div style="position:absolute; top:-28px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10; pointer-events:auto; cursor:pointer;">
-                        @container.Label
-                        <span @onclick="@(() => DeleteWidget(container))" @onclick:stopPropagation style="margin-left:8px; cursor:pointer; font-weight:bold">×</span>
+                    @* 标签栏：包含容器名称、拖拽手柄和删除按钮 *@
+                    <div style="position:absolute; top:-28px; left:0; right:0; display:flex; justify-content:space-between; align-items:center; z-index:10;">
+                        @* 拖拽手柄（左侧）*@
+                        <div draggable="true"
+                             @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation
+                             @ondragend="OnDragEnd"
+                             style="background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; cursor:move; pointer-events:auto; display:flex; align-items:center; gap:4px;">
+                            <span style="font-size:10px;">⋮⋮</span>
+                            @container.Label
+                        </div>
+                        @* 删除按钮（右侧）*@
+                        <div @onclick="@(() => DeleteWidget(container))" @onclick:stopPropagation
+                             style="background:#ff4d4f; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; cursor:pointer; pointer-events:auto; font-weight:bold;">
+                            ×
+                        </div>
                     </div>
                     @* Resize handle *@
                     <div draggable="false"
