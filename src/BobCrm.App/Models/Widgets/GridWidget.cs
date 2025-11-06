@@ -31,4 +31,19 @@ public class GridWidget : ContainerWidget
 
     /// <summary>是否显示边框</summary>
     public bool Bordered { get; set; } = false;
+
+    /// <summary>
+    /// 获取 Grid 控件的属性元数据
+    /// </summary>
+    public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
+    {
+        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        {
+            new() { PropertyPath = "Columns", Label = "PROP_COLUMNS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 12 },
+            new() { PropertyPath = "Gap", Label = "PROP_GAP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48 },
+            new() { PropertyPath = "Padding", Label = "PROP_PADDING", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48 },
+            new() { PropertyPath = "BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Color, Placeholder = "#fafafa" },
+            new() { PropertyPath = "Bordered", Label = "PROP_SHOW_BORDER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean }
+        };
+    }
 }

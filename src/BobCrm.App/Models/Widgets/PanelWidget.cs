@@ -37,4 +37,26 @@ public class PanelWidget : ContainerWidget
 
     /// <summary>容器布局选项</summary>
     public ContainerLayoutOptions ContainerLayout { get; set; } = new();
+
+    /// <summary>
+    /// 获取 Panel 控件的属性元数据
+    /// </summary>
+    public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
+    {
+        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        {
+            new() { PropertyPath = "Title", Label = "PROP_TITLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text, Placeholder = "PROP_PANEL_TITLE_PLACEHOLDER" },
+            new() { PropertyPath = "ShowHeader", Label = "PROP_SHOW_HEADER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
+            new() { PropertyPath = "ContainerLayout.Gap", Label = "PROP_GAP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.Padding", Label = "PROP_PADDING", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.FlexDirection", Label = "PROP_FLEX_DIRECTION", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Select, Group = "PROP_GROUP_LAYOUT", 
+                Options = new List<BobCrm.App.Models.Designer.PropertyOption> 
+                { 
+                    new() { Value = "row", Label = "PROP_DIRECTION_ROW" },
+                    new() { Value = "column", Label = "PROP_DIRECTION_COLUMN" }
+                }
+            },
+            new() { PropertyPath = "ContainerLayout.FlexWrap", Label = "PROP_FLEX_WRAP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean, Group = "PROP_GROUP_LAYOUT" }
+        };
+    }
 }

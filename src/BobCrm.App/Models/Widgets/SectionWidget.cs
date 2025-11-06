@@ -86,4 +86,22 @@ public class SectionWidget : ContainerWidget
             _ => base.CanEditProperty(propertyName)
         };
     }
+
+    /// <summary>
+    /// 获取 Section 控件的属性元数据
+    /// </summary>
+    public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
+    {
+        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        {
+            new() { PropertyPath = "Title", Label = "PROP_TITLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text, Placeholder = "PROP_SECTION_TITLE_PLACEHOLDER" },
+            new() { PropertyPath = "ShowTitle", Label = "PROP_SHOW_TITLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
+            new() { PropertyPath = "Collapsible", Label = "PROP_COLLAPSIBLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
+            new() { PropertyPath = "Collapsed", Label = "PROP_COLLAPSED_DEFAULT", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean, VisibleWhen = "Collapsible", VisibleWhenValue = true },
+            new() { PropertyPath = "ContainerLayout.Gap", Label = "PROP_GAP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.Padding", Label = "PROP_PADDING", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Color, Placeholder = "#f5f5f5", Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.BorderRadius", Label = "PROP_BORDER_RADIUS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 24, Group = "PROP_GROUP_LAYOUT" }
+        };
+    }
 }

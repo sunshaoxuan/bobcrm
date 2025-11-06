@@ -125,6 +125,21 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     /// </summary>
     public virtual bool CanEditProperty(string propertyName) => true;
 
+    /// <summary>
+    /// 获取控件的属性元数据列表
+    /// 子类应重写此方法以提供自己的属性定义
+    /// </summary>
+    public virtual List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
+    {
+        // 默认返回通用属性
+        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        {
+            new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 },
+            new() { PropertyPath = "Visible", Label = "PROP_VISIBLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean }
+        };
+    }
+
     // ===== IResizable 接口实现 =====
 
     // 调整大小时的初始状态（用于基于总增量计算）
