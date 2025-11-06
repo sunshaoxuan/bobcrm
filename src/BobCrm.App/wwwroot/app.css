@@ -193,6 +193,23 @@ body.is-dragging .container-child-widget > * {
     pointer-events: none !important;
 }
 
+/* 拖拽时：wrapper内的frame-drop-zone必须保持可接收事件 */
+body.is-dragging .frame-drop-zone {
+    pointer-events: auto !important;
+}
+
+/* 拖拽时：frame-drop-zone内部的子控件wrapper禁用pointer-events，让事件命中控件外壳 */
+body.is-dragging .frame-drop-zone > .container-child-widget,
+body.is-dragging .frame-drop-zone > .container-child-wrapper {
+    pointer-events: auto !important; /* 外壳保持可接收事件 */
+}
+
+/* 拖拽时：控件外壳内部的内容禁用pointer-events */
+body.is-dragging .frame-drop-zone > .container-child-widget > *,
+body.is-dragging .frame-drop-zone > .container-child-wrapper > * {
+    pointer-events: none !important;
+}
+
 /* 绝对定位模式的控件 */
 .abs-widget {
     position: absolute;
