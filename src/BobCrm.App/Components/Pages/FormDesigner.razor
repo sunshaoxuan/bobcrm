@@ -319,6 +319,7 @@ else
     private DraggableWidget? draggedParentContainer;
     private bool dropSucceeded = false;
     private bool isDragging = false; // 全局拖拽状态，用于控制容器wrapper的pointer-events
+    private bool isProcessingDrop = false; // 防护标志：正在处理drop，防止OnDragEnd清空状态
 
     // Tab管理
     private readonly TabStateManager tabStateManager = new();
@@ -862,6 +863,12 @@ else
 
     private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
+        // ⚠️ Guard：如果正在处理drop，不要清空状态（让OnContainerDrop完成）
+        if (isProcessingDrop)
+        {
+            return;
+        }
+
         if (!dropSucceeded)
         {
             draggedDefinition = null;
@@ -877,15 +884,19 @@ else
     /// </summary>
     private async Task OnContainerDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e, ContainerWidget targetContainer)
     {
+        // ⚠️ 关键：必须在第一行（任何await之前）设置guard并保存快照
+        // 防止竞态条件：await期间浏览器触发dragend，OnDragEnd清空字段
+        isProcessingDrop = true;
+        var definition = draggedDefinition;
+        var movingWidget = draggedWidget;
+        var originalParent = draggedParentContainer;
+
         try
         {
-            await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnContainerDrop start: container={targetContainer.Id}, type={targetContainer.Type}");
-
-            // ⚠️ 关键：在任何await之前保存拖拽状态到局部变量
-            // 避免竞态条件：在await期间浏览器触发dragend，OnDragEnd清空字段
-            var definition = draggedDefinition;
-            var movingWidget = draggedWidget;
-            var originalParent = draggedParentContainer;
+            // 诊断日志：验证快照是否成功保存
+            await JS.InvokeVoidAsync("console.log",
+                $"[FormDesigner] OnContainerDrop start: container={targetContainer.Id}, " +
+                $"def={definition?.Type ?? "null"}, widget={movingWidget?.Id ?? "null"}");
 
             // 使用 JavaScript 计算插入索引
             var containerSelector = $".frame-drop-zone[data-container-id=\"{targetContainer.Id}\"]";
@@ -970,6 +981,11 @@ else
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[FormDesigner] OnContainerDrop error: {ex.Message}");
+        }
+        finally
+        {
+            // 确保无论成功还是异常都重置guard标志
+            isProcessingDrop = false;
         }
     }
 
