@@ -7,6 +7,87 @@
 
 ---
 
+## [0.5.5] - 2025-11-06
+
+### 重构 (Refactored)
+
+**🏗️ 重大架构重构：设计态渲染与属性编辑器完全组件化**
+
+#### 1. **容器设计态渲染器组件化**
+- **问题**：所有容器的设计态渲染逻辑集中在 `FormDesigner.razor` 中（160+ 行 `if-else`）
+- **重构**：
+  - 创建 `Components/Designer/ContainerRenderers/` 目录
+  - 为每种容器创建独立的渲染器组件：
+    - `GridDesignRenderer.razor`
+    - `PanelDesignRenderer.razor`
+    - `SectionDesignRenderer.razor`
+    - `FrameDesignRenderer.razor`
+    - `TabContainerDesignRenderer.razor`
+    - `GenericContainerDesignRenderer.razor`
+  - `FormDesigner.razor` 从 160+ 行 `if-else` 简化为 50 行 `switch` + 组件调用
+- **收益**：
+  - ✅ 职责分离：设计器逻辑 vs 渲染细节
+  - ✅ 开闭原则：添加新容器只需创建新文件
+  - ✅ 代码简化：FormDesigner 减少 ~150 行
+
+#### 2. **属性面板元数据驱动重构**
+- **问题**：每个容器都有独立的 PropertyPanel 组件（5个文件，~250 行重复代码）
+- **重构**：
+  - 删除所有重复的 PropertyPanel 组件（5个文件）
+  - 创建 `PropertyMetadata.cs` 定义属性元数据结构
+  - 创建通用 `PropertyEditor.razor` 组件，根据元数据动态渲染
+  - 创建 `IWidgetPropertyProvider` 服务
+- **收益**：
+  - ✅ 消除重复：5个组件 → 1个通用组件
+  - ✅ 统一体验：所有属性编辑器UI一致
+  - ✅ 易于扩展：添加新控件只需定义元数据清单
+  - ✅ 支持高级特性：条件显示、分组、嵌套属性
+
+#### 3. **面向对象重构：属性元数据归属 Widget**
+- **问题**：属性元数据集中在 `WidgetPropertyProvider` 中（违反封装原则）
+- **重构**：
+  - 在 `DraggableWidget` 基类添加虚方法 `GetPropertyMetadata()`
+  - 每个具体 Widget 类重写此方法，定义自己的属性元数据
+  - `WidgetPropertyProvider` 简化为仅 1 行：`widget.GetPropertyMetadata()`
+- **收益**：
+  - ✅ 封装原则：每个 Widget 是自己属性的提供者
+  - ✅ 单一职责：属性定义与类在一起
+  - ✅ 开闭原则：添加新 Widget 无需修改 Provider
+  - ✅ 代码简化：WidgetPropertyProvider 从 143 行 → 34 行（-76%）
+
+#### 4. **多语言国际化完善**
+- **问题**：代码中硬编码了大量中文（属性标签、选项值、分组名等）
+- **修复**：
+  - 所有属性标签改为多语言键（`PROP_*` 前缀）
+  - `PropertyEditor.razor` 使用 `I18n.T()` 进行翻译
+  - 添加 42 个新的多语言资源：
+    - 属性标签：`PROP_COLUMNS`, `PROP_GAP`, `PROP_TITLE` 等
+    - 选项值：`PROP_DIRECTION_ROW`, `PROP_BORDER_SOLID` 等
+    - 分组：`PROP_GROUP_LAYOUT`
+    - 占位符：`PROP_PANEL_TITLE_PLACEHOLDER` 等
+- **收益**：
+  - ✅ 代码中不再有硬编码的中文
+  - ✅ 支持多语言切换（中文/日文/英文）
+  - ✅ 符合国际化最佳实践
+
+### 修复 (Fixed)
+- **容器布局"内外分离"视觉BUG**：
+  - 问题：容器内容区域使用 `min-height`，无法填充整个容器空间
+  - 修复：所有容器改用 `display:flex; flex-direction:column;` + `flex:1` 布局
+  - 影响：Grid, Panel, Section, Frame, TabContainer, GenericContainer
+
+### 文档 (Documentation)
+- 删除重复的模块级 README（`ContainerRenderers/README.md`）
+- 更新主设计文档，新增「容器设计态渲染器」章节
+- 遵循文档集中管理原则
+
+### 技术债务清理
+- 删除 5 个重复的 PropertyPanel 组件（~250 行）
+- 删除 `WidgetPropertyProvider` 中的所有静态方法（~109 行）
+- 总计清理约 359 行重复代码
+
+---
+
 ## [0.5.4] - 2025-11-06
 
 ### 新增 (Added)
