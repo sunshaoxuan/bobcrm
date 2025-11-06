@@ -37,7 +37,7 @@ public class RadioWidget : TextWidget
                     new() { Value = "vertical", Label = "PROP_DIRECTION_COLUMN" }
                 }
             },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 }
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
     }
 }

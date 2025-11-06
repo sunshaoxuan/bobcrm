@@ -3,7 +3,7 @@
 @using System.Reflection
 @inject BobCrm.App.Services.I18nService I18n
 
-@* 通用属性编辑器 - 根据元数据动态渲染 *@
+@* 通用属性编辑器 - 根据元数据动态渲染，支持Width属性根据单位动态调整Max值 *@
 
 @if (Properties != null && Properties.Any())
 {

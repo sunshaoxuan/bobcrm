@@ -36,7 +36,7 @@ public class TextareaWidget : TextWidget
             new() { PropertyPath = "MaxLength", Label = "LBL_MAX_LENGTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 10000 },
             new() { PropertyPath = "Rows", Label = "PROP_ROWS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 2, Max = 20 },
             new() { PropertyPath = "AutoSize", Label = "PROP_AUTO_SIZE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 }
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
     }
 }

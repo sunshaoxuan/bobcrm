@@ -29,7 +29,7 @@ public class LabelWidget : TextWidget
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Text", Label = "PROP_TEXT", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Bold", Label = "PROP_BOLD", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 }
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
     }
 }

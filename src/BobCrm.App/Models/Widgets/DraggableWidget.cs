@@ -126,6 +126,16 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     public virtual bool CanEditProperty(string propertyName) => true;
 
     /// <summary>
+    /// 获取宽度的最大值（子类可以重写）
+    /// 默认返回100（适用于百分比单位）
+    /// </summary>
+    public virtual int GetMaxWidth()
+    {
+        // 根据单位动态返回最大值
+        return WidthUnit == "%" ? 100 : 2000; // % 最大100，px 最大2000
+    }
+
+    /// <summary>
     /// 获取控件的属性元数据列表
     /// 子类应重写此方法以提供自己的属性定义
     /// </summary>
@@ -135,7 +145,7 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 },
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() },
             new() { PropertyPath = "Visible", Label = "PROP_VISIBLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean }
         };
     }

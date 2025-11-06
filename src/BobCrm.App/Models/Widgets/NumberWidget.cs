@@ -39,7 +39,7 @@ public class NumberWidget : TextWidget
             new() { PropertyPath = "MaxValue", Label = "PROP_MAX_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number },
             new() { PropertyPath = "Step", Label = "PROP_STEP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 100 },
             new() { PropertyPath = "AllowDecimal", Label = "PROP_ALLOW_DECIMAL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 }
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
     }
 }

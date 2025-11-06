@@ -25,7 +25,7 @@ public class CalendarWidget : TextWidget
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Format", Label = "PROP_DATE_FORMAT", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text, Placeholder = "yyyy-MM-dd" },
             new() { PropertyPath = "ShowTime", Label = "PROP_SHOW_TIME", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
-            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 100 }
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
     }
 }
