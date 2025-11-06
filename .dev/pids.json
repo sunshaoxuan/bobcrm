@@ -1,14 +1,14 @@
 {
   "appDll": "C:\\workspace\\bobcrm\\src\\BobCrm.App\\bin\\Debug\\net8.0\\BobCrm.App.dll",
-  "startedAt": "2025-11-06T16:12:27",
+  "startedAt": "2025-11-06T16:28:59",
   "api": {
     "ShellId": null,
-    "DotnetId": 47816
+    "DotnetId": 27860
   },
   "configuration": "Debug",
   "apiDll": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\bin\\Debug\\net8.0\\BobCrm.Api.dll",
   "app": {
     "ShellId": null,
-    "DotnetId": 36232
+    "DotnetId": 44636
   }
 }

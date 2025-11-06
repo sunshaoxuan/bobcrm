@@ -125,7 +125,7 @@ else
                             }
 
                             <div class="widget-content" style="width:100%; pointer-events:none">
-                                @RenderDesignWidget(widget)
+                                @RenderWidgetVisual(widget)
                             </div>
                         </div>
                     }
@@ -630,6 +630,27 @@ else
         <PropertyEditor Properties="@properties" Widget="@widget" OnPropertyChanged="UpdateWidget" />
     };
 
+    /// <summary>
+    /// 渲染组件的纯视觉外观（仅用于顶层包裹层内部，不包含交互功能）
+    /// </summary>
+    private RenderFragment RenderWidgetVisual(DraggableWidget widget) => __builder =>
+    {
+        if (widget is ContainerWidget container)
+        {
+            // 容器：直接渲染容器设计外观
+            @RenderContainerDesign(container)
+        }
+        else
+        {
+            // 普通组件：渲染简单的视觉占位
+            <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
+            <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
+        }
+    };
+
+    /// <summary>
+    /// 渲染组件的完整设计态（包含交互层，用于容器内子组件的递归渲染）
+    /// </summary>
     private RenderFragment RenderDesignWidget(DraggableWidget widget) => __builder =>
     {
         var isSelected = selectedWidget == widget;
