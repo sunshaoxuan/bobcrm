@@ -42,12 +42,23 @@
                     break;
                 
                 case PropertyEditorType.Number:
-                    <AntDesign.InputNumber TValue="int"
-                                          Value="@(Convert.ToInt32(GetPropertyValue(Widget, prop.PropertyPath) ?? 0))"
-                                          Min="@(prop.Min ?? 0)"
-                                          Max="@(prop.Max ?? 100)"
-                                          Style="width:100%"
-                                          OnChange="@((int val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    {
+                        // 渲染数字输入框，Max 为 null 时不限制
+                        var numberInput = new RenderFragment(__builder =>
+                        {
+                            __builder.OpenComponent<AntDesign.InputNumber<int>>(0);
+                            __builder.AddAttribute(1, "Value", Convert.ToInt32(GetPropertyValue(Widget, prop.PropertyPath) ?? 0));
+                            __builder.AddAttribute(2, "Min", prop.Min ?? 0);
+                            if (prop.Max.HasValue)
+                            {
+                                __builder.AddAttribute(3, "Max", prop.Max.Value);
+                            }
+                            __builder.AddAttribute(4, "Style", "width:100%");
+                            __builder.AddAttribute(5, "OnChange", Microsoft.AspNetCore.Components.EventCallback.Factory.Create<int>(this, val => SetPropertyValue(Widget, prop.PropertyPath, val)));
+                            __builder.CloseComponent();
+                        });
+                        @numberInput
+                    }
                     break;
                 
                 case PropertyEditorType.Boolean:

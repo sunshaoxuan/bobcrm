@@ -127,12 +127,12 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
 
     /// <summary>
     /// 获取宽度的最大值（子类可以重写）
-    /// 默认返回100（适用于百分比单位）
     /// </summary>
-    public virtual int GetMaxWidth()
+    public virtual int? GetMaxWidth()
     {
-        // 根据单位动态返回最大值
-        return WidthUnit == "%" ? 100 : 2000; // % 最大100，px 最大2000
+        // % 模式：限制为 100
+        // px 模式：不限制（返回 null 表示无限制，由画布自然约束）
+        return WidthUnit == "%" ? 100 : null;
     }
 
     /// <summary>
