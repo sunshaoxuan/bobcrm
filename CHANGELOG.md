@@ -117,6 +117,26 @@
     - ✅ 不再有 magic number（2000）
     - ✅ 符合单位语义：百分比是相对单位（需约束），像素是绝对单位（灵活）
 
+- **PropertyEditor Select 组件类型转换异常（严重BUG修复）**：
+  - **问题1 - 类型转换错误**：
+    - Select 配置：`TItem="PropertyOption"`, `TItemValue="string"`
+    - `OnSelectedItemChanged` 接收 `PropertyOption` 类型
+    - 导致运行时类型转换异常：`Invalid cast from String to PropertyOption`
+  - **问题2 - 级联失效（Circuit 断开）**：
+    - Blazor Server 特性：C# 未处理异常导致 SignalR 连接断开
+    - 一个组件错误导致整个页面 Circuit 断开
+    - 后续所有交互失效：`No interop methods are registered for renderer 1`
+    - 用户体验：添加第二个容器时崩溃，页面完全失效
+  - **修复**：
+    - 简化 Select 为纯字符串类型：`TItem="string"`, `TItemValue="string"`
+    - `OnSelectedItemChanged` 接收 `string` 参数
+    - `SelectOption` 也使用 `string` 类型
+  - **效果**：
+    - ✅ 不再有类型转换异常
+    - ✅ 可以添加多个容器和组件
+    - ✅ 属性面板下拉选择稳定工作
+    - ✅ Circuit 保持连接，页面不再崩溃
+
 ### 文档 (Documentation)
 - 删除重复的模块级 README（`ContainerRenderers/README.md`）
 - 更新主设计文档，新增「容器设计态渲染器」章节
