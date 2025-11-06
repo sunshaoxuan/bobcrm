@@ -46,10 +46,13 @@ public static class EntityMetadataEndpoints
             return Results.Ok(entities.Select(e => new
             {
                 e.EntityType,
+                e.EntityName,
+                e.EntityRoute,
                 e.DisplayNameKey,
                 e.DescriptionKey,
                 e.ApiEndpoint,
                 e.IsEnabled,
+                e.IsRootEntity,
                 e.Icon,
                 e.Category,
                 e.Order
