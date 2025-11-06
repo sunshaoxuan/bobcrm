@@ -697,14 +697,14 @@ else
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 外层 div 只负责交互（拖拽、选中），不添加视觉边框
-            // pointer-events:none 让拖放事件能穿透到内部的 frame-drop-zone
             // 注意：不使用 container-child-widget 类，避免 CSS 规则干扰内部 frame-drop-zone
+            // 移除 pointer-events:none，让外层div能正常接收拖拽事件
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
                  draggable="true"
                  data-widget-id="@container.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:none;">
+                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
                 @if (isSelected)
                 {
                     <div style="position:absolute; top:-28px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10; pointer-events:auto; cursor:pointer;">
