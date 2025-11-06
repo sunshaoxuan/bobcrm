@@ -318,6 +318,7 @@ else
     private DraggableWidget? draggedWidget;
     private DraggableWidget? draggedParentContainer;
     private bool dropSucceeded = false;
+    private bool isDragging = false; // 全局拖拽状态，用于控制容器wrapper的pointer-events
 
     // Tab管理
     private readonly TabStateManager tabStateManager = new();
@@ -334,6 +335,9 @@ else
 
         try
         {
+            // 0. 初始化全局拖放钩子（添加is-dragging类到body，控制pointer-events）
+            await JS.InvokeVoidAsync("bobcrm.initDragDrop");
+
             // 1. 加载可用字段列表（设计器必需）
             await LoadAvailableFields();
 
@@ -346,7 +350,7 @@ else
             {
                 await LoadTemplate();
             }
-            
+
             loading = false;
             await InvokeAsync(StateHasChanged);
         }
@@ -697,12 +701,13 @@ else
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 策略：
-            // - 未选中时：pointer-events:auto，可以点击选中容器，但会阻止内部drop（这是可接受的，因为用户看不到拖放区域）
-            // - 已选中时：pointer-events:none，拖放事件穿透到内部frame-drop-zone，但交互元素用auto保持功能
+            // - 未拖拽且未选中时：pointer-events:auto，可以点击选中容器
+            // - 拖拽中或已选中时：pointer-events:none，拖放事件穿透到内部frame-drop-zone
+            // - 交互元素（拖拽手柄、删除按钮、resize handle）单独设置pointer-events:auto保持功能
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
                  data-widget-id="@container.Id"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:@(isSelected ? "none" : "auto");">
+                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:@(isSelected || isDragging ? "none" : "auto");">
                 @if (isSelected)
                 {
                     @* 标签栏：包含容器名称、拖拽手柄和删除按钮 *@
@@ -818,6 +823,8 @@ else
     {
         dropSucceeded = false;
         draggedDefinition = definition;
+        isDragging = true; // 设置拖拽状态，让容器wrapper变成pointer-events:none
+        StateHasChanged(); // 立即更新UI
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnDragStart: {definition.Type}"); } catch { }
     }
 
@@ -826,6 +833,8 @@ else
         dropSucceeded = false;
         draggedWidget = widget;
         draggedParentContainer = WidgetNavigationHelper.FindParentContainer(layoutWidgets, widget);
+        isDragging = true; // 设置拖拽状态，让容器wrapper变成pointer-events:none
+        StateHasChanged(); // 立即更新UI
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnWidgetDragStart: {widget.Id}"); } catch { }
     }
 
@@ -855,6 +864,7 @@ else
             draggedWidget = null;
         }
         dropSucceeded = false;
+        isDragging = false; // 重置拖拽状态，让容器wrapper恢复pointer-events
         await InvokeAsync(StateHasChanged);
     }
 
