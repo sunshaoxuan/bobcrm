@@ -47,28 +47,33 @@
 - **问题**：属性元数据集中在 `WidgetPropertyProvider` 中（违反封装原则）
 - **重构**：
   - 在 `DraggableWidget` 基类添加虚方法 `GetPropertyMetadata()`
-  - 每个具体 Widget 类重写此方法，定义自己的属性元数据
+  - **所有 15 个 Widget 类**重写此方法，定义自己的属性元数据：
+    - **容器组件** (5个): GridWidget, PanelWidget, SectionWidget, FrameWidget, TabContainerWidget
+    - **普通组件** (10个): TextboxWidget, NumberWidget, SelectWidget, TextareaWidget, ButtonWidget, LabelWidget, CalendarWidget, CheckboxWidget, RadioWidget, ListboxWidget
   - `WidgetPropertyProvider` 简化为仅 1 行：`widget.GetPropertyMetadata()`
 - **收益**：
   - ✅ 封装原则：每个 Widget 是自己属性的提供者
   - ✅ 单一职责：属性定义与类在一起
   - ✅ 开闭原则：添加新 Widget 无需修改 Provider
   - ✅ 代码简化：WidgetPropertyProvider 从 143 行 → 34 行（-76%）
+  - ✅ 架构完整性：所有 Widget 类型都实现了属性元数据
 
 #### 4. **多语言国际化完善**
 - **问题**：代码中硬编码了大量中文（属性标签、选项值、分组名等）
 - **修复**：
   - 所有属性标签改为多语言键（`PROP_*` 前缀）
   - `PropertyEditor.razor` 使用 `I18n.T()` 进行翻译
-  - 添加 42 个新的多语言资源：
-    - 属性标签：`PROP_COLUMNS`, `PROP_GAP`, `PROP_TITLE` 等
-    - 选项值：`PROP_DIRECTION_ROW`, `PROP_BORDER_SOLID` 等
-    - 分组：`PROP_GROUP_LAYOUT`
-    - 占位符：`PROP_PANEL_TITLE_PLACEHOLDER` 等
+  - 添加 **62 个**新的多语言资源：
+    - **容器属性** (28个): `PROP_COLUMNS`, `PROP_GAP`, `PROP_TITLE`, `PROP_COLLAPSIBLE` 等
+    - **普通组件属性** (20个): `PROP_TEXT`, `PROP_BOLD`, `PROP_MIN_VALUE`, `PROP_STEP`, `PROP_ROWS`, `PROP_AUTO_SIZE` 等
+    - **选项值** (14个): `PROP_DIRECTION_ROW`, `PROP_BORDER_SOLID`, `PROP_BUTTON_PRIMARY` 等
+    - **分组**: `PROP_GROUP_LAYOUT`
+    - **占位符**: `PROP_PANEL_TITLE_PLACEHOLDER`, `PROP_SECTION_TITLE_PLACEHOLDER`
 - **收益**：
   - ✅ 代码中不再有硬编码的中文
   - ✅ 支持多语言切换（中文/日文/英文）
   - ✅ 符合国际化最佳实践
+  - ✅ 覆盖所有 Widget 类型的属性
 
 ### 修复 (Fixed)
 - **容器布局"内外分离"视觉BUG**：
