@@ -193,20 +193,21 @@ body.is-dragging .container-child-widget > * {
     pointer-events: none !important;
 }
 
-/* 拖拽时：wrapper内的frame-drop-zone必须保持可接收事件 */
-body.is-dragging .frame-drop-zone {
+/* 拖拽时：frame-drop-zone必须保持可接收事件（提高特异性避免被覆盖）*/
+body.is-dragging .frame-drop-zone,
+body.is-dragging .container-child-wrapper > .frame-drop-zone {
     pointer-events: auto !important;
 }
 
-/* 拖拽时：frame-drop-zone内部的子控件wrapper禁用pointer-events，让事件命中控件外壳 */
+/* 拖拽时：frame-drop-zone内部的子控件wrapper保持可接收事件 */
 body.is-dragging .frame-drop-zone > .container-child-widget,
 body.is-dragging .frame-drop-zone > .container-child-wrapper {
-    pointer-events: auto !important; /* 外壳保持可接收事件 */
+    pointer-events: auto !important;
 }
 
-/* 拖拽时：控件外壳内部的内容禁用pointer-events */
-body.is-dragging .frame-drop-zone > .container-child-widget > *,
-body.is-dragging .frame-drop-zone > .container-child-wrapper > * {
+/* 拖拽时：控件wrapper内部的内容禁用pointer-events，但不包括frame-drop-zone */
+body.is-dragging .frame-drop-zone > .container-child-widget > *:not(.frame-drop-zone),
+body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop-zone) {
     pointer-events: none !important;
 }
 
