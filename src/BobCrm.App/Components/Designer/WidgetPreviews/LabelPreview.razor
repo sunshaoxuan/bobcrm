@@ -1,0 +1,11 @@
+@* Label 设计态预览组件 *@
+@using BobCrm.App.Models.Widgets
+
+<div style="padding:4px 0; color:#333; font-size:13px; font-weight:@(Widget?.Bold == true ? "600" : "400")">
+    @(string.IsNullOrWhiteSpace(Widget?.Text) ? Widget?.Label : Widget?.Text)
+</div>
+
+@code {
+    [Parameter] public LabelWidget? Widget { get; set; }
+}
+
