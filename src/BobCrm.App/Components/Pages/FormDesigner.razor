@@ -881,14 +881,20 @@ else
         {
             await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnContainerDrop start: container={targetContainer.Id}, type={targetContainer.Type}");
 
+            // ⚠️ 关键：在任何await之前保存拖拽状态到局部变量
+            // 避免竞态条件：在await期间浏览器触发dragend，OnDragEnd清空字段
+            var definition = draggedDefinition;
+            var movingWidget = draggedWidget;
+            var originalParent = draggedParentContainer;
+
             // 使用 JavaScript 计算插入索引
             var containerSelector = $".frame-drop-zone[data-container-id=\"{targetContainer.Id}\"]";
             var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", containerSelector, e.ClientX, e.ClientY);
 
             // 从工具箱拖入新组件
-            if (draggedDefinition != null)
+            if (definition != null)
             {
-                var newWidget = WidgetRegistry.Create(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
+                var newWidget = WidgetRegistry.Create(definition.Type, I18n.T(definition.LabelKey));
 
                 // 初始化 Children 列表
                 if (targetContainer.Children == null)
@@ -914,16 +920,16 @@ else
                 await InvokeAsync(StateHasChanged);
             }
             // 移动已有组件到容器
-            else if (draggedWidget != null)
+            else if (movingWidget != null)
             {
                 // 检查是否在同一个容器内移动
-                var isSameContainer = draggedParentContainer != null && ReferenceEquals(draggedParentContainer, targetContainer);
+                var isSameContainer = originalParent != null && ReferenceEquals(originalParent, targetContainer);
 
                 // 从原位置移除
-                if (draggedParentContainer != null && draggedParentContainer.Children != null)
+                if (originalParent != null && originalParent.Children != null)
                 {
-                    var oldIndex = draggedParentContainer.Children.IndexOf(draggedWidget);
-                    draggedParentContainer.Children.Remove(draggedWidget);
+                    var oldIndex = originalParent.Children.IndexOf(movingWidget);
+                    originalParent.Children.Remove(movingWidget);
 
                     // 如果在同一个容器内移动，需要调整插入索引
                     if (isSameContainer && oldIndex >= 0 && insertIndex > oldIndex)
@@ -934,7 +940,7 @@ else
                 // 从顶层 layoutWidgets 中移除
                 else
                 {
-                    layoutWidgets.Remove(draggedWidget);
+                    layoutWidgets.Remove(movingWidget);
                 }
 
                 // 初始化 Children 列表
@@ -946,11 +952,11 @@ else
                 // 在指定位置插入
                 if (insertIndex >= 0 && insertIndex < targetContainer.Children.Count)
                 {
-                    targetContainer.Children.Insert(insertIndex, draggedWidget);
+                    targetContainer.Children.Insert(insertIndex, movingWidget);
                 }
                 else
                 {
-                    targetContainer.Children.Add(draggedWidget);
+                    targetContainer.Children.Add(movingWidget);
                 }
 
                 dropSucceeded = true;
