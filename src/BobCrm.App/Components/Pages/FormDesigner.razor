@@ -722,22 +722,22 @@ else
     {
         if (container is GridWidget grid)
         {
-            <div style="padding:@(grid.Padding)px; background:@grid.BackgroundColor; border:@(grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:120px">
-                <div style="display:grid; grid-template-columns:repeat(@grid.Columns, 1fr); gap:@(grid.Gap)px; min-height:100px"
+            <div style="padding:@(grid.Padding)px; background:@grid.BackgroundColor; border:@(grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:150px; display:flex; flex-direction:column;">
+                <div style="flex:1; display:grid; grid-template-columns:repeat(@grid.Columns, 1fr); gap:@(grid.Gap)px;"
                      @ondrop="@((e) => OnContainerDrop(e, grid))" @ondrop:preventDefault @ondrop:stopPropagation
                      @ondragover="OnDragOver" @ondragover:preventDefault>
                     @if (grid.Children?.Any() == true)
                     {
                         @foreach (var child in grid.Children)
                         {
-                            <div class="grid-cell" style="border:1px dashed #d9d9d9; padding:8px; background:#fff">
+                            <div class="grid-cell" style="border:1px dashed #d9d9d9; padding:8px; background:#fff; display:flex; flex-direction:column;">
                                 @RenderDesignWidget(child)
                             </div>
                         }
                     }
                     else
                     {
-                        <div style="grid-column:1/-1; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                        <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none; min-height:100px;">
                             拖入组件到网格
                         </div>
                     }
@@ -746,14 +746,14 @@ else
         }
         else if (container is PanelWidget panel)
         {
-            <div style="border:@(panel.ContainerLayout.BorderWidth)px @(panel.ContainerLayout.BorderStyle) @(panel.ContainerLayout.BorderColor); border-radius:@(panel.ContainerLayout.BorderRadius)px; background:@(panel.ContainerLayout.BackgroundColor); min-height:100px">
+            <div style="border:@(panel.ContainerLayout.BorderWidth)px @(panel.ContainerLayout.BorderStyle) @(panel.ContainerLayout.BorderColor); border-radius:@(panel.ContainerLayout.BorderRadius)px; background:@(panel.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column;">
                 @if (panel.ShowHeader)
                 {
-                    <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px">
+                    <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px; flex-shrink:0;">
                         @(string.IsNullOrWhiteSpace(panel.Title) ? "面板标题" : panel.Title)
                     </div>
                 }
-                <div style="padding:@(panel.ContainerLayout.Padding)px; display:flex; flex-direction:@(panel.ContainerLayout.FlexDirection); flex-wrap:@(panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(panel.ContainerLayout.Gap)px; min-height:60px"
+                <div style="flex:1; padding:@(panel.ContainerLayout.Padding)px; display:flex; flex-direction:@(panel.ContainerLayout.FlexDirection); flex-wrap:@(panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(panel.ContainerLayout.Gap)px;"
                      @ondrop="@((e) => OnContainerDrop(e, panel))" @ondrop:preventDefault @ondrop:stopPropagation
                      @ondragover="OnDragOver" @ondragover:preventDefault>
                     @if (panel.Children?.Any() == true)
@@ -765,7 +765,7 @@ else
                     }
                     else
                     {
-                        <div style="width:100%; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                        <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
                             拖入组件到面板
                         </div>
                     }
@@ -774,10 +774,10 @@ else
         }
         else if (container is SectionWidget section)
         {
-            <div style="border:@(section.ContainerLayout.BorderWidth)px @(section.ContainerLayout.BorderStyle) @(section.ContainerLayout.BorderColor); border-radius:@(section.ContainerLayout.BorderRadius)px; background:@(section.ContainerLayout.BackgroundColor); min-height:100px">
+            <div style="border:@(section.ContainerLayout.BorderWidth)px @(section.ContainerLayout.BorderStyle) @(section.ContainerLayout.BorderColor); border-radius:@(section.ContainerLayout.BorderRadius)px; background:@(section.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column;">
                 @if (section.ShowTitle)
                 {
-                    <div style="padding:8px 12px; border-bottom:1px solid #d9d9d9; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center">
+                    <div style="padding:8px 12px; border-bottom:1px solid #d9d9d9; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                         <span>@(string.IsNullOrWhiteSpace(section.Title) ? "分组标题" : section.Title)</span>
                         @if (section.Collapsible)
                         {
@@ -785,7 +785,7 @@ else
                         }
                     </div>
                 }
-                <div style="padding:@(section.ContainerLayout.Padding)px; display:flex; flex-direction:@(section.ContainerLayout.FlexDirection); flex-wrap:@(section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(section.ContainerLayout.Gap)px; min-height:60px"
+                <div style="flex:1; padding:@(section.ContainerLayout.Padding)px; display:flex; flex-direction:@(section.ContainerLayout.FlexDirection); flex-wrap:@(section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(section.ContainerLayout.Gap)px;"
                      @ondrop="@((e) => OnContainerDrop(e, section))" @ondrop:preventDefault @ondrop:stopPropagation
                      @ondragover="OnDragOver" @ondragover:preventDefault>
                     @if (section.Children?.Any() == true)
@@ -797,7 +797,7 @@ else
                     }
                     else
                     {
-                        <div style="width:100%; text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                        <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
                             拖入组件到分组
                         </div>
                     }
@@ -806,7 +806,7 @@ else
         }
         else if (container is FrameWidget frame)
         {
-            <div style="border:@(frame.BorderWidth)px @(frame.BorderStyle) @(frame.BorderColor); background:@(frame.BackgroundColor); padding:@(frame.Padding)px; min-height:100px"
+            <div style="border:@(frame.BorderWidth)px @(frame.BorderStyle) @(frame.BorderColor); background:@(frame.BackgroundColor); padding:@(frame.Padding)px; min-height:150px; display:flex; flex-direction:column;"
                  @ondrop="@((e) => OnContainerDrop(e, frame))" @ondrop:preventDefault @ondrop:stopPropagation
                  @ondragover="OnDragOver" @ondragover:preventDefault>
                 @if (frame.Children?.Any() == true)
@@ -818,7 +818,7 @@ else
                 }
                 else
                 {
-                    <div style="text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
                         拖入组件到框架
                     </div>
                 }
@@ -826,13 +826,13 @@ else
         }
         else if (container is TabContainerWidget tabbox)
         {
-            <div style="border:1px solid #e5e5e5; background:#fff; min-height:120px">
-                <div style="border-bottom:1px solid #e5e5e5; padding:8px 12px; background:#fafafa; display:flex; gap:8px; pointer-events:none">
+            <div style="border:1px solid #e5e5e5; background:#fff; min-height:150px; display:flex; flex-direction:column;">
+                <div style="border-bottom:1px solid #e5e5e5; padding:8px 12px; background:#fafafa; display:flex; gap:8px; pointer-events:none; flex-shrink:0;">
                     <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:4px 4px 0 0; font-size:12px">标签1</div>
                     <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签2</div>
                     <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签3</div>
                 </div>
-                <div style="padding:16px; min-height:60px"
+                <div style="flex:1; padding:16px; display:flex; flex-direction:column;"
                      @ondrop="@((e) => OnContainerDrop(e, tabbox))" @ondrop:preventDefault @ondrop:stopPropagation
                      @ondragover="OnDragOver" @ondragover:preventDefault>
                     @if (tabbox.Children?.Any() == true)
@@ -844,7 +844,7 @@ else
                     }
                     else
                     {
-                        <div style="text-align:center; padding:20px; color:#999; font-size:12px; pointer-events:none">
+                        <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
                             拖入Tab组件到标签容器
                         </div>
                     }
@@ -854,18 +854,22 @@ else
         else
         {
             // 通用容器渲染
-            <div style="border:1px dashed #ccc; padding:12px; background:#fafafa; min-height:80px">
-                <div style="font-size:11px; color:#999; margin-bottom:8px">容器: @container.Type</div>
+            <div style="border:1px dashed #ccc; padding:12px; background:#fafafa; min-height:150px; display:flex; flex-direction:column;"
+                 @ondrop="@((e) => OnContainerDrop(e, container))" @ondrop:preventDefault @ondrop:stopPropagation
+                 @ondragover="OnDragOver" @ondragover:preventDefault>
+                <div style="font-size:11px; color:#999; margin-bottom:8px; flex-shrink:0;">容器: @container.Type</div>
                 @if (container.Children?.Any() == true)
                 {
-                    @foreach (var child in container.Children)
-                    {
-                        @RenderDesignWidget(child)
-                    }
+                    <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                        @foreach (var child in container.Children)
+                        {
+                            @RenderDesignWidget(child)
+                        }
+                    </div>
                 }
                 else
                 {
-                    <div style="text-align:center; padding:20px; color:#999; font-size:12px">
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
                         拖入组件到此容器
                     </div>
                 }
