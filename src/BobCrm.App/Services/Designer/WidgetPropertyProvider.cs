@@ -34,11 +34,11 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "Columns", Label = "列数", EditorType = PropertyEditorType.Number, Min = 1, Max = 12 },
-            new() { PropertyPath = "Gap", Label = "间距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 },
-            new() { PropertyPath = "Padding", Label = "内边距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 },
-            new() { PropertyPath = "BackgroundColor", Label = "背景色", EditorType = PropertyEditorType.Color, Placeholder = "#fafafa" },
-            new() { PropertyPath = "Bordered", Label = "显示边框", EditorType = PropertyEditorType.Boolean }
+            new() { PropertyPath = "Columns", Label = "PROP_COLUMNS", EditorType = PropertyEditorType.Number, Min = 1, Max = 12 },
+            new() { PropertyPath = "Gap", Label = "PROP_GAP", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 },
+            new() { PropertyPath = "Padding", Label = "PROP_PADDING", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 },
+            new() { PropertyPath = "BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = PropertyEditorType.Color, Placeholder = "#fafafa" },
+            new() { PropertyPath = "Bordered", Label = "PROP_SHOW_BORDER", EditorType = PropertyEditorType.Boolean }
         };
     }
 
@@ -46,18 +46,18 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "Title", Label = "标题", EditorType = PropertyEditorType.Text, Placeholder = "面板标题" },
-            new() { PropertyPath = "ShowHeader", Label = "显示标题", EditorType = PropertyEditorType.Boolean },
-            new() { PropertyPath = "ContainerLayout.Gap", Label = "间距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "布局设置" },
-            new() { PropertyPath = "ContainerLayout.Padding", Label = "内边距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "布局设置" },
-            new() { PropertyPath = "ContainerLayout.FlexDirection", Label = "方向", EditorType = PropertyEditorType.Select, Group = "布局设置", 
+            new() { PropertyPath = "Title", Label = "PROP_TITLE", EditorType = PropertyEditorType.Text, Placeholder = "PROP_PANEL_TITLE_PLACEHOLDER" },
+            new() { PropertyPath = "ShowHeader", Label = "PROP_SHOW_HEADER", EditorType = PropertyEditorType.Boolean },
+            new() { PropertyPath = "ContainerLayout.Gap", Label = "PROP_GAP", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.Padding", Label = "PROP_PADDING", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.FlexDirection", Label = "PROP_FLEX_DIRECTION", EditorType = PropertyEditorType.Select, Group = "PROP_GROUP_LAYOUT", 
                 Options = new List<PropertyOption> 
                 { 
-                    new() { Value = "row", Label = "横向" },
-                    new() { Value = "column", Label = "纵向" }
+                    new() { Value = "row", Label = "PROP_DIRECTION_ROW" },
+                    new() { Value = "column", Label = "PROP_DIRECTION_COLUMN" }
                 }
             },
-            new() { PropertyPath = "ContainerLayout.FlexWrap", Label = "自动换行", EditorType = PropertyEditorType.Boolean, Group = "布局设置" }
+            new() { PropertyPath = "ContainerLayout.FlexWrap", Label = "PROP_FLEX_WRAP", EditorType = PropertyEditorType.Boolean, Group = "PROP_GROUP_LAYOUT" }
         };
     }
 
@@ -65,14 +65,14 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "Title", Label = "标题", EditorType = PropertyEditorType.Text, Placeholder = "分组标题" },
-            new() { PropertyPath = "ShowTitle", Label = "显示标题", EditorType = PropertyEditorType.Boolean },
-            new() { PropertyPath = "Collapsible", Label = "可折叠", EditorType = PropertyEditorType.Boolean },
-            new() { PropertyPath = "Collapsed", Label = "默认折叠", EditorType = PropertyEditorType.Boolean, VisibleWhen = "Collapsible", VisibleWhenValue = true },
-            new() { PropertyPath = "ContainerLayout.Gap", Label = "间距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "布局设置" },
-            new() { PropertyPath = "ContainerLayout.Padding", Label = "内边距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "布局设置" },
-            new() { PropertyPath = "ContainerLayout.BackgroundColor", Label = "背景色", EditorType = PropertyEditorType.Color, Placeholder = "#f5f5f5", Group = "布局设置" },
-            new() { PropertyPath = "ContainerLayout.BorderRadius", Label = "圆角 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 24, Group = "布局设置" }
+            new() { PropertyPath = "Title", Label = "PROP_TITLE", EditorType = PropertyEditorType.Text, Placeholder = "PROP_SECTION_TITLE_PLACEHOLDER" },
+            new() { PropertyPath = "ShowTitle", Label = "PROP_SHOW_TITLE", EditorType = PropertyEditorType.Boolean },
+            new() { PropertyPath = "Collapsible", Label = "PROP_COLLAPSIBLE", EditorType = PropertyEditorType.Boolean },
+            new() { PropertyPath = "Collapsed", Label = "PROP_COLLAPSED_DEFAULT", EditorType = PropertyEditorType.Boolean, VisibleWhen = "Collapsible", VisibleWhenValue = true },
+            new() { PropertyPath = "ContainerLayout.Gap", Label = "PROP_GAP", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.Padding", Label = "PROP_PADDING", EditorType = PropertyEditorType.Number, Min = 0, Max = 48, Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = PropertyEditorType.Color, Placeholder = "#f5f5f5", Group = "PROP_GROUP_LAYOUT" },
+            new() { PropertyPath = "ContainerLayout.BorderRadius", Label = "PROP_BORDER_RADIUS", EditorType = PropertyEditorType.Number, Min = 0, Max = 24, Group = "PROP_GROUP_LAYOUT" }
         };
     }
 
@@ -80,19 +80,19 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "BorderStyle", Label = "边框样式", EditorType = PropertyEditorType.Select,
+            new() { PropertyPath = "BorderStyle", Label = "PROP_BORDER_STYLE", EditorType = PropertyEditorType.Select,
                 Options = new List<PropertyOption>
                 {
-                    new() { Value = "solid", Label = "实线" },
-                    new() { Value = "dashed", Label = "虚线" },
-                    new() { Value = "dotted", Label = "点线" },
-                    new() { Value = "none", Label = "无边框" }
+                    new() { Value = "solid", Label = "PROP_BORDER_SOLID" },
+                    new() { Value = "dashed", Label = "PROP_BORDER_DASHED" },
+                    new() { Value = "dotted", Label = "PROP_BORDER_DOTTED" },
+                    new() { Value = "none", Label = "PROP_BORDER_NONE" }
                 }
             },
-            new() { PropertyPath = "BorderColor", Label = "边框颜色", EditorType = PropertyEditorType.Color, Placeholder = "#d9d9d9" },
-            new() { PropertyPath = "BorderWidth", Label = "边框宽度 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 10 },
-            new() { PropertyPath = "BackgroundColor", Label = "背景色", EditorType = PropertyEditorType.Color, Placeholder = "#fff" },
-            new() { PropertyPath = "Padding", Label = "内边距 (px)", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 }
+            new() { PropertyPath = "BorderColor", Label = "PROP_BORDER_COLOR", EditorType = PropertyEditorType.Color, Placeholder = "#d9d9d9" },
+            new() { PropertyPath = "BorderWidth", Label = "PROP_BORDER_WIDTH", EditorType = PropertyEditorType.Number, Min = 0, Max = 10 },
+            new() { PropertyPath = "BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = PropertyEditorType.Color, Placeholder = "#fff" },
+            new() { PropertyPath = "Padding", Label = "PROP_PADDING", EditorType = PropertyEditorType.Number, Min = 0, Max = 48 }
         };
     }
 
@@ -100,30 +100,30 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "Animated", Label = "动画效果", EditorType = PropertyEditorType.Boolean },
-            new() { PropertyPath = "Centered", Label = "居中显示", EditorType = PropertyEditorType.Boolean },
-            new() { PropertyPath = "Size", Label = "尺寸", EditorType = PropertyEditorType.Select,
+            new() { PropertyPath = "Animated", Label = "PROP_ANIMATED", EditorType = PropertyEditorType.Boolean },
+            new() { PropertyPath = "Centered", Label = "PROP_CENTERED", EditorType = PropertyEditorType.Boolean },
+            new() { PropertyPath = "Size", Label = "PROP_SIZE", EditorType = PropertyEditorType.Select,
                 Options = new List<PropertyOption>
                 {
-                    new() { Value = "small", Label = "小" },
-                    new() { Value = "default", Label = "默认" },
-                    new() { Value = "large", Label = "大" }
+                    new() { Value = "small", Label = "PROP_SIZE_SMALL" },
+                    new() { Value = "default", Label = "PROP_SIZE_DEFAULT" },
+                    new() { Value = "large", Label = "PROP_SIZE_LARGE" }
                 }
             },
-            new() { PropertyPath = "Type", Label = "类型", EditorType = PropertyEditorType.Select,
+            new() { PropertyPath = "Type", Label = "PROP_TYPE", EditorType = PropertyEditorType.Select,
                 Options = new List<PropertyOption>
                 {
-                    new() { Value = "line", Label = "线条" },
-                    new() { Value = "card", Label = "卡片" }
+                    new() { Value = "line", Label = "PROP_TAB_TYPE_LINE" },
+                    new() { Value = "card", Label = "PROP_TAB_TYPE_CARD" }
                 }
             },
-            new() { PropertyPath = "TabPosition", Label = "标签位置", EditorType = PropertyEditorType.Select,
+            new() { PropertyPath = "TabPosition", Label = "PROP_TAB_POSITION", EditorType = PropertyEditorType.Select,
                 Options = new List<PropertyOption>
                 {
-                    new() { Value = "top", Label = "顶部" },
-                    new() { Value = "bottom", Label = "底部" },
-                    new() { Value = "left", Label = "左侧" },
-                    new() { Value = "right", Label = "右侧" }
+                    new() { Value = "top", Label = "PROP_POSITION_TOP" },
+                    new() { Value = "bottom", Label = "PROP_POSITION_BOTTOM" },
+                    new() { Value = "left", Label = "PROP_POSITION_LEFT" },
+                    new() { Value = "right", Label = "PROP_POSITION_RIGHT" }
                 }
             }
         };
@@ -133,9 +133,9 @@ public class WidgetPropertyProvider : IWidgetPropertyProvider
     {
         return new List<WidgetPropertyMetadata>
         {
-            new() { PropertyPath = "Label", Label = "标签", EditorType = PropertyEditorType.Text },
-            new() { PropertyPath = "Width", Label = "宽度", EditorType = PropertyEditorType.Number, Min = 1, Max = 100 },
-            new() { PropertyPath = "Visible", Label = "可见", EditorType = PropertyEditorType.Boolean }
+            new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = PropertyEditorType.Text },
+            new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = PropertyEditorType.Number, Min = 1, Max = 100 },
+            new() { PropertyPath = "Visible", Label = "PROP_VISIBLE", EditorType = PropertyEditorType.Boolean }
         };
     }
 }

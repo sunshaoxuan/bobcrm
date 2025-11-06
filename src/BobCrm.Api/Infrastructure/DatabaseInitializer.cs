@@ -503,6 +503,49 @@ public static class DatabaseInitializer
             Ensure("LBL_WIDTH", "宽度", "幅", "Width");
             Ensure("LBL_DATA_SOURCE", "数据源", "データソース", "Data Source");
             Ensure("LBL_VISIBLE", "可见", "表示", "Visible");
+            // Property editor keys
+            Ensure("PROP_COLUMNS", "列数", "列数", "Columns");
+            Ensure("PROP_GAP", "间距 (px)", "間隔 (px)", "Gap (px)");
+            Ensure("PROP_PADDING", "内边距 (px)", "内側余白 (px)", "Padding (px)");
+            Ensure("PROP_BACKGROUND_COLOR", "背景色", "背景色", "Background Color");
+            Ensure("PROP_SHOW_BORDER", "显示边框", "枠線を表示", "Show Border");
+            Ensure("PROP_TITLE", "标题", "タイトル", "Title");
+            Ensure("PROP_SHOW_HEADER", "显示标题", "ヘッダーを表示", "Show Header");
+            Ensure("PROP_SHOW_TITLE", "显示标题", "タイトルを表示", "Show Title");
+            Ensure("PROP_COLLAPSIBLE", "可折叠", "折りたたみ可能", "Collapsible");
+            Ensure("PROP_COLLAPSED_DEFAULT", "默认折叠", "デフォルトで折りたたみ", "Collapsed by Default");
+            Ensure("PROP_BORDER_STYLE", "边框样式", "枠線スタイル", "Border Style");
+            Ensure("PROP_BORDER_COLOR", "边框颜色", "枠線の色", "Border Color");
+            Ensure("PROP_BORDER_WIDTH", "边框宽度 (px)", "枠線の幅 (px)", "Border Width (px)");
+            Ensure("PROP_BORDER_RADIUS", "圆角 (px)", "角丸 (px)", "Border Radius (px)");
+            Ensure("PROP_ANIMATED", "动画效果", "アニメーション", "Animated");
+            Ensure("PROP_CENTERED", "居中显示", "中央揃え", "Centered");
+            Ensure("PROP_SIZE", "尺寸", "サイズ", "Size");
+            Ensure("PROP_TYPE", "类型", "タイプ", "Type");
+            Ensure("PROP_TAB_POSITION", "标签位置", "タブの位置", "Tab Position");
+            Ensure("PROP_LABEL", "标签", "ラベル", "Label");
+            Ensure("PROP_GROUP_LAYOUT", "布局设置", "レイアウト設定", "Layout Settings");
+            Ensure("PROP_FLEX_DIRECTION", "方向", "方向", "Direction");
+            Ensure("PROP_FLEX_WRAP", "自动换行", "自動折り返し", "Flex Wrap");
+            // Property option values
+            Ensure("PROP_DIRECTION_ROW", "横向", "横方向", "Row");
+            Ensure("PROP_DIRECTION_COLUMN", "纵向", "縦方向", "Column");
+            Ensure("PROP_BORDER_SOLID", "实线", "実線", "Solid");
+            Ensure("PROP_BORDER_DASHED", "虚线", "破線", "Dashed");
+            Ensure("PROP_BORDER_DOTTED", "点线", "点線", "Dotted");
+            Ensure("PROP_BORDER_NONE", "无边框", "枠線なし", "None");
+            Ensure("PROP_SIZE_SMALL", "小", "小", "Small");
+            Ensure("PROP_SIZE_DEFAULT", "默认", "デフォルト", "Default");
+            Ensure("PROP_SIZE_LARGE", "大", "大", "Large");
+            Ensure("PROP_TAB_TYPE_LINE", "线条", "ライン", "Line");
+            Ensure("PROP_TAB_TYPE_CARD", "卡片", "カード", "Card");
+            Ensure("PROP_POSITION_TOP", "顶部", "上部", "Top");
+            Ensure("PROP_POSITION_BOTTOM", "底部", "下部", "Bottom");
+            Ensure("PROP_POSITION_LEFT", "左侧", "左", "Left");
+            Ensure("PROP_POSITION_RIGHT", "右侧", "右", "Right");
+            // Property placeholders
+            Ensure("PROP_PANEL_TITLE_PLACEHOLDER", "面板标题", "パネルタイトル", "Panel Title");
+            Ensure("PROP_SECTION_TITLE_PLACEHOLDER", "分组标题", "セクションタイトル", "Section Title");
             Ensure("BTN_DELETE", "删除", "削除", "Delete");
             Ensure("LBL_SELECT_COMPONENT", "选择一个组件", "コンポーネントを選択", "Select a component");
             // Menu and navigation keys

@@ -8,13 +8,13 @@ public class WidgetPropertyMetadata
     /// <summary>属性路径（支持嵌套，如 "Columns" 或 "ContainerLayout.Gap"）</summary>
     public required string PropertyPath { get; init; }
     
-    /// <summary>显示标签（多语言键或直接文本）</summary>
+    /// <summary>显示标签（多语言键，如 "PROP_COLUMNS"）</summary>
     public required string Label { get; init; }
     
     /// <summary>属性类型</summary>
     public required PropertyEditorType EditorType { get; init; }
     
-    /// <summary>分组名称（可选）</summary>
+    /// <summary>分组名称（多语言键，如 "PROP_GROUP_LAYOUT"）</summary>
     public string? Group { get; init; }
     
     /// <summary>最小值（数字类型）</summary>
@@ -35,7 +35,7 @@ public class WidgetPropertyMetadata
     /// <summary>条件值（VisibleWhen 对应的属性值为 true 时显示）</summary>
     public object? VisibleWhenValue { get; init; }
     
-    /// <summary>帮助文本</summary>
+    /// <summary>帮助文本（多语言键）</summary>
     public string? HelpText { get; init; }
 }
 
@@ -69,6 +69,7 @@ public enum PropertyEditorType
 public class PropertyOption
 {
     public required string Value { get; init; }
+    /// <summary>选项标签（多语言键，如 "PROP_DIRECTION_ROW"）</summary>
     public required string Label { get; init; }
 }
 

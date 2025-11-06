@@ -24,20 +24,20 @@
         if (prop.Group != null && prop.Group != currentGroup)
         {
             currentGroup = prop.Group;
-            <Divider Plain Style="margin:12px 0 8px 0; font-size:11px">@currentGroup</Divider>
+            <Divider Plain Style="margin:12px 0 8px 0; font-size:11px">@I18n.T(currentGroup)</Divider>
         }
 
         @* 渲染属性编辑器 *@
         <div style="margin-bottom:16px; @(prop.EditorType == PropertyEditorType.Boolean ? "display:flex; justify-content:space-between; align-items:center" : "")">
             <label style="@(prop.EditorType == PropertyEditorType.Boolean ? "font-size:12px; color:#666" : "display:block; font-size:12px; color:#666; margin-bottom:4px")">
-                @prop.Label
+                @I18n.T(prop.Label)
             </label>
             
             @switch (prop.EditorType)
             {
                 case PropertyEditorType.Text:
                     <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
-                           Placeholder="@prop.Placeholder"
+                           Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
                            OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
                     break;
                 
@@ -57,7 +57,7 @@
                 
                 case PropertyEditorType.Color:
                     <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
-                           Placeholder="@prop.Placeholder"
+                           Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
                            OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
                     break;
                 
@@ -74,7 +74,7 @@
                                 {
                                     @foreach (var opt in prop.Options)
                                     {
-                                        <SelectOption TItem="PropertyOption" TItemValue="string" Value="@opt.Value" Label="@opt.Label" />
+                                        <SelectOption TItem="PropertyOption" TItemValue="string" Value="@opt.Value" Label="@I18n.T(opt.Label)" />
                                     }
                                 }
                             </SelectOptions>
@@ -84,7 +84,7 @@
                 
                 case PropertyEditorType.Textarea:
                     <AntDesign.TextArea Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
-                                       Placeholder="@prop.Placeholder"
+                                       Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
                                        Rows="3"
                                        OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
                     break;
@@ -92,7 +92,7 @@
             
             @if (!string.IsNullOrEmpty(prop.HelpText))
             {
-                <div style="font-size:11px; color:#999; margin-top:4px">@prop.HelpText</div>
+                <div style="font-size:11px; color:#999; margin-top:4px">@I18n.T(prop.HelpText)</div>
             }
         </div>
     }
