@@ -23,8 +23,27 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        // 使用Testing环境，自动加载appsettings.Testing.json
-        builder.UseEnvironment("Testing");
+        // 使用Development环境以启用admin/debug端点
+        builder.UseEnvironment("Development");
+        
+        // 强制使用测试数据库配置（必须在base.CreateHost之前设置，确保最高优先级）
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            // 清除所有现有配置，确保测试配置优先
+            var testConfig = new Dictionary<string, string?>
+            {
+                ["Db:Provider"] = "postgres",
+                ["ConnectionStrings:Default"] = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres",
+                ["Jwt:Key"] = "dev-secret-change-in-prod-1234567890", // 与开发环境保持一致，避免JWT签名不匹配
+                ["Jwt:Issuer"] = "BobCrm",
+                ["Jwt:Audience"] = "BobCrmUsers",
+                ["Jwt:AccessMinutes"] = "60",
+                ["Jwt:RefreshDays"] = "7"
+            };
+            
+            // 添加内存配置作为最高优先级
+            config.AddInMemoryCollection(testConfig!);
+        });
         
         var host = base.CreateHost(builder);
         
