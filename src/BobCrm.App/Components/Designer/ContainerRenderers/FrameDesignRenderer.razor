@@ -1,0 +1,35 @@
+@using BobCrm.App.Models.Widgets
+
+@* Frame 容器的设计态渲染器 *@
+<div style="border:@(Frame.BorderWidth)px @(Frame.BorderStyle) @(Frame.BorderColor); background:@(Frame.BackgroundColor); padding:@(Frame.Padding)px; min-height:150px; display:flex; flex-direction:column;"
+     @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
+     @ondragover="@OnDragOver" @ondragover:preventDefault>
+    @if (Frame.Children?.Any() == true)
+    {
+        @foreach (var child in Frame.Children)
+        {
+            @RenderChild(child)
+        }
+    }
+    else
+    {
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
+            拖入组件到框架
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public FrameWidget Frame { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<DraggableWidget> RenderChild { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDrop { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDragOver { get; set; }
+}
+

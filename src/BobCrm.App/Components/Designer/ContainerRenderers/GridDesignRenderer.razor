@@ -1,0 +1,39 @@
+@using BobCrm.App.Models.Widgets
+
+@* Grid 容器的设计态渲染器 *@
+<div style="padding:@(Grid.Padding)px; background:@Grid.BackgroundColor; border:@(Grid.Bordered ? "1px solid #d9d9d9" : "none"); min-height:150px; display:flex; flex-direction:column;">
+    <div style="flex:1; display:grid; grid-template-columns:repeat(@Grid.Columns, 1fr); gap:@(Grid.Gap)px;"
+         @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
+         @ondragover="@OnDragOver" @ondragover:preventDefault>
+        @if (Grid.Children?.Any() == true)
+        {
+            @foreach (var child in Grid.Children)
+            {
+                <div class="grid-cell" style="border:1px dashed #d9d9d9; padding:8px; background:#fff; display:flex; flex-direction:column;">
+                    @RenderChild(child)
+                </div>
+            }
+        }
+        else
+        {
+            <div style="grid-column:1/-1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none; min-height:100px;">
+                拖入组件到网格
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public GridWidget Grid { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<DraggableWidget> RenderChild { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDrop { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDragOver { get; set; }
+}
+

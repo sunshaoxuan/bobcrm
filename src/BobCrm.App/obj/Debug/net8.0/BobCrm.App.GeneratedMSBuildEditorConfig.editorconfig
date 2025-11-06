@@ -24,6 +24,30 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/FrameDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcRnJhbWVEZXNpZ25SZW5kZXJlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/GenericContainerDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcR2VuZXJpY0NvbnRhaW5lckRlc2lnblJlbmRlcmVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/GridDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcR3JpZERlc2lnblJlbmRlcmVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/PanelDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcUGFuZWxEZXNpZ25SZW5kZXJlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/SectionDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcU2VjdGlvbkRlc2lnblJlbmRlcmVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/ContainerRenderers/TabContainerDesignRenderer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxDb250YWluZXJSZW5kZXJlcnNcVGFiQ29udGFpbmVyRGVzaWduUmVuZGVyZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/workspace/bobcrm/src/BobCrm.App/Components/Designer/PropertyPanels/FrameWidgetPropertyPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xEZXNpZ25lclxQcm9wZXJ0eVBhbmVsc1xGcmFtZVdpZGdldFByb3BlcnR5UGFuZWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

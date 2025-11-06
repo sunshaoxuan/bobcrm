@@ -1,0 +1,42 @@
+@using BobCrm.App.Models.Widgets
+
+@* TabContainer 容器的设计态渲染器 *@
+<div style="border:1px solid #e5e5e5; background:#fff; min-height:150px; display:flex; flex-direction:column;">
+    <div style="border-bottom:1px solid #e5e5e5; padding:8px 12px; background:#fafafa; display:flex; gap:8px; pointer-events:none; flex-shrink:0;">
+        <div style="padding:4px 12px; background:#1890ff; color:#fff; border-radius:4px 4px 0 0; font-size:12px">标签1</div>
+        <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签2</div>
+        <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签3</div>
+    </div>
+    <div style="flex:1; padding:16px; display:flex; flex-direction:column;"
+         @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
+         @ondragover="@OnDragOver" @ondragover:preventDefault>
+        @if (TabContainer.Children?.Any() == true)
+        {
+            @foreach (var child in TabContainer.Children)
+            {
+                @RenderChild(child)
+            }
+        }
+        else
+        {
+            <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
+                拖入Tab组件到标签容器
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public TabContainerWidget TabContainer { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<DraggableWidget> RenderChild { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDrop { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDragOver { get; set; }
+}
+

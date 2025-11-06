@@ -1,0 +1,43 @@
+@using BobCrm.App.Models.Widgets
+
+@* Panel 容器的设计态渲染器 *@
+<div style="border:@(Panel.ContainerLayout.BorderWidth)px @(Panel.ContainerLayout.BorderStyle) @(Panel.ContainerLayout.BorderColor); border-radius:@(Panel.ContainerLayout.BorderRadius)px; background:@(Panel.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column;">
+    @if (Panel.ShowHeader)
+    {
+        <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px; flex-shrink:0;">
+            @(string.IsNullOrWhiteSpace(Panel.Title) ? "面板标题" : Panel.Title)
+        </div>
+    }
+    <div style="flex:1; padding:@(Panel.ContainerLayout.Padding)px; display:flex; flex-direction:@(Panel.ContainerLayout.FlexDirection); flex-wrap:@(Panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Panel.ContainerLayout.Gap)px;"
+         @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
+         @ondragover="@OnDragOver" @ondragover:preventDefault>
+        @if (Panel.Children?.Any() == true)
+        {
+            @foreach (var child in Panel.Children)
+            {
+                @RenderChild(child)
+            }
+        }
+        else
+        {
+            <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
+                拖入组件到面板
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public PanelWidget Panel { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public RenderFragment<DraggableWidget> RenderChild { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDrop { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnDragOver { get; set; }
+}
+
