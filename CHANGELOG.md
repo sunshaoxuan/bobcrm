@@ -76,19 +76,22 @@
   - ✅ 覆盖所有 Widget 类型的属性
 
 ### 修复 (Fixed)
-- **所有组件的"内外错位"视觉BUG（通用修复）**：
-  - **问题根源**：外层包裹 div（用于拖拽、选中）有 `border` + `background` + `padding`，内层容器又有自己的 `border` + `padding`，造成双层边框和视觉错位
-  - **影响范围**：所有组件（容器 + 普通组件）
-  - **修复方案**：
-    - 外层 div 改用 `outline`（不占布局空间）而非 `border`
-    - 去掉容器组件的中间 `padding:4px` 包裹层
-    - 直接渲染内层容器，让容器的真实边框完全可见
-    - 选中状态用 `outline` 高亮，不影响内部布局
-  - **视觉效果**：不再有双层边框，容器真实样式完全可见，所有组件视觉统一
-- **容器内容区域填充问题**：
+- **容器内外错位视觉问题（多次迭代修复）**：
+  
+  **修复1 - 容器内容区域填充**：
   - 问题：容器内容区域使用 `min-height`，无法填充整个容器空间
   - 修复：所有容器改用 `display:flex; flex-direction:column;` + `flex:1` 布局
   - 影响：Grid, Panel, Section, Frame, TabContainer, GenericContainer
+  
+  **修复2 - 双层边框消除**：
+  - 问题：外层包裹 div 有 `border` + `background` + `padding`，内层容器又有自己的 `border`，造成双层边框
+  - 修复：外层 div 改用 `outline`（不占布局空间），去掉中间 `padding:4px` 包裹层
+  - 效果：不再有双层边框，容器真实样式完全可见
+  
+  **修复3 - 空状态padding优化**：
+  - 问题：空容器的 placeholder 被固定 padding（12-16px）挤压，内容区域比容器小
+  - 修复：空状态时 `padding=0`，有子组件时 `padding=原值`（条件表达式）
+  - 效果：空容器的 placeholder 填满整个容器，内外等宽等高
 
 ### 文档 (Documentation)
 - 删除重复的模块级 README（`ContainerRenderers/README.md`）
