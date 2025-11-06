@@ -698,7 +698,8 @@ else
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 外层 div 只负责交互（拖拽、选中），不添加视觉边框
             // pointer-events:none 让拖放事件能穿透到内部的 frame-drop-zone
-            <div draggable="true"
+            <div class="container-child-widget @(isSelected ? "selected" : "")"
+                 draggable="true"
                  data-widget-id="@container.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
@@ -723,7 +724,8 @@ else
         {
             // 渲染普通组件（带拖拽、选中和resize功能）
             // 外层 div 只负责交互，使用 outline 而非 border，避免双层边框
-            <div draggable="true"
+            <div class="container-child-widget @(isSelected ? "selected" : "")"
+                 draggable="true"
                  data-widget-id="@widget.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, widget))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(widget))" @onclick:stopPropagation
@@ -852,52 +854,83 @@ else
     {
         try
         {
+            // 使用 JavaScript 计算插入索引
+            var containerSelector = $".frame-drop-zone[data-container-id=\"{targetContainer.Id}\"]";
+            var insertIndex = await JS.InvokeAsync<int>("bobcrm.getInsertIndex", containerSelector, e.ClientX, e.ClientY);
+
             // 从工具箱拖入新组件
             if (draggedDefinition != null)
             {
                 var newWidget = WidgetRegistry.Create(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
-                
+
                 // 初始化 Children 列表
                 if (targetContainer.Children == null)
                 {
                     targetContainer.Children = new List<DraggableWidget>();
                 }
-                
-                targetContainer.Children.Add(newWidget);
+
+                // 在指定位置插入
+                if (insertIndex >= 0 && insertIndex < targetContainer.Children.Count)
+                {
+                    targetContainer.Children.Insert(insertIndex, newWidget);
+                }
+                else
+                {
+                    targetContainer.Children.Add(newWidget);
+                }
+
                 selectedWidget = newWidget;
                 dropSucceeded = true;
                 draggedDefinition = null;
-                
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added new widget to container: {targetContainer.Type}");
+
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added new widget to container at index {insertIndex}");
                 await InvokeAsync(StateHasChanged);
             }
             // 移动已有组件到容器
             else if (draggedWidget != null)
             {
-                // 从父容器中移除（如果有父容器）
+                // 检查是否在同一个容器内移动
+                var isSameContainer = draggedParentContainer != null && ReferenceEquals(draggedParentContainer, targetContainer);
+
+                // 从原位置移除
                 if (draggedParentContainer != null && draggedParentContainer.Children != null)
                 {
+                    var oldIndex = draggedParentContainer.Children.IndexOf(draggedWidget);
                     draggedParentContainer.Children.Remove(draggedWidget);
+
+                    // 如果在同一个容器内移动，需要调整插入索引
+                    if (isSameContainer && oldIndex >= 0 && insertIndex > oldIndex)
+                    {
+                        insertIndex--;
+                    }
                 }
                 // 从顶层 layoutWidgets 中移除
                 else
                 {
                     layoutWidgets.Remove(draggedWidget);
                 }
-                
+
                 // 初始化 Children 列表
                 if (targetContainer.Children == null)
                 {
                     targetContainer.Children = new List<DraggableWidget>();
                 }
-                
-                // 添加到目标容器
-                targetContainer.Children.Add(draggedWidget);
+
+                // 在指定位置插入
+                if (insertIndex >= 0 && insertIndex < targetContainer.Children.Count)
+                {
+                    targetContainer.Children.Insert(insertIndex, draggedWidget);
+                }
+                else
+                {
+                    targetContainer.Children.Add(draggedWidget);
+                }
+
                 dropSucceeded = true;
                 draggedWidget = null;
                 draggedParentContainer = null;
-                
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Moved widget to container: {targetContainer.Type}");
+
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Moved widget to container at index {insertIndex}");
                 await InvokeAsync(StateHasChanged);
             }
         }
