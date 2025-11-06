@@ -109,6 +109,7 @@ else
                              data-widget-id="@widget.Id"
                              @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
                              @ondragstart:preventDefault="@(resizingIds.Contains(widget.Id))"
+                             @ondragstart:stopPropagation
                              @ondragend="OnDragEnd"
                              @onclick="@(() => SelectWidget(widget))"
                              style="@(WidgetStyleHelper.GetFlowWidgetStyle(widget, selectedWidget == widget))">
@@ -699,7 +700,7 @@ else
             // pointer-events:none 让拖放事件能穿透到内部的 frame-drop-zone
             <div draggable="true"
                  data-widget-id="@container.Id"
-                 @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
+                 @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
                  style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:none;">
                 @if (isSelected)
@@ -722,9 +723,9 @@ else
         {
             // 渲染普通组件（带拖拽、选中和resize功能）
             // 外层 div 只负责交互，使用 outline 而非 border，避免双层边框
-            <div draggable="true" 
+            <div draggable="true"
                  data-widget-id="@widget.Id"
-                 @ondragstart="@((e) => OnWidgetDragStart(e, widget))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
+                 @ondragstart="@((e) => OnWidgetDragStart(e, widget))" @ondragstart:preventDefault="false" @ondragstart:stopPropagation @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(widget))" @onclick:stopPropagation
                  style="@widthStyle @displayStyle position:relative; cursor:move; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "1px dashed #d9d9d9"); outline-offset:0px; padding:8px; background:@backgroundColor; border-radius:4px;">
                 @if (isSelected)
