@@ -1,5 +1,6 @@
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\appsettings.Development.json
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\appsettings.json
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\appsettings.Testing.json
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.staticwebassets.endpoints.json
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.exe
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.deps.json
@@ -179,4 +180,3 @@ C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\refint\BobCrm.Api.dll
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.pdb
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.genruntimeconfig.cache
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\ref\BobCrm.Api.dll
-C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\appsettings.Testing.json

@@ -5,6 +5,7 @@ C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.deps.json
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.runtimeconfig.json
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\appsettings.Development.json
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\appsettings.json
+C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\appsettings.Testing.json
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.staticwebassets.endpoints.json
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.exe
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\testhost.exe
@@ -493,4 +494,3 @@ C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\refint\BobCrm.Api.Te
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\BobCrm.Api.Tests.pdb
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\BobCrm.Api.Tests.genruntimeconfig.cache
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\ref\BobCrm.Api.Tests.dll
-C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\appsettings.Testing.json
