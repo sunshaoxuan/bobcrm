@@ -23,6 +23,8 @@ public class CheckboxWidget : TextWidget
     /// <summary>布局方向（horizontal: 横向, vertical: 纵向）</summary>
     public string Direction { get; set; } = "horizontal";
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.CheckboxPreview);
+
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>

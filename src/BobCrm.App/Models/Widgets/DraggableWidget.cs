@@ -150,6 +150,13 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         };
     }
 
+    /// <summary>
+    /// 获取设计态预览组件类型
+    /// 子类应重写此属性以指定自己的预览组件
+    /// 使用动态组件渲染，无需在 FormDesigner 中使用 switch
+    /// </summary>
+    public virtual Type? PreviewComponentType => null;
+
     // ===== IResizable 接口实现 =====
 
     // 调整大小时的初始状态（用于基于总增量计算）

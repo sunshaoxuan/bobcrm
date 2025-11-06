@@ -15,6 +15,8 @@ public class LabelWidget : TextWidget
     public string? Text { get; set; }
     public bool Bold { get; set; } = false;
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.LabelPreview);
+
     public override bool CanEditProperty(string propertyName)
     {
         // 标签控件不能编辑DataField属性

@@ -23,6 +23,8 @@ public class SelectWidget : TextWidget
     /// <summary>是否允许搜索</summary>
     public bool AllowSearch { get; set; } = false;
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.SelectPreview);
+
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>

@@ -18,6 +18,8 @@ public class ListboxWidget : TextWidget
     public bool AllowSearch { get; set; } = false;
     public string? DefaultValue { get; set; }
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.SelectPreview);
+
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>

@@ -29,6 +29,8 @@ public class NumberWidget : TextWidget
     /// <summary>是否显示千分位</summary>
     public bool ShowThousandsSeparator { get; set; } = false;
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.NumberPreview);
+
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>

@@ -643,7 +643,8 @@ else
 
     /// <summary>
     /// 渲染组件的纯视觉外观（仅用于顶层包裹层内部，不包含交互功能）
-    /// 使用独立的预览组件，符合单一职责原则
+    /// 使用动态组件渲染，完全解耦，符合 OOP 原则
+    /// 无需 switch：每个 Widget 类声明自己的预览组件类型
     /// </summary>
     private RenderFragment RenderWidgetVisual(DraggableWidget widget) => __builder =>
     {
@@ -654,47 +655,19 @@ else
         }
         else
         {
-            // 普通组件：显示标签 + 使用对应的预览组件
+            // 普通组件：显示标签 + 使用动态组件渲染
             <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
-            @switch (widget)
+            
+            @if (widget.PreviewComponentType != null)
             {
-                case TextareaWidget _:
-                    <TextareaPreview />
-                    break;
-                
-                case CalendarWidget _:
-                    <CalendarPreview />
-                    break;
-                
-                case SelectWidget _:
-                case ListboxWidget _:
-                    <SelectPreview />
-                    break;
-                
-                case CheckboxWidget _:
-                    <CheckboxPreview />
-                    break;
-                
-                case RadioWidget _:
-                    <RadioPreview />
-                    break;
-                
-                case ButtonWidget button:
-                    <ButtonPreview Widget="@button" />
-                    break;
-                
-                case LabelWidget label:
-                    <LabelPreview Widget="@label" />
-                    break;
-                
-                case NumberWidget _:
-                    <NumberPreview />
-                    break;
-                
-                default:
-                    // TextboxWidget 或其他未知组件
-                    <TextboxPreview />
-                    break;
+                // 动态渲染 Widget 声明的预览组件
+                <DynamicComponent Type="@widget.PreviewComponentType"
+                                 Parameters="@(new Dictionary<string, object> { ["Widget"] = widget })" />
+            }
+            else
+            {
+                // 降级处理：无预览组件时显示默认输入框
+                <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px"></div>
             }
         }
     };

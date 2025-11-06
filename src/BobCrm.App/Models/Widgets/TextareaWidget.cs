@@ -26,6 +26,8 @@ public class TextareaWidget : TextWidget
     /// <summary>是否根据内容自动增长</summary>
     public bool AutoSize { get; set; } = true;
 
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.TextareaPreview);
+
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
