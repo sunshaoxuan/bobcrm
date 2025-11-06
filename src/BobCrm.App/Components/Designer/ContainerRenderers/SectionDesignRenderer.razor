@@ -13,7 +13,8 @@
         </div>
     }
     @* 拖放区域：空状态时无padding让placeholder填满，有子组件时有padding分隔 *@
-    <div style="flex:1; padding:@(Section.Children?.Any() == true ? Section.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Section.ContainerLayout.FlexDirection); flex-wrap:@(Section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Section.ContainerLayout.Gap)px;"
+    <div class="frame-drop-zone" data-container-id="@Section.Id"
+         style="flex:1; padding:@(Section.Children?.Any() == true ? Section.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Section.ContainerLayout.FlexDirection); flex-wrap:@(Section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Section.ContainerLayout.Gap)px;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (Section.Children?.Any() == true)

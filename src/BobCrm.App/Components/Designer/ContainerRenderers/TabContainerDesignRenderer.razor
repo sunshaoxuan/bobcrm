@@ -8,7 +8,8 @@
         <div style="padding:4px 12px; background:#f0f0f0; color:#666; border-radius:4px 4px 0 0; font-size:12px">标签3</div>
     </div>
     @* 拖放区域：空状态时无padding，有子组件时有padding *@
-    <div style="flex:1; padding:@(TabContainer.Children?.Any() == true ? 16 : 0)px; display:flex; flex-direction:column;"
+    <div class="frame-drop-zone" data-container-id="@TabContainer.Id"
+         style="flex:1; padding:@(TabContainer.Children?.Any() == true ? 16 : 0)px; display:flex; flex-direction:column;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (TabContainer.Children?.Any() == true)
