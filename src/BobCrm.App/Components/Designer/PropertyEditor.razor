@@ -81,17 +81,17 @@
                 case PropertyEditorType.Select:
                     {
                         var currentValue = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
-                        <AntDesign.Select TItem="PropertyOption"
-                                         TItemValue="string"
+                        <AntDesign.Select TItemValue="string"
+                                         TItem="string"
                                          Value="@currentValue"
                                          Style="width:100%"
-                                         OnSelectedItemChanged="@((PropertyOption opt) => SetPropertyValue(Widget, prop.PropertyPath, opt.Value))">
+                                         OnSelectedItemChanged="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))">
                             <SelectOptions>
                                 @if (prop.Options != null)
                                 {
                                     @foreach (var opt in prop.Options)
                                     {
-                                        <SelectOption TItem="PropertyOption" TItemValue="string" Value="@opt.Value" Label="@I18n.T(opt.Label)" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@opt.Value" Label="@I18n.T(opt.Label)" />
                                     }
                                 }
                             </SelectOptions>
