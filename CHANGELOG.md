@@ -101,6 +101,16 @@
     - `RenderDesignWidget` 保留完整交互层，用于容器内子组件递归渲染
   - 效果：每个组件只有一个 resize handle，不再重复
 
+- **Width 最大值逻辑移至 Widget 类（面向对象修复）**：
+  - 问题：所有 Widget 的 Width 属性 `Max=100`（硬编码），只适用于百分比，对像素单位不合理（超过100被截断）
+  - 错误尝试：在 PropertyEditor 中判断 WidthUnit（违反职责分离）
+  - 正确方案：
+    - 在 `DraggableWidget` 基类添加 `GetMaxWidth()` 虚方法
+    - 根据 `WidthUnit` 动态返回：`%` → 100，`px` → 2000
+    - 所有 Widget 的 `GetPropertyMetadata()` 使用 `Max = GetMaxWidth()`
+    - PropertyEditor 保持简洁，直接使用 `prop.Max`，无业务判断
+  - 效果：切换单位时自动调整最大值，封装在 Widget 类内部，符合面向对象原则
+
 ### 文档 (Documentation)
 - 删除重复的模块级 README（`ContainerRenderers/README.md`）
 - 更新主设计文档，新增「容器设计态渲染器」章节
