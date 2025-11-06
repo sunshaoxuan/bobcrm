@@ -1,7 +1,7 @@
 @using BobCrm.App.Models.Widgets
 
 @* Panel 容器的设计态渲染器 *@
-<div style="border:@(Panel.ContainerLayout.BorderWidth)px @(Panel.ContainerLayout.BorderStyle) @(Panel.ContainerLayout.BorderColor); border-radius:@(Panel.ContainerLayout.BorderRadius)px; background:@(Panel.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column;">
+<div style="border:@(Panel.ContainerLayout.BorderWidth)px @(Panel.ContainerLayout.BorderStyle) @(Panel.ContainerLayout.BorderColor); border-radius:@(Panel.ContainerLayout.BorderRadius)px; background:@(Panel.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column; pointer-events:auto;">
     @if (Panel.ShowHeader)
     {
         <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px; flex-shrink:0;">
@@ -10,7 +10,7 @@
     }
     @* 拖放区域：空状态时无padding，有子组件时有padding *@
     <div class="frame-drop-zone" data-container-id="@Panel.Id"
-         style="flex:1; padding:@(Panel.Children?.Any() == true ? Panel.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Panel.ContainerLayout.FlexDirection); flex-wrap:@(Panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Panel.ContainerLayout.Gap)px;"
+         style="flex:1; padding:@(Panel.Children?.Any() == true ? Panel.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Panel.ContainerLayout.FlexDirection); flex-wrap:@(Panel.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Panel.ContainerLayout.Gap)px; pointer-events:auto;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (Panel.Children?.Any() == true)

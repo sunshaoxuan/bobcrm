@@ -1,7 +1,7 @@
 @using BobCrm.App.Models.Widgets
 
 @* Section 容器的设计态渲染器 *@
-<div style="border:@(Section.ContainerLayout.BorderWidth)px @(Section.ContainerLayout.BorderStyle) @(Section.ContainerLayout.BorderColor); border-radius:@(Section.ContainerLayout.BorderRadius)px; background:@(Section.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column;">
+<div style="border:@(Section.ContainerLayout.BorderWidth)px @(Section.ContainerLayout.BorderStyle) @(Section.ContainerLayout.BorderColor); border-radius:@(Section.ContainerLayout.BorderRadius)px; background:@(Section.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column; pointer-events:auto;">
     @if (Section.ShowTitle)
     {
         <div style="padding:8px 12px; border-bottom:1px solid #d9d9d9; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
@@ -14,7 +14,7 @@
     }
     @* 拖放区域：空状态时无padding让placeholder填满，有子组件时有padding分隔 *@
     <div class="frame-drop-zone" data-container-id="@Section.Id"
-         style="flex:1; padding:@(Section.Children?.Any() == true ? Section.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Section.ContainerLayout.FlexDirection); flex-wrap:@(Section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Section.ContainerLayout.Gap)px;"
+         style="flex:1; padding:@(Section.Children?.Any() == true ? Section.ContainerLayout.Padding : 0)px; display:flex; flex-direction:@(Section.ContainerLayout.FlexDirection); flex-wrap:@(Section.ContainerLayout.FlexWrap ? "wrap" : "nowrap"); gap:@(Section.ContainerLayout.Gap)px; pointer-events:auto;"
          @ondrop="@OnDrop" @ondrop:preventDefault @ondrop:stopPropagation
          @ondragover="@OnDragOver" @ondragover:preventDefault>
         @if (Section.Children?.Any() == true)
