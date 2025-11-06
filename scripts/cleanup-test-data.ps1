@@ -41,30 +41,16 @@ try {
 }
 
 Write-Host ""
-
-# 2. 重建开发数据库
-Write-Host "2. 重建开发数据库（bobcrm）" -ForegroundColor Yellow
-try {
-    Write-Host "  删除旧数据库..." -ForegroundColor Gray
-    docker exec bobcrm-postgres psql -U postgres -c "DROP DATABASE IF EXISTS bobcrm" 2>&1 | Out-Null
-    
-    Write-Host "  创建新数据库..." -ForegroundColor Gray
-    docker exec bobcrm-postgres psql -U postgres -c "CREATE DATABASE bobcrm" 2>&1 | Out-Null
-    
-    Write-Host "  ✓ 开发数据库已重建" -ForegroundColor Green
-} catch {
-    Write-Host "  [错误] 重建数据库失败: $_" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  清理完成！" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "下一步：" -ForegroundColor Yellow
-Write-Host "  1. 重启后端服务以重新初始化数据库：" -ForegroundColor White
-Write-Host "     pwsh scripts/dev.ps1 -Action restart" -ForegroundColor Cyan
-Write-Host "  2. 刷新浏览器页面" -ForegroundColor White
+Write-Host "说明：" -ForegroundColor Yellow
+Write-Host "  - 测试数据库（bobcrm_test）已清理" -ForegroundColor White
+Write-Host "  - 开发数据库（bobcrm）未受影响" -ForegroundColor White
+Write-Host "  - 如需重建开发数据库，请手动运行：" -ForegroundColor White
+Write-Host "    docker exec bobcrm-postgres psql -U postgres -c 'DROP DATABASE IF EXISTS bobcrm'" -ForegroundColor Gray
+Write-Host "    docker exec bobcrm-postgres psql -U postgres -c 'CREATE DATABASE bobcrm'" -ForegroundColor Gray
+Write-Host "    pwsh scripts/dev.ps1 -Action restart" -ForegroundColor Gray
 Write-Host ""
 

@@ -18,6 +18,8 @@
 @inject IDesignWidgetContentRenderer DesignRenderer
 @inject IDesignContainerRenderer ContainerRenderer
 
+<script src="/js/form-designer-resize.js"></script>
+
 <AuthChecker>
 @if (loading)
 {
@@ -649,19 +651,33 @@ else
         var borderColor = isSelected ? "#1890ff" : "#d9d9d9";
         var backgroundColor = isSelected ? "#e6f7ff" : "#fff";
         
+        // 计算宽度样式
+        var widthStyle = "";
+        if (widget is IFlowSized flowWidget && flowWidget.Width > 0)
+        {
+            widthStyle = $"width:{flowWidget.Width}{flowWidget.WidthUnit};";
+        }
+        
         // 根据组件类型渲染不同的外观
         if (widget is ContainerWidget container)
         {
-            // 渲染容器组件（带拖拽和选中功能）
+            // 渲染容器组件（带拖拽、选中和resize功能）
             <div draggable="true" 
+                 data-widget-id="@container.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, container))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="border:2px solid @borderColor; background:@backgroundColor; border-radius:4px; position:relative; cursor:move; margin:4px">
+                 style="@widthStyle border:2px solid @borderColor; background:@backgroundColor; border-radius:4px; position:relative; cursor:move; margin:4px; display:inline-block;">
                 @if (isSelected)
                 {
                     <div style="position:absolute; top:-24px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10">
                         @container.Label
                         <span @onclick="@(() => DeleteWidget(container))" @onclick:stopPropagation style="margin-left:8px; cursor:pointer; font-weight:bold">×</span>
+                    </div>
+                    @* Resize handle *@
+                    <div draggable="false"
+                         @onmousedown="@((e) => OnResizeStart(e, container))" @onmousedown:stopPropagation @onmousedown:preventDefault
+                         @ondragstart:preventDefault="true"
+                         style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:8px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6);">
                     </div>
                 }
                 <div style="padding:4px">
@@ -671,16 +687,23 @@ else
         }
         else
         {
-            // 渲染普通组件（带拖拽和选中功能）
+            // 渲染普通组件（带拖拽、选中和resize功能）
             <div draggable="true" 
+                 data-widget-id="@widget.Id"
                  @ondragstart="@((e) => OnWidgetDragStart(e, widget))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                  @onclick="@(() => SelectWidget(widget))" @onclick:stopPropagation
-                 style="border:2px solid @borderColor; background:@backgroundColor; padding:8px; border-radius:4px; position:relative; cursor:move; margin:4px">
+                 style="@widthStyle border:2px solid @borderColor; background:@backgroundColor; padding:8px; border-radius:4px; position:relative; cursor:move; margin:4px; display:inline-block;">
                 @if (isSelected)
                 {
                     <div style="position:absolute; top:-24px; right:0; background:#1890ff; color:#fff; padding:2px 8px; border-radius:4px 4px 0 0; font-size:11px; z-index:10">
                         @widget.Label
                         <span @onclick="@(() => DeleteWidget(widget))" @onclick:stopPropagation style="margin-left:8px; cursor:pointer; font-weight:bold">×</span>
+                    </div>
+                    @* Resize handle *@
+                    <div draggable="false"
+                         @onmousedown="@((e) => OnResizeStart(e, widget))" @onmousedown:stopPropagation @onmousedown:preventDefault
+                         @ondragstart:preventDefault="true"
+                         style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:8px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6);">
                     </div>
                 }
                 <div style="font-size:12px; color:#666; margin-bottom:4px">@widget.Label</div>
@@ -1003,14 +1026,50 @@ else
         }
     }
 
-    private void OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, DraggableWidget widget)
+    // Resize 功能状态
+    private DraggableWidget? resizingWidget = null;
+    private DotNetObjectReference<FormDesigner>? resizeDotNetRef = null;
+
+    private async Task OnResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, DraggableWidget widget)
     {
-        // TODO: 实现resize逻辑（可选功能）
+        resizingWidget = widget;
+        
+        // 创建 .NET 对象引用
+        resizeDotNetRef?.Dispose(); // 清理旧的引用
+        resizeDotNetRef = DotNetObjectReference.Create(this);
+
+        // 初始化 JavaScript resize 处理器
+        await JS.InvokeVoidAsync("FormDesignerResize.start", resizeDotNetRef, widget.Id, e.ClientX);
+    }
+
+    [JSInvokable]
+    public void OnResizeMove(string widgetId, int newWidth)
+    {
+        if (resizingWidget == null || resizingWidget.Id != widgetId) return;
+
+        // 更新组件宽度
+        if (resizingWidget is IFlowSized flowWidget)
+        {
+            flowWidget.Width = Math.Max(50, newWidth); // 最小宽度50px
+            flowWidget.WidthUnit = "px"; // resize时使用px
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnResizeEnd()
+    {
+        resizingWidget = null;
+        
+        // 清理 DotNetObjectReference（但不立即dispose，等待下次resize或组件销毁时）
+        // resizeDotNetRef?.Dispose();
+        // resizeDotNetRef = null;
     }
 
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
+        resizeDotNetRef?.Dispose();
     }
 
     private void HandleI18nChanged()
