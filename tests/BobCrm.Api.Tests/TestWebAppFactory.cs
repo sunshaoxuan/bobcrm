@@ -10,8 +10,12 @@ using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 
-// Use Postgres from docker (see docker-compose.yml):
-// Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres
+// 测试数据库策略：
+// 1. 使用固定的测试数据库名称（bobcrm_test），与开发环境（bobcrm）完全隔离
+// 2. 每个测试类启动时重建数据库（RecreateAsync），确保测试独立性
+// 3. 测试数据会保留在bobcrm_test中，方便调试
+// 4. 使用 scripts/cleanup-test-data.ps1 清理测试数据库
+// 5. 开发环境使用 bobcrm 数据库，永远不会被测试污染
 
 namespace BobCrm.Api.Tests;
 
@@ -19,20 +23,11 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 {
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
-        // Force provider to postgres for tests
-        builder.ConfigureAppConfiguration((context, config) =>
-        {
-            var dict = new Dictionary<string, string?>
-            {
-                ["Db:Provider"] = "postgres",
-                // 使用独立的测试数据库，避免影响开发数据
-                ["ConnectionStrings:Default"] = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres"
-            };
-            config.AddInMemoryCollection(dict!);
-        });
-
+        // 使用Testing环境，自动加载appsettings.Testing.json
+        builder.UseEnvironment("Testing");
+        
         var host = base.CreateHost(builder);
+        
         // Reset and seed database to a clean state
         using (var scope = host.Services.CreateScope())
         {

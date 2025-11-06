@@ -493,3 +493,4 @@ C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\refint\BobCrm.Api.Te
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\BobCrm.Api.Tests.pdb
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\BobCrm.Api.Tests.genruntimeconfig.cache
 C:\workspace\bobcrm\tests\BobCrm.Api.Tests\obj\Debug\net8.0\ref\BobCrm.Api.Tests.dll
+C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\appsettings.Testing.json
