@@ -283,7 +283,7 @@ cd publish && ./BobCrm.App
 **✅ 新架构（已重构）**：
 - [x] **FormDesigner.razor** (452行) - 通用表单设计器
   - 不依赖任何实体，从FieldDefinitions API加载字段
-  - 路由：`/designer` 或 `/designer/{templateId}`（同时支持旧路由 `/template-designer` 和 `/templates/edit`）
+  - 路由：`/designer` 或 `/designer/{templateId}`
   
 - [x] **PageLoader.razor** (430行) - 通用页面加载器
   - 根据EntityType动态加载任何实体
