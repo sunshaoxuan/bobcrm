@@ -701,13 +701,13 @@ else
         {
             // 渲染容器组件（带拖拽、选中和resize功能）
             // 策略：
-            // - 未拖拽且未选中时：pointer-events:auto，可以点击选中容器
-            // - 拖拽中或已选中时：pointer-events:none，拖放事件穿透到内部frame-drop-zone
-            // - 交互元素（拖拽手柄、删除按钮、resize handle）单独设置pointer-events:auto保持功能
+            // - wrapper保持pointer-events:auto（或不设置），让它能接收点击和拖放事件
+            // - 依赖body.is-dragging CSS规则来禁用容器内子控件的pointer-events
+            // - 避免在wrapper上使用pointer-events:none，那会阻止所有后代接收事件
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
                  data-widget-id="@container.Id"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
-                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px; pointer-events:@(isSelected || isDragging ? "none" : "auto");">
+                 style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
                 @if (isSelected)
                 {
                     @* 标签栏：包含容器名称、拖拽手柄和删除按钮 *@
@@ -823,8 +823,9 @@ else
     {
         dropSucceeded = false;
         draggedDefinition = definition;
-        isDragging = true; // 设置拖拽状态，让容器wrapper变成pointer-events:none
-        StateHasChanged(); // 立即更新UI
+        isDragging = true; // 设置拖拽状态（供OnDragEnd使用）
+        // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
+        // 依赖JS的body.is-dragging来控制CSS，无需Blazor重新渲染
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnDragStart: {definition.Type}"); } catch { }
     }
 
@@ -833,8 +834,9 @@ else
         dropSucceeded = false;
         draggedWidget = widget;
         draggedParentContainer = WidgetNavigationHelper.FindParentContainer(layoutWidgets, widget);
-        isDragging = true; // 设置拖拽状态，让容器wrapper变成pointer-events:none
-        StateHasChanged(); // 立即更新UI
+        isDragging = true; // 设置拖拽状态（供OnDragEnd使用）
+        // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
+        // 依赖JS的body.is-dragging来控制CSS，无需Blazor重新渲染
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnWidgetDragStart: {widget.Id}"); } catch { }
     }
 
