@@ -146,6 +146,11 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseInitializer.InitializeAsync(db);
 
+    // Sync system entities (IBizEntity implementations) to EntityDefinition table
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
+    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
+    await synchronizer.SyncSystemEntitiesAsync();
+
     // Seed test data (development only)
     try
     {
