@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using BobCrm.Api.Services.DataMigration;
 using BobCrm.Api.Domain.Models;
-using BobCrm.Api.Data;
 using BobCrm.Api.Infrastructure;
 
 namespace BobCrm.Api.Tests;
