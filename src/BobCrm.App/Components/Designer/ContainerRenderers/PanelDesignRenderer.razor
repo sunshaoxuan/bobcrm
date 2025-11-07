@@ -1,7 +1,7 @@
 @using BobCrm.App.Models.Widgets
 
 @* Panel 容器的设计态渲染器 *@
-<div style="border:@(Panel.ContainerLayout.BorderWidth)px @(Panel.ContainerLayout.BorderStyle) @(Panel.ContainerLayout.BorderColor); border-radius:@(Panel.ContainerLayout.BorderRadius)px; background:@(Panel.ContainerLayout.BackgroundColor); min-height:150px; display:flex; flex-direction:column; pointer-events:auto;">
+<div style="border:@(Panel.ContainerLayout.BorderWidth)px @(Panel.ContainerLayout.BorderStyle) @(Panel.ContainerLayout.BorderColor); border-radius:@(Panel.ContainerLayout.BorderRadius)px; background:@(Panel.ContainerLayout.BackgroundColor); min-height:@(Panel.GetDesignMinHeight())px; display:flex; flex-direction:column; pointer-events:auto;">
     @if (Panel.ShowHeader)
     {
         <div style="padding:8px 12px; border-bottom:1px solid #e5e5e5; background:#fafafa; font-weight:600; font-size:14px; flex-shrink:0;">

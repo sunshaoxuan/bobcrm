@@ -13,4 +13,15 @@ public abstract class ContainerWidget : DraggableWidget
     {
         return "container";
     }
+
+    /// <summary>
+    /// 容器的设计态最小高度
+    /// 默认 100px，子类可重写以提供自己的值
+    /// </summary>
+    public override int GetDesignMinHeight()
+    {
+        // 容器需要足够的空间显示拖放区域
+        // 100px = 标题栏(~40px) + 内容区域(~60px)
+        return 100;
+    }
 }

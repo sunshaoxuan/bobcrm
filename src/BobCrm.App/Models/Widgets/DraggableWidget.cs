@@ -184,6 +184,16 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     /// </summary>
     public virtual Type? PreviewComponentType => null;
 
+    /// <summary>
+    /// 获取设计态最小高度（px）
+    /// 子类可重写以提供自己的最小高度
+    /// </summary>
+    public virtual int GetDesignMinHeight()
+    {
+        // 普通组件：默认最小高度 32px
+        return 32;
+    }
+
     // ===== 渲染方法（OOP多态） =====
 
     /// <summary>
