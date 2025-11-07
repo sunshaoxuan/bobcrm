@@ -102,8 +102,16 @@ builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 // ILocalization as Singleton with IMemoryCache for cross-request caching
 builder.Services.AddSingleton<ILocalization, EfLocalization>();
 
-// Entity Metadata Service (Scoped - 需要访问数据库)
-builder.Services.AddScoped<BobCrm.Api.Services.EntityMetadataService>();
+// Entity Publishing Services (实体自定义与发布)
+builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
+builder.Services.AddScoped<BobCrm.Api.Services.EntityPublishingService>();
+
+// Dynamic Entity Services (代码生成与动态编译)
+builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
+builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
+builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
@@ -145,6 +153,11 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseInitializer.InitializeAsync(db);
+
+    // Sync system entities (IBizEntity implementations) to EntityDefinition table
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
+    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
+    await synchronizer.SyncSystemEntitiesAsync();
 
     // Seed test data (development only)
     try
@@ -213,10 +226,11 @@ app.MapSetupEndpoints();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapI18nEndpoints();
-app.MapEntityMetadataEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
+app.MapEntityDefinitionEndpoints();
+app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
 
 // 管理和调试端点（仅开发环境）

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BobCrm.Api.Domain;
+using BobCrm.Api.Domain.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -41,8 +42,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
 
-    // 元数据
-    public DbSet<Data.Entities.EntityMetadata> EntityMetadata => Set<Data.Entities.EntityMetadata>();
+    // 实体自定义与发布（统一的实体定义系统）
+    public DbSet<EntityDefinition> EntityDefinitions => Set<EntityDefinition>();
+    public DbSet<FieldMetadata> FieldMetadatas => Set<FieldMetadata>();
+    public DbSet<EntityInterface> EntityInterfaces => Set<EntityInterface>();
+    public DbSet<DDLScript> DDLScripts => Set<DDLScript>();
 
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
@@ -126,12 +130,70 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<FormTemplate>()
             .HasIndex(ft => new { ft.EntityType, ft.IsSystemDefault });
 
-        // EntityMetadata 配置
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasKey(em => em.EntityType);
-        
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasIndex(em => new { em.IsRootEntity, em.IsEnabled, em.Order });
+        // EntityDefinition 配置
+        b.Entity<EntityDefinition>()
+            .HasIndex(ed => new { ed.Namespace, ed.EntityName })
+            .IsUnique();
+
+        b.Entity<EntityDefinition>()
+            .HasIndex(ed => ed.Status);
+
+        b.Entity<EntityDefinition>()
+            .HasIndex(ed => ed.IsLocked);
+
+        // FieldMetadata 配置
+        b.Entity<FieldMetadata>()
+            .HasIndex(fm => fm.EntityDefinitionId);
+
+        b.Entity<FieldMetadata>()
+            .HasIndex(fm => fm.ParentFieldId);
+
+        b.Entity<FieldMetadata>()
+            .HasIndex(fm => new { fm.EntityDefinitionId, fm.PropertyName })
+            .IsUnique();
+
+        // 配置关系
+        b.Entity<FieldMetadata>()
+            .HasOne(fm => fm.EntityDefinition)
+            .WithMany(ed => ed.Fields)
+            .HasForeignKey(fm => fm.EntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<FieldMetadata>()
+            .HasOne(fm => fm.ParentField)
+            .WithMany(pf => pf.ChildFields)
+            .HasForeignKey(fm => fm.ParentFieldId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<FieldMetadata>()
+            .HasOne(fm => fm.ReferencedEntity)
+            .WithMany()
+            .HasForeignKey(fm => fm.ReferencedEntityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // EntityInterface 配置
+        b.Entity<EntityInterface>()
+            .HasIndex(ei => new { ei.EntityDefinitionId, ei.InterfaceType })
+            .IsUnique();
+
+        b.Entity<EntityInterface>()
+            .HasOne(ei => ei.EntityDefinition)
+            .WithMany(ed => ed.Interfaces)
+            .HasForeignKey(ei => ei.EntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // DDLScript 配置
+        b.Entity<DDLScript>()
+            .HasIndex(ds => ds.EntityDefinitionId);
+
+        b.Entity<DDLScript>()
+            .HasIndex(ds => ds.Status);
+
+        b.Entity<DDLScript>()
+            .HasOne(ds => ds.EntityDefinition)
+            .WithMany(ed => ed.DDLScripts)
+            .HasForeignKey(ds => ds.EntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private AppDbContext db => this;
