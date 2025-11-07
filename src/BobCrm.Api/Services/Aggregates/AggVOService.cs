@@ -453,10 +453,19 @@ public class AggVOService : IAggVOService
     /// <summary>
     /// 将字典转换为 VO 对象
     /// </summary>
-    private object ConvertDictionaryToVO(Dictionary<string, object> dict, Type voType)
+    private object ConvertDictionaryToVO(object dictOrEntity, Type voType)
     {
-        var json = JsonSerializer.Serialize(dict);
-        return JsonSerializer.Deserialize(json, voType)!;
+        // 如果已经是Dictionary，直接使用
+        if (dictOrEntity is Dictionary<string, object> dict)
+        {
+            var json = JsonSerializer.Serialize(dict);
+            return JsonSerializer.Deserialize(json, voType)!;
+        }
+
+        // 否则，先转换为Dictionary
+        var convertedDict = ConvertVOToDictionary(dictOrEntity);
+        var jsonStr = JsonSerializer.Serialize(convertedDict);
+        return JsonSerializer.Deserialize(jsonStr, voType)!;
     }
 
     /// <summary>

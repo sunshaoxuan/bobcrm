@@ -114,16 +114,14 @@ public class PostgreSQLDDLGenerator
     {
         return fieldType switch
         {
-            FieldDataType.String => length.HasValue ? $"VARCHAR({length})" : "TEXT",
-            FieldDataType.Integer => "INTEGER",
-            FieldDataType.Long => "BIGINT",
+            FieldDataType.String => length.HasValue ? $"VARCHAR({length})" : "TEXT",  // 注意：Text是String的别名
+            FieldDataType.Int32 => "INTEGER",
+            FieldDataType.Int64 => "BIGINT",
             FieldDataType.Decimal => precision.HasValue && scale.HasValue
                 ? $"NUMERIC({precision},{scale})"
                 : "NUMERIC(18,2)",
             FieldDataType.Boolean => "BOOLEAN",
-            FieldDataType.DateTime => "TIMESTAMP WITHOUT TIME ZONE",
-            FieldDataType.Date => "DATE",
-            FieldDataType.Text => "TEXT",
+            FieldDataType.DateTime => "TIMESTAMP WITHOUT TIME ZONE",  // 注意：Date是DateTime的别名
             FieldDataType.Guid => "UUID",
             _ => "TEXT"
         };
@@ -139,10 +137,9 @@ public class PostgreSQLDDLGenerator
 
         return field.DataType switch
         {
-            FieldDataType.String or FieldDataType.Text => $"'{field.DefaultValue}'",
+            FieldDataType.String => $"'{field.DefaultValue}'",  // 注意：Text是String的别名，Date是DateTime的别名
             FieldDataType.Boolean => field.DefaultValue.ToLower() == "true" ? "TRUE" : "FALSE",
             FieldDataType.DateTime => field.DefaultValue.ToUpper() == "NOW" ? "CURRENT_TIMESTAMP" : $"'{field.DefaultValue}'",
-            FieldDataType.Date => field.DefaultValue.ToUpper() == "TODAY" ? "CURRENT_DATE" : $"'{field.DefaultValue}'",
             FieldDataType.Guid => field.DefaultValue.ToUpper() == "NEWID" ? "gen_random_uuid()" : $"'{field.DefaultValue}'",
             _ => field.DefaultValue
         };
