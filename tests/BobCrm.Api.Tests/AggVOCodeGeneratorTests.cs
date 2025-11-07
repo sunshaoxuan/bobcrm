@@ -275,7 +275,7 @@ public class AggVOCodeGeneratorTests
             DisplayNameKey = $"ENTITY_{entityName.ToUpper()}",
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
-            DefaultTableName = entityName.ToLower() + "s",
+            // DefaultTableName 是计算属性，不需要赋值
             Fields = fields.ToList(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

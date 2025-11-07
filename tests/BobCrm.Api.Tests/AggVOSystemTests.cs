@@ -300,7 +300,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
             IsEnabled = true,
             Order = 0,
             Source = "Custom",
-            DefaultTableName = entityName.ToLower() + "s",
+            // DefaultTableName 是计算属性，不需要赋值
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

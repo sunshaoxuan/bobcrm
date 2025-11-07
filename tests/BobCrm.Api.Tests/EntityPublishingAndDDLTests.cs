@@ -18,6 +18,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly Mock<ILogger<DDLExecutionService>> _mockDDLLogger;
     private readonly Mock<ILogger<EntityPublishingService>> _mockPublishLogger;
+    private readonly Mock<IEntityLockService> _mockLockService;
 
     public EntityPublishingAndDDLTests()
     {
@@ -29,6 +30,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         _ddlGenerator = new PostgreSQLDDLGenerator();
         _mockDDLLogger = new Mock<ILogger<DDLExecutionService>>();
         _mockPublishLogger = new Mock<ILogger<EntityPublishingService>>();
+        _mockLockService = new Mock<IEntityLockService>();
     }
 
     [Fact]
@@ -36,7 +38,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -53,7 +55,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -82,7 +84,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -99,7 +101,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
