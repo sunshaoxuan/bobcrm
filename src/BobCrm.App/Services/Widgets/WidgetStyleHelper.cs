@@ -37,11 +37,9 @@ public static class WidgetStyleHelper
     {
         var basis = CalculateFlexBasis(widget, gap);
         
-        var isContainer = IsContainerType(widget.Type);
-        
-        var heightStyle = widget.HeightUnit == "px"
-            ? $"min-height:{Math.Max(widget.Height, 32)}px;"
-            : (isContainer ? "" : "min-height:32px;");
+        // 设计态使用组件自己定义的最小高度，而不是运行态的 Height 属性
+        var minHeight = widget.GetDesignMinHeight();
+        var heightStyle = $"min-height:{minHeight}px;";
         
         var border = isSelected ? "2px solid #1890ff" : "1px solid #e0e0e0";
         var zIndex = isSelected ? "z-index:100" : "z-index:1";
