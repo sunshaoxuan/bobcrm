@@ -408,7 +408,8 @@
                 isUserDefault = true
             };
 
-            var resp = await Auth.PutAsJsonAsync($"/api/templates/{templateId}", payload);
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.PutAsJsonAsync($"/api/templates/{templateId}", payload);
 
             if (resp.IsSuccessStatusCode)
             {
