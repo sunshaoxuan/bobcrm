@@ -108,8 +108,7 @@ public static class DatabaseInitializer
             );
         }
 
-        // EntityMetadata 自动注册（通过反射扫描所有实现IEntityMetadataProvider的实体）
-        await AutoRegisterEntityMetadataAsync(db);
+        // EntityDefinition 自动同步已在 Program.cs 中由 EntityDefinitionSynchronizer 处理
 
         if (!await db.Set<LocalizationResource>().IgnoreQueryFilters().AnyAsync())
         {

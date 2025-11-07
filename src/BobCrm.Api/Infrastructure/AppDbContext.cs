@@ -42,10 +42,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
 
-    // 元数据
-    public DbSet<Data.Entities.EntityMetadata> EntityMetadata => Set<Data.Entities.EntityMetadata>();
-
-    // 实体自定义与发布
+    // 实体自定义与发布（统一的实体定义系统）
     public DbSet<EntityDefinition> EntityDefinitions => Set<EntityDefinition>();
     public DbSet<FieldMetadata> FieldMetadatas => Set<FieldMetadata>();
     public DbSet<EntityInterface> EntityInterfaces => Set<EntityInterface>();
@@ -132,26 +129,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<FormTemplate>()
             .HasIndex(ft => new { ft.EntityType, ft.IsSystemDefault });
-
-        // EntityMetadata 配置
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasKey(em => em.EntityType);
-
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasIndex(em => new { em.IsRootEntity, em.IsEnabled, em.Order });
-
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasIndex(em => em.EntitySource);
-
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasIndex(em => em.SourceDefinitionId);
-
-        // EntityMetadata 与 EntityDefinition 的可选关系
-        b.Entity<Data.Entities.EntityMetadata>()
-            .HasOne<EntityDefinition>()
-            .WithMany()
-            .HasForeignKey(em => em.SourceDefinitionId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         // EntityDefinition 配置
         b.Entity<EntityDefinition>()
