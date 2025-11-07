@@ -18,6 +18,7 @@ using BobCrm.Api.Domain;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Endpoints;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Middleware;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
