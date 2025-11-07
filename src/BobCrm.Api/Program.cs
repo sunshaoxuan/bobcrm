@@ -107,6 +107,11 @@ builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
 builder.Services.AddScoped<BobCrm.Api.Services.EntityPublishingService>();
 
+// Dynamic Entity Services (代码生成与动态编译)
+builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
+builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
+
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddHttpContextAccessor();

@@ -501,6 +501,245 @@ public static class EntityDefinitionEndpoints
         .WithSummary("获取DDL执行历史")
         .WithDescription("获取实体定义的所有DDL脚本执行历史");
 
+        // ==================== 代码生成与编译 ====================
+
+        // 生成实体代码
+        group.MapGet("/{id:guid}/generate-code", async (
+            Guid id,
+            AppDbContext db,
+            Services.DynamicEntityService dynamicEntityService) =>
+        {
+            try
+            {
+                var code = await dynamicEntityService.GenerateCodeAsync(id);
+
+                return Results.Ok(new
+                {
+                    entityId = id,
+                    code,
+                    message = "代码生成成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("GenerateEntityCode")
+        .WithSummary("生成实体代码")
+        .WithDescription("生成实体的C#类代码（不编译）");
+
+        // 编译实体
+        group.MapPost("/{id:guid}/compile", async (
+            Guid id,
+            AppDbContext db,
+            Services.DynamicEntityService dynamicEntityService,
+            ILogger<Program> logger) =>
+        {
+            try
+            {
+                logger.LogInformation("[Compile] Compiling entity: {Id}", id);
+
+                var result = await dynamicEntityService.CompileEntityAsync(id);
+
+                if (!result.Success)
+                {
+                    logger.LogError("[Compile] Failed with {Count} errors", result.Errors.Count);
+                    return Results.BadRequest(new
+                    {
+                        success = false,
+                        errors = result.Errors.Select(e => new
+                        {
+                            e.Code,
+                            e.Message,
+                            e.Line,
+                            e.Column
+                        })
+                    });
+                }
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    assemblyName = result.AssemblyName,
+                    loadedTypes = result.LoadedTypes,
+                    message = "实体编译成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[Compile] Exception: {Message}", ex.Message);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("CompileEntity")
+        .WithSummary("编译实体")
+        .WithDescription("编译实体代码并加载到内存");
+
+        // 批量编译实体
+        group.MapPost("/compile-batch", async (
+            CompileBatchDto dto,
+            AppDbContext db,
+            Services.DynamicEntityService dynamicEntityService,
+            ILogger<Program> logger) =>
+        {
+            try
+            {
+                logger.LogInformation("[Compile] Batch compiling {Count} entities", dto.EntityIds.Count);
+
+                var result = await dynamicEntityService.CompileMultipleEntitiesAsync(dto.EntityIds);
+
+                if (!result.Success)
+                {
+                    logger.LogError("[Compile] Batch failed with {Count} errors", result.Errors.Count);
+                    return Results.BadRequest(new
+                    {
+                        success = false,
+                        errors = result.Errors.Select(e => new
+                        {
+                            e.Code,
+                            e.Message,
+                            e.Line,
+                            e.Column,
+                            e.FilePath
+                        })
+                    });
+                }
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    assemblyName = result.AssemblyName,
+                    loadedTypes = result.LoadedTypes,
+                    count = result.LoadedTypes.Count,
+                    message = $"成功编译{result.LoadedTypes.Count}个实体"
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[Compile] Batch exception: {Message}", ex.Message);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("CompileBatchEntities")
+        .WithSummary("批量编译实体")
+        .WithDescription("批量编译多个实体到同一程序集");
+
+        // 验证实体代码语法
+        group.MapGet("/{id:guid}/validate-code", async (
+            Guid id,
+            AppDbContext db,
+            Services.DynamicEntityService dynamicEntityService) =>
+        {
+            try
+            {
+                var result = await dynamicEntityService.ValidateEntityCodeAsync(id);
+
+                return Results.Ok(new
+                {
+                    isValid = result.IsValid,
+                    errors = result.Errors.Select(e => new
+                    {
+                        e.Code,
+                        e.Message,
+                        e.Line,
+                        e.Column
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("ValidateEntityCode")
+        .WithSummary("验证实体代码")
+        .WithDescription("验证生成的实体代码语法（不编译）");
+
+        // 获取已加载的实体列表
+        group.MapGet("/loaded-entities", (Services.DynamicEntityService dynamicEntityService) =>
+        {
+            var loadedEntities = dynamicEntityService.GetLoadedEntities();
+
+            return Results.Ok(new
+            {
+                count = loadedEntities.Count,
+                entities = loadedEntities
+            });
+        })
+        .WithName("GetLoadedEntities")
+        .WithSummary("获取已加载实体")
+        .WithDescription("获取当前已加载到内存的所有动态实体");
+
+        // 获取实体类型信息
+        group.MapGet("/type-info/{fullTypeName}", (
+            string fullTypeName,
+            Services.DynamicEntityService dynamicEntityService) =>
+        {
+            var typeInfo = dynamicEntityService.GetEntityTypeInfo(fullTypeName);
+
+            if (typeInfo == null)
+                return Results.NotFound(new { error = "实体类型未加载" });
+
+            return Results.Ok(typeInfo);
+        })
+        .WithName("GetEntityTypeInfo")
+        .WithSummary("获取实体类型信息")
+        .WithDescription("获取已加载实体的类型元数据信息");
+
+        // 卸载实体
+        group.MapDelete("/loaded-entities/{fullTypeName}", (
+            string fullTypeName,
+            Services.DynamicEntityService dynamicEntityService) =>
+        {
+            dynamicEntityService.UnloadEntity(fullTypeName);
+
+            return Results.Ok(new { message = $"实体 {fullTypeName} 已卸载" });
+        })
+        .WithName("UnloadEntity")
+        .WithSummary("卸载实体")
+        .WithDescription("从内存中卸载指定的动态实体");
+
+        // 重新编译实体
+        group.MapPost("/{id:guid}/recompile", async (
+            Guid id,
+            AppDbContext db,
+            Services.DynamicEntityService dynamicEntityService,
+            ILogger<Program> logger) =>
+        {
+            try
+            {
+                logger.LogInformation("[Recompile] Recompiling entity: {Id}", id);
+
+                var result = await dynamicEntityService.RecompileEntityAsync(id);
+
+                if (!result.Success)
+                {
+                    return Results.BadRequest(new
+                    {
+                        success = false,
+                        errors = result.Errors
+                    });
+                }
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    assemblyName = result.AssemblyName,
+                    loadedTypes = result.LoadedTypes,
+                    message = "实体重新编译成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[Recompile] Exception: {Message}", ex.Message);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .WithName("RecompileEntity")
+        .WithSummary("重新编译实体")
+        .WithDescription("卸载并重新编译实体（用于实体定义更新后）");
+
         return app;
     }
 }
@@ -572,4 +811,12 @@ public record UpdateFieldMetadataDto
     public int? SortOrder { get; init; }
     public string? DefaultValue { get; init; }
     public string? ValidationRules { get; init; }
+}
+
+/// <summary>
+/// 批量编译DTO
+/// </summary>
+public record CompileBatchDto
+{
+    public List<Guid> EntityIds { get; init; } = new();
 }
