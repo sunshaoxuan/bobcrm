@@ -704,12 +704,12 @@ else
             // 策略：
             // - wrapper必须有@ondragover/@ondrop处理器，否则浏览器不允许drop
             // - 当拖动到已有子控件上时，pointer在wrapper上，事件必须从wrapper开始处理
-            // - wrapper处理dragover/drop，然后事件冒泡到frame-drop-zone进行位置计算
+            // - wrapper处理完后stopPropagation，避免事件继续冒泡到frame-drop-zone重复处理
             <div class="container-child-wrapper @(isSelected ? "selected" : "")"
                  data-widget-id="@container.Id"
                  @onclick="@(() => SelectWidget(container))" @onclick:stopPropagation
                  @ondragover="OnDragOver" @ondragover:preventDefault
-                 @ondrop="@(e => OnContainerDrop(e, container))" @ondrop:preventDefault
+                 @ondrop="@(e => OnContainerDrop(e, container))" @ondrop:preventDefault @ondrop:stopPropagation
                  style="@widthStyle @displayStyle position:relative; margin:4px; outline:@(isSelected ? "2px solid #1890ff" : "none"); outline-offset:2px;">
                 @if (isSelected)
                 {
