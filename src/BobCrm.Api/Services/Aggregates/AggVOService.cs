@@ -462,8 +462,21 @@ public class AggVOService : IAggVOService
     /// <summary>
     /// 获取实体ID
     /// </summary>
-    private int GetEntityId(Dictionary<string, object> data)
+    private int GetEntityId(object entityOrDict)
     {
+        Dictionary<string, object> data;
+
+        // 如果已经是 Dictionary，直接使用
+        if (entityOrDict is Dictionary<string, object> dict)
+        {
+            data = dict;
+        }
+        else
+        {
+            // 否则转换为 Dictionary
+            data = ConvertVOToDictionary(entityOrDict);
+        }
+
         if (data.TryGetValue("Id", out var idValue))
         {
             if (idValue is JsonElement jsonElement)

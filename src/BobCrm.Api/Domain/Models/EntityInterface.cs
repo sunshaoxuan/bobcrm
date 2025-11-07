@@ -77,6 +77,18 @@ public static class InterfaceType
 }
 
 /// <summary>
+/// EntityInterfaceType 别名类，用于代码兼容性
+/// </summary>
+public static class EntityInterfaceType
+{
+    public const string Base = InterfaceType.Base;
+    public const string Archive = InterfaceType.Archive;
+    public const string Audit = InterfaceType.Audit;
+    public const string Version = InterfaceType.Version;
+    public const string TimeVersion = InterfaceType.TimeVersion;
+}
+
+/// <summary>
 /// 接口字段映射 - 每种接口对应的字段定义
 /// </summary>
 public static class InterfaceFieldMapping
