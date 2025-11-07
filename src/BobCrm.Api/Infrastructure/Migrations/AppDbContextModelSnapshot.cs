@@ -334,6 +334,57 @@ namespace BobCrm.Api.Infrastructure.Migrations
                     b.ToTable("UserLayouts");
                 });
 
+            modelBuilder.Entity("BobCrm.Api.Domain.Models.FormTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityType")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsInUse")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSystemDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsUserDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LayoutJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntityType", "IsSystemDefault");
+
+                    b.HasIndex("UserId", "EntityType");
+
+                    b.HasIndex("UserId", "EntityType", "IsUserDefault");
+
+                    b.ToTable("FormTemplates");
+                });
+
             modelBuilder.Entity("BobCrm.Api.Domain.UserPreferences", b =>
                 {
                     b.Property<int>("Id")
