@@ -29,7 +29,9 @@ public class TabContainerWidget : ContainerWidget
     /// </summary>
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
-        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        var properties = base.GetPropertyMetadata();
+
+        properties.AddRange(new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "Animated", Label = "PROP_ANIMATED", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Centered", Label = "PROP_CENTERED", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
@@ -57,7 +59,9 @@ public class TabContainerWidget : ContainerWidget
                     new() { Value = "right", Label = "PROP_POSITION_RIGHT" }
                 }
             }
-        };
+        });
+
+        return properties;
     }
 
     public override string GetDefaultCodePrefix()

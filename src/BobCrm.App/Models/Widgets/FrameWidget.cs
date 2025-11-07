@@ -33,7 +33,9 @@ public class FrameWidget : ContainerWidget
     /// </summary>
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
-        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        var properties = base.GetPropertyMetadata();
+
+        properties.AddRange(new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "BorderStyle", Label = "PROP_BORDER_STYLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Select,
                 Options = new List<BobCrm.App.Models.Designer.PropertyOption>
@@ -48,7 +50,9 @@ public class FrameWidget : ContainerWidget
             new() { PropertyPath = "BorderWidth", Label = "PROP_BORDER_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 10 },
             new() { PropertyPath = "BackgroundColor", Label = "PROP_BACKGROUND_COLOR", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Color, Placeholder = "#fff" },
             new() { PropertyPath = "Padding", Label = "PROP_PADDING", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48 }
-        };
+        });
+
+        return properties;
     }
 
     public override string GetDefaultCodePrefix()
