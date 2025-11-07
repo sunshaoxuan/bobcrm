@@ -435,6 +435,134 @@ public static class LayoutEndpoints
         .WithSummary("删除布局（兼容别名）")
         .WithDescription("删除用户级别的布局模板（兼容旧路径 /api/layout/customer）");
 
+        // ===== 新版API：支持EntityType =====
+
+        // 获取实体布局（根据EntityType）
+        layoutGroup.MapGet("/entity/{entityType}", (
+            string entityType,
+            ClaimsPrincipal user,
+            ILayoutQueries q,
+            ILogger<Program> logger,
+            string? scope) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            scope ??= "effective";
+
+            logger.LogDebug("[Layout] Retrieving layout for entity {EntityType}, user {UserId}, scope {Scope}",
+                entityType, uid, scope);
+
+            return Results.Json(q.GetLayoutByEntityType(uid, entityType, scope));
+        })
+        .WithName("GetLayoutByEntityType")
+        .WithSummary("获取实体布局（根据实体类型）")
+        .WithDescription("根据实体类型（如customer、product、order）获取布局模板");
+
+        // 保存实体布局（根据EntityType）
+        layoutGroup.MapPost("/entity/{entityType}", async (
+            string entityType,
+            ClaimsPrincipal user,
+            IRepository<UserLayout> repoLayout,
+            IUnitOfWork uow,
+            System.Text.Json.JsonElement layout,
+            HttpContext http,
+            ILocalization loc,
+            ILogger<Program> logger,
+            string? scope) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var saveScope = (scope ?? "user").ToLowerInvariant();
+            var targetUserId = saveScope == "default" ? "__default__" : uid;
+
+            logger.LogInformation("[Layout] Saving layout for entity {EntityType}, scope {Scope}, user {UserId}",
+                entityType, saveScope, uid);
+
+            if (saveScope == "default")
+            {
+                var name = user.Identity?.Name ?? string.Empty;
+                var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+                if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save default layout", uid);
+                    return Results.StatusCode(403);
+                }
+            }
+
+            var body = System.Text.Json.JsonSerializer.Serialize(layout);
+            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.EntityType == entityType).FirstOrDefault();
+
+            if (entity != null)
+            {
+                entity.LayoutJson = body;
+                repoLayout.Update(entity);
+                logger.LogInformation("[Layout] Updated existing entity layout");
+            }
+            else
+            {
+                entity = new UserLayout
+                {
+                    UserId = targetUserId,
+                    CustomerId = 0,  // 使用EntityType时，CustomerId设为0
+                    EntityType = entityType,
+                    LayoutJson = body
+                };
+                await repoLayout.AddAsync(entity);
+                logger.LogInformation("[Layout] Created new entity layout");
+            }
+
+            await uow.SaveChangesAsync();
+            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已保存"));
+        })
+        .WithName("SaveLayoutByEntityType")
+        .WithSummary("保存实体布局（根据实体类型）")
+        .WithDescription("根据实体类型保存布局模板");
+
+        // 删除实体布局（根据EntityType）
+        layoutGroup.MapDelete("/entity/{entityType}", async (
+            string entityType,
+            ClaimsPrincipal user,
+            IRepository<UserLayout> repoLayout,
+            IUnitOfWork uow,
+            ILogger<Program> logger,
+            string? scope) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var delScope = (scope ?? "user").ToLowerInvariant();
+            var targetUserId = delScope == "default" ? "__default__" : uid;
+
+            logger.LogInformation("[Layout] Deleting layout for entity {EntityType}, scope {Scope}, user {UserId}",
+                entityType, delScope, uid);
+
+            if (delScope == "default")
+            {
+                var name = user.Identity?.Name ?? string.Empty;
+                var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+                if (!string.Equals(name, "admin", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to delete default layout", uid);
+                    return Results.StatusCode(403);
+                }
+            }
+
+            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.EntityType == entityType).FirstOrDefault();
+            if (entity != null)
+            {
+                repoLayout.Remove(entity);
+                await uow.SaveChangesAsync();
+                logger.LogInformation("[Layout] Entity layout deleted successfully");
+            }
+            else
+            {
+                logger.LogDebug("[Layout] No entity layout found to delete");
+            }
+
+            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已删除"));
+        })
+        .WithName("DeleteLayoutByEntityType")
+        .WithSummary("删除实体布局（根据实体类型）")
+        .WithDescription("根据实体类型删除布局模板");
+
         // 从标签生成布局
         layoutGroup.MapPost("/{customerId:int}/generate", async (
             int customerId,

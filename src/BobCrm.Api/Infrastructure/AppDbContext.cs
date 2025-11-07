@@ -35,6 +35,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<UserLayout> UserLayouts => Set<UserLayout>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
 
     // 本地化
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
@@ -110,6 +111,20 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // FieldValue 索引
         b.Entity<FieldValue>()
             .HasIndex(fv => new { fv.CustomerId, fv.FieldDefinitionId });
+
+        // UserLayout 索引
+        b.Entity<UserLayout>()
+            .HasIndex(ul => new { ul.UserId, ul.EntityType });
+
+        // FormTemplate 索引和约束
+        b.Entity<FormTemplate>()
+            .HasIndex(ft => new { ft.UserId, ft.EntityType });
+
+        b.Entity<FormTemplate>()
+            .HasIndex(ft => new { ft.UserId, ft.EntityType, ft.IsUserDefault });
+
+        b.Entity<FormTemplate>()
+            .HasIndex(ft => new { ft.EntityType, ft.IsSystemDefault });
 
         // EntityMetadata 配置
         b.Entity<Data.Entities.EntityMetadata>()
