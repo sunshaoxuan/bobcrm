@@ -292,7 +292,9 @@ cd publish && ./BobCrm.App
 **最新进展**（2025-11-07）：
 - ✅ 系统级逻辑删除机制已实现（IEntity接口、DDL生成器、反射持久化）
 - ✅ AggVO聚合根系统核心功能已完成
-- 🚧 正在完善：数据库迁移、前端界面、单元测试、集成示例、锁定机制
+- ✅ 数据库迁移、前端界面、单元测试、集成示例、锁定机制全部完成
+- ✅ **表单设计器实体元数据树视图** - 支持字段拖放和自动组件选择
+- 🚧 下一步：图片/文件上传组件、接口抽象层优化
 
 #### AggVO系统已完成功能：
 
@@ -305,14 +307,21 @@ cd publish && ./BobCrm.App
 - [x] **PostgreSQL DDL生成器** - 自动生成接口字段（包含逻辑删除）
 - [x] **ReflectionPersistenceService** - 支持动态CRUD和逻辑删除
 - [x] **AGGVO_SYSTEM_GUIDE.md** - 完整使用文档（96KB）
+- [x] **数据库迁移脚本** - EntityDefinition主子表字段迁移（EF + SQL）
+- [x] **前端可视化界面** - MasterDetailConfig.razor（527行）
+- [x] **单元测试** - 30个测试方法，覆盖集成、代码生成、迁移评估
+- [x] **集成示例** - ORDER_MANAGEMENT_EXAMPLE.md（15KB）+ 自动化脚本
+- [x] **锁定机制** - EntityLockService + 自动锁定发布实体
+- [x] **表单设计器实体元数据树** - 字段拖放 + 自动组件选择
 
-#### 待完成任务（当前迭代）：
+#### 待完成任务（下一个迭代）：
 
-- [ ] **数据库迁移脚本** - 为EntityDefinition新增字段生成迁移
-- [ ] **前端可视化界面** - 主子表配置UI（Blazor组件）
-- [ ] **单元测试** - AggVO系统完整测试覆盖
-- [ ] **集成示例** - 订单管理示例（Order-OrderLine-OrderLineAttribute）
-- [ ] **锁定机制** - 模板引用时自动锁定EntityDefinition
+- [ ] **图片/文件上传组件** - ImageUploadWidget, FileWidget, MapWidget
+- [ ] **文件存储服务** - IFileStorageService接口和实现
+- [ ] **文件上传API** - FileUploadController（上传/下载/删除）
+- [ ] **接口抽象层** - 为所有服务添加接口（遵循DIP原则）
+- [ ] **Swagger文档增强** - XML注释、请求示例、JWT配置
+- [ ] **异常处理优化** - Result<T>模式 + 全局异常过滤器
 
 ---
 
