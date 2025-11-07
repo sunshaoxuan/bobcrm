@@ -42,6 +42,12 @@ public class ReflectionPersistenceService
         var dbSet = GetDbSet(entityType);
         var query = (IQueryable<object>)dbSet;
 
+        // 自动过滤逻辑删除的记录（系统级安全机制）
+        if (HasProperty(entityType, "IsDeleted"))
+        {
+            query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
+        }
+
         // 应用过滤条件
         if (options?.Filters != null && options.Filters.Any())
         {
@@ -84,12 +90,16 @@ public class ReflectionPersistenceService
         _logger.LogInformation("[Persistence] Getting {EntityType} with ID {Id}", fullTypeName, id);
 
         var dbSet = GetDbSet(entityType);
-        var findMethod = dbSet.GetType().GetMethod("Find", new[] { typeof(object[]) });
+        var query = (IQueryable<object>)dbSet;
 
-        if (findMethod == null)
-            throw new InvalidOperationException("Find method not found");
+        // 自动过滤逻辑删除的记录
+        if (HasProperty(entityType, "IsDeleted"))
+        {
+            query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
+        }
 
-        var result = findMethod.Invoke(dbSet, new object[] { new object[] { id } });
+        // 查询指定ID的记录
+        var result = await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
 
         return result;
     }
@@ -155,32 +165,45 @@ public class ReflectionPersistenceService
     }
 
     /// <summary>
-    /// 删除实体
+    /// 删除实体（逻辑删除）
     /// </summary>
-    public async Task<bool> DeleteAsync(string fullTypeName, int id)
+    public async Task<bool> DeleteAsync(string fullTypeName, int id, string? deletedBy = null)
     {
         var entityType = _dynamicEntityService.GetEntityType(fullTypeName);
         if (entityType == null)
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
-        _logger.LogInformation("[Persistence] Deleting {EntityType} with ID {Id}", fullTypeName, id);
+        _logger.LogInformation("[Persistence] Soft deleting {EntityType} with ID {Id}", fullTypeName, id);
 
         // 查找实体
         var entity = await GetByIdAsync(fullTypeName, id);
         if (entity == null)
             return false;
 
-        // 从DbContext删除
-        var dbSet = GetDbSet(entityType);
-        var removeMethod = dbSet.GetType().GetMethod("Remove", new[] { entityType });
+        // 逻辑删除：设置 IsDeleted = true
+        if (HasProperty(entityType, "IsDeleted"))
+        {
+            SetPropertyValue(entity, entityType, "IsDeleted", true);
 
-        if (removeMethod == null)
-            throw new InvalidOperationException("Remove method not found");
+            if (HasProperty(entityType, "DeletedAt"))
+            {
+                SetPropertyValue(entity, entityType, "DeletedAt", DateTime.UtcNow);
+            }
 
-        removeMethod.Invoke(dbSet, new[] { entity });
-        await _db.SaveChangesAsync();
+            if (HasProperty(entityType, "DeletedBy") && !string.IsNullOrEmpty(deletedBy))
+            {
+                SetPropertyValue(entity, entityType, "DeletedBy", deletedBy);
+            }
 
-        _logger.LogInformation("[Persistence] Deleted {EntityType} successfully", fullTypeName);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("[Persistence] Soft deleted {EntityType} successfully", fullTypeName);
+        }
+        else
+        {
+            _logger.LogWarning("[Persistence] Entity {EntityType} does not support soft delete, skipping", fullTypeName);
+            return false;
+        }
 
         return true;
     }
@@ -221,6 +244,27 @@ public class ReflectionPersistenceService
             throw new InvalidOperationException($"Failed to get DbSet for {entityType.Name}");
 
         return dbSet;
+    }
+
+    /// <summary>
+    /// 检查实体类型是否有指定属性
+    /// </summary>
+    private bool HasProperty(Type entityType, string propertyName)
+    {
+        return entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance) != null;
+    }
+
+    /// <summary>
+    /// 设置实体的单个属性值
+    /// </summary>
+    private void SetPropertyValue(object entity, Type entityType, string propertyName, object value)
+    {
+        var property = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (property != null && property.CanWrite)
+        {
+            var convertedValue = ConvertValue(value, property.PropertyType);
+            property.SetValue(entity, convertedValue);
+        }
     }
 
     /// <summary>

@@ -22,7 +22,11 @@ public class PostgreSQLDDLGenerator
 
         var columns = new List<string>();
 
-        // 生成字段定义
+        // 首先添加接口定义的系统字段
+        var interfaceColumns = GenerateInterfaceColumns(entity);
+        columns.AddRange(interfaceColumns.Select(col => $"    {col}"));
+
+        // 然后添加自定义字段
         foreach (var field in entity.Fields.OrderBy(f => f.SortOrder))
         {
             var columnDef = GenerateColumnDefinition(field);
@@ -142,6 +146,73 @@ public class PostgreSQLDDLGenerator
             FieldDataType.Guid => field.DefaultValue.ToUpper() == "NEWID" ? "gen_random_uuid()" : $"'{field.DefaultValue}'",
             _ => field.DefaultValue
         };
+    }
+
+    /// <summary>
+    /// 根据实体接口生成数据库列
+    /// </summary>
+    private List<string> GenerateInterfaceColumns(EntityDefinition entity)
+    {
+        var columns = new List<string>();
+        var addedColumns = new HashSet<string>(); // 防止重复添加
+
+        foreach (var entityInterface in entity.Interfaces.Where(i => i.IsEnabled))
+        {
+            switch (entityInterface.InterfaceType)
+            {
+                case EntityInterfaceType.Base:
+                    // IEntity 字段（包含逻辑删除）
+                    if (addedColumns.Add("Id"))
+                        columns.Add("\"Id\" SERIAL PRIMARY KEY");
+                    if (addedColumns.Add("IsDeleted"))
+                        columns.Add("\"IsDeleted\" BOOLEAN NOT NULL DEFAULT FALSE");
+                    if (addedColumns.Add("DeletedAt"))
+                        columns.Add("\"DeletedAt\" TIMESTAMP WITHOUT TIME ZONE NULL");
+                    if (addedColumns.Add("DeletedBy"))
+                        columns.Add("\"DeletedBy\" VARCHAR(100) NULL");
+                    break;
+
+                case EntityInterfaceType.Archive:
+                    // IArchive 字段
+                    if (addedColumns.Add("Code"))
+                        columns.Add("\"Code\" VARCHAR(100) NOT NULL");
+                    if (addedColumns.Add("Name"))
+                        columns.Add("\"Name\" VARCHAR(200) NOT NULL");
+                    break;
+
+                case EntityInterfaceType.Audit:
+                    // IAuditable 字段
+                    if (addedColumns.Add("CreatedAt"))
+                        columns.Add("\"CreatedAt\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP");
+                    if (addedColumns.Add("CreatedBy"))
+                        columns.Add("\"CreatedBy\" VARCHAR(100) NULL");
+                    if (addedColumns.Add("UpdatedAt"))
+                        columns.Add("\"UpdatedAt\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP");
+                    if (addedColumns.Add("UpdatedBy"))
+                        columns.Add("\"UpdatedBy\" VARCHAR(100) NULL");
+                    if (addedColumns.Add("Version"))
+                        columns.Add("\"Version\" INTEGER NOT NULL DEFAULT 1");
+                    break;
+
+                case EntityInterfaceType.Version:
+                    // IVersioned 字段
+                    if (addedColumns.Add("Version"))
+                        columns.Add("\"Version\" INTEGER NOT NULL DEFAULT 1");
+                    break;
+
+                case EntityInterfaceType.TimeVersion:
+                    // ITimeVersioned 字段
+                    if (addedColumns.Add("ValidFrom"))
+                        columns.Add("\"ValidFrom\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP");
+                    if (addedColumns.Add("ValidTo"))
+                        columns.Add("\"ValidTo\" TIMESTAMP WITHOUT TIME ZONE NULL");
+                    if (addedColumns.Add("VersionNo"))
+                        columns.Add("\"VersionNo\" INTEGER NOT NULL DEFAULT 1");
+                    break;
+            }
+        }
+
+        return columns;
     }
 
     /// <summary>

@@ -233,10 +233,14 @@ namespace BobCrm.Api.Domain
 {
     /// <summary>
     /// 基础实体接口 - 所有实体都应实现此接口
+    /// 包含逻辑删除支持（系统级安全机制）
     /// </summary>
     public interface IEntity
     {
         int Id { get; set; }
+        bool IsDeleted { get; set; }
+        DateTime? DeletedAt { get; set; }
+        string? DeletedBy { get; set; }
     }
 
     /// <summary>
