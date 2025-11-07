@@ -7,6 +7,213 @@
 
 ---
 
+## [0.5.8] - 2025-11-07
+
+### 新增 (Added)
+
+**🎨 完整的多模板管理系统 - FormTemplate 表与前后端全栈实现**
+
+#### 背景与需求
+- **旧方案问题**：
+  - 每个用户每个实体类型只能有一个布局（UserLayout 表）
+  - 无法创建多个模板供不同场景使用
+  - 无默认模板机制，新用户需要重新设计
+  - 模板命名、描述、分组功能缺失
+
+- **新需求**：
+  - 每个实体可以有多个命名模板（如"客户详情-简版"、"客户详情-完整版"）
+  - 支持用户默认模板（每个用户每个实体一个）
+  - 支持系统默认模板（每个实体一个，对所有用户生效）
+  - 模板选择优先级：用户默认 > 系统默认 > 第一个模板
+  - 实体类型锁定：模板保存后不允许修改实体类型
+  - 删除保护：系统默认、用户默认、正在使用的模板不可删除
+
+#### 后端实现
+
+1. **FormTemplate 域模型** (`src/BobCrm.Api/Domain/Models/FormTemplate.cs`)：
+   ```csharp
+   public class FormTemplate
+   {
+       public int Id { get; set; }
+       public string Name { get; set; }              // 模板名称
+       public string? EntityType { get; set; }       // 实体类型（customer/product/order）
+       public string UserId { get; set; }            // 所属用户
+       public bool IsUserDefault { get; set; }       // 是否为用户默认
+       public bool IsSystemDefault { get; set; }     // 是否为系统默认
+       public string? LayoutJson { get; set; }       // 布局JSON
+       public string? Description { get; set; }      // 模板描述
+       public DateTime CreatedAt { get; set; }
+       public DateTime UpdatedAt { get; set; }
+       public bool IsInUse { get; set; }             // 是否正在使用
+   }
+   ```
+
+2. **数据库迁移** (`20251107030000_AddFormTemplateTable.cs`)：
+   - 创建 FormTemplates 表
+   - 添加三个复合索引优化查询：
+     - `(UserId, EntityType)`
+     - `(UserId, EntityType, IsUserDefault)`
+     - `(EntityType, IsSystemDefault)`
+
+3. **完整的 CRUD API** (`src/BobCrm.Api/Endpoints/TemplateEndpoints.cs`)：
+   - **GET /api/templates** - 获取用户的所有模板
+     - 支持 `?entityType=customer` 过滤
+     - 支持 `?groupBy=entity` 按实体类型分组
+     - 返回排序：用户默认优先，然后按更新时间倒序
+   - **GET /api/templates/{id}** - 获取单个模板详情
+   - **POST /api/templates** - 创建新模板
+     - 自动清除同实体类型下的其他用户默认模板
+     - 系统默认模板仅管理员可设置
+   - **PUT /api/templates/{id}** - 更新模板
+     - EntityType 一旦设置后锁定，不允许修改
+     - 设置为用户默认时，自动取消其他模板的默认标记
+   - **DELETE /api/templates/{id}** - 删除模板
+     - 业务规则：系统默认、用户默认、正在使用的模板不可删除
+   - **GET /api/templates/effective/{entityType}** - 获取有效模板
+     - 优先级：用户默认 > 系统默认 > 第一个创建的模板
+
+4. **业务逻辑保护**：
+   - EntityType 锁定：防止修改已设计模板的实体类型导致数据混乱
+   - 默认模板唯一性：同一用户同一实体只能有一个用户默认模板
+   - 删除保护：三类模板受保护（系统默认/用户默认/正在使用）
+   - 权限控制：所有端点都需要认证，只能操作自己的模板
+
+#### 前端实现
+
+1. **Templates.razor 完全重写** (602行，`/templates` 路由)：
+   - **分组视图**：
+     - 平铺列表：所有模板按更新时间倒序显示
+     - 按实体分组：将模板按实体类型（客户/产品/订单）分组显示
+   - **模板卡片**：
+     - 显示模板名称、描述、更新时间
+     - 徽章：用户默认（蓝色）、系统默认（紫色）、实体类型（绿色）
+     - 操作按钮：
+       - **编辑** - 跳转到设计器
+       - **设为默认** - 设置为用户默认模板（已是默认则不显示）
+       - **删除** - 删除模板（受保护模板禁用按钮）
+   - **友好提示**：
+     - 空状态：显示"暂无模板"提示
+     - 删除确认：JavaScript confirm 对话框
+     - 成功/失败消息：右上角浮动提示，3秒后自动消失
+
+2. **FormDesigner.razor 增强** (1115行，`/designer` 和 `/designer/{id}` 路由)：
+
+   **路由处理**：
+   - `/designer/new` - 创建新模板（空白画布）
+   - `/designer/{id}` - 编辑现有模板（加载模板数据）
+
+   **模板属性面板**（右侧，无选中组件时显示）：
+   - **模板名称**：文本输入框（必填）
+   - **模板描述**：多行文本框（3行，可选）
+   - **实体类型**：
+     - 新建模板：使用 EntitySelector 组件选择实体
+     - 编辑模板：显示为禁用输入框 + 🔒 锁定提示
+   - **组件数量**：显示当前画布上的组件数量（蓝色大数字）
+   - **提示信息**：蓝色信息卡片，说明模板的作用
+
+   **保存逻辑升级**：
+   - **验证**：模板名称和实体类型为必填
+   - **创建模式**：
+     - POST /api/templates 创建新模板
+     - 保存成功后获取新模板ID
+     - 自动更新 URL 为 `/designer/{newId}`（避免重复创建）
+     - 锁定实体类型
+   - **更新模式**：
+     - PUT /api/templates/{id} 更新现有模板
+     - 保留实体类型锁定状态
+
+   **加载逻辑重构**：
+   - 使用 FormTemplate API（GET /api/templates/{id}）
+   - 解析模板元数据：名称、描述、实体类型、布局JSON
+   - 判断实体类型锁定状态（有EntityType则锁定）
+   - 兼容处理：非数字ID视为旧格式，初始化空模板
+
+3. **PageLoader.razor 集成** (`/{entityType}/{id}` 路由)：
+   - 优先使用 GET /api/templates/effective/{entityType} 加载模板
+   - 如果找不到 FormTemplate，回退到旧的 UserLayout API（向后兼容）
+   - 错误处理：模板未找到、JSON 解析失败、字段绑定错误都保留控件（只是没有数据）
+
+4. **前端 DTO 模型** (`src/BobCrm.App/Models/FormTemplate.cs`)：
+   ```csharp
+   public class FormTemplate { /* 对应后端模型 */ }
+   public class TemplateGroupByEntity { /* 按实体分组 */ }
+   public class TemplateGroupByUser { /* 按用户分组 */ }
+   ```
+
+#### 技术亮点
+
+1. **OOP 设计原则**：
+   - 单一职责：TemplateEndpoints 专注模板管理
+   - 开闭原则：新增实体类型无需修改模板系统
+   - 依赖倒置：通过 IRepository<FormTemplate> 访问数据
+
+2. **数据完整性**：
+   - 复合索引优化查询性能
+   - 唯一性约束通过代码强制执行
+   - 事务保证：自动清除旧默认模板 + 设置新默认模板
+
+3. **用户体验**：
+   - 渐进式增强：先显示模板列表，再按需加载详情
+   - 友好提示：操作成功/失败都有清晰反馈
+   - 实体类型锁定：防止误操作导致数据混乱
+   - 删除保护：重要模板禁用删除按钮，防止误删
+
+4. **向后兼容**：
+   - PageLoader 保留 UserLayout API 回退逻辑
+   - FormDesigner 可以加载旧格式模板
+   - 数据库保留 UserLayouts 表（旧数据不丢失）
+
+#### 工作流程示例
+
+**创建新模板**：
+1. 用户访问 `/templates`，点击"新建模板"
+2. 跳转到 `/designer/new`（空白画布）
+3. 输入模板名称："客户详情-简版"
+4. 输入描述："仅显示基本信息和联系方式"
+5. 选择实体类型："客户"（customer）
+6. 拖拽组件设计表单布局
+7. 点击"保存布局"
+8. 系统创建模板，URL 更新为 `/designer/123`
+9. 实体类型自动锁定，不可再修改
+
+**设置默认模板**：
+1. 用户访问 `/templates`
+2. 在"客户详情-简版"卡片上点击"设为默认"
+3. 系统自动取消"客户详情-完整版"的默认标记
+4. "客户详情-简版"变为用户默认模板
+5. 后续访问 `/customer/1` 自动使用简版模板
+
+**删除模板**：
+1. 用户在模板列表点击"删除"按钮
+2. 系统检查模板状态：
+   - 是系统默认？→ 禁用按钮
+   - 是用户默认？→ 禁用按钮
+   - 正在使用？→ 禁用按钮
+   - 可以删除 → 弹出确认对话框
+3. 用户确认后，模板被删除
+
+#### 测试与验证
+- ✅ 创建/编辑/删除模板功能正常
+- ✅ 实体类型锁定机制生效
+- ✅ 默认模板优先级正确（用户默认 > 系统默认 > 第一个）
+- ✅ 删除保护规则正确执行
+- ✅ 分组视图正常切换
+- ✅ 所有操作都有友好提示
+
+#### 相关提交
+- `34b05dc` - fix: 修复布局保存和加载的数据格式不匹配问题（双重序列化）
+- `5dae952` - feat: 实现完整的多模板管理系统（FormTemplate表+前后端集成）
+- `9bd67bc` - feat: 增强FormDesigner支持FormTemplate API和实体锁定
+
+#### 收益
+- ✅ **多模板支持**：每个实体可以有无限个命名模板
+- ✅ **默认模板机制**：新用户可以快速开始，无需从零设计
+- ✅ **分组管理**：按实体类型组织模板，清晰易用
+- ✅ **数据保护**：实体类型锁定 + 删除保护，防止误操作
+- ✅ **扩展性**：支持未来的模板导入/导出、模板市场等功能
+
+---
+
 ## [0.5.7] - 2025-11-07
 
 ### 新增 (Added)
