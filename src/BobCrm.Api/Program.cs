@@ -113,6 +113,11 @@ builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
 builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
 builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 
+// Advanced Features Services (高级功能：AggVO、数据迁移评估)
+builder.Services.AddScoped<BobCrm.Api.Services.CodeGeneration.AggVOCodeGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.Aggregates.AggVOService>();
+builder.Services.AddScoped<BobCrm.Api.Services.DataMigration.DataMigrationEvaluator>();
+
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddHttpContextAccessor();

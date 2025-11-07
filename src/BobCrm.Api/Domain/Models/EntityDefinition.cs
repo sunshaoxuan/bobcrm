@@ -80,6 +80,44 @@ public class EntityDefinition
     /// </summary>
     public bool IsLocked { get; set; } = false;
 
+    // ============ 主子表结构配置 ============
+
+    /// <summary>
+    /// 父实体ID（仅用于 MasterDetail 和 MasterDetailGrandchild 的子实体）
+    /// Detail 实体指向 Master，Grandchild 实体指向 Detail
+    /// </summary>
+    public Guid? ParentEntityId { get; set; }
+
+    /// <summary>
+    /// 父实体名称（冗余字段，便于查询和显示）
+    /// </summary>
+    [MaxLength(100)]
+    public string? ParentEntityName { get; set; }
+
+    /// <summary>
+    /// 父实体外键字段名（在子实体中，如 "OrderId"、"OrderLineId"）
+    /// </summary>
+    [MaxLength(100)]
+    public string? ParentForeignKeyField { get; set; }
+
+    /// <summary>
+    /// 在父实体中的集合属性名（如 "OrderLines"、"Comments"）
+    /// 用于生成 AggVO 的子实体列表属性名
+    /// </summary>
+    [MaxLength(100)]
+    public string? ParentCollectionProperty { get; set; }
+
+    /// <summary>
+    /// 级联删除行为：NoAction、Cascade、SetNull、Restrict
+    /// </summary>
+    [MaxLength(20)]
+    public string CascadeDeleteBehavior { get; set; } = "NoAction";
+
+    /// <summary>
+    /// 是否自动级联保存（保存主表时自动保存子表）
+    /// </summary>
+    public bool AutoCascadeSave { get; set; } = true;
+
     // ============ 注册表属性（原EntityMetadata字段）============
 
     /// <summary>
@@ -202,4 +240,22 @@ public static class EntitySource
 
     /// <summary>用户自定义实体（通过UI创建）</summary>
     public const string Custom = "Custom";
+}
+
+/// <summary>
+/// 级联删除行为枚举
+/// </summary>
+public static class CascadeDeleteBehavior
+{
+    /// <summary>不执行任何操作</summary>
+    public const string NoAction = "NoAction";
+
+    /// <summary>级联删除相关记录</summary>
+    public const string Cascade = "Cascade";
+
+    /// <summary>将外键设置为NULL</summary>
+    public const string SetNull = "SetNull";
+
+    /// <summary>阻止删除（抛出错误）</summary>
+    public const string Restrict = "Restrict";
 }
