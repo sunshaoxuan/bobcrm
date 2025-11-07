@@ -225,6 +225,11 @@ else
                         </div>
 
                         <div style="margin-bottom:12px">
+                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DESCRIPTION")</label>
+                            <TextArea @bind-Value="description" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_DESCRIPTION")" Rows="3" />
+                        </div>
+
+                        <div style="margin-bottom:12px">
                             <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</label>
                             
                             @if (isEntityTypeLocked)
@@ -295,7 +300,9 @@ else
 @code {
     [Parameter] public string? TemplateId { get; set; }
 
+    private int? templateIdNumeric = null; // 模板的数字ID（用于更新已有模板）
     private string templateName = "";
+    private string description = ""; // 模板描述
     private string entityType = "";
     private string? originalEntityType = null; // 模板原始的实体类型（用于判断是否锁定）
     private bool isEntityTypeLocked = false; // 实体类型是否已锁定（已设置的模板不允许修改实体类型）
@@ -431,7 +438,9 @@ else
 
     private void InitializeEmptyTemplate()
     {
+        templateIdNumeric = null;
         templateName = I18n.T("LBL_NEW_TEMPLATE");
+        description = "";
         entityType = ""; // 新建模板，不设置默认实体类型
         originalEntityType = null;
         isEntityTypeLocked = false; // 新建模板，允许选择实体类型
@@ -472,105 +481,109 @@ else
     {
         try
         {
-            // 解析TemplateId（如"user-customer"表示用户的客户模板）
-            string scope = "effective"; // 默认加载有效布局
-            int customerId = 0; // 默认为模板
-            
-            if (TemplateId?.StartsWith("user-") == true)
-            {
-                // user-customer表示用户的客户模板
-                scope = "user";
-                entityType = TemplateId.Substring(5); // 去掉"user-"前缀
-            }
-            else if (TemplateId?.StartsWith("default-") == true)
-            {
-                // default-customer表示系统默认客户模板
-                scope = "default";
-                entityType = TemplateId.Substring(8); // 去掉"default-"前缀
-            }
-            else if (!string.IsNullOrWhiteSpace(TemplateId))
-            {
-                // 如果是纯实体名，加载该实体的有效模板
-                entityType = TemplateId;
-            }
+            // ⭐ 新逻辑：使用 FormTemplate API
+            // 路由：/designer/new（新建）或 /designer/{id}（编辑）
 
-            // 从API加载布局
-            var resp = await Auth.GetWithRefreshAsync($"/api/layout/{customerId}?scope={scope}");
-            
-            if (!resp.IsSuccessStatusCode)
+            if (TemplateId == "new" || string.IsNullOrWhiteSpace(TemplateId))
             {
-                // 加载失败，初始化空模板
+                // 新建模板
                 InitializeEmptyTemplate();
+                await JS.InvokeVoidAsync("console.log", "[FormDesigner] Creating new template");
                 return;
             }
 
-            var content = await resp.Content.ReadAsStringAsync();
-            
-            // 处理空响应
-            if (string.IsNullOrWhiteSpace(content) || content == "{}" || content == "null")
+            // 尝试解析为数字ID
+            if (int.TryParse(TemplateId, out var id))
             {
-                InitializeEmptyTemplate();
-                return;
-            }
+                templateIdNumeric = id;
 
-            // 解析布局JSON
-            var doc = System.Text.Json.JsonDocument.Parse(content);
-            var root = doc.RootElement;
+                // 从 FormTemplate API 加载
+                var resp = await Auth.GetWithRefreshAsync($"/api/templates/{id}");
 
-            // 设置模板名称
-            templateName = scope == "user" ? I18n.T("LBL_USER_TEMPLATE") : 
-                          scope == "default" ? I18n.T("LBL_DEFAULT_TEMPLATE") : 
-                          I18n.T("LBL_TEMPLATE");
-
-            // 解析items（Widget列表）
-            if (root.TryGetProperty("items", out var itemsEl))
-            {
-                layoutWidgets = new List<DraggableWidget>();
-                
-                foreach (var item in itemsEl.EnumerateObject())
+                if (!resp.IsSuccessStatusCode)
                 {
-                    try
-                    {
-                        var widget = LayoutMapper.FromJsonElement(item.Value);
-                        layoutWidgets.Add(widget);
-                    }
-                    catch (Exception ex)
-                    {
-                        await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to parse widget: {ex.Message}");
-                    }
+                    error = $"模板加载失败: {resp.StatusCode}";
+                    await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load template {id}: {resp.StatusCode}");
+                    return;
                 }
 
-                // 保持JSON中的顺序（设计器中用户可以手动拖拽调整）
+                var content = await resp.Content.ReadAsStringAsync();
+                var template = System.Text.Json.JsonSerializer.Deserialize<FormTemplateDto>(
+                    content,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (template == null)
+                {
+                    error = "模板数据解析失败";
+                    return;
+                }
+
+                // 填充模板信息
+                templateName = template.Name;
+                description = template.Description ?? "";
+                entityType = template.EntityType ?? "";
+                originalEntityType = template.EntityType;
+
+                // 如果模板有实体类型，锁定它（不允许修改）
+                isEntityTypeLocked = !string.IsNullOrWhiteSpace(template.EntityType);
+
+                // 解析布局JSON
+                if (!string.IsNullOrWhiteSpace(template.LayoutJson))
+                {
+                    var doc = System.Text.Json.JsonDocument.Parse(template.LayoutJson);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("items", out var itemsEl))
+                    {
+                        layoutWidgets = new List<DraggableWidget>();
+
+                        foreach (var item in itemsEl.EnumerateObject())
+                        {
+                            try
+                            {
+                                var widget = LayoutMapper.FromJsonElement(item.Value);
+                                layoutWidgets.Add(widget);
+                            }
+                            catch (Exception ex)
+                            {
+                                await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to parse widget: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    layoutWidgets = new List<DraggableWidget>();
+                }
+
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template {id}: {layoutWidgets.Count} widgets, entityType={entityType}, locked={isEntityTypeLocked}");
             }
             else
             {
-                // 没有items属性，可能是旧格式或空模板
-                layoutWidgets = new List<DraggableWidget>();
+                // 不是数字ID，可能是旧格式（兼容性处理）
+                await JS.InvokeVoidAsync("console.warn", $"[FormDesigner] Unknown TemplateId format: {TemplateId}, initializing empty template");
+                InitializeEmptyTemplate();
             }
-
-            // ⭐ 关键：判断是否锁定实体类型
-            // 如果模板已经有组件（layoutWidgets.Count > 0），说明是已设计的模板，锁定实体类型
-            // 如果模板为空但有明确的 entityType，也锁定（避免空模板修改实体类型导致混乱）
-            if (layoutWidgets.Count > 0 && !string.IsNullOrWhiteSpace(entityType))
-            {
-                originalEntityType = entityType;
-                isEntityTypeLocked = true;
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Entity type locked: {entityType} (has {layoutWidgets.Count} widgets)");
-            }
-            else
-            {
-                originalEntityType = null;
-                isEntityTypeLocked = false;
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Entity type unlocked: new or empty template");
-            }
-
-            await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template: {layoutWidgets.Count} widgets");
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[FormDesigner] LoadTemplate failed: {ex.Message}");
-            InitializeEmptyTemplate();
+            error = $"加载失败: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// FormTemplate DTO（与后端 FormTemplate 对应）
+    /// </summary>
+    private class FormTemplateDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? EntityType { get; set; }
+        public string? LayoutJson { get; set; }
+        public string? Description { get; set; }
+        public bool IsUserDefault { get; set; }
+        public bool IsSystemDefault { get; set; }
     }
 
     private class FieldDefinitionItem
@@ -605,6 +618,19 @@ else
     {
         try
         {
+            // 验证必填字段
+            if (string.IsNullOrWhiteSpace(templateName))
+            {
+                await JS.InvokeVoidAsync("alert", "请输入模板名称");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(entityType))
+            {
+                await JS.InvokeVoidAsync("alert", "请选择实体类型");
+                return;
+            }
+
             // 序列化布局为JSON
             var items = new Dictionary<string, object>();
             for (int i = 0; i < layoutWidgets.Count; i++)
@@ -614,25 +640,83 @@ else
                 items[key] = itemData;
             }
 
-            // 构建完整的布局数据（与 LoadTemplate 期望的格式匹配）
+            // 构建完整的布局数据
             var layoutData = new Dictionary<string, object>
             {
-                ["items"] = items,
-                ["entityType"] = entityType ?? "",
-                ["templateName"] = templateName ?? ""
+                ["items"] = items
             };
 
-            // 直接发送对象，后端会自动序列化（不要双重序列化）
+            // 序列化为JSON字符串
+            var layoutJson = System.Text.Json.JsonSerializer.Serialize(layoutData);
+
             var client = await Auth.CreateClientWithAuthAsync();
-            var resp = await client.PostAsJsonAsync($"/api/layout/0", layoutData);
-            
-            if (resp.IsSuccessStatusCode)
+            System.Net.Http.HttpResponseMessage resp;
+
+            if (templateIdNumeric.HasValue)
             {
-                await JS.InvokeVoidAsync("alert", "保存成功");
+                // 更新现有模板
+                var updatePayload = new
+                {
+                    name = templateName,
+                    description = description,
+                    layoutJson = layoutJson,
+                    entityType = entityType
+                };
+
+                resp = await client.PutAsJsonAsync($"/api/templates/{templateIdNumeric.Value}", updatePayload);
+
+                if (resp.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("alert", "模板更新成功");
+                    await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Template {templateIdNumeric.Value} updated successfully");
+                }
+                else
+                {
+                    var errorContent = await resp.Content.ReadAsStringAsync();
+                    error = $"更新失败: {resp.StatusCode} - {errorContent}";
+                    await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Update failed: {error}");
+                }
             }
             else
             {
-                error = "保存失败";
+                // 创建新模板
+                var createPayload = new
+                {
+                    name = templateName,
+                    description = description,
+                    entityType = entityType,
+                    layoutJson = layoutJson,
+                    isUserDefault = false // 新建模板默认不是用户默认
+                };
+
+                resp = await client.PostAsJsonAsync("/api/templates", createPayload);
+
+                if (resp.IsSuccessStatusCode)
+                {
+                    // 获取新创建的模板ID
+                    var content = await resp.Content.ReadAsStringAsync();
+                    var newTemplate = System.Text.Json.JsonSerializer.Deserialize<FormTemplateDto>(
+                        content,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (newTemplate != null)
+                    {
+                        templateIdNumeric = newTemplate.Id;
+                        isEntityTypeLocked = true; // 保存后锁定实体类型
+                        originalEntityType = entityType;
+                        await JS.InvokeVoidAsync("alert", "模板创建成功");
+                        await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Template created with ID {newTemplate.Id}");
+
+                        // 更新URL以反映新的模板ID（避免重复创建）
+                        Nav.NavigateTo($"/designer/{newTemplate.Id}", forceLoad: false);
+                    }
+                }
+                else
+                {
+                    var errorContent = await resp.Content.ReadAsStringAsync();
+                    error = $"创建失败: {resp.StatusCode} - {errorContent}";
+                    await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Create failed: {error}");
+                }
             }
         }
         catch (Exception ex)
