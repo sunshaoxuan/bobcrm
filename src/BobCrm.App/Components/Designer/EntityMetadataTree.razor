@@ -1,0 +1,371 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@using System.Text.Json
+
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
+@inject IJSRuntime JS
+
+@if (loading)
+{
+    <div style="padding:16px; text-align:center; color:#999">
+        <Icon Type="@IconType.Outline.Loading" Spin />
+        <div style="margin-top:8px; font-size:12px">@I18n.T("LBL_LOADING")...</div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(error))
+{
+    <div style="padding:16px">
+        <Alert Type="AlertType.Warning" Message="@error" ShowIcon="true" />
+    </div>
+}
+else if (fieldNodes.Count == 0)
+{
+    <div style="padding:16px; text-align:center; color:#999">
+        <Icon Type="@IconType.Outline.Inbox" Style="font-size:32px; margin-bottom:8px" />
+        <div style="font-size:12px">@I18n.T("LBL_NO_ENTITY_SELECTED")</div>
+    </div>
+}
+else
+{
+    <!-- Entity structure tree -->
+    <div style="padding:8px">
+        @foreach (var group in fieldNodes.GroupBy(f => f.Source).OrderBy(g => GetSourceOrder(g.Key)))
+        {
+            <div style="margin-bottom:12px">
+                <div style="font-size:11px; color:#999; font-weight:600; margin-bottom:6px; padding:0 4px; text-transform:uppercase">
+                    @GetSourceDisplayName(group.Key)
+                </div>
+                @foreach (var field in group.OrderBy(f => f.PropertyName))
+                {
+                    <div class="entity-field-item"
+                         draggable="@field.IsDraggable"
+                         data-drag-type="entity-field"
+                         data-drag-data="@field.Key"
+                         @ondragstart="@((e) => OnFieldDragStart(e, field))"
+                         @ondragstart:preventDefault="false"
+                         @ondragend="OnFieldDragEnd"
+                         style="padding:6px 8px; margin:2px 0; background:#fff; border:1px solid #e0e0e0; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px; transition:all 0.2s"
+                         @onmouseenter="@(() => hoveredField = field)"
+                         @onmouseleave="@(() => hoveredField = null)">
+
+                        <Icon Type="@GetFieldIcon(field.DataType)" Style="color:#1890ff; font-size:14px" />
+
+                        <div style="flex:1; min-width:0">
+                            <div style="font-size:12px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
+                                @field.PropertyName
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(field.DisplayName))
+                            {
+                                <div style="font-size:10px; color:#999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
+                                    @field.DisplayName
+                                </div>
+                            }
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px">
+                            <Tag Color="@GetDataTypeColor(field.DataType)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
+                                @field.DataType
+                            </Tag>
+                            @if (field.IsRequired)
+                            {
+                                <Tag Color="red" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
+                                    *
+                                </Tag>
+                            }
+                        </div>
+                    </div>
+
+                    @* Tooltip showing suggested widget *@
+                    @if (hoveredField == field)
+                    {
+                        <div style="font-size:10px; color:#52c41a; padding:4px 8px; background:#f6ffed; border:1px solid #b7eb8f; border-radius:2px; margin-top:-2px; margin-bottom:4px">
+                            <Icon Type="@IconType.Outline.Bulb" /> @I18n.T("LBL_SUGGESTED"): @field.SuggestedWidgetType
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? EntityType { get; set; }
+
+    [Parameter]
+    public EventCallback<EntityFieldNode> OnFieldDragStarted { get; set; }
+
+    private bool loading = false;
+    private string? error = null;
+    private List<EntityFieldNode> fieldNodes = new();
+    private EntityFieldNode? hoveredField = null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadEntityMetadata();
+    }
+
+    private async Task LoadEntityMetadata()
+    {
+        if (string.IsNullOrWhiteSpace(EntityType))
+        {
+            fieldNodes = new();
+            return;
+        }
+
+        loading = true;
+        error = null;
+        StateHasChanged();
+
+        try
+        {
+            // Get entity definition by type
+            var response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(EntityType)}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                error = $"Failed to load entity metadata: {response.StatusCode}";
+                loading = false;
+                return;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var entityDef = JsonSerializer.Deserialize<EntityDefinitionDto>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (entityDef == null)
+            {
+                error = "Failed to parse entity metadata";
+                loading = false;
+                return;
+            }
+
+            // Build field nodes
+            fieldNodes = new List<EntityFieldNode>();
+
+            // Add custom fields
+            if (entityDef.Fields != null)
+            {
+                foreach (var field in entityDef.Fields)
+                {
+                    var node = new EntityFieldNode
+                    {
+                        Key = field.PropertyName,
+                        PropertyName = field.PropertyName,
+                        DisplayName = I18n.T(field.DisplayNameKey),
+                        DataType = field.DataType,
+                        Length = field.Length,
+                        Precision = field.Precision,
+                        Scale = field.Scale,
+                        IsRequired = field.IsRequired,
+                        DefaultValue = field.DefaultValue,
+                        Source = "Custom",
+                        IsDraggable = true,
+                        SuggestedWidgetType = GetSuggestedWidgetType(field.DataType, field.Length, field.IsRequired),
+                        Icon = GetFieldIcon(field.DataType)
+                    };
+                    fieldNodes.Add(node);
+                }
+            }
+
+            // Add interface fields
+            if (entityDef.Interfaces != null)
+            {
+                foreach (var iface in entityDef.Interfaces.Where(i => i.IsEnabled))
+                {
+                    var interfaceFields = GetInterfaceFields(iface.InterfaceType);
+                    foreach (var field in interfaceFields)
+                    {
+                        // Avoid duplicates
+                        if (!fieldNodes.Any(f => f.PropertyName == field.PropertyName))
+                        {
+                            field.Source = iface.InterfaceType;
+                            fieldNodes.Add(field);
+                        }
+                    }
+                }
+            }
+
+            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {fieldNodes.Count} fields for {EntityType}");
+        }
+        catch (Exception ex)
+        {
+            error = $"Error: {ex.Message}";
+            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnFieldDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, EntityFieldNode field)
+    {
+        try
+        {
+            await OnFieldDragStarted.InvokeAsync(field);
+            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Dragging field: {field.PropertyName}");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Drag start error: {ex.Message}");
+        }
+    }
+
+    private void OnFieldDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        // Cleanup after drag
+        hoveredField = null;
+        StateHasChanged();
+    }
+
+    private string GetSuggestedWidgetType(string dataType, int? length, bool isRequired)
+    {
+        return dataType switch
+        {
+            "String" when length <= 100 => "Input",
+            "String" when length > 100 => "TextArea",
+            "Integer" or "Long" => "InputNumber",
+            "Decimal" => "InputNumber",
+            "Boolean" => "Checkbox",
+            "DateTime" => "DatePicker",
+            "Date" => "DatePicker",
+            "Time" => "TimePicker",
+            "Guid" => "Input",
+            "Text" => "TextArea",
+            _ => "Input"
+        };
+    }
+
+    private string GetFieldIcon(string dataType)
+    {
+        return dataType switch
+        {
+            "String" => IconType.Outline.Font,
+            "Integer" or "Long" or "Decimal" => IconType.Outline.Number,
+            "Boolean" => IconType.Outline.Check,
+            "DateTime" or "Date" => IconType.Outline.Calendar,
+            "Time" => IconType.Outline.ClockCircle,
+            "Text" => IconType.Outline.FileText,
+            "Guid" => IconType.Outline.Key,
+            _ => IconType.Outline.Field
+        };
+    }
+
+    private string GetDataTypeColor(string dataType)
+    {
+        return dataType switch
+        {
+            "String" => "blue",
+            "Integer" or "Long" or "Decimal" => "green",
+            "Boolean" => "orange",
+            "DateTime" or "Date" or "Time" => "purple",
+            "Text" => "cyan",
+            "Guid" => "geekblue",
+            _ => "default"
+        };
+    }
+
+    private int GetSourceOrder(string source)
+    {
+        return source switch
+        {
+            "Custom" => 1,
+            "Base" => 2,
+            "Archive" => 3,
+            "Audit" => 4,
+            "Tree" => 5,
+            _ => 99
+        };
+    }
+
+    private string GetSourceDisplayName(string source)
+    {
+        return source switch
+        {
+            "Custom" => I18n.T("LBL_CUSTOM_FIELDS"),
+            "Base" => I18n.T("LBL_BASE_FIELDS"),
+            "Archive" => I18n.T("LBL_ARCHIVE_FIELDS"),
+            "Audit" => I18n.T("LBL_AUDIT_FIELDS"),
+            "Tree" => I18n.T("LBL_TREE_FIELDS"),
+            _ => source
+        };
+    }
+
+    private List<EntityFieldNode> GetInterfaceFields(string interfaceType)
+    {
+        return interfaceType switch
+        {
+            "Base" => new List<EntityFieldNode>
+            {
+                new() { PropertyName = "Id", DisplayName = "ID", DataType = "Integer", IsRequired = true, Source = "Base", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
+                new() { PropertyName = "Code", DisplayName = I18n.T("FIELD_CODE"), DataType = "String", Length = 50, IsRequired = false, Source = "Base", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") },
+                new() { PropertyName = "Name", DisplayName = I18n.T("FIELD_NAME"), DataType = "String", Length = 200, IsRequired = true, Source = "Base", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
+            },
+            "Archive" => new List<EntityFieldNode>
+            {
+                new() { PropertyName = "IsArchived", DisplayName = I18n.T("FIELD_IS_ARCHIVED"), DataType = "Boolean", IsRequired = true, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "Checkbox", Icon = GetFieldIcon("Boolean") },
+                new() { PropertyName = "ArchivedAt", DisplayName = I18n.T("FIELD_ARCHIVED_AT"), DataType = "DateTime", IsRequired = false, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
+                new() { PropertyName = "ArchivedBy", DisplayName = I18n.T("FIELD_ARCHIVED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
+            },
+            "Audit" => new List<EntityFieldNode>
+            {
+                new() { PropertyName = "CreatedAt", DisplayName = I18n.T("FIELD_CREATED_AT"), DataType = "DateTime", IsRequired = true, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
+                new() { PropertyName = "CreatedBy", DisplayName = I18n.T("FIELD_CREATED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") },
+                new() { PropertyName = "UpdatedAt", DisplayName = I18n.T("FIELD_UPDATED_AT"), DataType = "DateTime", IsRequired = true, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
+                new() { PropertyName = "UpdatedBy", DisplayName = I18n.T("FIELD_UPDATED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
+            },
+            "Tree" => new List<EntityFieldNode>
+            {
+                new() { PropertyName = "ParentId", DisplayName = I18n.T("FIELD_PARENT_ID"), DataType = "Integer", IsRequired = false, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
+                new() { PropertyName = "Level", DisplayName = I18n.T("FIELD_LEVEL"), DataType = "Integer", IsRequired = true, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
+                new() { PropertyName = "Path", DisplayName = I18n.T("FIELD_PATH"), DataType = "String", Length = 500, IsRequired = false, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
+            },
+            _ => new List<EntityFieldNode>()
+        };
+    }
+
+    // DTOs
+    private class EntityDefinitionDto
+    {
+        public Guid Id { get; set; }
+        public string EntityName { get; set; } = "";
+        public string Namespace { get; set; } = "";
+        public List<FieldDto>? Fields { get; set; }
+        public List<InterfaceDto>? Interfaces { get; set; }
+    }
+
+    private class FieldDto
+    {
+        public string PropertyName { get; set; } = "";
+        public string DisplayNameKey { get; set; } = "";
+        public string DataType { get; set; } = "";
+        public int? Length { get; set; }
+        public int? Precision { get; set; }
+        public int? Scale { get; set; }
+        public bool IsRequired { get; set; }
+        public string? DefaultValue { get; set; }
+    }
+
+    private class InterfaceDto
+    {
+        public string InterfaceType { get; set; } = "";
+        public bool IsEnabled { get; set; }
+    }
+}
+
+<style>
+    .entity-field-item:hover {
+        background: #e6f7ff !important;
+        border-color: #1890ff !important;
+        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+    }
+
+    .entity-field-item:active {
+        transform: scale(0.98);
+    }
+</style>

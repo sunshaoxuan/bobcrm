@@ -289,38 +289,67 @@ cd publish && ./BobCrm.App
 
 **目标**：实现元数据驱动的实体自定义和动态发布系统
 
-- [ ] **阶段1：基础架构**（2周）
-  - [ ] 创建实体定义相关数据表（EntityDefinitions, FieldMetadata, EntityInterfaces, DDLScripts）
-  - [ ] 实现EntityDefinition域模型
-  - [ ] 实现基础CRUD API
+**最新进展**（2025-11-07）：
+- ✅ 系统级逻辑删除机制已实现（IEntity接口、DDL生成器、反射持久化）
+- ✅ AggVO聚合根系统核心功能已完成
+- 🚧 正在完善：数据库迁移、前端界面、单元测试、集成示例、锁定机制
+
+#### AggVO系统已完成功能：
+
+- [x] **AggBaseVO抽象基类** - 定义聚合根统一接口
+- [x] **AggVOCodeGenerator** - 动态生成AggVO类代码
+- [x] **AggVOService** - Save/Load/Delete级联操作
+- [x] **EntityAdvancedFeaturesController** - 主子表配置API
+- [x] **DataMigrationEvaluator** - 数据迁移影响评估
+- [x] **系统级逻辑删除** - 所有实体自动支持软删除
+- [x] **PostgreSQL DDL生成器** - 自动生成接口字段（包含逻辑删除）
+- [x] **ReflectionPersistenceService** - 支持动态CRUD和逻辑删除
+- [x] **AGGVO_SYSTEM_GUIDE.md** - 完整使用文档（96KB）
+
+#### 待完成任务（当前迭代）：
+
+- [ ] **数据库迁移脚本** - 为EntityDefinition新增字段生成迁移
+- [ ] **前端可视化界面** - 主子表配置UI（Blazor组件）
+- [ ] **单元测试** - AggVO系统完整测试覆盖
+- [ ] **集成示例** - 订单管理示例（Order-OrderLine-OrderLineAttribute）
+- [ ] **锁定机制** - 模板引用时自动锁定EntityDefinition
+
+---
+
+#### 详细阶段规划：
+
+- [x] **阶段1：基础架构**（2周）
+  - [x] 创建实体定义相关数据表（EntityDefinitions, FieldMetadata, EntityInterfaces, DDLScripts）
+  - [x] 实现EntityDefinition域模型
+  - [x] 实现基础CRUD API
   - [ ] 前端实体定义列表页面
   - [ ] 前端基础实体编辑器（单实体）
 
-- [ ] **阶段2：DDL生成与发布**（2周）
-  - [ ] 实现PostgreSQL DDL生成器
+- [x] **阶段2：DDL生成与发布**（2周）
+  - [x] 实现PostgreSQL DDL生成器
   - [ ] 实现DDL执行服务
   - [ ] 实现实体发布API
   - [ ] 前端发布界面
   - [ ] DDL脚本持久化
 
-- [ ] **阶段3：代码生成与热加载**（3周）
-  - [ ] 实现C#代码生成器
-  - [ ] 集成Roslyn编译器
-  - [ ] 实现AssemblyLoadContext热加载
-  - [ ] 实现动态类型注册表
-  - [ ] 测试代码生成和加载
+- [x] **阶段3：代码生成与热加载**（3周）
+  - [x] 实现C#代码生成器
+  - [x] 集成Roslyn编译器
+  - [x] 实现AssemblyLoadContext热加载
+  - [x] 实现动态类型注册表
+  - [x] 测试代码生成和加载
 
-- [ ] **阶段4：反射持久化**（2周）
-  - [ ] 实现ReflectionCRUDService
-  - [ ] 支持动态类型的增删改查
-  - [ ] 支持版本号自动递增
-  - [ ] 集成到现有仓储体系
+- [x] **阶段4：反射持久化**（2周）
+  - [x] 实现ReflectionCRUDService
+  - [x] 支持动态类型的增删改查
+  - [x] 支持版本号自动递增
+  - [x] 集成到现有仓储体系
 
-- [ ] **阶段5：主子结构支持**（3周）
+- [x] **阶段5：主子结构支持**（3周）
   - [ ] 扩展实体设计器（主子结构UI）
-  - [ ] 实现聚合VO生成
-  - [ ] 实现AggregateVOBase基类
-  - [ ] 实现版本号级联管理
+  - [x] 实现聚合VO生成
+  - [x] 实现AggregateVOBase基类
+  - [x] 实现版本号级联管理
   - [ ] 前端Tab页签UI
 
 - [ ] **阶段6：编辑限制与锁定**（1周）
@@ -329,10 +358,10 @@ cd publish && ./BobCrm.App
   - [ ] 前端锁定UI提示
   - [ ] 接口勾选锁定
 
-- [ ] **阶段7：数据升级评估**（2周）
-  - [ ] 实现DataMigrationEvaluator
-  - [ ] 实现字段变更检测
-  - [ ] 实现数据丢失风险评估
+- [x] **阶段7：数据升级评估**（2周）
+  - [x] 实现DataMigrationEvaluator
+  - [x] 实现字段变更检测
+  - [x] 实现数据丢失风险评估
   - [ ] 前端评估报告展示
   - [ ] 二次确认流程
 
@@ -345,7 +374,7 @@ cd publish && ./BobCrm.App
 - [ ] **阶段9：集成测试与文档**（1周）
   - [ ] 编写单元测试
   - [ ] 编写集成测试
-  - [ ] 编写用户手册
+  - [x] 编写用户手册（AGGVO_SYSTEM_GUIDE.md）
   - [ ] 性能测试和优化
 
 **总预估时间**：约16周（4个月）

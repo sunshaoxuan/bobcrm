@@ -13,17 +13,20 @@ public class EntityPublishingService
     private readonly AppDbContext _db;
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly DDLExecutionService _ddlExecutor;
+    private readonly EntityLockService _lockService;
     private readonly ILogger<EntityPublishingService> _logger;
 
     public EntityPublishingService(
         AppDbContext db,
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
+        EntityLockService lockService,
         ILogger<EntityPublishingService> logger)
     {
         _db = db;
         _ddlGenerator = ddlGenerator;
         _ddlExecutor = ddlExecutor;
+        _lockService = lockService;
         _logger = logger;
     }
 
@@ -101,8 +104,11 @@ public class EntityPublishingService
             entity.UpdatedBy = publishedBy;
             await _db.SaveChangesAsync();
 
+            // 8. 锁定实体定义（防止发布后误修改关键属性）
+            await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
+
             result.Success = true;
-            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully", entity.EntityName);
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully and locked", entity.EntityName);
         }
         catch (Exception ex)
         {
