@@ -55,15 +55,18 @@ else
         <!-- Designer Main Area -->
         <div style="display:flex; flex:1; overflow:hidden">
             <!-- Left Toolbox -->
-            <div class="designer-toolbox" style="width:240px; border-right:1px solid var(--border); overflow-y:auto; background:#fafafa">
+            <div class="designer-toolbox" style="width:280px; border-right:1px solid var(--border); overflow-y:auto; background:#fafafa">
                 <div style="padding:16px">
                     <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_COMPONENTS")</h3>
-                    <Collapse Accordion="false" DefaultActiveKey="@(new[]{"1","2"})">
+                    <Collapse Accordion="false" DefaultActiveKey="@(new[]{"entity","1","2"})">
+                        <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
+                            <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
+                        </Panel>
                         <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
                             <div style="display:flex; flex-direction:column; gap:8px">
                                 @foreach (var comp in WidgetRegistry.BasicWidgets)
                                 {
-                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" 
+                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
                                          @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                          style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                         <Icon Type="@comp.Icon" />
@@ -76,7 +79,7 @@ else
                             <div style="display:flex; flex-direction:column; gap:8px">
                                 @foreach (var comp in WidgetRegistry.LayoutWidgets)
                                 {
-                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type" 
+                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
                                          @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
                                          style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
                                         <Icon Type="@comp.Icon" />
@@ -324,6 +327,7 @@ else
     private WidgetRegistry.WidgetDefinition? draggedDefinition;
     private DraggableWidget? draggedWidget;
     private DraggableWidget? draggedParentContainer;
+    private EntityFieldNode? draggedEntityField; // 拖拽的实体字段
     private bool dropSucceeded = false;
     private bool isDragging = false; // 全局拖拽状态，用于控制容器wrapper的pointer-events
     private bool isProcessingDrop = false; // 防护标志：正在处理drop，防止OnDragEnd清空状态
@@ -930,6 +934,13 @@ else
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnWidgetDragStart: {widget.Id}"); } catch { }
     }
 
+    private void OnEntityFieldDragStart(EntityFieldNode field)
+    {
+        dropSucceeded = false;
+        draggedEntityField = field;
+        // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
+    }
+
     private void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
         // Allow drop
@@ -950,6 +961,27 @@ else
             draggedDefinition = null;
             await InvokeAsync(StateHasChanged);
         }
+        else if (draggedEntityField != null)
+        {
+            // 从实体字段创建组件
+            var widgetType = draggedEntityField.SuggestedWidgetType;
+            var label = draggedEntityField.DisplayName;
+
+            var newWidget = WidgetRegistry.Create(widgetType, label);
+
+            // 设置数据字段绑定
+            newWidget.DataField = draggedEntityField.PropertyName;
+            newWidget.Label = label;
+
+            // 自动生成唯一的 Code
+            newWidget.Code = WidgetCodeGenerator.GenerateUniqueCode(newWidget, GetAllWidgets());
+
+            layoutWidgets.Add(newWidget);
+            selectedWidget = newWidget;
+            dropSucceeded = true;
+            draggedEntityField = null;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
@@ -964,6 +996,7 @@ else
         {
             draggedDefinition = null;
             draggedWidget = null;
+            draggedEntityField = null;
         }
         dropSucceeded = false;
         await InvokeAsync(StateHasChanged);
@@ -1021,6 +1054,44 @@ else
                 draggedDefinition = null;
 
                 await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added new widget to container at index {insertIndex}");
+                await InvokeAsync(StateHasChanged);
+            }
+            // 从实体字段创建组件并添加到容器
+            else if (draggedEntityField != null)
+            {
+                var widgetType = draggedEntityField.SuggestedWidgetType;
+                var label = draggedEntityField.DisplayName;
+
+                var newWidget = WidgetRegistry.Create(widgetType, label);
+
+                // 设置数据字段绑定
+                newWidget.DataField = draggedEntityField.PropertyName;
+                newWidget.Label = label;
+
+                // 自动生成唯一的 Code
+                newWidget.Code = WidgetCodeGenerator.GenerateUniqueCode(newWidget, GetAllWidgets());
+
+                // 初始化 Children 列表
+                if (targetContainer.Children == null)
+                {
+                    targetContainer.Children = new List<DraggableWidget>();
+                }
+
+                // 在指定位置插入
+                if (insertIndex >= 0 && insertIndex < targetContainer.Children.Count)
+                {
+                    targetContainer.Children.Insert(insertIndex, newWidget);
+                }
+                else
+                {
+                    targetContainer.Children.Add(newWidget);
+                }
+
+                selectedWidget = newWidget;
+                dropSucceeded = true;
+                draggedEntityField = null;
+
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added entity field widget to container at index {insertIndex}");
                 await InvokeAsync(StateHasChanged);
             }
             // 移动已有组件到容器

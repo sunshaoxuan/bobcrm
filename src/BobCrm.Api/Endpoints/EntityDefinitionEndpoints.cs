@@ -69,6 +69,23 @@ public static class EntityDefinitionEndpoints
         .WithSummary("获取实体定义详情")
         .WithDescription("获取指定实体定义的完整信息，包括所有字段和接口");
 
+        // 根据实体类型名称获取实体定义（用于表单设计器）
+        group.MapGet("/by-type/{entityType}", async (string entityType, AppDbContext db) =>
+        {
+            var definition = await db.EntityDefinitions
+                .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
+                .Include(ed => ed.Interfaces)
+                .FirstOrDefaultAsync(ed => ed.FullName == entityType);
+
+            if (definition == null)
+                return Results.NotFound(new { error = "实体定义不存在" });
+
+            return Results.Json(definition);
+        })
+        .WithName("GetEntityDefinitionByType")
+        .WithSummary("根据类型名称获取实体定义")
+        .WithDescription("根据实体的完整类型名称获取实体定义，用于表单设计器中的实体元数据树");
+
         // 检查实体是否被引用
         group.MapGet("/{id:guid}/referenced", async (Guid id, AppDbContext db) =>
         {
