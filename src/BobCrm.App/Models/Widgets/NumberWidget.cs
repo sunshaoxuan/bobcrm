@@ -36,7 +36,9 @@ public class NumberWidget : TextWidget
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
-        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        var properties = base.GetPropertyMetadata();
+
+        properties.AddRange(new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "DefaultValue", Label = "LBL_DEFAULT_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number },
@@ -45,7 +47,9 @@ public class NumberWidget : TextWidget
             new() { PropertyPath = "Step", Label = "PROP_STEP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 100 },
             new() { PropertyPath = "AllowDecimal", Label = "PROP_ALLOW_DECIMAL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
-        };
+        });
+
+        return properties;
     }
 
     public override void RenderRuntime(RuntimeRenderContext context)

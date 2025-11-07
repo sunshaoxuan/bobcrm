@@ -236,6 +236,7 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_TEMPLATE_PROPERTIES", ZH = "模板属性", JA = "テンプレートプロパティ", EN = "Template Properties" },
                 new LocalizationResource { Key = "LBL_WIDGET_PROPERTIES", ZH = "组件属性", JA = "コンポーネントプロパティ", EN = "Widget Properties" },
                 new LocalizationResource { Key = "PROP_CODE", ZH = "代码/名称", JA = "コード/名前", EN = "Code/Name" },
+                new LocalizationResource { Key = "ERR_CODE_NOT_UNIQUE", ZH = "此代码已被使用，请输入唯一的代码", JA = "このコードは既に使用されています。一意のコードを入力してください", EN = "This code is already in use. Please enter a unique code" },
                 new LocalizationResource { Key = "PROP_GROUP_BASIC", ZH = "基本", JA = "基本", EN = "Basic" },
                 new LocalizationResource { Key = "LBL_TEMPLATE", ZH = "模板", JA = "テンプレート", EN = "Template" },
                 new LocalizationResource { Key = "LBL_TEMPLATE_NAME", ZH = "模板名称", JA = "テンプレート名", EN = "Template Name" },

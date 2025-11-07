@@ -33,7 +33,9 @@ public class TextareaWidget : TextWidget
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
-        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        var properties = base.GetPropertyMetadata();
+
+        properties.AddRange(new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Placeholder", Label = "LBL_PLACEHOLDER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
@@ -42,7 +44,9 @@ public class TextareaWidget : TextWidget
             new() { PropertyPath = "Rows", Label = "PROP_ROWS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 2, Max = 20 },
             new() { PropertyPath = "AutoSize", Label = "PROP_AUTO_SIZE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
-        };
+        });
+
+        return properties;
     }
 
     public override void RenderRuntime(RuntimeRenderContext context)

@@ -35,7 +35,9 @@ public class ButtonWidget : TextWidget
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
-        return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
+        var properties = base.GetPropertyMetadata();
+
+        properties.AddRange(new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Variant", Label = "PROP_BUTTON_VARIANT", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Select,
@@ -58,7 +60,9 @@ public class ButtonWidget : TextWidget
             },
             new() { PropertyPath = "Block", Label = "PROP_BUTTON_BLOCK", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
-        };
+        });
+
+        return properties;
     }
 
     public override void RenderRuntime(RuntimeRenderContext context)

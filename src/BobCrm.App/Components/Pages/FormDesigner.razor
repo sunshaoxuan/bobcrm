@@ -644,7 +644,7 @@ else
     private RenderFragment RenderTypeSpecificPropertyPanel(DraggableWidget widget) => __builder =>
     {
         var properties = PropertyProvider.GetProperties(widget);
-        <PropertyEditor Properties="@properties" Widget="@widget" OnPropertyChanged="UpdateWidget" />
+        <PropertyEditor Properties="@properties" Widget="@widget" AllWidgets="@GetAllWidgets()" OnPropertyChanged="UpdateWidget" />
     };
 
     /// <summary>

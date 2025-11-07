@@ -1,5 +1,6 @@
 @using BobCrm.App.Models.Designer
 @using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
 @using System.Reflection
 @inject BobCrm.App.Services.I18nService I18n
 
@@ -36,9 +37,29 @@
             @switch (prop.EditorType)
             {
                 case PropertyEditorType.Text:
-                    <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
-                           Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
-                           OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    @if (prop.PropertyPath == "Code")
+                    {
+                        // Code 属性需要唯一性校验
+                        var currentCode = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
+                        var isCodeValid = string.IsNullOrWhiteSpace(currentCode) ||
+                                         WidgetCodeGenerator.IsCodeUnique(currentCode, Widget?.Id ?? "", AllWidgets ?? Enumerable.Empty<DraggableWidget>());
+
+                        <Input Value="@currentCode"
+                               Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
+                               Status="@(isCodeValid ? "" : "error")"
+                               OnChange="@((string val) => HandleCodeChange(val))" />
+
+                        @if (!isCodeValid)
+                        {
+                            <div style="font-size:11px; color:#ff4d4f; margin-top:4px">@I18n.T("ERR_CODE_NOT_UNIQUE")</div>
+                        }
+                    }
+                    else
+                    {
+                        <Input Value="@(GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "")"
+                               Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
+                               OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    }
                     break;
                 
                 case PropertyEditorType.Number:
@@ -124,6 +145,33 @@
 
     [Parameter]
     public Action? OnPropertyChanged { get; set; }
+
+    /// <summary>
+    /// 所有组件的列表（用于Code唯一性校验）
+    /// </summary>
+    [Parameter]
+    public IEnumerable<DraggableWidget>? AllWidgets { get; set; }
+
+    /// <summary>
+    /// 处理Code属性的修改
+    /// </summary>
+    private void HandleCodeChange(string newCode)
+    {
+        if (Widget == null)
+            return;
+
+        // 验证唯一性
+        if (string.IsNullOrWhiteSpace(newCode))
+        {
+            SetPropertyValue(Widget, "Code", newCode);
+            return;
+        }
+
+        var isUnique = WidgetCodeGenerator.IsCodeUnique(newCode, Widget.Id, AllWidgets ?? Enumerable.Empty<DraggableWidget>());
+
+        // 无论是否唯一都设置值，让用户看到错误提示
+        SetPropertyValue(Widget, "Code", newCode);
+    }
 
     /// <summary>
     /// 获取属性值（支持嵌套路径，如 "ContainerLayout.Gap"）
