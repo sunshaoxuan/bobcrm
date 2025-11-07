@@ -89,7 +89,58 @@ builder.Services.AddAuthentication(o =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "BobCRM API",
+        Version = "v1",
+        Description = "客户信息管理系统 - 动态实体定义、表单设计、AggVO聚合根管理",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "BobCRM Team",
+            Email = "support@bobcrm.com"
+        }
+    });
+
+    // 包含XML注释文档
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
+
+    // JWT Bearer认证配置
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "请输入JWT令牌，格式：Bearer {token}"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    // API分组：按标签分组
+    options.TagActionsBy(api => new[] { api.GroupName ?? "Default" });
+    options.DocInclusionPredicate((name, api) => true);
+});
 
 // Memory cache for cross-request caching (localization, etc.)
 builder.Services.AddMemoryCache();
@@ -143,6 +194,9 @@ var app = builder.Build();
 app.Logger.LogInformation("============================================");
 app.Logger.LogInformation("Application starting at {Time}, log file: {LogFile}", DateTime.Now, logFilePath);
 app.Logger.LogInformation("============================================");
+
+// 全局异常处理（放在最前面）
+app.UseGlobalExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
