@@ -160,14 +160,12 @@ public class CSharpCodeGenerator
     {
         return field.DataType switch
         {
-            FieldDataType.String => "string",
-            FieldDataType.Integer => "int",
-            FieldDataType.Long => "long",
+            FieldDataType.String => "string",  // 注意：Text 是 String 的别名
+            FieldDataType.Int32 => "int",
+            FieldDataType.Int64 => "long",
             FieldDataType.Decimal => "decimal",
             FieldDataType.Boolean => "bool",
             FieldDataType.DateTime => "DateTime",
-            FieldDataType.Date => "DateOnly",
-            FieldDataType.Text => "string",
             FieldDataType.Guid => "Guid",
             _ => "object"
         };
@@ -180,12 +178,11 @@ public class CSharpCodeGenerator
     {
         return dataType switch
         {
-            FieldDataType.Integer => true,
-            FieldDataType.Long => true,
+            FieldDataType.Int32 => true,
+            FieldDataType.Int64 => true,
             FieldDataType.Decimal => true,
             FieldDataType.Boolean => true,
             FieldDataType.DateTime => true,
-            FieldDataType.Date => true,
             FieldDataType.Guid => true,
             _ => false
         };
@@ -199,7 +196,7 @@ public class CSharpCodeGenerator
         if (string.IsNullOrEmpty(field.DefaultValue))
         {
             // 引用类型默认初始化为空字符串
-            if (field.DataType == FieldDataType.String || field.DataType == FieldDataType.Text)
+            if (field.DataType == FieldDataType.String)  // Text是String的别名，只需检查String
             {
                 if (field.IsRequired)
                 {
@@ -211,12 +208,11 @@ public class CSharpCodeGenerator
 
         return field.DataType switch
         {
-            FieldDataType.String or FieldDataType.Text => $" = \"{field.DefaultValue}\";",
-            FieldDataType.Integer or FieldDataType.Long => $" = {field.DefaultValue};",
+            FieldDataType.String => $" = \"{field.DefaultValue}\";",  // Text是String的别名
+            FieldDataType.Int32 or FieldDataType.Int64 => $" = {field.DefaultValue};",
             FieldDataType.Decimal => $" = {field.DefaultValue}m;",
             FieldDataType.Boolean => $" = {field.DefaultValue.ToLower()};",
             FieldDataType.DateTime when field.DefaultValue.ToUpper() == "NOW" => " = DateTime.UtcNow;",
-            FieldDataType.Date when field.DefaultValue.ToUpper() == "TODAY" => " = DateOnly.FromDateTime(DateTime.UtcNow);",
             FieldDataType.Guid when field.DefaultValue.ToUpper() == "NEWID" => " = Guid.NewGuid();",
             _ => string.Empty
         };

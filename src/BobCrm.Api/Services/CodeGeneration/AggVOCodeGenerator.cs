@@ -258,20 +258,18 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
     {
         var baseType = field.DataType switch
         {
-            FieldDataType.String => "string",
-            FieldDataType.Integer => "int",
-            FieldDataType.Long => "long",
+            FieldDataType.String => "string",  // 注意：Text是String的别名，Date是DateTime的别名
+            FieldDataType.Int32 => "int",
+            FieldDataType.Int64 => "long",
             FieldDataType.Decimal => "decimal",
             FieldDataType.Boolean => "bool",
             FieldDataType.DateTime => "DateTime",
-            FieldDataType.Date => "DateOnly",
-            FieldDataType.Text => "string",
             FieldDataType.Guid => "Guid",
             _ => "object"
         };
 
         // 如果不是必填且是值类型，添加?
-        if (!field.IsRequired && field.DataType != FieldDataType.String && field.DataType != FieldDataType.Text)
+        if (!field.IsRequired && field.DataType != FieldDataType.String)
         {
             baseType += "?";
         }

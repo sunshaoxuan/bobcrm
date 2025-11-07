@@ -331,14 +331,12 @@ public class DataMigrationEvaluator : IDataMigrationEvaluator
     {
         return field.DataType switch
         {
-            FieldDataType.String => field.Length.HasValue ? $"VARCHAR({field.Length})" : "TEXT",
-            FieldDataType.Integer => "INTEGER",
-            FieldDataType.Long => "BIGINT",
+            FieldDataType.String => field.Length.HasValue ? $"VARCHAR({field.Length})" : "TEXT",  // 注意：Text是String的别名
+            FieldDataType.Int32 => "INTEGER",
+            FieldDataType.Int64 => "BIGINT",
             FieldDataType.Decimal => $"DECIMAL({field.Precision ?? 18}, {field.Scale ?? 2})",
             FieldDataType.Boolean => "BOOLEAN",
-            FieldDataType.DateTime => "TIMESTAMP",
-            FieldDataType.Date => "DATE",
-            FieldDataType.Text => "TEXT",
+            FieldDataType.DateTime => "TIMESTAMP",  // 注意：Date是DateTime的别名
             FieldDataType.Guid => "UUID",
             _ => "TEXT"
         };

@@ -486,6 +486,7 @@ public class FilterCondition
 /// <summary>
 /// 过滤操作符常量
 /// </summary>
+#pragma warning disable CS0108 // 成员隐藏继承的成员；缺少关键字 new
 public static class FilterOperator
 {
     public const string Equals = "equals";
@@ -493,3 +494,4 @@ public static class FilterOperator
     public const string GreaterThan = "greaterThan";
     public const string LessThan = "lessThan";
 }
+#pragma warning restore CS0108
