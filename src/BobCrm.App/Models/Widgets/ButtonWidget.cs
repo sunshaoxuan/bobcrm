@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace BobCrm.App.Models.Widgets;
 
 /// <summary>
@@ -57,5 +59,38 @@ public class ButtonWidget : TextWidget
             new() { PropertyPath = "Block", Label = "PROP_BUTTON_BLOCK", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
+    }
+
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
+        RenderFieldLabel(builder, context.Label);
+        builder.OpenElement(4, "button");
+        builder.AddAttribute(5, "type", "button");
+        builder.AddAttribute(6, "style", "padding:6px 16px; border-radius:4px; border:none; cursor:pointer; background:#1890ff; color:#fff;");
+        if (context.Mode == RuntimeWidgetRenderMode.Browse)
+        {
+            builder.AddAttribute(7, "disabled", true);
+        }
+        builder.AddContent(8, Label);
+        builder.CloseElement(); // button
+        builder.CloseElement(); // container
+    }
+
+    public override void RenderDesign(DesignRenderContext context)
+    {
+        var buttonColor = Variant == "primary" ? "#1890ff" : "#f0f0f0";
+        var textColor = Variant == "primary" ? "#fff" : "#555";
+
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"padding:6px; background:{context.BackgroundResolver(this)}; pointer-events:none;");
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "style", $"display:inline-block; padding:6px 16px; border-radius:4px; background:{buttonColor}; color:{textColor}; font-size:12px;");
+        builder.AddContent(4, Label);
+        builder.CloseElement();
+        builder.CloseElement();
     }
 }

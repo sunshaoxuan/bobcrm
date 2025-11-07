@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace BobCrm.App.Models.Widgets;
 
 /// <summary>
@@ -33,5 +35,26 @@ public class LabelWidget : TextWidget
             new() { PropertyPath = "Bold", Label = "PROP_BOLD", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
+    }
+
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"{context.ResolveTextStyle()} font-weight:600;");
+        builder.AddContent(2, context.Label);
+        builder.CloseElement();
+    }
+
+    public override void RenderDesign(DesignRenderContext context)
+    {
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"padding:6px; background:{context.BackgroundResolver(this)}; pointer-events:none;");
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "style", $"{context.TextStyleResolver(this)} font-size:11px; font-weight:500;");
+        builder.AddContent(4, Label);
+        builder.CloseElement();
+        builder.CloseElement();
     }
 }

@@ -138,6 +138,15 @@
     
     private string DisplayText => string.IsNullOrWhiteSpace(Value) ? "" : GetDisplayTextForValue(Value);
     
+    protected override async Task OnParametersSetAsync()
+    {
+        // 如果有初始值但数据未加载，预加载数据以显示 DisplayName
+        if (!string.IsNullOrWhiteSpace(Value) && !dataLoaded && DataLoader != null)
+        {
+            await LoadData();
+        }
+    }
+    
     private async void OpenSelector()
     {
         if (Disabled) return;

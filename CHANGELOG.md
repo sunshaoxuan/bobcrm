@@ -7,6 +7,65 @@
 
 ---
 
+## [0.5.6] - 2025-11-07
+
+### 重构 (Refactored)
+
+**🏗️ OOP重构：组件渲染多态化，消除集中式分支逻辑**
+
+#### 问题分析
+- **RuntimeWidgetRenderer.cs** (325行) 包含大量 switch-case 分支逻辑
+- **DesignWidgetContentRenderer.cs** (215行) 同样存在重复的分支结构
+- 违反开闭原则：每增加新组件类型都需修改这两个渲染器
+- 违反单一职责原则：渲染器承担了所有组件的渲染逻辑
+- 维护成本高：组件的渲染逻辑分散在多个地方
+
+#### 重构方案
+1. **在基类 DraggableWidget 中添加虚方法**：
+   - `RenderRuntime(RuntimeRenderContext)` - 运行时渲染（Browse/Edit模式）
+   - `RenderDesign(DesignRenderContext)` - 设计态渲染
+   - 引入 `RuntimeRenderContext` 和 `DesignRenderContext` 封装渲染上下文
+   - 提供辅助方法：`RenderFieldLabel`, `RenderReadOnlyValue`
+
+2. **所有组件类重写渲染方法** (9个组件)：
+   - TextboxWidget - 文本输入框
+   - NumberWidget - 数字输入框
+   - TextareaWidget - 文本域
+   - CalendarWidget - 日期选择
+   - SelectWidget - 下拉选择
+   - ListboxWidget - 列表框
+   - ButtonWidget - 按钮
+   - LabelWidget - 标签
+   - CheckboxWidget / RadioWidget - 复选框/单选框
+
+3. **渲染器简化为多态调用**：
+   - RuntimeWidgetRenderer: 300+ 行 → **50 行** (-83%)
+   - DesignWidgetContentRenderer: 200+ 行 → **42 行** (-79%)
+   - 移除所有私有渲染方法，仅调用 `widget.RenderRuntime(context)` 或 `widget.RenderDesign(context)`
+
+#### 收益
+- ✅ **单一职责原则**：每个组件类负责自己的渲染逻辑
+- ✅ **开闭原则**：新增组件类型无需修改渲染器代码
+- ✅ **里氏替换原则**：所有组件都可以通过基类引用调用
+- ✅ **多态**：使用虚方法重写替代 if-else/switch-case
+- ✅ **封装**：渲染逻辑封装在组件类内部
+- ✅ **代码简化**：渲染器总行数减少 ~450 行
+- ✅ **可维护性**：每个组件的所有逻辑（属性、渲染）都在同一个类中
+- ✅ **可扩展性**：添加新组件只需创建新类，无需修改现有代码
+
+#### 技术细节
+- 创建 `RuntimeWidgetRenderMode` 枚举（Browse/Edit）
+- 使用 `EventCallbackFactory` 处理组件事件
+- 支持 Browse 模式（只读显示）和 Edit 模式（可编辑）
+- 设计态渲染提供纯视觉预览（禁用交互）
+
+### 测试 (Tested)
+- ✅ 编译通过：0 错误，1 个无关警告
+- ✅ 单元测试：101 个测试通过，3 个跳过
+- ✅ 架构验证：所有组件渲染逻辑正常工作
+
+---
+
 ## [0.5.5] - 2025-11-06
 
 ### 重构 (Refactored)

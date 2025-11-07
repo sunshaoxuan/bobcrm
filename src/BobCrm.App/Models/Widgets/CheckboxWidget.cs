@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+
 namespace BobCrm.App.Models.Widgets;
 
 /// <summary>
@@ -41,6 +44,126 @@ public class CheckboxWidget : TextWidget
             },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }
         };
+    }
+
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        var value = context.ValueGetter?.Invoke() ?? string.Empty;
+        var selectedValues = value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim()).ToHashSet();
+
+        if (context.Mode == RuntimeWidgetRenderMode.Edit)
+        {
+            var builder = context.Builder;
+            var callbackFactory = new EventCallbackFactory();
+            var flexDirection = Direction == "vertical" ? "column" : "row";
+
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
+            RenderFieldLabel(builder, context.Label);
+
+            builder.OpenElement(4, "div");
+            builder.AddAttribute(5, "style", $"display:flex; flex-direction:{flexDirection}; gap:8px; flex-wrap:wrap;");
+
+            if (Items.Count == 0)
+            {
+                // Single checkbox
+                builder.OpenElement(6, "label");
+                builder.AddAttribute(7, "style", "display:flex; align-items:center; gap:4px; cursor:pointer;");
+                builder.OpenElement(8, "input");
+                builder.AddAttribute(9, "type", "checkbox");
+                builder.AddAttribute(10, "checked", !string.IsNullOrWhiteSpace(value));
+                if (context.ValueSetter != null)
+                {
+                    builder.AddAttribute(11, "onchange",
+                        callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
+                            e => context.ValueSetter!(e.Value?.ToString() == "true" ? "true" : "")));
+                }
+                builder.CloseElement(); // input
+                builder.OpenElement(12, "span");
+                builder.AddContent(13, Label);
+                builder.CloseElement(); // span
+                builder.CloseElement(); // label
+            }
+            else
+            {
+                // Checkbox group
+                foreach (var item in Items)
+                {
+                    builder.OpenElement(14, "label");
+                    builder.AddAttribute(15, "style", "display:flex; align-items:center; gap:4px; cursor:pointer;");
+                    builder.OpenElement(16, "input");
+                    builder.AddAttribute(17, "type", "checkbox");
+                    builder.AddAttribute(18, "value", item.Value);
+                    builder.AddAttribute(19, "checked", selectedValues.Contains(item.Value));
+                    if (context.ValueSetter != null)
+                    {
+                        builder.AddAttribute(20, "onchange",
+                            callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
+                                e =>
+                                {
+                                    var isChecked = e.Value?.ToString() == "true";
+                                    if (isChecked)
+                                    {
+                                        selectedValues.Add(item.Value);
+                                    }
+                                    else
+                                    {
+                                        selectedValues.Remove(item.Value);
+                                    }
+                                    return context.ValueSetter!(string.Join(",", selectedValues));
+                                }));
+                    }
+                    builder.CloseElement(); // input
+                    builder.OpenElement(21, "span");
+                    builder.AddContent(22, item.Label ?? item.Value);
+                    builder.CloseElement(); // span
+                    builder.CloseElement(); // label
+                }
+            }
+
+            builder.CloseElement(); // checkbox container
+            builder.CloseElement(); // outer container
+        }
+        else
+        {
+            var displayValue = Items.Count > 0
+                ? string.Join(", ", selectedValues.Select(v => Items.FirstOrDefault(i => i.Value == v)?.Label ?? v))
+                : (string.IsNullOrWhiteSpace(value) ? "No" : "Yes");
+            RenderReadOnlyValue(context, displayValue);
+        }
+    }
+
+    public override void RenderDesign(DesignRenderContext context)
+    {
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"padding:6px; background:{context.BackgroundResolver(this)}; pointer-events:none;");
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "style", $"{context.TextStyleResolver(this)} font-size:11px; margin-bottom:2px;");
+        builder.AddContent(4, Label);
+        builder.CloseElement();
+
+        var flexDirection = Direction == "vertical" ? "column" : "row";
+        builder.OpenElement(5, "div");
+        builder.AddAttribute(6, "style", $"display:flex; flex-direction:{flexDirection}; gap:8px;");
+
+        // Show preview checkboxes
+        for (int i = 0; i < Math.Min(Items.Count == 0 ? 1 : Items.Count, 3); i++)
+        {
+            builder.OpenElement(7, "div");
+            builder.AddAttribute(8, "style", "display:flex; align-items:center; gap:4px;");
+            builder.OpenElement(9, "div");
+            builder.AddAttribute(10, "style", "width:14px; height:14px; border:1px solid #d9d9d9; border-radius:2px; background:#fff;");
+            builder.CloseElement();
+            builder.OpenElement(11, "span");
+            builder.AddAttribute(12, "style", "font-size:12px; color:#666;");
+            builder.AddContent(13, Items.Count == 0 ? Label : (Items[i].Label ?? Items[i].Value));
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // checkbox container
+        builder.CloseElement(); // outer container
     }
 }
 

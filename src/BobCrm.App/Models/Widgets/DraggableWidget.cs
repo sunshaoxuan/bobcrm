@@ -1,4 +1,16 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+
 namespace BobCrm.App.Models.Widgets;
+
+/// <summary>
+/// 运行时渲染模式
+/// </summary>
+public enum RuntimeWidgetRenderMode
+{
+    Browse,
+    Edit
+}
 
 /// <summary>
 /// 可拖放控件基类 - 所有控件的基础
@@ -156,6 +168,97 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     /// 使用动态组件渲染，无需在 FormDesigner 中使用 switch
     /// </summary>
     public virtual Type? PreviewComponentType => null;
+
+    // ===== 渲染方法（OOP多态） =====
+
+    /// <summary>
+    /// 运行时渲染上下文
+    /// </summary>
+    public sealed record RuntimeRenderContext
+    {
+        public required RenderTreeBuilder Builder { get; init; }
+        public required RuntimeWidgetRenderMode Mode { get; init; }
+        public required ComponentBase EventTarget { get; init; }
+        public required DraggableWidget Widget { get; init; }
+        public required string Label { get; init; }
+        public Func<string>? ValueGetter { get; init; }
+        public Func<string?, Task>? ValueSetter { get; init; }
+        public Func<DraggableWidget, string>? GetWidgetTextStyle { get; init; }
+        public Func<DraggableWidget, string>? GetWidgetBackground { get; init; }
+        public IReadOnlyList<ListItem>? Items { get; init; }
+
+        public string ResolveTextStyle()
+            => GetWidgetTextStyle?.Invoke(Widget) ?? "font-size:12px; color:#333;";
+
+        public string ResolveBackground()
+            => GetWidgetBackground?.Invoke(Widget) ?? "#fff";
+    }
+
+    /// <summary>
+    /// 设计态渲染上下文
+    /// </summary>
+    public sealed record DesignRenderContext
+    {
+        public required RenderTreeBuilder Builder { get; init; }
+        public required Func<DraggableWidget, string> TextStyleResolver { get; init; }
+        public required Func<DraggableWidget, string> BackgroundResolver { get; init; }
+        public required Func<string, string> Localize { get; init; }
+    }
+
+    /// <summary>
+    /// 渲染运行时视图（Browse或Edit模式）
+    /// 子类应重写此方法以实现自己的运行时渲染逻辑
+    /// </summary>
+    public virtual void RenderRuntime(RuntimeRenderContext context)
+    {
+        // 默认实现：简单的只读文本显示
+        var value = context.ValueGetter?.Invoke() ?? string.Empty;
+        RenderReadOnlyValue(context, value);
+    }
+
+    /// <summary>
+    /// 渲染设计态预览
+    /// 子类应重写此方法以实现自己的设计态渲染逻辑
+    /// </summary>
+    public virtual void RenderDesign(DesignRenderContext context)
+    {
+        // 默认实现：带边框的标签占位符
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"padding:6px; background:{context.BackgroundResolver(this)}; pointer-events:none;");
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "style", $"{context.TextStyleResolver(this)} font-size:11px; margin-bottom:2px;");
+        builder.AddContent(4, Label);
+        builder.CloseElement();
+        builder.OpenElement(5, "div");
+        builder.AddAttribute(6, "style", "height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px;");
+        builder.CloseElement();
+        builder.CloseElement();
+    }
+
+    // ===== 辅助渲染方法 =====
+
+    protected static void RenderFieldLabel(RenderTreeBuilder builder, string label)
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "runtime-field-label");
+        builder.AddContent(2, label);
+        builder.CloseElement();
+    }
+
+    protected static void RenderReadOnlyValue(RuntimeRenderContext context, string value)
+    {
+        var builder = context.Builder;
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"display:flex; flex-direction:column; gap:4px; background:{context.ResolveBackground()}; padding:4px 0;");
+        RenderFieldLabel(builder, context.Label);
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "runtime-field-value");
+        builder.AddAttribute(6, "style", context.ResolveTextStyle());
+        builder.AddContent(7, string.IsNullOrWhiteSpace(value) ? "--" : value);
+        builder.CloseElement();
+        builder.CloseElement();
+    }
 
     // ===== IResizable 接口实现 =====
 
