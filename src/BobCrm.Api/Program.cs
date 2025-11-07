@@ -217,6 +217,7 @@ app.MapEntityMetadataEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
+app.MapEntityDefinitionEndpoints();
 app.MapFieldActionEndpoints();
 
 // 管理和调试端点（仅开发环境）

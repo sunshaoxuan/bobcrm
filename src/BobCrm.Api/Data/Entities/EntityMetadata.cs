@@ -39,10 +39,28 @@ public class EntityMetadata
     /// <summary>实体分类（如：core, sales, service）</summary>
     public string? Category { get; set; }
 
+    /// <summary>实体来源：System（系统内置硬编码实体）或 Custom（用户自定义实体）</summary>
+    public string EntitySource { get; set; } = "System";
+
+    /// <summary>如果是自定义实体，指向 EntityDefinition.Id</summary>
+    public Guid? SourceDefinitionId { get; set; }
+
     /// <summary>创建时间</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>最后更新时间</summary>
     public DateTime? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// 实体来源枚举
+/// </summary>
+public static class EntitySource
+{
+    /// <summary>系统内置实体（硬编码）</summary>
+    public const string System = "System";
+
+    /// <summary>用户自定义实体（通过EntityDefinition创建）</summary>
+    public const string Custom = "Custom";
 }
 

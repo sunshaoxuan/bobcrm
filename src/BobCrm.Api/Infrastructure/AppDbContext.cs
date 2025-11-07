@@ -140,6 +140,19 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<Data.Entities.EntityMetadata>()
             .HasIndex(em => new { em.IsRootEntity, em.IsEnabled, em.Order });
 
+        b.Entity<Data.Entities.EntityMetadata>()
+            .HasIndex(em => em.EntitySource);
+
+        b.Entity<Data.Entities.EntityMetadata>()
+            .HasIndex(em => em.SourceDefinitionId);
+
+        // EntityMetadata 与 EntityDefinition 的可选关系
+        b.Entity<Data.Entities.EntityMetadata>()
+            .HasOne<EntityDefinition>()
+            .WithMany()
+            .HasForeignKey(em => em.SourceDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // EntityDefinition 配置
         b.Entity<EntityDefinition>()
             .HasIndex(ed => new { ed.Namespace, ed.EntityName })
