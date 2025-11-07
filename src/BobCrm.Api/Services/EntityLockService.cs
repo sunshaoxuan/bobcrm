@@ -1,5 +1,6 @@
-using BobCrm.Api.Data;
+using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Services.EntityLocking;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
@@ -230,11 +231,11 @@ public class EntityLockService : IEntityLockService
     /// <summary>
     /// 验证修改请求是否被锁定限制
     /// </summary>
-    public async Task<ValidationResult> ValidateModificationAsync(
+    public async Task<EntityLockValidationResult> ValidateModificationAsync(
         Guid entityId,
         EntityDefinitionUpdateRequest updateRequest)
     {
-        var result = new ValidationResult { IsValid = true };
+        var result = new EntityLockValidationResult { IsValid = true };
 
         var entity = await _context.EntityDefinitions.FindAsync(entityId);
         if (entity == null)
@@ -270,41 +271,4 @@ public class EntityLockService : IEntityLockService
 
         return result;
     }
-}
-
-/// <summary>
-/// 实体锁定信息
-/// </summary>
-public class EntityLockInfo
-{
-    public Guid EntityId { get; set; }
-    public string EntityName { get; set; } = "";
-    public bool IsLocked { get; set; }
-    public List<string> Reasons { get; set; } = new();
-}
-
-/// <summary>
-/// 验证结果
-/// </summary>
-public class ValidationResult
-{
-    public bool IsValid { get; set; }
-    public List<string> Errors { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
-}
-
-/// <summary>
-/// 实体定义更新请求（用于验证）
-/// </summary>
-public class EntityDefinitionUpdateRequest
-{
-    public string? EntityName { get; set; }
-    public string? Namespace { get; set; }
-    public string? StructureType { get; set; }
-    public string? DisplayNameKey { get; set; }
-    public string? DescriptionKey { get; set; }
-    public string? Icon { get; set; }
-    public string? Category { get; set; }
-    public int? Order { get; set; }
-    public bool? IsEnabled { get; set; }
 }

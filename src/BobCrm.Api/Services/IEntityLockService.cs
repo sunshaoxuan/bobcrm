@@ -1,3 +1,5 @@
+using BobCrm.Api.Services.EntityLocking;
+
 namespace BobCrm.Api.Services;
 
 /// <summary>
@@ -58,7 +60,7 @@ public interface IEntityLockService
     /// <param name="entityId">实体ID</param>
     /// <param name="updateRequest">更新请求</param>
     /// <returns>验证结果</returns>
-    Task<ValidationResult> ValidateModificationAsync(
+    Task<EntityLockValidationResult> ValidateModificationAsync(
         Guid entityId,
         EntityDefinitionUpdateRequest updateRequest);
 }

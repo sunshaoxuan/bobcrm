@@ -1,4 +1,4 @@
-using BobCrm.Api.Data;
+using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Services.CodeGeneration;
 using BobCrm.Api.Services.DataMigration;
