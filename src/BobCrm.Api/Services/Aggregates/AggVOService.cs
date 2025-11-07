@@ -11,7 +11,7 @@ namespace BobCrm.Api.Services.Aggregates;
 /// AggVO 聚合根服务
 /// 提供 Save、Load、Delete 等操作的实现
 /// </summary>
-public class AggVOService
+public class AggVOService : IAggVOService
 {
     private readonly ApplicationDbContext _context;
     private readonly ReflectionPersistenceService _persistenceService;

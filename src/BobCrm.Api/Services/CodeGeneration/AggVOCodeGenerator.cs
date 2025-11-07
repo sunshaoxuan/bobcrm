@@ -7,7 +7,7 @@ namespace BobCrm.Api.Services.CodeGeneration;
 /// AggVO（聚合值对象）代码生成器
 /// 根据主子表结构生成聚合根类
 /// </summary>
-public class AggVOCodeGenerator
+public class AggVOCodeGenerator : IAggVOCodeGenerator
 {
     /// <summary>
     /// 为主实体生成 AggVO 类代码

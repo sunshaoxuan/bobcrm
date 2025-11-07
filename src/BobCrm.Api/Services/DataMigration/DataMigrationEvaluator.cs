@@ -8,7 +8,7 @@ namespace BobCrm.Api.Services.DataMigration;
 /// 数据迁移影响评估器
 /// 在发布实体变更前，评估对现有数据的影响
 /// </summary>
-public class DataMigrationEvaluator
+public class DataMigrationEvaluator : IDataMigrationEvaluator
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DataMigrationEvaluator> _logger;

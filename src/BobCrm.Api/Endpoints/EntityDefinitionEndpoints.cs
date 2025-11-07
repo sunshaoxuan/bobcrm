@@ -379,7 +379,7 @@ public static class EntityDefinitionEndpoints
         group.MapPost("/{id:guid}/publish", async (
             Guid id,
             AppDbContext db,
-            Services.EntityPublishingService publishService,
+            Services.IEntityPublishingService publishService,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -411,7 +411,7 @@ public static class EntityDefinitionEndpoints
         group.MapPost("/{id:guid}/publish-changes", async (
             Guid id,
             AppDbContext db,
-            Services.EntityPublishingService publishService,
+            Services.IEntityPublishingService publishService,
             HttpContext http,
             ILogger<Program> logger) =>
         {
