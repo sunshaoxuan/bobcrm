@@ -111,6 +111,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.EntityPublishingService>();
 builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
 builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
+builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
@@ -229,6 +230,7 @@ app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
 app.MapEntityDefinitionEndpoints();
+app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
 
 // 管理和调试端点（仅开发环境）
