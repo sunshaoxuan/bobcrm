@@ -826,7 +826,6 @@ else
     {
         dropSucceeded = false;
         draggedDefinition = definition;
-        isDragging = true; // 设置拖拽状态（供OnDragEnd使用）
         // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
         // 依赖JS的body.is-dragging来控制CSS，无需Blazor重新渲染
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnDragStart: {definition.Type}"); } catch { }
@@ -837,7 +836,6 @@ else
         dropSucceeded = false;
         draggedWidget = widget;
         draggedParentContainer = WidgetNavigationHelper.FindParentContainer(layoutWidgets, widget);
-        isDragging = true; // 设置拖拽状态（供OnDragEnd使用）
         // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
         // 依赖JS的body.is-dragging来控制CSS，无需Blazor重新渲染
         try { await JS.InvokeVoidAsync("console.log", $"[FormDesigner] OnWidgetDragStart: {widget.Id}"); } catch { }
@@ -875,7 +873,6 @@ else
             draggedWidget = null;
         }
         dropSucceeded = false;
-        isDragging = false; // 重置拖拽状态，让容器wrapper恢复pointer-events
         await InvokeAsync(StateHasChanged);
     }
 
