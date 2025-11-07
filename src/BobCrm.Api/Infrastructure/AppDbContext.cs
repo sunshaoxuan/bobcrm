@@ -111,6 +111,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<FieldValue>()
             .HasIndex(fv => new { fv.CustomerId, fv.FieldDefinitionId });
 
+        // UserLayout 索引
+        b.Entity<UserLayout>()
+            .HasIndex(ul => new { ul.UserId, ul.EntityType });
+
         // EntityMetadata 配置
         b.Entity<Data.Entities.EntityMetadata>()
             .HasKey(em => em.EntityType);

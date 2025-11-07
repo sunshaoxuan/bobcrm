@@ -126,14 +126,22 @@ else if (entityData != null)
             loading = true;
             await InvokeAsync(StateHasChanged);
 
-            // 1. 加载模板元数据（暂时使用旧的Layout API）
-            var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/0");
+            await JS.InvokeVoidAsync("console.log", $"[PageLoader] Loading data for entity: {EntityType}, ID: {Id}");
+
+            // 1. 【实体匹配】加载模板（根据EntityType）
+            var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
             string? layoutJson = null;
-            
+
             if (layoutResp.IsSuccessStatusCode)
             {
                 var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                 layoutJson = layoutDoc.GetRawText();
+                await JS.InvokeVoidAsync("console.log", $"[PageLoader] Layout loaded for entity type: {EntityType}");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.warn",
+                    $"[PageLoader] No layout found for entity type {EntityType}, using empty layout. Status: {layoutResp.StatusCode}");
             }
 
             // 2. 加载实体数据
@@ -148,33 +156,61 @@ else if (entityData != null)
 
             var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
             entityData = dataDoc;
+            await JS.InvokeVoidAsync("console.log", $"[PageLoader] Entity data loaded successfully");
 
-            // 3. 解析布局JSON
+            // 3. 解析布局JSON（如果遇到数据绑定错误，保留控件但不显示数据）
             if (!string.IsNullOrWhiteSpace(layoutJson))
             {
-                var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
-                layoutWidgets = ParseLayoutFromJson(doc.RootElement);
+                try
+                {
+                    var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
+                    layoutWidgets = ParseLayoutFromJson(doc.RootElement);
+                    await JS.InvokeVoidAsync("console.log", $"[PageLoader] Parsed {layoutWidgets.Count} widgets from layout");
+                }
+                catch (Exception ex)
+                {
+                    await JS.InvokeVoidAsync("console.error", $"[PageLoader] Failed to parse layout JSON: {ex.Message}");
+                    // 解析失败，使用空布局
+                    layoutWidgets = new List<DraggableWidget>();
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.log", "[PageLoader] No layout JSON, using empty widget list");
+                layoutWidgets = new List<DraggableWidget>();
             }
 
-            // 4. 初始化编辑值
+            // 4. 初始化编辑值（即使数据绑定失败，也要初始化可用的字段）
             if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
             {
                 editValueManager.Clear();
                 foreach (var field in fieldsElement.EnumerateArray())
                 {
-                    if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
-                        field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
+                    try
                     {
-                        editValueManager.SetValue(keyProp.GetString(), valueProp.GetString());
+                        if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) &&
+                            field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
+                        {
+                            editValueManager.SetValue(keyProp.GetString(), valueProp.GetString());
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 单个字段绑定错误不影响其他字段
+                        await JS.InvokeVoidAsync("console.warn",
+                            $"[PageLoader] Failed to bind field, skipping: {ex.Message}");
                     }
                 }
+                await JS.InvokeVoidAsync("console.log", $"[PageLoader] Initialized field values");
             }
 
             loading = false;
             await InvokeAsync(StateHasChanged);
+            await JS.InvokeVoidAsync("console.log", "[PageLoader] Load completed successfully");
         }
         catch (Exception ex)
         {
+            await JS.InvokeVoidAsync("console.error", $"[PageLoader] Load failed: {ex.Message}");
             error = ex.Message;
             loading = false;
             await InvokeAsync(StateHasChanged);
