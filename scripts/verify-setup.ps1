@@ -1,9 +1,26 @@
-# BobCRM 环境验证脚本
+# BobCRM 环境验证脚本 - 增强版
 # 用于验证系统是否正确配置并可以运行
+# 所有输出将保存到日志文件
 
 $ErrorActionPreference = 'Continue'
 $script:errors = @()
 $script:warnings = @()
+
+# 创建日志文件（每次新建）
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$logDir = "logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir | Out-Null
+}
+$logFile = "$logDir/verify-$timestamp.log"
+
+# 启动日志记录
+Start-Transcript -Path $logFile -Force
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  BobCRM 环境验证" -ForegroundColor Cyan
+Write-Host "  日志文件: $logFile" -ForegroundColor Cyan
+Write-Host "========================================`n" -ForegroundColor Cyan
 
 function Write-Section {
     param([string]$title)
@@ -31,14 +48,43 @@ function Write-Warn {
     $script:warnings += $message
 }
 
-# 1. 检查前置条件
+# ========================================
+# 步骤 0: Git 同步（新增）
+# ========================================
+Write-Section "Git 同步"
+
+Write-Host "正在放弃本地所有修改..." -ForegroundColor Gray
+try {
+    # 停止所有运行中的服务
+    Write-Host "停止运行中的服务..." -ForegroundColor Gray
+    Get-Process | Where-Object {$_.ProcessName -like "BobCrm*"} | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    
+    # 放弃所有本地修改
+    git reset --hard HEAD 2>&1 | Out-Null
+    
+    # 清理未跟踪的文件（排除 logs 目录）
+    git clean -fdx -e logs/ 2>&1 | Out-Null
+    
+    Write-Host "正在拉取远程代码..." -ForegroundColor Gray
+    $gitPull = git pull origin main 2>&1
+    Write-Host $gitPull
+    
+    $currentCommit = git rev-parse --short HEAD
+    Write-Check "Git 同步" $true "当前提交: $currentCommit"
+} catch {
+    Write-Check "Git 同步" $false $_.Exception.Message
+}
+
+# ========================================
+# 步骤 1: 检查前置条件
+# ========================================
 Write-Section "检查前置条件"
 
 # 检查 .NET SDK
 $dotnetVersion = $null
 try {
     $dotnetVersion = (dotnet --version 2>$null)
-    # 提取主版本号
     if ($dotnetVersion -match '^(\d+)\.') {
         $majorVersion = [int]$Matches[1]
         $isNet8Plus = $majorVersion -ge 8
@@ -71,7 +117,9 @@ try {
     Write-Check "Docker" $false "未安装（可选，可用本地PostgreSQL替代）"
 }
 
-# 2. 检查项目结构
+# ========================================
+# 步骤 2: 检查项目结构
+# ========================================
 Write-Section "检查项目结构"
 
 $requiredFiles = @(
@@ -87,7 +135,9 @@ foreach ($file in $requiredFiles) {
     Write-Check $file $exists
 }
 
-# 3. 检查 PostgreSQL 连接
+# ========================================
+# 步骤 3: 检查数据库
+# ========================================
 Write-Section "检查数据库"
 
 if ($dockerInstalled) {
@@ -105,7 +155,6 @@ if ($dockerInstalled) {
     }
     
     if ($pgRunning) {
-        # 测试数据库连接
         try {
             docker exec bobcrm-pg pg_isready -U postgres 2>$null | Out-Null
             $dbReady = $?
@@ -118,20 +167,28 @@ if ($dockerInstalled) {
     Write-Warn "Docker未安装，跳过数据库检查" "请确保已安装并配置PostgreSQL"
 }
 
-# 4. 编译项目
-Write-Section "编译项目"
+# ========================================
+# 步骤 4: 清理并编译项目
+# ========================================
+Write-Section "清理并编译项目"
 
-Write-Host "正在编译..." -ForegroundColor Gray
-$buildOutput = dotnet build BobCrm.sln -c Debug --nologo -v minimal 2>&1
-$buildSuccess = $?
+Write-Host "正在清理..." -ForegroundColor Gray
+$cleanOutput = dotnet clean BobCrm.sln --nologo -v minimal 2>&1
+Write-Host $cleanOutput
+
+Write-Host "`n正在编译..." -ForegroundColor Gray
+$buildOutput = dotnet build BobCrm.sln -c Debug --nologo 2>&1
+$buildSuccess = $LASTEXITCODE -eq 0
 
 Write-Check "项目编译" $buildSuccess
 if (-not $buildSuccess) {
-    Write-Host "编译错误：" -ForegroundColor Red
+    Write-Host "`n完整编译输出：" -ForegroundColor Red
     Write-Host $buildOutput -ForegroundColor DarkRed
 }
 
-# 5. 检查端口占用
+# ========================================
+# 步骤 5: 检查端口占用
+# ========================================
 Write-Section "检查端口"
 
 function Test-Port {
@@ -152,32 +209,38 @@ $port5200Free = Test-Port -port 5200
 Write-Check "端口 8080 (前端) 可用" $port8080Free
 Write-Check "端口 5200 (API) 可用" $port5200Free
 
-# 6. 运行测试
+# ========================================
+# 步骤 6: 运行测试
+# ========================================
 Write-Section "运行测试"
 
 if ((Test-Path "tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj")) {
     Write-Host "正在运行测试..." -ForegroundColor Gray
-    $testOutput = dotnet test tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj --no-build --logger "console;verbosity=minimal" 2>&1
-    $testSuccess = $?
+    $testOutput = dotnet test tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj --no-build --logger "console;verbosity=normal" 2>&1
+    $testSuccess = $LASTEXITCODE -eq 0
     
     Write-Check "集成测试" $testSuccess
     if (-not $testSuccess) {
-        Write-Host "测试输出：" -ForegroundColor Yellow
-        Write-Host ($testOutput | Select-Object -Last 10) -ForegroundColor DarkYellow
+        Write-Host "`n完整测试输出：" -ForegroundColor Yellow
+        Write-Host $testOutput -ForegroundColor DarkYellow
     }
 } else {
     Write-Warn "未找到测试项目" "跳过测试"
 }
 
-# 7. 总结
+# ========================================
+# 步骤 7: 总结
+# ========================================
 Write-Section "验证总结"
 
 if ($script:errors.Count -eq 0 -and $script:warnings.Count -eq 0) {
     Write-Host "✓ 所有检查通过！系统已就绪。" -ForegroundColor Green
     Write-Host "`n下一步：" -ForegroundColor Cyan
-    Write-Host "  1. 启动系统: pwsh scripts/dev.ps1 -Action start" -ForegroundColor White
+    Write-Host "  1. 启动系统: pwsh scripts/run.ps1" -ForegroundColor White
     Write-Host "  2. 访问前端: http://localhost:8080" -ForegroundColor White
     Write-Host "  3. 使用管理员账号登录: admin / Admin@12345" -ForegroundColor White
+    Write-Host "`n日志已保存到: $logFile" -ForegroundColor Cyan
+    Stop-Transcript
     exit 0
 } else {
     if ($script:errors.Count -gt 0) {
@@ -195,6 +258,7 @@ if ($script:errors.Count -eq 0 -and $script:warnings.Count -eq 0) {
     }
     
     Write-Host "`n请解决上述问题后再次运行此脚本。" -ForegroundColor Yellow
+    Write-Host "完整日志已保存到: $logFile" -ForegroundColor Cyan
+    Stop-Transcript
     exit 1
 }
-
