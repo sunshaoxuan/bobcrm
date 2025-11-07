@@ -11,11 +11,11 @@ namespace BobCrm.Api.Services;
 /// </summary>
 public class EntityLockService : IEntityLockService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly ILogger<EntityLockService> _logger;
 
     public EntityLockService(
-        ApplicationDbContext context,
+        AppDbContext context,
         ILogger<EntityLockService> logger)
     {
         _context = context;

@@ -15,13 +15,13 @@ namespace BobCrm.Api.Controllers;
 [Route("api/entity-advanced")]
 public class EntityAdvancedFeaturesController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly IAggVOCodeGenerator _aggVOCodeGenerator;
     private readonly IDataMigrationEvaluator _migrationEvaluator;
     private readonly ILogger<EntityAdvancedFeaturesController> _logger;
 
     public EntityAdvancedFeaturesController(
-        ApplicationDbContext context,
+        AppDbContext context,
         IAggVOCodeGenerator aggVOCodeGenerator,
         IDataMigrationEvaluator migrationEvaluator,
         ILogger<EntityAdvancedFeaturesController> logger)

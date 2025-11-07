@@ -10,11 +10,11 @@ namespace BobCrm.Api.Services.DataMigration;
 /// </summary>
 public class DataMigrationEvaluator : IDataMigrationEvaluator
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly ILogger<DataMigrationEvaluator> _logger;
 
     public DataMigrationEvaluator(
-        ApplicationDbContext context,
+        AppDbContext context,
         ILogger<DataMigrationEvaluator> logger)
     {
         _context = context;
