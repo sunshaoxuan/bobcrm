@@ -87,4 +87,9 @@ public class CalendarWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "calendar";
+    }
 }

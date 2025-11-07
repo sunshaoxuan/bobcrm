@@ -46,4 +46,9 @@ public class GridWidget : ContainerWidget
             new() { PropertyPath = "Bordered", Label = "PROP_SHOW_BORDER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean }
         };
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "grid";
+    }
 }

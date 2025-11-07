@@ -98,4 +98,9 @@ public class TextboxWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "textbox";
+    }
 }

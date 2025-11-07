@@ -24,4 +24,9 @@ public class TabWidget : ContainerWidget
 
     /// <summary>标签图标（Ant Design Icon 名称，可选）</summary>
     public string? Icon { get; set; }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "tab";
+    }
 }

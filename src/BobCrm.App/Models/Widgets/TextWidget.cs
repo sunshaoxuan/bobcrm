@@ -22,4 +22,9 @@ public abstract class TextWidget : DraggableWidget
 
     /// <summary>文本对齐方式（left, center, right）</summary>
     public string TextAlign { get; set; } = "left";
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "text";
+    }
 }

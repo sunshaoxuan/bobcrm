@@ -106,5 +106,24 @@ public static class WidgetNavigationHelper
             }
         }
     }
+
+    /// <summary>
+    /// 获取所有Widget（包括嵌套的子Widget）
+    /// </summary>
+    public static IEnumerable<DraggableWidget> GetAllWidgets(IEnumerable<DraggableWidget> widgets)
+    {
+        foreach (var widget in widgets)
+        {
+            yield return widget;
+
+            if (widget is ContainerWidget container && container.Children != null)
+            {
+                foreach (var child in GetAllWidgets(container.Children))
+                {
+                    yield return child;
+                }
+            }
+        }
+    }
 }
 

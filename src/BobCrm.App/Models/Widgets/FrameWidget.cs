@@ -50,4 +50,9 @@ public class FrameWidget : ContainerWidget
             new() { PropertyPath = "Padding", Label = "PROP_PADDING", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 48 }
         };
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "frame";
+    }
 }

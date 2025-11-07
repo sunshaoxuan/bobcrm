@@ -59,4 +59,9 @@ public class TabContainerWidget : ContainerWidget
             }
         };
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "tabcontainer";
+    }
 }

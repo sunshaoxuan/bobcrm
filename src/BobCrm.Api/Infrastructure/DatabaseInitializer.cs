@@ -235,6 +235,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_PROPERTIES", ZH = "属性", JA = "プロパティ", EN = "Properties" },
                 new LocalizationResource { Key = "LBL_TEMPLATE_PROPERTIES", ZH = "模板属性", JA = "テンプレートプロパティ", EN = "Template Properties" },
                 new LocalizationResource { Key = "LBL_WIDGET_PROPERTIES", ZH = "组件属性", JA = "コンポーネントプロパティ", EN = "Widget Properties" },
+                new LocalizationResource { Key = "PROP_CODE", ZH = "代码/名称", JA = "コード/名前", EN = "Code/Name" },
+                new LocalizationResource { Key = "PROP_GROUP_BASIC", ZH = "基本", JA = "基本", EN = "Basic" },
                 new LocalizationResource { Key = "LBL_TEMPLATE", ZH = "模板", JA = "テンプレート", EN = "Template" },
                 new LocalizationResource { Key = "LBL_TEMPLATE_NAME", ZH = "模板名称", JA = "テンプレート名", EN = "Template Name" },
                 new LocalizationResource { Key = "LBL_USER_TEMPLATE", ZH = "用户模板", JA = "ユーザーテンプレート", EN = "User Template" },

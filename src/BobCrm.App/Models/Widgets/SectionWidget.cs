@@ -104,4 +104,9 @@ public class SectionWidget : ContainerWidget
             new() { PropertyPath = "ContainerLayout.BorderRadius", Label = "PROP_BORDER_RADIUS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 24, Group = "PROP_GROUP_LAYOUT" }
         };
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "section";
+    }
 }

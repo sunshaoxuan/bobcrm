@@ -103,4 +103,9 @@ public class ListboxWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "listbox";
+    }
 }

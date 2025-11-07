@@ -128,5 +128,10 @@ public class RadioWidget : TextWidget
         builder.CloseElement(); // radio container
         builder.CloseElement(); // outer container
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "radio";
+    }
 }
 

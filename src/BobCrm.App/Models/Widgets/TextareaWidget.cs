@@ -89,4 +89,9 @@ public class TextareaWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "textarea";
+    }
 }

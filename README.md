@@ -2,23 +2,34 @@
 
 一个基于 Blazor Server 的 CRM 系统，具有动态表单设计、多语言支持和丰富的字段动作功能。
 
-## 📝 最新更新（v0.5.6，2025-11-07）
+## 📝 最新更新（v0.5.7，2025-11-07）
 
-**🏗️ OOP重构：组件渲染多态化，消除集中式分支逻辑**
+**🏷️ OOP实现：组件代码/名称自动生成与唯一性校验**
 
-- ✅ **多态渲染** - 每个组件类自己负责渲染逻辑（运行时+设计态）
-- ✅ **代码简化** - RuntimeWidgetRenderer: 325行 → 50行 (-83%)
-- ✅ **代码简化** - DesignWidgetContentRenderer: 215行 → 42行 (-79%)
-- ✅ **开闭原则** - 新增组件无需修改渲染器，仅创建新类并重写方法
-- ✅ **单一职责** - 组件的所有逻辑（属性、渲染）都封装在自己的类中
-- ✅ **架构优化** - 总减少 ~450 行分支逻辑，遵循OOP最佳实践
+- ✅ **自动命名** - 拖放组件自动生成人类可读的 Code（textbox1, button2...）
+- ✅ **按类型分组** - 每种组件独立编号（textbox1-N, button1-N）
+- ✅ **唯一性保证** - 递归检查所有组件（包括容器嵌套），确保 Code 唯一
+- ✅ **属性面板集成** - Code 可见、可编辑，显示在「基本」分组
+- ✅ **OOP 最佳实践** - 抽象方法模式，18个组件各自实现 `GetDefaultCodePrefix()`
+- ✅ **开闭原则** - 新增组件只需实现前缀方法，无需修改代码生成器
 
-**重构覆盖**：
-- 9个组件类实现自渲染（Textbox, Number, Textarea, Calendar, Select, Listbox, Button, Label, Checkbox/Radio）
-- 2个渲染器简化为多态调用（Runtime + Design）
+**实现覆盖**：
+- 基类新增 Code 属性 + 抽象方法 `GetDefaultCodePrefix()`
+- 18个组件类实现前缀方法（textbox, number, grid, panel...）
+- WidgetCodeGenerator 服务（生成、校验、建议）
+- FormDesigner 两处拖放点集成自动生成
 - 测试通过：101/104 测试用例
 
 详见：[CHANGELOG.md](CHANGELOG.md) | [设计文档](docs/客户信息管理系统设计文档.md)
+
+---
+
+### v0.5.6 - OOP重构：组件渲染多态化
+
+- ✅ 每个组件类自己负责渲染逻辑（运行时+设计态）
+- ✅ RuntimeWidgetRenderer: 325行 → 50行 (-83%)
+- ✅ DesignWidgetContentRenderer: 215行 → 42行 (-79%)
+- ✅ 总减少 ~450 行分支逻辑
 
 ## 🚀 快速开始（5分钟上手）
 

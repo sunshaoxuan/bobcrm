@@ -93,4 +93,9 @@ public class ButtonWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "button";
+    }
 }

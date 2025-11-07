@@ -57,4 +57,9 @@ public class LabelWidget : TextWidget
         builder.CloseElement();
         builder.CloseElement();
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "label";
+    }
 }

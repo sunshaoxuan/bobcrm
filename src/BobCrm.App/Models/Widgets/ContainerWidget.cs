@@ -8,4 +8,9 @@ namespace BobCrm.App.Models.Widgets;
 public abstract class ContainerWidget : DraggableWidget
 {
     // Children 属性已在基类 DraggableWidget 中定义
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "container";
+    }
 }

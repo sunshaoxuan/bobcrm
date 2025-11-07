@@ -59,4 +59,9 @@ public class PanelWidget : ContainerWidget
             new() { PropertyPath = "ContainerLayout.FlexWrap", Label = "PROP_FLEX_WRAP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean, Group = "PROP_GROUP_LAYOUT" }
         };
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "panel";
+    }
 }

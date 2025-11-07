@@ -851,6 +851,10 @@ else
         if (draggedDefinition != null)
         {
             var newWidget = WidgetRegistry.Create(draggedDefinition.Type, I18n.T(draggedDefinition.LabelKey));
+
+            // 自动生成唯一的 Code
+            newWidget.Code = WidgetCodeGenerator.GenerateUniqueCode(newWidget, GetAllWidgets());
+
             layoutWidgets.Add(newWidget);
             selectedWidget = newWidget;
             dropSucceeded = true;
@@ -903,6 +907,9 @@ else
             if (definition != null)
             {
                 var newWidget = WidgetRegistry.Create(definition.Type, I18n.T(definition.LabelKey));
+
+                // 自动生成唯一的 Code
+                newWidget.Code = WidgetCodeGenerator.GenerateUniqueCode(newWidget, GetAllWidgets());
 
                 // 初始化 Children 列表
                 if (targetContainer.Children == null)
@@ -1089,6 +1096,14 @@ else
             templateName = I18n.T("LBL_NEW_TEMPLATE");
         }
         try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    /// <summary>
+    /// 获取所有 Widget（包括嵌套的子组件）
+    /// </summary>
+    private IEnumerable<DraggableWidget> GetAllWidgets()
+    {
+        return WidgetNavigationHelper.GetAllWidgets(layoutWidgets);
     }
 }
 

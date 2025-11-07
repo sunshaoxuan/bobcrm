@@ -165,5 +165,10 @@ public class CheckboxWidget : TextWidget
         builder.CloseElement(); // checkbox container
         builder.CloseElement(); // outer container
     }
+
+    public override string GetDefaultCodePrefix()
+    {
+        return "checkbox";
+    }
 }
 

@@ -7,6 +7,90 @@
 
 ---
 
+## [0.5.7] - 2025-11-07
+
+### 新增 (Added)
+
+**🏷️ OOP实现：组件代码/名称自动生成与唯一性校验**
+
+#### 功能需求
+- 每个组件被放到画布上时，自动生成人类可读的 Code/ID（如 textbox1, button2）
+- Code 在属性窗口中可见、可编辑，具有排重校验
+- 按组件类型分组自动编号（textbox1, textbox2, button1, button2...）
+- 必须遵循 OOP 最佳实践，不能在渲染层使用 if-else/switch-case
+
+#### 实现方案
+
+1. **基类扩展 - DraggableWidget**：
+   - 新增 `Code` 属性（string，人类可读标识）
+   - 新增抽象方法 `GetDefaultCodePrefix()`，所有组件必须实现
+   - Code 自动加入属性元数据列表，显示在属性面板「基本」分组
+
+2. **所有组件类实现前缀方法**（18个组件）：
+   - TextboxWidget → "textbox"
+   - NumberWidget → "number"
+   - TextareaWidget → "textarea"
+   - CalendarWidget → "calendar"
+   - SelectWidget → "select"
+   - ListboxWidget → "listbox"
+   - ButtonWidget → "button"
+   - LabelWidget → "label"
+   - CheckboxWidget → "checkbox"
+   - RadioWidget → "radio"
+   - GridWidget → "grid"
+   - PanelWidget → "panel"
+   - SectionWidget → "section"
+   - FrameWidget → "frame"
+   - TabContainerWidget → "tabcontainer"
+   - TabWidget → "tab"
+   - GroupBoxWidget → "groupbox"
+   - GenericContainerWidget → "container"
+
+3. **WidgetCodeGenerator 服务**（新增文件）：
+   - `GenerateUniqueCode(widget, allWidgets)` - 生成唯一代码
+     - 获取组件前缀：`widget.GetDefaultCodePrefix()`
+     - 递归获取所有现有 Code（包括嵌套子组件）
+     - 自动递增数字直到找到唯一 Code（prefix1, prefix2...）
+   - `IsCodeUnique(code, widgetId, allWidgets)` - 校验唯一性
+   - `ValidateAndSuggestCode(widget, allWidgets)` - 验证并建议新 Code
+   - `GetAllCodes(widgets)` - 递归提取所有 Code（私有方法）
+
+4. **FormDesigner 集成**：
+   - 两个组件拖放点自动生成 Code：
+     - 画布拖放：`newWidget.Code = WidgetCodeGenerator.GenerateUniqueCode(newWidget, GetAllWidgets())`
+     - 容器拖放：同上逻辑，确保在容器内创建的组件也有唯一 Code
+   - 新增辅助方法 `GetAllWidgets()` - 调用 WidgetNavigationHelper
+
+5. **WidgetNavigationHelper 扩展**：
+   - 新增 `GetAllWidgets(widgets)` - 递归获取所有组件（包括容器嵌套）
+   - 使用 `yield return` 优化内存占用
+
+6. **多语言资源**：
+   - `PROP_CODE` - 代码/名称 / コード/名前 / Code/Name
+   - `PROP_GROUP_BASIC` - 基本 / 基本 / Basic
+
+#### 技术细节
+- 使用 **抽象方法模式**：基类定义契约，每个组件实现自己的前缀
+- 遵循 **开闭原则**：新增组件类型只需实现 `GetDefaultCodePrefix()`，无需修改生成器
+- 遵循 **单一职责**：WidgetCodeGenerator 专注于 Code 生成与校验逻辑
+- 遵循 **里氏替换**：所有组件通过基类引用统一调用 `GetDefaultCodePrefix()`
+- 使用 **递归遍历**：处理容器嵌套场景，确保跨整个组件树的唯一性
+- 使用 **不区分大小写比较**：`StringComparer.OrdinalIgnoreCase` 避免 Code1 与 code1 冲突
+
+#### 收益
+- ✅ **OOP 最佳实践** - 多态替代分支逻辑
+- ✅ **开闭原则** - 新增组件无需修改代码生成器
+- ✅ **可扩展性** - 支持容器嵌套的递归校验
+- ✅ **用户体验** - 自动命名，减少手动输入
+- ✅ **数据引用** - 为未来的组件引用（如数据绑定、脚本）做准备
+
+### 测试 (Tested)
+- ✅ 编译通过：0 错误，1 个无关警告
+- ✅ 单元测试：101 个测试通过，3 个跳过
+- ✅ 功能验证：拖放组件自动生成唯一 Code（textbox1, textbox2...）
+
+---
+
 ## [0.5.6] - 2025-11-07
 
 ### 重构 (Refactored)

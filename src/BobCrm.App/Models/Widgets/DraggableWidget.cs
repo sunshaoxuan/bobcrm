@@ -21,11 +21,17 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
 {
     // ===== 基本标识 =====
 
-    /// <summary>控件唯一标识</summary>
+    /// <summary>控件唯一标识（GUID）</summary>
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>控件类型</summary>
     public string Type { get; set; } = "";
+
+    /// <summary>
+    /// 控件代码/名称（人类可读，用于引用）
+    /// 例如：textbox1, button2, myCustomInput
+    /// </summary>
+    public string Code { get; set; } = "";
 
     /// <summary>控件标签/标题</summary>
     public string Label { get; set; } = "";
@@ -132,6 +138,14 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     // ===== 方法 =====
 
     /// <summary>
+    /// 获取控件代码的默认前缀
+    /// 子类必须实现此方法以提供自己的前缀（如 "textbox", "button"）
+    /// 用于生成默认的 Code，例如：textbox1, textbox2, button1, button2
+    /// </summary>
+    /// <returns>小写的前缀字符串</returns>
+    public abstract string GetDefaultCodePrefix();
+
+    /// <summary>
     /// 判断某个属性是否可编辑（根据控件类型）
     /// 子类可以重写此方法来限制可编辑的属性
     /// </summary>
@@ -156,6 +170,7 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         // 默认返回通用属性
         return new List<BobCrm.App.Models.Designer.WidgetPropertyMetadata>
         {
+            new() { PropertyPath = "Code", Label = "PROP_CODE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text, Group = "PROP_GROUP_BASIC" },
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() },
             new() { PropertyPath = "Visible", Label = "PROP_VISIBLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean }
