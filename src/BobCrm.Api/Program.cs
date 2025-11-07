@@ -218,7 +218,6 @@ app.MapSetupEndpoints();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapI18nEndpoints();
-app.MapEntityMetadataEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
