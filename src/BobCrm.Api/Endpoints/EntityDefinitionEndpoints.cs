@@ -356,6 +356,151 @@ public static class EntityDefinitionEndpoints
         .WithSummary("删除实体定义")
         .WithDescription("删除实体定义（仅限草稿状态且未被引用）");
 
+        // ==================== 发布 ====================
+
+        // 发布新实体（CREATE TABLE）
+        group.MapPost("/{id:guid}/publish", async (
+            Guid id,
+            AppDbContext db,
+            Services.EntityPublishingService publishService,
+            HttpContext http,
+            ILogger<Program> logger) =>
+        {
+            var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            logger.LogInformation("[Publish] Publishing new entity: {Id}", id);
+
+            var result = await publishService.PublishNewEntityAsync(id, uid);
+
+            if (!result.Success)
+            {
+                logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Ok(new
+            {
+                success = true,
+                scriptId = result.ScriptId,
+                ddlScript = result.DDLScript,
+                message = "实体发布成功"
+            });
+        })
+        .WithName("PublishEntity")
+        .WithSummary("发布新实体")
+        .WithDescription("发布新实体定义，生成并执行CREATE TABLE语句");
+
+        // 发布实体修改（ALTER TABLE）
+        group.MapPost("/{id:guid}/publish-changes", async (
+            Guid id,
+            AppDbContext db,
+            Services.EntityPublishingService publishService,
+            HttpContext http,
+            ILogger<Program> logger) =>
+        {
+            var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            logger.LogInformation("[Publish] Publishing changes for entity: {Id}", id);
+
+            var result = await publishService.PublishEntityChangesAsync(id, uid);
+
+            if (!result.Success)
+            {
+                logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
+                return Results.BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Results.Ok(new
+            {
+                success = true,
+                scriptId = result.ScriptId,
+                ddlScript = result.DDLScript,
+                changeAnalysis = new
+                {
+                    newFieldsCount = result.ChangeAnalysis?.NewFields.Count ?? 0,
+                    lengthIncreasesCount = result.ChangeAnalysis?.LengthIncreases.Count ?? 0,
+                    hasDestructiveChanges = result.ChangeAnalysis?.HasDestructiveChanges ?? false
+                },
+                message = "实体修改发布成功"
+            });
+        })
+        .WithName("PublishEntityChanges")
+        .WithSummary("发布实体修改")
+        .WithDescription("发布实体定义的修改，生成并执行ALTER TABLE语句");
+
+        // 预览DDL脚本（不执行）
+        group.MapGet("/{id:guid}/preview-ddl", async (
+            Guid id,
+            AppDbContext db,
+            Services.PostgreSQLDDLGenerator ddlGenerator) =>
+        {
+            var definition = await db.EntityDefinitions
+                .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
+                .Include(ed => ed.Interfaces)
+                .FirstOrDefaultAsync(ed => ed.Id == id);
+
+            if (definition == null)
+                return Results.NotFound(new { error = "实体定义不存在" });
+
+            string ddlScript;
+            if (definition.Status == EntityStatus.Draft)
+            {
+                ddlScript = ddlGenerator.GenerateCreateTableScript(definition);
+            }
+            else if (definition.Status == EntityStatus.Modified)
+            {
+                // 简化实现：只显示添加字段的脚本
+                var newFields = definition.Fields.Where(f => f.CreatedAt > definition.UpdatedAt.AddMinutes(-5)).ToList();
+                if (newFields.Any())
+                {
+                    ddlScript = ddlGenerator.GenerateAlterTableAddColumns(definition, newFields);
+                }
+                else
+                {
+                    ddlScript = "-- 无变更";
+                }
+            }
+            else
+            {
+                ddlScript = "-- 实体已发布，无待发布的变更";
+            }
+
+            return Results.Ok(new
+            {
+                entityId = id,
+                entityName = definition.EntityName,
+                status = definition.Status,
+                ddlScript
+            });
+        })
+        .WithName("PreviewDDL")
+        .WithSummary("预览DDL脚本")
+        .WithDescription("预览将要执行的DDL脚本（不实际执行）");
+
+        // 获取DDL执行历史
+        group.MapGet("/{id:guid}/ddl-history", async (
+            Guid id,
+            AppDbContext db,
+            Services.DDLExecutionService ddlExecutor) =>
+        {
+            var history = await ddlExecutor.GetDDLHistoryAsync(id);
+
+            return Results.Ok(history.Select(h => new
+            {
+                h.Id,
+                h.ScriptType,
+                h.Status,
+                h.CreatedAt,
+                h.ExecutedAt,
+                h.CreatedBy,
+                h.ErrorMessage,
+                scriptPreview = h.SqlScript.Length > 200 ? h.SqlScript.Substring(0, 200) + "..." : h.SqlScript
+            }));
+        })
+        .WithName("GetDDLHistory")
+        .WithSummary("获取DDL执行历史")
+        .WithDescription("获取实体定义的所有DDL脚本执行历史");
+
         return app;
     }
 }

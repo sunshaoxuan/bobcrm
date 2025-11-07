@@ -102,8 +102,10 @@ builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 // ILocalization as Singleton with IMemoryCache for cross-request caching
 builder.Services.AddSingleton<ILocalization, EfLocalization>();
 
-// Entity Metadata Service (Scoped - 需要访问数据库)
-builder.Services.AddScoped<BobCrm.Api.Services.EntityMetadataService>();
+// Entity Publishing Services (实体自定义与发布)
+builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
+builder.Services.AddScoped<BobCrm.Api.Services.EntityPublishingService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
