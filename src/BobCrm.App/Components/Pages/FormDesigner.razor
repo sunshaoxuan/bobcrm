@@ -614,12 +614,17 @@ else
                 items[key] = itemData;
             }
 
-            var layoutJson = System.Text.Json.JsonSerializer.Serialize(items);
+            // 构建完整的布局数据（与 LoadTemplate 期望的格式匹配）
+            var layoutData = new Dictionary<string, object>
+            {
+                ["items"] = items,
+                ["entityType"] = entityType ?? "",
+                ["templateName"] = templateName ?? ""
+            };
 
-            // 保存到API（暂时使用旧的Layout API，后续会创建Template API）
+            // 直接发送对象，后端会自动序列化（不要双重序列化）
             var client = await Auth.CreateClientWithAuthAsync();
-            var payload = new { layoutJson };
-            var resp = await client.PostAsJsonAsync($"/api/layout/0", payload);
+            var resp = await client.PostAsJsonAsync($"/api/layout/0", layoutData);
             
             if (resp.IsSuccessStatusCode)
             {
