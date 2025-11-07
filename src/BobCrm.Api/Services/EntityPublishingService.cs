@@ -8,19 +8,19 @@ namespace BobCrm.Api.Services;
 /// 实体发布服务
 /// 负责实体的完整发布流程：验证 -> 生成DDL -> 执行DDL -> 更新状态
 /// </summary>
-public class EntityPublishingService
+public class EntityPublishingService : IEntityPublishingService
 {
     private readonly AppDbContext _db;
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly DDLExecutionService _ddlExecutor;
-    private readonly EntityLockService _lockService;
+    private readonly IEntityLockService _lockService;
     private readonly ILogger<EntityPublishingService> _logger;
 
     public EntityPublishingService(
         AppDbContext db,
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
-        EntityLockService lockService,
+        IEntityLockService lockService,
         ILogger<EntityPublishingService> logger)
     {
         _db = db;

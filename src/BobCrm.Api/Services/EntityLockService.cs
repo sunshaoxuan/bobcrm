@@ -8,7 +8,7 @@ namespace BobCrm.Api.Services;
 /// 实体锁定服务
 /// 管理实体定义的锁定状态，防止已被使用的实体被误修改
 /// </summary>
-public class EntityLockService
+public class EntityLockService : IEntityLockService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<EntityLockService> _logger;

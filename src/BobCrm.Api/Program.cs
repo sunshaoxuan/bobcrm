@@ -105,7 +105,7 @@ builder.Services.AddSingleton<ILocalization, EfLocalization>();
 // Entity Publishing Services (实体自定义与发布)
 builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
-builder.Services.AddScoped<BobCrm.Api.Services.EntityPublishingService>();
+builder.Services.AddScoped<BobCrm.Api.Services.IEntityPublishingService, BobCrm.Api.Services.EntityPublishingService>();
 
 // Dynamic Entity Services (代码生成与动态编译)
 builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
@@ -113,11 +113,11 @@ builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
 builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
 builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 
-// Advanced Features Services (高级功能：AggVO、数据迁移评估、实体锁定)
-builder.Services.AddScoped<BobCrm.Api.Services.CodeGeneration.AggVOCodeGenerator>();
-builder.Services.AddScoped<BobCrm.Api.Services.Aggregates.AggVOService>();
-builder.Services.AddScoped<BobCrm.Api.Services.DataMigration.DataMigrationEvaluator>();
-builder.Services.AddScoped<BobCrm.Api.Services.EntityLockService>();
+// Advanced Features Services (高级功能：AggVO、数据迁移评估、实体锁定) - 使用接口注册遵循DIP原则
+builder.Services.AddScoped<BobCrm.Api.Services.CodeGeneration.IAggVOCodeGenerator, BobCrm.Api.Services.CodeGeneration.AggVOCodeGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.Aggregates.IAggVOService, BobCrm.Api.Services.Aggregates.AggVOService>();
+builder.Services.AddScoped<BobCrm.Api.Services.DataMigration.IDataMigrationEvaluator, BobCrm.Api.Services.DataMigration.DataMigrationEvaluator>();
+builder.Services.AddScoped<BobCrm.Api.Services.IEntityLockService, BobCrm.Api.Services.EntityLockService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());

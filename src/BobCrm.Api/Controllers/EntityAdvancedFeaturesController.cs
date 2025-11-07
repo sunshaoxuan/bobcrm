@@ -16,14 +16,14 @@ namespace BobCrm.Api.Controllers;
 public class EntityAdvancedFeaturesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
-    private readonly AggVOCodeGenerator _aggVOCodeGenerator;
-    private readonly DataMigrationEvaluator _migrationEvaluator;
+    private readonly IAggVOCodeGenerator _aggVOCodeGenerator;
+    private readonly IDataMigrationEvaluator _migrationEvaluator;
     private readonly ILogger<EntityAdvancedFeaturesController> _logger;
 
     public EntityAdvancedFeaturesController(
         ApplicationDbContext context,
-        AggVOCodeGenerator aggVOCodeGenerator,
-        DataMigrationEvaluator migrationEvaluator,
+        IAggVOCodeGenerator aggVOCodeGenerator,
+        IDataMigrationEvaluator migrationEvaluator,
         ILogger<EntityAdvancedFeaturesController> logger)
     {
         _context = context;
