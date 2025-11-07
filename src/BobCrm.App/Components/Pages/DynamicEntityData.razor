@@ -1,0 +1,188 @@
+@page "/dynamic-entity/{FullTypeName}"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.DynamicEntityService DynamicEntitySvc
+@inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@using BobCrm.App.Models
+@using System.Text.Json
+
+<AuthChecker>
+    <PageHeader Title="@($"{_entityName} - 数据管理")" OnBack="GoBack">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" OnClick="ShowCreateModal">
+                        <Icon Type="plus" /> 新建
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button OnClick="LoadData">
+                        <Icon Type="reload" /> 刷新
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    @if (_loading)
+    {
+        <div style="text-align: center; padding: 50px;">
+            <Spin Size="large" />
+        </div>
+    }
+    else
+    {
+        <Card>
+            <Alert Type="@AlertType.Info" Message="动态实体数据管理" ShowIcon>
+                <MessageTemplate>
+                    <p>实体类型: <Tag>@FullTypeName</Tag></p>
+                    <p>此页面用于管理动态编译加载的实体数据。请确保实体已成功编译加载。</p>
+                </MessageTemplate>
+            </Alert>
+
+            <div style="margin-top: 16px;">
+                <h4>数据列表</h4>
+                @if (_data.Any())
+                {
+                    <Table TItem="Dictionary<string, object>" DataSource="@_data" Loading="@_loading" PageSize="20">
+                        @foreach (var column in GetDisplayColumns())
+                        {
+                            <Column Title="@column" TData="string" DataIndex="@column">
+                                @{
+                                    var value = context.ContainsKey(column) ? context[column] : null;
+                                    <text>@FormatValue(value)</text>
+                                }
+                            </Column>
+                        }
+                        <ActionColumn Title="操作">
+                            <Space Size="@AntDesign.SpaceSize.Small">
+                                <SpaceItem>
+                                    <Button Size="@ButtonSize.Small" OnClick="() => ShowEditModal(context)">
+                                        编辑
+                                    </Button>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Popconfirm Title="确定删除？" OnConfirm="() => HandleDelete(context)">
+                                        <Button Danger Size="@ButtonSize.Small">
+                                            删除
+                                        </Button>
+                                    </Popconfirm>
+                                </SpaceItem>
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                }
+                else
+                {
+                    <Empty Description="暂无数据" />
+                }
+            </div>
+        </Card>
+    }
+</AuthChecker>
+
+@code {
+    [Parameter] public string FullTypeName { get; set; } = string.Empty;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IMessageService MessageService { get; set; } = default!;
+
+    private bool _loading = false;
+    private string _entityName = string.Empty;
+    private List<Dictionary<string, object>> _data = new();
+    private int _total = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _entityName = FullTypeName.Split('.').LastOrDefault() ?? FullTypeName;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            var request = new DynamicEntityQueryRequest
+            {
+                Skip = 0,
+                Take = 100,
+                OrderBy = "Id",
+                OrderByDescending = false
+            };
+
+            var response = await DynamicEntitySvc.QueryAsync(FullTypeName, request);
+            if (response != null)
+            {
+                _data = response.Data;
+                _total = response.Total;
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error($"加载数据失败: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private List<string> GetDisplayColumns()
+    {
+        if (!_data.Any()) return new List<string>();
+
+        // 显示前6列
+        return _data.First().Keys.Take(6).ToList();
+    }
+
+    private string FormatValue(object? value)
+    {
+        if (value == null) return string.Empty;
+
+        if (value is JsonElement jsonElement)
+        {
+            return jsonElement.ToString();
+        }
+
+        if (value is DateTime dt)
+        {
+            return dt.ToString("yyyy-MM-dd HH:mm");
+        }
+
+        return value.ToString() ?? string.Empty;
+    }
+
+    private void ShowCreateModal()
+    {
+        // TODO: 实现创建模态框
+        MessageService.Info("创建功能开发中...");
+    }
+
+    private void ShowEditModal(Dictionary<string, object> entity)
+    {
+        // TODO: 实现编辑模态框
+        MessageService.Info("编辑功能开发中...");
+    }
+
+    private async Task HandleDelete(Dictionary<string, object> entity)
+    {
+        if (entity.ContainsKey("Id"))
+        {
+            try
+            {
+                var id = Convert.ToInt32(entity["Id"]);
+                await DynamicEntitySvc.DeleteAsync(FullTypeName, id);
+                await MessageService.Success("删除成功");
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                await MessageService.Error($"删除失败: {ex.Message}");
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/entity-definitions");
+    }
+}

@@ -1,0 +1,366 @@
+@page "/entity-definitions/create"
+@page "/entity-definitions/edit/{Id:guid}"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
+@using BobCrm.App.Models
+
+<AuthChecker>
+    <PageHeader Title="@(_isNew ? "新建实体定义" : "编辑实体定义")" OnBack="GoBack">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Button OnClick="HandleSave" Type="@ButtonType.Primary" Loading="@_saving">
+                        <Icon Type="save" /> 保存
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button OnClick="GoBack">
+                        取消
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    @if (_loading)
+    {
+        <div style="text-align: center; padding: 50px;">
+            <Spin Size="large" />
+        </div>
+    }
+    else
+    {
+        <Card>
+            <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
+                <FormItem Label="命名空间">
+                    <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" />
+                </FormItem>
+
+                <FormItem Label="实体名称">
+                    <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" />
+                    <div class="ant-form-text">
+                        将用作C#类名，如: Product
+                    </div>
+                </FormItem>
+
+                <FormItem Label="显示名Key">
+                    <Input @bind-Value="@_model.DisplayNameKey" Placeholder="ENTITY_PRODUCT" />
+                    <div class="ant-form-text">
+                        多语言Key，如: ENTITY_PRODUCT
+                    </div>
+                </FormItem>
+
+                <FormItem Label="描述Key">
+                    <Input @bind-Value="@_model.DescriptionKey" Placeholder="ENTITY_PRODUCT_DESC" />
+                </FormItem>
+
+                <FormItem Label="结构类型">
+                    <RadioGroup @bind-Value="@_model.StructureType" Disabled="@(!_isNew)">
+                        <Radio RadioButton Value="Single">单一实体</Radio>
+                        <Radio RadioButton Value="MasterDetail">主从实体</Radio>
+                        <Radio RadioButton Value="MasterDetailGrandchild">主从孙实体</Radio>
+                    </RadioGroup>
+                </FormItem>
+
+                <FormItem Label="接口">
+                    <CheckboxGroup @bind-Value="@_selectedInterfaces" Disabled="@(!_isNew)">
+                        <Checkbox Value="Base">Base (IEntity - Id)</Checkbox>
+                        <Checkbox Value="Archive">Archive (IArchive - Code, Name)</Checkbox>
+                        <Checkbox Value="Audit">Audit (IAuditable - 审计字段)</Checkbox>
+                        <Checkbox Value="Version">Version (IVersioned - 版本)</Checkbox>
+                        <Checkbox Value="TimeVersion">TimeVersion (ITimeVersioned - 时间版本)</Checkbox>
+                    </CheckboxGroup>
+                </FormItem>
+
+                <FormItem Label="图标">
+                    <Input @bind-Value="@_model.Icon" Placeholder="database" />
+                </FormItem>
+
+                <FormItem Label="分类">
+                    <Input @bind-Value="@_model.Category" Placeholder="业务管理" />
+                </FormItem>
+
+                <FormItem Label="排序">
+                    <InputNumber @bind-Value="@_model.Order" Min="0" />
+                </FormItem>
+
+                <FormItem Label="启用">
+                    <Switch @bind-Value="@_model.IsEnabled" />
+                </FormItem>
+            </Form>
+        </Card>
+
+        <Card Title="字段定义" Style="margin-top: 16px;">
+            <CardExtra>
+                <Button OnClick="AddField" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
+                    <Icon Type="plus" /> 添加字段
+                </Button>
+            </CardExtra>
+            <ChildContent>
+                <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
+                    <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
+                    <PropertyColumn Property="f => f.DisplayNameKey" Title="显示名Key" />
+                    <PropertyColumn Property="f => f.DataType" Title="数据类型">
+                        <Tag>@context.DataType</Tag>
+                    </PropertyColumn>
+                    <PropertyColumn Property="f => f.Length" Title="长度" />
+                    <PropertyColumn Property="f => f.IsRequired" Title="必填">
+                        @(context.IsRequired ? "是" : "否")
+                    </PropertyColumn>
+                    <PropertyColumn Property="f => f.SortOrder" Title="排序" />
+                    <ActionColumn Title="操作">
+                        <Space>
+                            <SpaceItem>
+                                <Button Size="@ButtonSize.Small" OnClick="() => EditField(context)">
+                                    编辑
+                                </Button>
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Popconfirm Title="确定删除？" OnConfirm="() => RemoveField(context)">
+                                    <Button Danger Size="@ButtonSize.Small">
+                                        删除
+                                    </Button>
+                                </Popconfirm>
+                            </SpaceItem>
+                        </Space>
+                    </ActionColumn>
+                </Table>
+            </ChildContent>
+        </Card>
+    }
+</AuthChecker>
+
+<!-- 字段编辑模态框 -->
+<Modal Title="@(_editingField.Id == Guid.Empty ? "新建字段" : "编辑字段")" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
+    <Form Model="@_editingField" LabelColSpan="6" WrapperColSpan="18">
+        <FormItem Label="属性名">
+            <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" />
+        </FormItem>
+        <FormItem Label="显示名Key">
+            <Input @bind-Value="@_editingField.DisplayNameKey" Placeholder="FIELD_PRICE" />
+        </FormItem>
+        <FormItem Label="数据类型">
+            <Select @bind-Value="@_editingField.DataType" Style="width: 100%;">
+                <SelectOption Value="@FieldDataType.String" Label="String" />
+                <SelectOption Value="@FieldDataType.Integer" Label="Integer" />
+                <SelectOption Value="@FieldDataType.Long" Label="Long" />
+                <SelectOption Value="@FieldDataType.Decimal" Label="Decimal" />
+                <SelectOption Value="@FieldDataType.Boolean" Label="Boolean" />
+                <SelectOption Value="@FieldDataType.DateTime" Label="DateTime" />
+                <SelectOption Value="@FieldDataType.Date" Label="Date" />
+                <SelectOption Value="@FieldDataType.Text" Label="Text" />
+                <SelectOption Value="@FieldDataType.Guid" Label="Guid" />
+            </Select>
+        </FormItem>
+        <FormItem Label="长度">
+            <InputNumber @bind-Value="@_editingField.Length" Min="0" Placeholder="对于String类型" />
+        </FormItem>
+        <FormItem Label="精度">
+            <InputNumber @bind-Value="@_editingField.Precision" Min="0" Placeholder="对于Decimal类型" />
+        </FormItem>
+        <FormItem Label="小数位">
+            <InputNumber @bind-Value="@_editingField.Scale" Min="0" Placeholder="对于Decimal类型" />
+        </FormItem>
+        <FormItem Label="必填">
+            <Switch @bind-Value="@_editingField.IsRequired" />
+        </FormItem>
+        <FormItem Label="默认值">
+            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="如: 0, NOW, NEWID" />
+        </FormItem>
+        <FormItem Label="排序">
+            <InputNumber @bind-Value="@_editingField.SortOrder" Min="0" />
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Inject] private IMessageService MessageService { get; set; } = default!;
+
+    private bool _isNew => !Id.HasValue;
+    private bool _loading = false;
+    private bool _saving = false;
+    private bool _fieldModalVisible = false;
+
+    private EditModel _model = new();
+    private FieldMetadataDto _editingField = new();
+    private string[] _selectedInterfaces = Array.Empty<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            await LoadEntity();
+        }
+        else
+        {
+            // 默认选中Base接口
+            _selectedInterfaces = new[] { "Base" };
+        }
+    }
+
+    private async Task LoadEntity()
+    {
+        _loading = true;
+        try
+        {
+            var entity = await EntityDefService.GetByIdAsync(Id!.Value);
+            if (entity != null)
+            {
+                _model = new EditModel
+                {
+                    Namespace = entity.Namespace,
+                    EntityName = entity.EntityName,
+                    DisplayNameKey = entity.DisplayNameKey,
+                    DescriptionKey = entity.DescriptionKey,
+                    StructureType = entity.StructureType,
+                    Icon = entity.Icon,
+                    Category = entity.Category,
+                    Order = entity.Order,
+                    IsEnabled = entity.IsEnabled,
+                    Fields = entity.Fields
+                };
+
+                _selectedInterfaces = entity.Interfaces.Where(i => i.IsEnabled).Select(i => i.InterfaceType).ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error($"加载失败: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                var request = new CreateEntityDefinitionRequest
+                {
+                    Namespace = _model.Namespace,
+                    EntityName = _model.EntityName,
+                    DisplayNameKey = _model.DisplayNameKey,
+                    DescriptionKey = _model.DescriptionKey,
+                    StructureType = _model.StructureType,
+                    Interfaces = _selectedInterfaces.ToList(),
+                    Fields = _model.Fields
+                };
+
+                await EntityDefService.CreateAsync(request);
+                await MessageService.Success("创建成功");
+            }
+            else
+            {
+                var request = new UpdateEntityDefinitionRequest
+                {
+                    DisplayNameKey = _model.DisplayNameKey,
+                    DescriptionKey = _model.DescriptionKey,
+                    Icon = _model.Icon,
+                    Category = _model.Category,
+                    IsEnabled = _model.IsEnabled,
+                    Order = _model.Order,
+                    Fields = _model.Fields,
+                    Interfaces = _selectedInterfaces.ToList()
+                };
+
+                await EntityDefService.UpdateAsync(Id!.Value, request);
+                await MessageService.Success("更新成功");
+            }
+
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error($"保存失败: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void AddField()
+    {
+        _editingField = new FieldMetadataDto
+        {
+            Id = Guid.Empty,
+            SortOrder = (_model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100),
+            DataType = FieldDataType.String
+        };
+        _fieldModalVisible = true;
+    }
+
+    private void EditField(FieldMetadataDto field)
+    {
+        _editingField = new FieldMetadataDto
+        {
+            Id = field.Id,
+            PropertyName = field.PropertyName,
+            DisplayNameKey = field.DisplayNameKey,
+            DataType = field.DataType,
+            Length = field.Length,
+            Precision = field.Precision,
+            Scale = field.Scale,
+            IsRequired = field.IsRequired,
+            DefaultValue = field.DefaultValue,
+            SortOrder = field.SortOrder
+        };
+        _fieldModalVisible = true;
+    }
+
+    private void SaveField()
+    {
+        if (_editingField.Id == Guid.Empty)
+        {
+            _editingField.Id = Guid.NewGuid();
+            _model.Fields.Add(_editingField);
+        }
+        else
+        {
+            var index = _model.Fields.FindIndex(f => f.Id == _editingField.Id);
+            if (index >= 0)
+            {
+                _model.Fields[index] = _editingField;
+            }
+        }
+
+        _fieldModalVisible = false;
+    }
+
+    private void CancelFieldEdit()
+    {
+        _fieldModalVisible = false;
+    }
+
+    private void RemoveField(FieldMetadataDto field)
+    {
+        _model.Fields.Remove(field);
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/entity-definitions");
+    }
+
+    private class EditModel
+    {
+        public string Namespace { get; set; } = "BobCrm.Domain.Custom";
+        public string EntityName { get; set; } = string.Empty;
+        public string DisplayNameKey { get; set; } = string.Empty;
+        public string? DescriptionKey { get; set; }
+        public string StructureType { get; set; } = "Single";
+        public string? Icon { get; set; }
+        public string? Category { get; set; }
+        public int Order { get; set; }
+        public bool IsEnabled { get; set; } = true;
+        public List<FieldMetadataDto> Fields { get; set; } = new();
+    }
+}
