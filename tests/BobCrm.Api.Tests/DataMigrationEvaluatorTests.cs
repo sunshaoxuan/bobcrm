@@ -15,13 +15,13 @@ public class DataMigrationEvaluatorTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
     private readonly DataMigrationEvaluator _evaluator;
-    private readonly ApplicationDbContext _db;
+    private readonly AppDbContext _db;
 
     public DataMigrationEvaluatorTests(TestWebAppFactory factory)
     {
         _factory = factory;
         var scope = _factory.Services.CreateScope();
-        _db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        _db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DataMigrationEvaluator>>();
         _evaluator = new DataMigrationEvaluator(_db, logger);
     }

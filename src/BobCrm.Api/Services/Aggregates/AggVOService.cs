@@ -1,7 +1,6 @@
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain.Aggregates;
 using BobCrm.Api.Domain.Models;
-using BobCrm.Api.Services.DynamicEntity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -13,12 +12,12 @@ namespace BobCrm.Api.Services.Aggregates;
 /// </summary>
 public class AggVOService : IAggVOService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly AppDbContext _context;
     private readonly ReflectionPersistenceService _persistenceService;
     private readonly ILogger<AggVOService> _logger;
 
     public AggVOService(
-        ApplicationDbContext context,
+        AppDbContext context,
         ReflectionPersistenceService persistenceService,
         ILogger<AggVOService> logger)
     {

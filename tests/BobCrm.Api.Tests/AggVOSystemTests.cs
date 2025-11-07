@@ -285,7 +285,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
         string status = "Published")
     {
         using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var entity = new EntityDefinition
         {
