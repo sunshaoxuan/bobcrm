@@ -73,12 +73,12 @@
         <Tabs DefaultActiveKey="ddl">
             <TabPane Key="ddl" Tab="DDL脚本">
                 <Card Title="DDL预览" Style="margin-bottom: 16px;">
-                    <CardExtra>
+                    <Extra>
                         <Button OnClick="LoadDDLPreview" Size="@ButtonSize.Small">
                             <Icon Type="reload" /> 刷新
                         </Button>
-                    </CardExtra>
-                    <ChildContent>
+                    </Extra>
+                    <Body>
                         @if (_loadingDDL)
                         {
                             <Spin />
@@ -89,9 +89,9 @@
                         }
                         else
                         {
-                            <Empty Description="暂无DDL脚本" />
+                            <Empty Description="@("暂无DDL脚本")" />
                         }
-                    </ChildContent>
+                    </Body>
                 </Card>
 
                 <Card Title="DDL历史">
@@ -131,7 +131,7 @@
                     }
                     else
                     {
-                        <Empty Description="点击"生成代码"按钮查看" />
+                        <Empty Description='@("点击\"生成代码\"按钮查看")' />
                     }
                 </Card>
             </TabPane>
@@ -143,7 +143,7 @@
                         <Result Status="@(_compilationResult.Success ? "success" : "error")"
                                 Title="@(_compilationResult.Success ? "编译成功" : "编译失败")"
                                 SubTitle="@_compilationResult.Message">
-                            <ResultExtra>
+                            <Extra>
                                 @if (_compilationResult.Success)
                                 {
                                     <Descriptions Bordered>
@@ -158,7 +158,7 @@
                                 }
                                 else if (_compilationResult.Errors.Any())
                                 {
-                                    <Alert Type="@AlertType.Error" Message="编译错误" ShowIcon>
+                                    <Alert Type="@AlertType.Error" Message="编译错误" ShowIcon="true">
                                         <MessageTemplate>
                                             <ul>
                                                 @foreach (var error in _compilationResult.Errors)
@@ -171,12 +171,12 @@
                                         </MessageTemplate>
                                     </Alert>
                                 }
-                            </ResultExtra>
+                            </Extra>
                         </Result>
                     }
                     else
                     {
-                        <Empty Description="点击"编译"按钮查看" />
+                        <Empty Description='@("点击\"编译\"按钮查看")' />
                     }
                 </Card>
             </TabPane>

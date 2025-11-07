@@ -58,20 +58,20 @@
 
                 <FormItem Label="结构类型">
                     <RadioGroup @bind-Value="@_model.StructureType" Disabled="@(!_isNew)">
-                        <Radio RadioButton Value="Single">单一实体</Radio>
-                        <Radio RadioButton Value="MasterDetail">主从实体</Radio>
-                        <Radio RadioButton Value="MasterDetailGrandchild">主从孙实体</Radio>
+                        <Radio Value="@("Single")">单一实体</Radio>
+                        <Radio Value="@("MasterDetail")">主从实体</Radio>
+                        <Radio Value="@("MasterDetailGrandchild")">主从孙实体</Radio>
                     </RadioGroup>
                 </FormItem>
 
                 <FormItem Label="接口">
-                    <CheckboxGroup @bind-Value="@_selectedInterfaces" Disabled="@(!_isNew)">
-                        <Checkbox Value="Base">Base (IEntity - Id)</Checkbox>
-                        <Checkbox Value="Archive">Archive (IArchive - Code, Name)</Checkbox>
-                        <Checkbox Value="Audit">Audit (IAuditable - 审计字段)</Checkbox>
-                        <Checkbox Value="Version">Version (IVersioned - 版本)</Checkbox>
-                        <Checkbox Value="TimeVersion">TimeVersion (ITimeVersioned - 时间版本)</Checkbox>
-                    </CheckboxGroup>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">Base (IEntity - Id)</Checkbox>
+                        <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">Archive (IArchive - Code, Name)</Checkbox>
+                        <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">Audit (IAuditable - 审计字段)</Checkbox>
+                        <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">Version (IVersioned - 版本)</Checkbox>
+                        <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">TimeVersion (ITimeVersioned - 时间版本)</Checkbox>
+                    </div>
                 </FormItem>
 
                 <FormItem Label="图标">
@@ -83,7 +83,7 @@
                 </FormItem>
 
                 <FormItem Label="排序">
-                    <InputNumber @bind-Value="@_model.Order" Min="0" />
+                    <AntDesign.InputNumber TValue="int" @bind-Value="@_model.Order" Min="0" />
                 </FormItem>
 
                 <FormItem Label="启用">
@@ -93,12 +93,12 @@
         </Card>
 
         <Card Title="字段定义" Style="margin-top: 16px;">
-            <CardExtra>
+            <Extra>
                 <Button OnClick="AddField" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
                     <Icon Type="plus" /> 添加字段
                 </Button>
-            </CardExtra>
-            <ChildContent>
+            </Extra>
+            <Body>
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
                     <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
                     <PropertyColumn Property="f => f.DisplayNameKey" Title="显示名Key" />
@@ -127,7 +127,7 @@
                         </Space>
                     </ActionColumn>
                 </Table>
-            </ChildContent>
+            </Body>
         </Card>
     }
 </AuthChecker>
@@ -142,26 +142,28 @@
             <Input @bind-Value="@_editingField.DisplayNameKey" Placeholder="FIELD_PRICE" />
         </FormItem>
         <FormItem Label="数据类型">
-            <Select @bind-Value="@_editingField.DataType" Style="width: 100%;">
-                <SelectOption Value="@FieldDataType.String" Label="String" />
-                <SelectOption Value="@FieldDataType.Integer" Label="Integer" />
-                <SelectOption Value="@FieldDataType.Long" Label="Long" />
-                <SelectOption Value="@FieldDataType.Decimal" Label="Decimal" />
-                <SelectOption Value="@FieldDataType.Boolean" Label="Boolean" />
-                <SelectOption Value="@FieldDataType.DateTime" Label="DateTime" />
-                <SelectOption Value="@FieldDataType.Date" Label="Date" />
-                <SelectOption Value="@FieldDataType.Text" Label="Text" />
-                <SelectOption Value="@FieldDataType.Guid" Label="Guid" />
+            <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
+                <SelectOptions>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid" />
+                </SelectOptions>
             </Select>
         </FormItem>
         <FormItem Label="长度">
-            <InputNumber @bind-Value="@_editingField.Length" Min="0" Placeholder="对于String类型" />
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Length" Min="0" Placeholder="对于String类型" ValueChanged="@((int? val) => _editingField.Length = val)" />
         </FormItem>
         <FormItem Label="精度">
-            <InputNumber @bind-Value="@_editingField.Precision" Min="0" Placeholder="对于Decimal类型" />
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Precision" Min="0" Placeholder="对于Decimal类型" ValueChanged="@((int? val) => _editingField.Precision = val)" />
         </FormItem>
         <FormItem Label="小数位">
-            <InputNumber @bind-Value="@_editingField.Scale" Min="0" Placeholder="对于Decimal类型" />
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Scale" Min="0" Placeholder="对于Decimal类型" ValueChanged="@((int? val) => _editingField.Scale = val)" />
         </FormItem>
         <FormItem Label="必填">
             <Switch @bind-Value="@_editingField.IsRequired" />
@@ -170,7 +172,7 @@
             <Input @bind-Value="@_editingField.DefaultValue" Placeholder="如: 0, NOW, NEWID" />
         </FormItem>
         <FormItem Label="排序">
-            <InputNumber @bind-Value="@_editingField.SortOrder" Min="0" />
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.SortOrder" Min="0" ValueChanged="@((int? val) => _editingField.SortOrder = val ?? 0)" />
         </FormItem>
     </Form>
 </Modal>
@@ -187,6 +189,51 @@
     private EditModel _model = new();
     private FieldMetadataDto _editingField = new();
     private string[] _selectedInterfaces = Array.Empty<string>();
+
+    // Checkbox 绑定属性
+    private bool IsBaseSelected
+    {
+        get => _selectedInterfaces.Contains("Base");
+        set => UpdateInterfaceSelection("Base", value);
+    }
+
+    private bool IsArchiveSelected
+    {
+        get => _selectedInterfaces.Contains("Archive");
+        set => UpdateInterfaceSelection("Archive", value);
+    }
+
+    private bool IsAuditSelected
+    {
+        get => _selectedInterfaces.Contains("Audit");
+        set => UpdateInterfaceSelection("Audit", value);
+    }
+
+    private bool IsVersionSelected
+    {
+        get => _selectedInterfaces.Contains("Version");
+        set => UpdateInterfaceSelection("Version", value);
+    }
+
+    private bool IsTimeVersionSelected
+    {
+        get => _selectedInterfaces.Contains("TimeVersion");
+        set => UpdateInterfaceSelection("TimeVersion", value);
+    }
+
+    private void UpdateInterfaceSelection(string interfaceType, bool isSelected)
+    {
+        var list = _selectedInterfaces.ToList();
+        if (isSelected && !list.Contains(interfaceType))
+        {
+            list.Add(interfaceType);
+        }
+        else if (!isSelected && list.Contains(interfaceType))
+        {
+            list.Remove(interfaceType);
+        }
+        _selectedInterfaces = list.ToArray();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -292,7 +339,7 @@
         _editingField = new FieldMetadataDto
         {
             Id = Guid.Empty,
-            SortOrder = (_model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100),
+            SortOrder = (_model.Fields != null && _model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100),
             DataType = FieldDataType.String
         };
         _fieldModalVisible = true;
@@ -316,23 +363,55 @@
         _fieldModalVisible = true;
     }
 
-    private void SaveField()
+    private Task SaveField()
     {
         if (_editingField.Id == Guid.Empty)
         {
             _editingField.Id = Guid.NewGuid();
-            _model.Fields.Add(_editingField);
+            if (_model.Fields == null)
+            {
+                _model.Fields = new List<FieldMetadataDto>();
+            }
+            _model.Fields.Add(new FieldMetadataDto
+            {
+                Id = _editingField.Id,
+                PropertyName = _editingField.PropertyName,
+                DisplayNameKey = _editingField.DisplayNameKey,
+                DataType = _editingField.DataType,
+                Length = _editingField.Length,
+                Precision = _editingField.Precision,
+                Scale = _editingField.Scale,
+                IsRequired = _editingField.IsRequired,
+                DefaultValue = _editingField.DefaultValue,
+                SortOrder = _editingField.SortOrder
+            });
         }
         else
         {
-            var index = _model.Fields.FindIndex(f => f.Id == _editingField.Id);
-            if (index >= 0)
+            if (_model.Fields != null)
             {
-                _model.Fields[index] = _editingField;
+                var index = _model.Fields.FindIndex(f => f.Id == _editingField.Id);
+                if (index >= 0)
+                {
+                    _model.Fields[index] = new FieldMetadataDto
+                    {
+                        Id = _editingField.Id,
+                        PropertyName = _editingField.PropertyName,
+                        DisplayNameKey = _editingField.DisplayNameKey,
+                        DataType = _editingField.DataType,
+                        Length = _editingField.Length,
+                        Precision = _editingField.Precision,
+                        Scale = _editingField.Scale,
+                        IsRequired = _editingField.IsRequired,
+                        DefaultValue = _editingField.DefaultValue,
+                        SortOrder = _editingField.SortOrder
+                    };
+                }
             }
         }
 
         _fieldModalVisible = false;
+        return Task.CompletedTask;
     }
 
     private void CancelFieldEdit()

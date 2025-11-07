@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "kA8ASB6t2yo=",
+  "dgSpecHash": "30VsEUF//8Q=",
   "success": true,
   "projectFilePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
   "expectedPackageFiles": [
@@ -14,9 +14,9 @@
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.aspnetcore.identity.entityframeworkcore\\8.0.21\\microsoft.aspnetcore.identity.entityframeworkcore.8.0.21.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.aspnetcore.openapi\\8.0.21\\microsoft.aspnetcore.openapi.8.0.21.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.3\\microsoft.codeanalysis.analyzers.3.3.3.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.common\\4.5.0\\microsoft.codeanalysis.common.4.5.0.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.csharp\\4.5.0\\microsoft.codeanalysis.csharp.4.5.0.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.4\\microsoft.codeanalysis.analyzers.3.3.4.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.common\\4.8.0\\microsoft.codeanalysis.common.4.8.0.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.csharp\\4.8.0\\microsoft.codeanalysis.csharp.4.8.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.csharp.workspaces\\4.5.0\\microsoft.codeanalysis.csharp.workspaces.4.5.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.codeanalysis.workspaces.common\\4.5.0\\microsoft.codeanalysis.workspaces.common.4.5.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.21\\microsoft.data.sqlite.core.8.0.21.nupkg.sha512",
@@ -79,7 +79,7 @@
     "C:\\Users\\X02851\\.nuget\\packages\\system.codedom\\4.4.0\\system.codedom.4.4.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.collections\\4.0.11\\system.collections.4.0.11.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.collections.concurrent\\4.0.12\\system.collections.concurrent.4.0.12.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\system.collections.immutable\\6.0.0\\system.collections.immutable.6.0.0.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\system.collections.immutable\\7.0.0\\system.collections.immutable.7.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.composition\\6.0.0\\system.composition.6.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.composition.attributedmodel\\6.0.0\\system.composition.attributedmodel.6.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.composition.convention\\6.0.0\\system.composition.convention.6.0.0.nupkg.sha512",
@@ -96,7 +96,7 @@
     "C:\\Users\\X02851\\.nuget\\packages\\system.io.pipelines\\9.0.0\\system.io.pipelines.9.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.memory\\4.5.3\\system.memory.4.5.3.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.reflection\\4.1.0\\system.reflection.4.1.0.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\system.reflection.metadata\\6.0.1\\system.reflection.metadata.6.0.1.nupkg.sha512",
+    "C:\\Users\\X02851\\.nuget\\packages\\system.reflection.metadata\\7.0.0\\system.reflection.metadata.7.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.reflection.primitives\\4.0.1\\system.reflection.primitives.4.0.1.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.resources.resourcemanager\\4.0.1\\system.resources.resourcemanager.4.0.1.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.runtime\\4.1.0\\system.runtime.4.1.0.nupkg.sha512",
@@ -107,7 +107,6 @@
     "C:\\Users\\X02851\\.nuget\\packages\\system.security.cryptography.pkcs\\8.0.1\\system.security.cryptography.pkcs.8.0.1.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.security.cryptography.xml\\8.0.2\\system.security.cryptography.xml.8.0.2.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.text.encoding\\4.0.11\\system.text.encoding.4.0.11.nupkg.sha512",
-    "C:\\Users\\X02851\\.nuget\\packages\\system.text.encoding.codepages\\6.0.0\\system.text.encoding.codepages.6.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.text.encoding.extensions\\4.0.11\\system.text.encoding.extensions.4.0.11.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.text.encodings.web\\9.0.0\\system.text.encodings.web.9.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.text.json\\9.0.0\\system.text.json.9.0.0.nupkg.sha512",
@@ -115,5 +114,42 @@
     "C:\\Users\\X02851\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512",
     "C:\\Users\\X02851\\.nuget\\packages\\system.threading.tasks\\4.0.11\\system.threading.tasks.4.0.11.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1608",
+      "level": "Warning",
+      "message": "依存関係の制約外で検出されたパッケージのバージョン: Microsoft.CodeAnalysis.CSharp.Workspaces 4.5.0 では Microsoft.CodeAnalysis.Common (= 4.5.0) が必要ですが、バージョン Microsoft.CodeAnalysis.Common 4.8.0 は解決されました。",
+      "projectPath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "libraryId": "Microsoft.CodeAnalysis.Common",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1608",
+      "level": "Warning",
+      "message": "依存関係の制約外で検出されたパッケージのバージョン: Microsoft.CodeAnalysis.CSharp.Workspaces 4.5.0 では Microsoft.CodeAnalysis.CSharp (= 4.5.0) が必要ですが、バージョン Microsoft.CodeAnalysis.CSharp 4.8.0 は解決されました。",
+      "projectPath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "libraryId": "Microsoft.CodeAnalysis.CSharp",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    },
+    {
+      "code": "NU1608",
+      "level": "Warning",
+      "message": "依存関係の制約外で検出されたパッケージのバージョン: Microsoft.CodeAnalysis.Workspaces.Common 4.5.0 では Microsoft.CodeAnalysis.Common (= 4.5.0) が必要ですが、バージョン Microsoft.CodeAnalysis.Common 4.8.0 は解決されました。",
+      "projectPath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\workspace\\bobcrm\\src\\BobCrm.Api\\BobCrm.Api.csproj",
+      "libraryId": "Microsoft.CodeAnalysis.Common",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
 }

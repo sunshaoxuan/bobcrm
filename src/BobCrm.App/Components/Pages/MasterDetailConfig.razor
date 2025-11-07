@@ -58,14 +58,14 @@
         <Card Title="结构类型" Style="margin-bottom: 16px;">
             <Form Model="@_config" LabelColSpan="4" WrapperColSpan="20">
                 <FormItem Label="结构类型">
-                    <RadioGroup @bind-Value="@_config.StructureType" OnChange="OnStructureTypeChange">
-                        <Radio RadioButton Value="Single">
+                    <RadioGroup Value="@_config.StructureType" ValueChanged="@(EventCallback.Factory.Create<string>(this, HandleStructureTypeChanged))">
+                        <Radio Value="@("Single")">
                             <Icon Type="file" /> 单一实体
                         </Radio>
-                        <Radio RadioButton Value="MasterDetail">
+                        <Radio Value="@("MasterDetail")">
                             <Icon Type="node-index" /> 主子结构（两层）
                         </Radio>
-                        <Radio RadioButton Value="MasterDetailGrandchild">
+                        <Radio Value="@("MasterDetailGrandchild")">
                             <Icon Type="apartment" /> 主子孙结构（三层）
                         </Radio>
                     </RadioGroup>
@@ -80,45 +80,48 @@
         @if (_config.StructureType != "Single")
         {
             <Card Title="子实体配置" Style="margin-bottom: 16px;">
-                <CardExtra>
+                <Extra>
                     <Button OnClick="ShowAddChildDialog" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
                         <Icon Type="plus" /> 添加子实体
                     </Button>
-                </CardExtra>
-
+                </Extra>
+                <Body>
                 @if (_config.Children == null || !_config.Children.Any())
                 {
-                    <Empty Description="尚未配置子实体">
-                        <EmptyFooter>
+                    <div>
+                        <Empty Description="@("尚未配置子实体")" />
+                        <div style="text-align: center; margin-top: 16px;">
                             <Button Type="@ButtonType.Primary" OnClick="ShowAddChildDialog">
                                 立即添加
                             </Button>
-                        </EmptyFooter>
-                    </Empty>
+                        </div>
+                    </div>
                 }
                 else
                 {
                     <Table TItem="ChildEntityConfig" DataSource="@_config.Children" Bordered Size="@TableSize.Small">
                         <PropertyColumn Property="c => c.ChildEntityName" Title="子实体名称" />
                         <PropertyColumn Property="c => c.ForeignKeyField" Title="外键字段">
-                            <Input @bind-Value="@context.ForeignKeyField" Size="@InputSize.Small" Placeholder="如: OrderId" />
+                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="如: OrderId" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CollectionProperty" Title="集合属性名">
-                            <Input @bind-Value="@context.CollectionProperty" Size="@InputSize.Small" Placeholder="如: OrderLines" />
+                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="如: OrderLines" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="级联删除">
-                            <Select @bind-Value="@context.CascadeDeleteBehavior" Size="@SelectSize.Small" Style="width: 120px;">
-                                <SelectOption Value="NoAction" Label="无操作" />
-                                <SelectOption Value="Cascade" Label="级联删除" />
-                                <SelectOption Value="SetNull" Label="设置NULL" />
-                                <SelectOption Value="Restrict" Label="限制" />
+                            <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Style="width: 120px;">
+                                <SelectOptions>
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("NoAction")" Label="无操作" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("Cascade")" Label="级联删除" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("SetNull")" Label="设置NULL" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("Restrict")" Label="限制" />
+                                </SelectOptions>
                             </Select>
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.AutoCascadeSave" Title="自动保存">
-                            <Switch @bind-Value="@context.AutoCascadeSave" Size="@SwitchSize.Small" />
+                            <Switch @bind-Value="@context.AutoCascadeSave" Size="small" />
                         </PropertyColumn>
                         <ActionColumn Title="操作">
-                            <Space Size="@SpaceSize.Small">
+                            <Space>
                                 <SpaceItem>
                                     <Button Size="@ButtonSize.Small" Danger OnClick="() => RemoveChild(context)">
                                         <Icon Type="delete" /> 移除
@@ -128,6 +131,7 @@
                         </ActionColumn>
                     </Table>
                 }
+                </Body>
             </Card>
         }
 
@@ -160,24 +164,26 @@
            @bind-Visible="@_showAddChildDialog"
            OnOk="HandleAddChild"
            OnCancel="() => _showAddChildDialog = false"
-           OkText="添加"
-           CancelText="取消">
+           OkText="@("添加")"
+           CancelText="@("取消")">
         <Form Model="@_newChild" LabelColSpan="6" WrapperColSpan="18">
             <FormItem Label="子实体">
-                <Select @bind-Value="@_newChild.ChildEntityId"
+                <Select TItemValue="Guid" TItem="ChildEntityDto" @bind-Value="@_newChild.ChildEntityId"
                         Placeholder="选择子实体"
                         AllowClear
                         ShowSearch
                         Loading="@_loadingCandidates">
-                    @foreach (var candidate in _childCandidates)
-                    {
-                        <SelectOption Value="@candidate.Id" Label="@candidate.EntityName">
-                            <Space>
-                                <SpaceItem>@candidate.EntityName</SpaceItem>
-                                <SpaceItem><Tag>@candidate.StructureType</Tag></SpaceItem>
-                            </Space>
-                        </SelectOption>
-                    }
+                    <SelectOptions>
+                        @foreach (var candidate in _childCandidates)
+                        {
+                            <SelectOption TItemValue="Guid" TItem="ChildEntityDto" Value="@candidate.Id" Label="@candidate.EntityName">
+                                <Space>
+                                    <SpaceItem>@candidate.EntityName</SpaceItem>
+                                    <SpaceItem><Tag>@candidate.StructureType</Tag></SpaceItem>
+                                </Space>
+                            </SelectOption>
+                        }
+                    </SelectOptions>
                 </Select>
             </FormItem>
 
@@ -191,10 +197,10 @@
 
             <FormItem Label="级联删除">
                 <RadioGroup @bind-Value="@_newChild.CascadeDeleteBehavior">
-                    <Radio Value="NoAction">无操作</Radio>
-                    <Radio Value="Cascade">级联删除</Radio>
-                    <Radio Value="SetNull">设置NULL</Radio>
-                    <Radio Value="Restrict">限制</Radio>
+                    <Radio Value="@("NoAction")">无操作</Radio>
+                    <Radio Value="@("Cascade")">级联删除</Radio>
+                    <Radio Value="@("SetNull")">设置NULL</Radio>
+                    <Radio Value="@("Restrict")">限制</Radio>
                 </RadioGroup>
             </FormItem>
 
@@ -308,8 +314,9 @@
         }
     }
 
-    private void OnStructureTypeChange(string newValue)
+    private void HandleStructureTypeChanged(string newValue)
     {
+        _config.StructureType = newValue;
         _hasChanges = true;
         if (newValue == "Single")
         {

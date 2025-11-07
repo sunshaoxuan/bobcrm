@@ -7,6 +7,7 @@ C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.deps.json
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.runtimeconfig.json
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.pdb
+C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.xml
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Humanizer.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\Microsoft.AspNetCore.Cryptography.Internal.dll
@@ -177,6 +178,7 @@ C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\staticwebassets.build.endpoi
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.csproj.Up2Date
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.dll
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\refint\BobCrm.Api.dll
+C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.xml
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.pdb
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\BobCrm.Api.genruntimeconfig.cache
 C:\workspace\bobcrm\src\BobCrm.Api\obj\Debug\net8.0\ref\BobCrm.Api.dll

@@ -92,6 +92,11 @@ public class AuthService
         return http;
     }
 
+    /// <summary>
+    /// 兼容方法：CreateAuthedClientAsync 作为 CreateClientWithAuthAsync 的别名
+    /// </summary>
+    public Task<HttpClient> CreateAuthedClientAsync() => CreateClientWithAuthAsync();
+
     public Task<HttpClient> CreateClientWithLangAsync() => CreateBaseClientAsync();
 
     /// <summary>

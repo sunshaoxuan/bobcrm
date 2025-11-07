@@ -67,6 +67,10 @@
               "target": "Package",
               "version": "[8.0.21, )"
             },
+            "Microsoft.CodeAnalysis.CSharp": {
+              "target": "Package",
+              "version": "[4.8.0, )"
+            },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
@@ -180,6 +184,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "FluentAssertions": {
+              "target": "Package",
+              "version": "[6.12.*, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.*, )"
@@ -196,9 +204,17 @@
               "target": "Package",
               "version": "[8.*, )"
             },
+            "Microsoft.EntityFrameworkCore.InMemory": {
+              "target": "Package",
+              "version": "[8.*, )"
+            },
             "Microsoft.NET.Test.Sdk": {
               "target": "Package",
               "version": "[17.*, )"
+            },
+            "Moq": {
+              "target": "Package",
+              "version": "[4.20.*, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",

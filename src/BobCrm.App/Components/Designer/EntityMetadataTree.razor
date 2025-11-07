@@ -245,14 +245,14 @@ else
     {
         return dataType switch
         {
-            "String" => IconType.Outline.Font,
+            "String" => IconType.Outline.FileText,
             "Integer" or "Long" or "Decimal" => IconType.Outline.Number,
             "Boolean" => IconType.Outline.Check,
             "DateTime" or "Date" => IconType.Outline.Calendar,
             "Time" => IconType.Outline.ClockCircle,
             "Text" => IconType.Outline.FileText,
             "Guid" => IconType.Outline.Key,
-            _ => IconType.Outline.Field
+            _ => IconType.Outline.Appstore
         };
     }
 

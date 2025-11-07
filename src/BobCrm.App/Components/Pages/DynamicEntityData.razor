@@ -32,7 +32,7 @@
     else
     {
         <Card>
-            <Alert Type="@AlertType.Info" Message="动态实体数据管理" ShowIcon>
+            <Alert Type="@AlertType.Info" Message="动态实体数据管理" ShowIcon="true">
                 <MessageTemplate>
                     <p>实体类型: <Tag>@FullTypeName</Tag></p>
                     <p>此页面用于管理动态编译加载的实体数据。请确保实体已成功编译加载。</p>
@@ -54,7 +54,7 @@
                             </Column>
                         }
                         <ActionColumn Title="操作">
-                            <Space Size="@AntDesign.SpaceSize.Small">
+                            <Space>
                                 <SpaceItem>
                                     <Button Size="@ButtonSize.Small" OnClick="() => ShowEditModal(context)">
                                         编辑
@@ -73,7 +73,7 @@
                 }
                 else
                 {
-                    <Empty Description="暂无数据" />
+                    <Empty Description="@("暂无数据")" />
                 }
             </div>
         </Card>
