@@ -5,17 +5,26 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 
-<PageTitle>@I18n.T("MENU_TEMPLATES") - OneCRM</PageTitle>
+<PageTitle>模板管理 - OneCRM</PageTitle>
 
-<div style="max-width:1200px; margin:0 auto">
+<div style="max-width:1200px; margin:0 auto; padding:24px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
-        <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">@I18n.T("MENU_TEMPLATES")</h2>
+        <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">模板管理</h2>
+        <div style="display:flex; gap:12px; align-items:center">
+            <select @onchange="OnGroupByChanged" class="group-selector" value="@groupBy">
+                <option value="none">平铺列表</option>
+                <option value="entity">按实体分组</option>
+            </select>
+            <button @onclick="CreateNewTemplate" class="btn-primary">
+                ➕ 新建模板
+            </button>
+        </div>
     </div>
 
     @if (loading)
     {
         <div style="padding:48px; text-align:center; color:var(--muted)">
-            @I18n.T("LBL_LOADING")...
+            加载中...
         </div>
     }
     else if (!string.IsNullOrWhiteSpace(error))
@@ -24,64 +33,86 @@
             <div style="color:#f5222d; font-size:16px; margin-bottom:16px">
                 ⚠️ @error
             </div>
-            <button @onclick="@(() => Nav.NavigateTo("/login", forceLoad: true))" 
-                    style="padding:8px 24px; background:var(--primary); color:#fff; border:none; border-radius:4px; cursor:pointer">
-                去登录
-            </button>
         </div>
     }
     else
     {
-        <div style="display:grid; gap:20px">
-            <!-- Current User Template -->
-            <div class="template-section">
-                <h3 class="section-title">@I18n.T("LBL_CURRENT_USER_TEMPLATE")</h3>
-                <div class="template-card">
-                    <div class="template-info">
-                        <div class="template-name">@I18n.T("LBL_CUSTOMER_LAYOUT")</div>
-                        <div class="template-desc">@I18n.T("LBL_DEFAULT_LAYOUT_DESC")</div>
-                        <div class="template-meta">
-                            <span class="meta-item">@I18n.T("LBL_LAST_UPDATED"): @lastUpdated</span>
-                            <span class="meta-item">@widgetCount @I18n.T("LBL_WIDGET_COUNT")</span>
-                        </div>
-                    </div>
-                    <div class="template-actions">
-                        <button @onclick="EditTemplate" class="btn-primary-custom">
-                            @I18n.T("BTN_EDIT_TEMPLATE")
-                        </button>
-                        <button @onclick="ResetTemplate" class="btn-secondary-custom">
-                            @I18n.T("BTN_RESET_TO_DEFAULT")
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Template Info -->
-            <div class="info-section">
-                <div class="info-card">
-                    <div class="info-icon">ℹ️</div>
-                    <div class="info-content">
-                        <div class="info-title">@I18n.T("LBL_ABOUT_TEMPLATE")</div>
-                        <div class="info-text">
-                            @I18n.T("LBL_TEMPLATE_INFO")
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrWhiteSpace(message))
+        @if (groupBy == "entity" && groupedTemplates != null && groupedTemplates.Any())
+        {
+            @foreach (var group in groupedTemplates)
             {
-                <div class="message-box @(messageSuccess ? "success" : "error")">
-                    @message
+                <div class="template-section">
+                    <h3 class="section-title">@GetEntityDisplayName(group.EntityType)</h3>
+                    <div style="display:grid; gap:12px">
+                        @foreach (var template in group.Templates)
+                        {
+                            @RenderTemplateCard(template)
+                        }
+                    </div>
                 </div>
             }
-        </div>
+        }
+        else if (flatTemplates != null && flatTemplates.Any())
+        {
+            <div style="display:grid; gap:12px">
+                @foreach (var template in flatTemplates)
+                {
+                    @RenderTemplateCard(template)
+                }
+            </div>
+        }
+        else
+        {
+            <div class="info-card">
+                <div class="info-icon">ℹ️</div>
+                <div class="info-content">
+                    <div class="info-title">暂无模板</div>
+                    <div class="info-text">
+                        点击右上角"新建模板"按钮创建您的第一个表单模板
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="message-box @(messageSuccess ? "success" : "error")">
+                @message
+            </div>
+        }
     }
 </div>
 
 <style>
+    .group-selector {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--card-bg);
+        color: var(--text);
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        padding: 8px 16px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
     .template-section {
-        margin-bottom: 20px;
+        margin-bottom: 32px;
     }
 
     .section-title {
@@ -97,12 +128,17 @@
         background: var(--card-bg);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 24px;
-        box-shadow: var(--shadow);
+        padding: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 24px;
+        gap: 20px;
+        transition: all 0.2s;
+    }
+
+    .template-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-color: var(--primary);
     }
 
     .template-info {
@@ -113,36 +149,83 @@
         font-size: 16px;
         font-weight: 600;
         color: var(--text);
+        margin-bottom: 4px;
+    }
+
+    .template-badges {
+        display: flex;
+        gap: 8px;
         margin-bottom: 8px;
     }
 
+    .badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .badge-default {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .badge-system {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .badge-entity {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
     .template-desc {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--muted);
-        margin-bottom: 12px;
-        line-height: 1.5;
+        margin-bottom: 8px;
     }
 
     .template-meta {
-        display: flex;
-        gap: 16px;
-        font-size: 13px;
+        font-size: 12px;
         color: var(--muted);
-    }
-
-    .meta-item {
-        display: flex;
-        align-items: center;
     }
 
     .template-actions {
         display: flex;
-        gap: 12px;
-        flex-direction: column;
+        gap: 8px;
     }
 
-    .info-section {
-        margin-top: 20px;
+    .btn-action {
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--card-bg);
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .btn-action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-danger {
+        color: #d32f2f;
+    }
+
+    .btn-danger:hover {
+        background: #d32f2f;
+        color: white;
+        border-color: #d32f2f;
     }
 
     .info-card {
@@ -150,19 +233,14 @@
         border: 1px solid var(--border);
         border-left: 4px solid var(--primary);
         border-radius: 8px;
-        padding: 20px;
+        padding: 24px;
         display: flex;
         gap: 16px;
         align-items: flex-start;
     }
 
-    .theme-dark .info-card {
-        background: linear-gradient(135deg, rgba(63, 124, 255, 0.1) 0%, rgba(63, 124, 255, 0.05) 100%);
-    }
-
     .info-icon {
         font-size: 24px;
-        line-height: 1;
     }
 
     .info-content {
@@ -170,7 +248,7 @@
     }
 
     .info-title {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 600;
         color: var(--text);
         margin-bottom: 8px;
@@ -183,11 +261,15 @@
     }
 
     .message-box {
-        padding: 12px 16px;
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        padding: 12px 20px;
         border-radius: 6px;
         font-size: 14px;
-        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         animation: slideIn 0.3s ease;
+        z-index: 1000;
     }
 
     .message-box.success {
@@ -202,35 +284,27 @@
         border: 1px solid #fca5a5;
     }
 
-    .theme-dark .message-box.success {
-        background: rgba(14, 165, 233, 0.1);
-        color: #7dd3fc;
-    }
-
-    .theme-dark .message-box.error {
-        background: rgba(239, 68, 68, 0.1);
-        color: #fca5a5;
-    }
-
     @@keyframes slideIn {
         from {
             opacity: 0;
-            transform: translateY(-10px);
+            transform: translateX(100px);
         }
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateX(0);
         }
     }
 </style>
 
 @code {
     private bool loading = true;
-    private string lastUpdated = "";
-    private int widgetCount = 0;
     private string message = "";
     private bool messageSuccess = false;
     private string? error = null;
+    private string groupBy = "none";
+
+    private List<FormTemplate>? flatTemplates;
+    private List<TemplateGroupByEntity>? groupedTemplates;
 
     protected override void OnInitialized()
     {
@@ -245,115 +319,266 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        await LoadTemplates();
+    }
 
+    private async Task LoadTemplates()
+    {
         try
         {
-            await JS.InvokeVoidAsync("console.log", "[Templates] Starting initialization");
-            
-            // 认证预检查：确保已登录，否则导航到登录页
+            loading = true;
+            await InvokeAsync(StateHasChanged);
+
             var isAuthenticated = await Auth.EnsureAuthenticatedAsync();
-            await JS.InvokeVoidAsync("console.log", $"[Templates] Authentication check: {isAuthenticated}");
-            
             if (!isAuthenticated)
             {
-                await JS.InvokeVoidAsync("console.warn", "[Templates] Not authenticated, redirecting to login");
                 Nav.NavigateTo("/login", forceLoad: true);
                 return;
             }
 
-            // Load template info（独立于客户数据，使用全局模板 customerId=0）
-            await JS.InvokeVoidAsync("console.log", "[Templates] Fetching layout data");
-            var resp = await Auth.GetWithRefreshAsync("/api/layout/customer?scope=effective");
-            await JS.InvokeVoidAsync("console.log", $"[Templates] Response status: {resp.StatusCode}");
-            
+            var url = groupBy == "entity"
+                ? "/api/templates?groupBy=entity"
+                : "/api/templates";
+
+            var resp = await Auth.GetWithRefreshAsync(url);
+
             if (resp.IsSuccessStatusCode)
             {
                 var content = await resp.Content.ReadAsStringAsync();
-                
-                // 处理空响应或无效 JSON
-                if (!string.IsNullOrWhiteSpace(content) && content != "{}" && content != "null")
+
+                if (groupBy == "entity")
                 {
-                    try
-                    {
-                        var doc = System.Text.Json.JsonDocument.Parse(content);
-                        if (doc.RootElement.TryGetProperty("items", out var items))
-                        {
-                            widgetCount = items.EnumerateObject().Count();
-                            lastUpdated = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
-                        }
-                    }
-                    catch
-                    {
-                        // JSON 解析失败，使用默认值
-                        widgetCount = 0;
-                        lastUpdated = I18n.T("LBL_NOT_SET");
-                    }
+                    groupedTemplates = System.Text.Json.JsonSerializer.Deserialize<List<TemplateGroupByEntity>>(
+                        content,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    flatTemplates = null;
                 }
                 else
                 {
-                    // 无模板，使用默认值
-                    widgetCount = 0;
-                    lastUpdated = I18n.T("LBL_NOT_SET");
+                    flatTemplates = System.Text.Json.JsonSerializer.Deserialize<List<FormTemplate>>(
+                        content,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    groupedTemplates = null;
                 }
-            }
-            else if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                error = I18n.T("ERR_LOGIN_EXPIRED");
             }
             else
             {
-                // 其他错误，但不阻止页面显示
-                widgetCount = 0;
-                lastUpdated = I18n.T("LBL_NOT_SET");
+                error = $"加载失败: {resp.StatusCode}";
             }
 
-            await JS.InvokeVoidAsync("console.log", $"[Templates] Loaded: widgetCount={widgetCount}, lastUpdated={lastUpdated}");
             loading = false;
-            await JS.InvokeVoidAsync("console.log", "[Templates] Setting loading=false, calling StateHasChanged");
             await InvokeAsync(StateHasChanged);
-            await JS.InvokeVoidAsync("console.log", "[Templates] Initialization complete");
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Error: {ex.Message}\nStack: {ex.StackTrace}");
-            error = $"Error: {ex.Message}";
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Load error: {ex.Message}");
+            error = ex.Message;
             loading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    private void EditTemplate()
+    private async void OnGroupByChanged(ChangeEventArgs e)
     {
-        // ⭐ 导航到通用表单设计器，编辑客户的用户模板
-        // 使用特殊ID "user-customer" 表示编辑当前用户的客户模板
-        Nav.NavigateTo("/designer/user-customer");
+        groupBy = e.Value?.ToString() ?? "none";
+        await LoadTemplates();
     }
 
-    private async Task ResetTemplate()
+    private void CreateNewTemplate()
+    {
+        // 导航到设计器创建新模板
+        Nav.NavigateTo("/designer/new");
+    }
+
+    private void EditTemplate(int templateId)
+    {
+        Nav.NavigateTo($"/designer/{templateId}");
+    }
+
+    private async Task SetAsDefault(int templateId)
     {
         try
         {
-            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_CONFIRM_RESET_TEMPLATE"));
-            if (!confirm) return;
+            var template = FindTemplate(templateId);
+            if (template == null) return;
 
-            // Delete the user template
-            var resp = await Auth.DeleteWithRefreshAsync("/api/layout/customer");
+            var payload = new
+            {
+                isUserDefault = true
+            };
+
+            var resp = await Auth.PutAsJsonAsync($"/api/templates/{templateId}", payload);
+
             if (resp.IsSuccessStatusCode)
             {
-                ShowMessage(I18n.T("MSG_TEMPLATE_RESET_SUCCESS"), true);
-                // Reload template info
-                await OnAfterRenderAsync(true);
+                ShowMessage("已设置为默认模板", true);
+                await LoadTemplates();
             }
             else
             {
-                ShowMessage(I18n.T("MSG_TEMPLATE_RESET_FAILED"), false);
+                ShowMessage("设置失败", false);
             }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Reset error: {ex.Message}");
-            ShowMessage(I18n.T("MSG_TEMPLATE_RESET_FAILED") + ": " + ex.Message, false);
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Set default error: {ex.Message}");
+            ShowMessage($"设置失败: {ex.Message}", false);
         }
+    }
+
+    private async Task DeleteTemplate(int templateId)
+    {
+        try
+        {
+            var confirm = await JS.InvokeAsync<bool>("confirm", "确定要删除此模板吗？");
+            if (!confirm) return;
+
+            var resp = await Auth.DeleteWithRefreshAsync($"/api/templates/{templateId}");
+
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage("模板已删除", true);
+                await LoadTemplates();
+            }
+            else
+            {
+                var errorMsg = await resp.Content.ReadAsStringAsync();
+                ShowMessage($"删除失败: {errorMsg}", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Delete error: {ex.Message}");
+            ShowMessage($"删除失败: {ex.Message}", false);
+        }
+    }
+
+    private RenderFragment RenderTemplateCard(FormTemplate template) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "template-card");
+
+        // 模板信息
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "class", "template-info");
+
+        // 名称
+        builder.OpenElement(4, "div");
+        builder.AddAttribute(5, "class", "template-name");
+        builder.AddContent(6, template.Name);
+        builder.CloseElement();
+
+        // 徽章
+        builder.OpenElement(7, "div");
+        builder.AddAttribute(8, "class", "template-badges");
+
+        if (template.IsUserDefault)
+        {
+            builder.OpenElement(9, "span");
+            builder.AddAttribute(10, "class", "badge badge-default");
+            builder.AddContent(11, "用户默认");
+            builder.CloseElement();
+        }
+
+        if (template.IsSystemDefault)
+        {
+            builder.OpenElement(12, "span");
+            builder.AddAttribute(13, "class", "badge badge-system");
+            builder.AddContent(14, "系统默认");
+            builder.CloseElement();
+        }
+
+        if (!string.IsNullOrWhiteSpace(template.EntityType))
+        {
+            builder.OpenElement(15, "span");
+            builder.AddAttribute(16, "class", "badge badge-entity");
+            builder.AddContent(17, GetEntityDisplayName(template.EntityType));
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // badges
+
+        // 描述
+        if (!string.IsNullOrWhiteSpace(template.Description))
+        {
+            builder.OpenElement(18, "div");
+            builder.AddAttribute(19, "class", "template-desc");
+            builder.AddContent(20, template.Description);
+            builder.CloseElement();
+        }
+
+        // 元数据
+        builder.OpenElement(21, "div");
+        builder.AddAttribute(22, "class", "template-meta");
+        builder.AddContent(23, $"更新于 {template.UpdatedAt:yyyy-MM-dd HH:mm}");
+        builder.CloseElement();
+
+        builder.CloseElement(); // template-info
+
+        // 操作按钮
+        builder.OpenElement(24, "div");
+        builder.AddAttribute(25, "class", "template-actions");
+
+        // 编辑按钮
+        builder.OpenElement(26, "button");
+        builder.AddAttribute(27, "class", "btn-action");
+        builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
+        builder.AddContent(29, "编辑");
+        builder.CloseElement();
+
+        // 设为默认按钮
+        if (!template.IsUserDefault && !string.IsNullOrWhiteSpace(template.EntityType))
+        {
+            builder.OpenElement(30, "button");
+            builder.AddAttribute(31, "class", "btn-action");
+            builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => SetAsDefault(template.Id)));
+            builder.AddContent(33, "设为默认");
+            builder.CloseElement();
+        }
+
+        // 删除按钮
+        var canDelete = !template.IsUserDefault && !template.IsSystemDefault && !template.IsInUse;
+        builder.OpenElement(34, "button");
+        builder.AddAttribute(35, "class", "btn-action btn-danger");
+        builder.AddAttribute(36, "disabled", !canDelete);
+        builder.AddAttribute(37, "onclick", EventCallback.Factory.Create(this, () => DeleteTemplate(template.Id)));
+        builder.AddContent(38, "删除");
+        builder.CloseElement();
+
+        builder.CloseElement(); // template-actions
+
+        builder.CloseElement(); // template-card
+    };
+
+    private FormTemplate? FindTemplate(int templateId)
+    {
+        if (flatTemplates != null)
+        {
+            return flatTemplates.FirstOrDefault(t => t.Id == templateId);
+        }
+
+        if (groupedTemplates != null)
+        {
+            foreach (var group in groupedTemplates)
+            {
+                var template = group.Templates.FirstOrDefault(t => t.Id == templateId);
+                if (template != null) return template;
+            }
+        }
+
+        return null;
+    }
+
+    private string GetEntityDisplayName(string? entityType)
+    {
+        return entityType switch
+        {
+            "customer" => "客户",
+            "product" => "产品",
+            "order" => "订单",
+            null or "" => "未分类",
+            _ => entityType
+        };
     }
 
     private void ShowMessage(string msg, bool success)

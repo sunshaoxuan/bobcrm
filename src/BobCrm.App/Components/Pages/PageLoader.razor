@@ -128,20 +128,43 @@ else if (entityData != null)
 
             await JS.InvokeVoidAsync("console.log", $"[PageLoader] Loading data for entity: {EntityType}, ID: {Id}");
 
-            // 1. 【实体匹配】加载模板（根据EntityType）
-            var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
+            // 1. 【实体匹配】加载有效模板（根据EntityType）
+            // 优先级：用户默认模板 > 系统默认模板 > 第一个创建的模板
+            var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
             string? layoutJson = null;
 
-            if (layoutResp.IsSuccessStatusCode)
+            if (templateResp.IsSuccessStatusCode)
             {
-                var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                layoutJson = layoutDoc.GetRawText();
-                await JS.InvokeVoidAsync("console.log", $"[PageLoader] Layout loaded for entity type: {EntityType}");
+                var templateContent = await templateResp.Content.ReadAsStringAsync();
+                var template = System.Text.Json.JsonSerializer.Deserialize<FormTemplate>(
+                    templateContent,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (template != null)
+                {
+                    layoutJson = template.LayoutJson;
+                    await JS.InvokeVoidAsync("console.log",
+                        $"[PageLoader] Template loaded: {template.Name} (ID: {template.Id}, IsDefault: {template.IsUserDefault})");
+                }
+            }
+            else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // 如果没有找到模板，回退到旧的UserLayout API
+                await JS.InvokeVoidAsync("console.warn",
+                    $"[PageLoader] No FormTemplate found for entity {EntityType}, falling back to UserLayout API");
+
+                var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
+                if (layoutResp.IsSuccessStatusCode)
+                {
+                    var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    layoutJson = layoutDoc.GetRawText();
+                    await JS.InvokeVoidAsync("console.log", $"[PageLoader] Fallback layout loaded from UserLayout");
+                }
             }
             else
             {
                 await JS.InvokeVoidAsync("console.warn",
-                    $"[PageLoader] No layout found for entity type {EntityType}, using empty layout. Status: {layoutResp.StatusCode}");
+                    $"[PageLoader] Failed to load template: {templateResp.StatusCode}");
             }
 
             // 2. 加载实体数据
