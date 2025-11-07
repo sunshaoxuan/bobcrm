@@ -360,7 +360,7 @@ public class ReflectionPersistenceService
 
             // 简化实现：只支持相等过滤
             query = query.Where(e =>
-                property.GetValue(e)?.Equals(filter.Value) == true);
+                property.GetValue(e) != null && property.GetValue(e)!.Equals(filter.Value));
         }
 
         return query;
@@ -481,4 +481,15 @@ public class FilterCondition
     public string Field { get; set; } = string.Empty;
     public string Operator { get; set; } = "equals"; // equals, contains, greaterThan, lessThan
     public object Value { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 过滤操作符常量
+/// </summary>
+public static class FilterOperator
+{
+    public const string Equals = "equals";
+    public const string Contains = "contains";
+    public const string GreaterThan = "greaterThan";
+    public const string LessThan = "lessThan";
 }

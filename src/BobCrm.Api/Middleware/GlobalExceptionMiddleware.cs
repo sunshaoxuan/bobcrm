@@ -77,8 +77,8 @@ public class GlobalExceptionMiddleware
     {
         return exception switch
         {
-            ArgumentException => (int)HttpStatusCode.BadRequest,
             ArgumentNullException => (int)HttpStatusCode.BadRequest,
+            ArgumentException => (int)HttpStatusCode.BadRequest,
             InvalidOperationException => (int)HttpStatusCode.BadRequest,
             UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
             KeyNotFoundException => (int)HttpStatusCode.NotFound,
@@ -93,8 +93,8 @@ public class GlobalExceptionMiddleware
     {
         return exception switch
         {
-            ArgumentException => "INVALID_ARGUMENT",
             ArgumentNullException => "NULL_ARGUMENT",
+            ArgumentException => "INVALID_ARGUMENT",
             InvalidOperationException => "INVALID_OPERATION",
             UnauthorizedAccessException => "UNAUTHORIZED",
             KeyNotFoundException => "NOT_FOUND",
@@ -112,8 +112,8 @@ public class GlobalExceptionMiddleware
         {
             return exception switch
             {
-                ArgumentException => "请求参数无效",
                 ArgumentNullException => "必填参数缺失",
+                ArgumentException => "请求参数无效",
                 InvalidOperationException => "操作无效",
                 UnauthorizedAccessException => "未授权访问",
                 KeyNotFoundException => "请求的资源不存在",

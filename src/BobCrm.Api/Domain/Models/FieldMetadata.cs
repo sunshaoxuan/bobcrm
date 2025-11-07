@@ -137,4 +137,10 @@ public static class FieldDataType
     public const string Boolean = "Boolean";
     public const string Guid = "Guid";
     public const string EntityRef = "EntityRef";  // 子实体引用
+
+    // 别名常量，用于代码中更直观的引用
+    public const string Integer = Int32;
+    public const string Long = Int64;
+    public const string Text = String;
+    public const string Date = DateTime;
 }
