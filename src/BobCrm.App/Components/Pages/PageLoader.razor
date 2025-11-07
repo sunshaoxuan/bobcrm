@@ -245,22 +245,6 @@ else if (entityData != null)
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 
-    private async Task<FormTemplate?> LoadTemplateForEntity(string entityType)
-    {
-        // TODO: 从API加载模板，目前返回模拟数据
-        await Task.CompletedTask;
-        
-        return new FormTemplate
-        {
-            TemplateId = $"{entityType}-default",
-            Name = $"{entityType}默认模板",
-            EntityType = entityType,
-            EntityApi = $"/api/{entityType}s",
-            SiderComponent = entityType == "customer" ? "CustomerSider" : null,
-            LayoutJson = "{}"  // 将从UserLayouts表加载
-        };
-    }
-
     private List<DraggableWidget> ParseLayoutFromJson(System.Text.Json.JsonElement root)
     {
         var widgets = new List<DraggableWidget>();
