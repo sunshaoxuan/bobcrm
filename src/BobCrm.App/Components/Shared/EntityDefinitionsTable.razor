@@ -1,0 +1,77 @@
+@using BobCrm.App.Models
+
+<Table TItem="EntityDefinitionDto" DataSource="@Entities" Loading="@false" PageSize="20">
+    <PropertyColumn Property="e => e.EntityName" Title="实体名称" Sortable>
+        <a @onclick="() => OnEdit.InvokeAsync(context.Id)" style="cursor: pointer;">
+            @context.EntityName
+        </a>
+    </PropertyColumn>
+    <PropertyColumn Property="e => e.DisplayNameKey" Title="显示名" />
+    <PropertyColumn Property="e => e.Namespace" Title="命名空间" />
+    <PropertyColumn Property="e => e.Source" Title="来源">
+        <Tag Color="@(context.Source == EntitySource.System ? "blue" : "green")">
+            @context.Source
+        </Tag>
+    </PropertyColumn>
+    <PropertyColumn Property="e => e.Status" Title="状态">
+        @if (context.Status == EntityStatus.Draft)
+        {
+            <Tag Color="orange">草稿</Tag>
+        }
+        else if (context.Status == EntityStatus.Published)
+        {
+            <Tag Color="green">已发布</Tag>
+        }
+        else if (context.Status == EntityStatus.Modified)
+        {
+            <Tag Color="blue">已修改</Tag>
+        }
+    </PropertyColumn>
+    <PropertyColumn Property="e => e.IsLocked" Title="锁定">
+        @if (context.IsLocked)
+        {
+            <Icon Type="lock" Theme="outline" />
+        }
+        else
+        {
+            <Icon Type="unlock" Theme="outline" />
+        }
+    </PropertyColumn>
+    <PropertyColumn Property="e => e.Fields.Count" Title="字段数" />
+    <PropertyColumn Property="e => e.UpdatedAt" Title="更新时间" Format="yyyy-MM-dd HH:mm" />
+    <ActionColumn Title="操作">
+        <Space>
+            <SpaceItem>
+                <Button Size="@ButtonSize.Small" OnClick="() => OnEdit.InvokeAsync(context.Id)">
+                    编辑
+                </Button>
+            </SpaceItem>
+            @if (context.Status == EntityStatus.Draft || context.Status == EntityStatus.Modified)
+            {
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" OnClick="() => OnPublish.InvokeAsync(context.Id)">
+                        发布
+                    </Button>
+                </SpaceItem>
+            }
+            @if (context.Source == EntitySource.Custom && context.Status == EntityStatus.Draft)
+            {
+                <SpaceItem>
+                    <Popconfirm Title="确定要删除吗？" OnConfirm="() => OnDelete.InvokeAsync(context.Id)">
+                        <Button Danger Size="@ButtonSize.Small">
+                            删除
+                        </Button>
+                    </Popconfirm>
+                </SpaceItem>
+            }
+        </Space>
+    </ActionColumn>
+</Table>
+
+@code {
+    [Parameter] public List<EntityDefinitionDto> Entities { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnPublish { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+}

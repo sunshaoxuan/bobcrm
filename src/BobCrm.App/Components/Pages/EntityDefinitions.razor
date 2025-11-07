@@ -1,0 +1,122 @@
+@page "/entity-definitions"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
+@using BobCrm.App.Models
+
+<AuthChecker>
+    <PageHeader Title="实体定义管理" SubTitle="管理系统和自定义实体定义">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" OnClick="NavigateToCreate">
+                        <Icon Type="plus" /> 新建实体
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button OnClick="LoadData">
+                        <Icon Type="reload" /> 刷新
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    @if (_loading)
+    {
+        <div style="text-align: center; padding: 50px;">
+            <Spin Size="large" />
+        </div>
+    }
+    else
+    {
+        <Card>
+            <Tabs DefaultActiveKey="all">
+                <TabPane Key="all" Tab="全部">
+                    <EntityDefinitionsTable Entities="@_entities" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                </TabPane>
+                <TabPane Key="system" Tab="系统实体">
+                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Source == EntitySource.System).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                </TabPane>
+                <TabPane Key="custom" Tab="自定义实体">
+                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Source == EntitySource.Custom).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                </TabPane>
+                <TabPane Key="draft" Tab="草稿">
+                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Status == EntityStatus.Draft).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                </TabPane>
+            </Tabs>
+        </Card>
+    }
+</AuthChecker>
+
+@code {
+    private bool _loading = false;
+    private List<EntityDefinitionDto> _entities = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            _entities = await EntityDefService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error($"加载失败: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NavigateToCreate()
+    {
+        Nav.NavigateTo("/entity-definitions/create");
+    }
+
+    private void NavigateToEdit(Guid id)
+    {
+        Nav.NavigateTo($"/entity-definitions/edit/{id}");
+    }
+
+    private void NavigateToPublish(Guid id)
+    {
+        Nav.NavigateTo($"/entity-definitions/publish/{id}");
+    }
+
+    private async Task HandleDelete(Guid id)
+    {
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            Title = "确认删除",
+            Content = "确定要删除此实体定义吗？此操作不可恢复。",
+            OkText = "删除",
+            CancelText = "取消",
+            OkType = "danger"
+        });
+
+        if (confirmed)
+        {
+            try
+            {
+                await EntityDefService.DeleteAsync(id);
+                await MessageService.Success("删除成功");
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                await MessageService.Error($"删除失败: {ex.Message}");
+            }
+        }
+    }
+
+    [Inject] private IMessageService MessageService { get; set; } = default!;
+    [Inject] private IModalService ModalService { get; set; } = default!;
+}
