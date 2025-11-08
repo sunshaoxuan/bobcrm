@@ -1,0 +1,40 @@
+@page "/files"
+
+<h3>文件上传（MinIO/S3）</h3>
+
+<InputFile OnChange="OnFileSelected" />
+<button class="ant-btn ant-btn-primary" @onclick="UploadAsync" disabled="@(selectedFile is null)">上传</button>
+
+@if (!string.IsNullOrEmpty(lastUrl))
+{
+    <p>已上传：<a href="@lastUrl" target="_blank">@lastUrl</a></p>
+}
+
+@code {
+    private IBrowserFile? selectedFile;
+    private string? lastUrl;
+
+    [Inject] IHttpClientFactory HttpFactory { get; set; } = default!;
+
+    private Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        return Task.CompletedTask;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (selectedFile is null) return;
+        using var content = new MultipartFormDataContent();
+        using var stream = selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+        var sc = new StreamContent(stream);
+        sc.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedFile.ContentType ?? "application/octet-stream");
+        content.Add(sc, "file", selectedFile.Name);
+        var client = HttpFactory.CreateClient("api");
+        var resp = await client.PostAsync("/api/files/upload", content);
+        resp.EnsureSuccessStatusCode();
+        var json = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        lastUrl = json.RootElement.GetProperty("url").GetString();
+        StateHasChanged();
+    }
+}

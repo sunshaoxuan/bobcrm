@@ -190,6 +190,10 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
+// S3/MinIO file storage
+builder.Services.Configure<BobCrm.Api.Services.Storage.S3Options>(builder.Configuration.GetSection("S3"));
+builder.Services.AddSingleton<BobCrm.Api.Services.Storage.IFileStorageService, BobCrm.Api.Services.Storage.S3FileStorageService>();
+
 var app = builder.Build();
 
 // 配置详细日志
@@ -294,6 +298,7 @@ app.MapTemplateEndpoints();
 app.MapEntityDefinitionEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
+app.MapFileEndpoints();
 
 app.MapControllers();
 
@@ -307,3 +312,4 @@ app.Run();
 
 // Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
+
