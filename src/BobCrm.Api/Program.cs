@@ -231,13 +231,16 @@ using (var scope = app.Services.CreateScope())
             else { r.ZH = zh; r.JA = ja; r.EN = en; }
         }
 
-        Upsert("TXT_AUTH_HERO_TITLE", "智能连接的客户体验中枢", "インテリジェントに接続された顧客体験の中枢", "The Intelligent Hub for Connected Customer Experience");
-        Upsert("TXT_AUTH_HERO_SUBTITLE", "让团队与客户的关系更简单、更高效、更有温度。在同一个平台上完成洞察、协作与成长。", "チームと顧客の関係を、よりシンプルに、より効率的に、より温かく。同じプラットフォームで洞察・協働・成長を完結。", "Make team–customer relationships simpler, faster, and warmer. Gain insight, collaborate, and grow on a single platform.");
+        // Short hero copy to avoid wrapping in JA/EN
+        Upsert("TXT_AUTH_HERO_TITLE", "智能连接，统一体验", "スマート接続、統一体験", "Smart Connection, Unified Experience");
+        Upsert("TXT_AUTH_HERO_SUBTITLE", "更快决策，更自然协作。", "意思決定を速く、協働を自然に。", "Decide faster, collaborate naturally.");
         Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
         Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
         Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
         Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
-        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をよりスマートに、協働をより自然に。", "Make relationships smarter, collaboration more natural.");
+        Upsert("TXT_AUTH_TAGLINE", "更快决策，更自然协作。", "意思決定を速く、協働を自然に。", "Decide faster, collaborate naturally.");
+        // Missing panel eyebrow
+        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
         await db.SaveChangesAsync();
     }
     catch (Exception ex)
