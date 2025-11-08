@@ -12,6 +12,9 @@
            ShowHeroContent="false"
            BrandInHero='true'
            BrandText='OneCRM'
+           HeroImageUrl='@heroImageUrl'
+           HeroImageUrlAlt='@heroImageUrlAlt'
+           HeroImageUseAlt='@heroUseAlt'
            Eyebrow='@I18n.T("LBL_SECURE")'
            PanelEyebrow='@I18n.T("LBL_WELCOME_BACK")'
            FormTitle='@I18n.T("LBL_LOGIN_TITLE")'
@@ -47,6 +50,11 @@
     private LoginModel model = new();
     private bool loading = false;
     private string? error;
+    private string? heroImageUrl;
+    private string? heroImageUrlAlt;
+    private bool heroUseAlt;
+    private List<string> slider = new();
+    private CancellationTokenSource? cts;
 
     // Hero points removed per new guideline (two lines only)
 
@@ -88,10 +96,96 @@
                     Nav.NavigateTo("/customers", forceLoad: true);
                     return;
                 }
+                // Initialize hero slider images
+                try
+                {
+                    InitializeHeroImages();
+                    _ = RunSliderAsync();
+                }
+                catch { }
+
                 StateHasChanged();
             }
             catch { }
         }
+    }
+
+    private void InitializeHeroImages()
+    {
+        try
+        {
+            // Try slider folder first
+            var sliderDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "slider");
+            IEnumerable<string> files = Enumerable.Empty<string>();
+            if (Directory.Exists(sliderDir))
+            {
+                files = Directory.GetFiles(sliderDir)
+                    .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                             || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                             || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                             || f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+                             || f.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => f);
+                slider = files.Select(f => "/images/slider/" + Path.GetFileName(f)).ToList();
+            }
+            if (slider.Count == 0)
+            {
+                // fallback to /images root
+                var imagesDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images");
+                if (Directory.Exists(imagesDir))
+                {
+                    files = Directory.GetFiles(imagesDir)
+                        .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                                 || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                                 || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                                 || f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+                                 || f.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(f => f);
+                    slider = files.Select(f => "/images/" + Path.GetFileName(f)).ToList();
+                }
+            }
+            if (slider.Count == 0)
+            {
+                slider = new() { "/images/tokyo01.jpg" };
+            }
+            heroImageUrl = slider[0];
+            heroImageUrlAlt = slider.Count > 1 ? slider[1] : slider[0];
+            heroUseAlt = false;
+        }
+        catch { }
+    }
+
+    private async Task RunSliderAsync()
+    {
+        cts?.Cancel();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+        int idx = 0;
+        while (!token.IsCancellationRequested)
+        {
+            try { await Task.Delay(8000, token); } catch { break; }
+            if (slider.Count == 0) continue;
+            idx = (idx + 1) % slider.Count;
+            var next = slider[idx];
+            if (!heroUseAlt)
+            {
+                heroImageUrlAlt = next;
+                heroUseAlt = true;
+            }
+            else
+            {
+                heroImageUrl = next;
+                heroUseAlt = false;
+            }
+            try { await InvokeAsync(StateHasChanged); } catch { }
+        }
+    }
+
+    public void Dispose()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        I18n.OnChanged -= HandleI18nChanged;
     }
 
     private async Task OnLoginAsync()
@@ -205,14 +299,8 @@
     public record UserDto(string id, string username, string role);
     public class AdminInfo { public bool exists { get; set; } public string? username { get; set; } public string? email { get; set; } }
 
-    public void Dispose()
-    {
-        I18n.OnChanged -= HandleI18nChanged;
-    }
+    
 }
-
-
-
 
 
 

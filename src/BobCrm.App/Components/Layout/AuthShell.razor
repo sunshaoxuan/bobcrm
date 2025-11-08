@@ -3,6 +3,11 @@
 
 <div class="auth-shell @(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : "has-hero-image")" style="@(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : $"--hero-image: url('{HeroImageUrl}')")">
     <section class="auth-hero">
+        @if (!string.IsNullOrWhiteSpace(HeroImageUrl) || !string.IsNullOrWhiteSpace(HeroImageUrlAlt))
+        {
+            <div class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" style="--img: url('@HeroImageUrl')"></div>
+            <div class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" style="--img: url('@HeroImageUrlAlt')"></div>
+        }
         @if (BrandInHero)
         {
             <div class="auth-hero-brand">@BrandText</div>
@@ -72,6 +77,8 @@
     [Parameter] public bool BrandInHero { get; set; } = true;
     [Parameter] public string BrandText { get; set; } = "OneCRM";
     [Parameter] public string? HeroImageUrl { get; set; }
+    [Parameter] public string? HeroImageUrlAlt { get; set; }
+    [Parameter] public bool HeroImageUseAlt { get; set; }
     [Parameter] public string FormTitle { get; set; } = string.Empty;
     [Parameter] public string? PanelEyebrow { get; set; }
     [Parameter] public string? FormDescription { get; set; }
