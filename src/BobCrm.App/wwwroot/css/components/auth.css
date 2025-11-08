@@ -153,9 +153,12 @@
   color: var(--text-secondary);
 }
 
-.auth-form button {
+.auth-form button, .auth-form .ant-btn {
   width: 100%;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .auth-message {

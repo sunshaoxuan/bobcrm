@@ -1,7 +1,7 @@
 @using BobCrm.App.Services
 @inject I18nService I18n
 
-<div class="auth-shell @(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : "has-hero-image")" style="@(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : $"--hero-image: url('{HeroImageUrl}')")">
+<div class="auth-shell @((string.IsNullOrWhiteSpace(HeroImageUrl) && string.IsNullOrWhiteSpace(HeroImageUrlAlt)) ? string.Empty : "has-hero-image")">
     <section class="auth-hero">
         @if (!string.IsNullOrWhiteSpace(HeroImageUrl) || !string.IsNullOrWhiteSpace(HeroImageUrlAlt))
         {
