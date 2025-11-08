@@ -133,6 +133,10 @@ public class AggVOService : IAggVOService
         {
             // 1. 加载主实体
             var masterData = await _persistenceService.GetByIdAsync(headTypeName, masterId);
+            if (masterData is null)
+            {
+                throw new InvalidOperationException($"Record ({headTypeName}) with ID {masterId} was not found.");
+            }
             var headVO = ConvertDictionaryToVO(masterData, headType);
             aggVO.SetHeadVO(headVO);
 

@@ -1,4 +1,5 @@
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Domain;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,7 +100,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
 
         // 6. UserLayouts (default template)
         var defaultLayout = await db.Set<Domain.UserLayout>()
-            .FirstOrDefaultAsync(l => l.UserId == "__default__" && l.CustomerId == 0);
+            .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
         Assert.NotNull(defaultLayout);
         Assert.False(string.IsNullOrWhiteSpace(defaultLayout.LayoutJson));
     }

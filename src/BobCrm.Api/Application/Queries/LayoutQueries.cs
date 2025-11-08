@@ -24,7 +24,7 @@ public class LayoutQueries : ILayoutQueries
     // ===== 旧版方法（向后兼容，基于CustomerId） =====
 
     public object GetUserLayout(string userId, int customerId)
-        => ReadJson(_repo.Query(x => x.UserId == userId && x.CustomerId == customerId).FirstOrDefault()?.LayoutJson);
+        => ReadJson(_repo.Query(UserLayoutScope.ForUser(userId, customerId)).FirstOrDefault()?.LayoutJson);
 
     public object GetLayout(string userId, int customerId, string scope)
     {
@@ -32,16 +32,16 @@ public class LayoutQueries : ILayoutQueries
         return scope switch
         {
             "user" => GetUserLayout(userId, customerId),
-            "default" => ReadJson(_repo.Query(x => x.UserId == DefaultUserId && x.CustomerId == customerId).FirstOrDefault()?.LayoutJson),
+            "default" => ReadJson(_repo.Query(UserLayoutScope.ForUser(DefaultUserId, customerId)).FirstOrDefault()?.LayoutJson),
             _ => GetEffectiveLayout(userId, customerId)
         };
     }
 
     public object GetEffectiveLayout(string userId, int customerId)
     {
-        var user = _repo.Query(x => x.UserId == userId && x.CustomerId == customerId).FirstOrDefault();
+        var user = _repo.Query(UserLayoutScope.ForUser(userId, customerId)).FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(user?.LayoutJson)) return ReadJson(user!.LayoutJson);
-        var def = _repo.Query(x => x.UserId == DefaultUserId && x.CustomerId == customerId).FirstOrDefault();
+        var def = _repo.Query(UserLayoutScope.ForUser(DefaultUserId, customerId)).FirstOrDefault();
         return ReadJson(def?.LayoutJson);
     }
 

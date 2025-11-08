@@ -8,7 +8,7 @@ public class UserLayoutConfiguration : IEntityTypeConfiguration<UserLayout>
 {
     public void Configure(EntityTypeBuilder<UserLayout> builder)
     {
-        builder.HasIndex(x => new { x.UserId, x.CustomerId }).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.EntityType }).IsUnique();
     }
 }
 

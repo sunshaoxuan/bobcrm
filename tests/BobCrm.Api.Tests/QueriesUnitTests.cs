@@ -81,8 +81,12 @@ public class QueriesUnitTests
     public void LayoutQueries_User_Default_Effective()
     {
         var repo = new ListRepo<UserLayout>();
-        repo.Data.Add(new UserLayout{ Id=1, UserId="__default__", CustomerId=1, LayoutJson = "{\"mode\":\"flow\"}" });
-        repo.Data.Add(new UserLayout{ Id=2, UserId="u1", CustomerId=1, LayoutJson = "{\"mode\":\"free\"}" });
+        var defaultLayout = new UserLayout{ Id=1, UserId="__default__", LayoutJson = "{\"mode\":\"flow\"}" };
+        UserLayoutScope.ApplyCustomerScope(defaultLayout, 1);
+        var userLayout = new UserLayout{ Id=2, UserId="u1", LayoutJson = "{\"mode\":\"free\"}" };
+        UserLayoutScope.ApplyCustomerScope(userLayout, 1);
+        repo.Data.Add(defaultLayout);
+        repo.Data.Add(userLayout);
         var q = new LayoutQueries(repo);
         var user = q.GetLayout("u1", 1, "user");
         var def = q.GetLayout("u1", 1, "default");

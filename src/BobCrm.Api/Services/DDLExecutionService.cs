@@ -1,7 +1,8 @@
+using System.Data;
+using System.Data.Common;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace BobCrm.Api.Services;
 
@@ -49,7 +50,7 @@ public class DDLExecutionService
             _logger.LogInformation("[DDL] Executing {ScriptType} script for entity {EntityId}", scriptType, entityDefinitionId);
 
             // 执行DDL（使用原始SQL）
-            await _db.Database.ExecuteSqlRawAsync(sqlScript);
+            await ExecuteSqlScriptAsync(sqlScript);
 
             script.Status = DDLScriptStatus.Success;
             script.ExecutedAt = DateTime.UtcNow;
@@ -148,7 +149,7 @@ public class DDLExecutionService
         {
             // 使用EXPLAIN来验证语法（不实际执行）
             // 注意：EXPLAIN对DDL语句支持有限，这里只做基础检查
-            await _db.Database.ExecuteSqlRawAsync($"EXPLAIN {sqlScript}");
+            await ExecuteSqlScriptAsync($"EXPLAIN {sqlScript}");
             return (true, null);
         }
         catch (Exception ex)
@@ -208,6 +209,18 @@ public class DDLExecutionService
             .SqlQueryRaw<TableColumnInfo>(sql, tableName.ToLower())
             .ToListAsync();
     }
+
+    private async Task ExecuteSqlScriptAsync(string sqlScript)
+    {
+        var connection = _db.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText = sqlScript;
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+        await command.ExecuteNonQueryAsync();
+    }
 }
 
 /// <summary>
@@ -243,3 +256,4 @@ public static class DDLScriptStatus
     public const string Failed = "Failed";
     public const string RolledBack = "RolledBack";
 }
+

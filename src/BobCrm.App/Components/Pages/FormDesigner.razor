@@ -38,65 +38,59 @@ else if (error != null)
 }
 else
 {
-    <!-- Full screen designer -->
-    <div class="designer-container" style="position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; z-index:1000; display:flex; flex-direction:column">
-        <!-- Designer Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card-bg)">
-            <div style="display:flex; align-items:center; gap:16px">
-                <h2 style="margin:0; font-size:18px">@I18n.T("MODE_DESIGN") - @templateName</h2>
+    <div class="designer-shell">
+        <header class="designer-header">
+            <div class="designer-header-meta">
+                <div>
+                    <p class="designer-eyebrow">@I18n.T("MODE_DESIGN")</p>
+                    <h2>@templateName</h2>
+                </div>
                 <Tag Color="blue">@entityType</Tag>
             </div>
-            <div style="display:flex; gap:8px">
+            <div class="designer-header-actions">
+                <Button Ghost OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
                 <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
-                <Button OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
             </div>
-        </div>
+        </header>
 
-        <!-- Designer Main Area -->
-        <div style="display:flex; flex:1; overflow:hidden">
-            <!-- Left Toolbox -->
-            <div class="designer-toolbox" style="width:280px; border-right:1px solid var(--border); overflow-y:auto; background:#fafafa">
-                <div style="padding:16px">
-                    <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_COMPONENTS")</h3>
-                    <Collapse Accordion="false" DefaultActiveKey="@(new[]{"entity","1","2"})">
-                        <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
-                            <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
-                        </Panel>
-                        <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
-                            <div style="display:flex; flex-direction:column; gap:8px">
-                                @foreach (var comp in WidgetRegistry.BasicWidgets)
-                                {
-                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
-                                         @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
-                                         style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
-                                        <Icon Type="@comp.Icon" />
-                                        <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
-                                    </div>
-                                }
-                            </div>
-                        </Panel>
-                        <Panel Header="@I18n.T("LBL_LAYOUT_COMPONENTS")" Key="2">
-                            <div style="display:flex; flex-direction:column; gap:8px">
-                                @foreach (var comp in WidgetRegistry.LayoutWidgets)
-                                {
-                                    <div class="component-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
-                                         @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd"
-                                         style="padding:8px 12px; background:#fff; border:1px solid #d9d9d9; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px">
-                                        <Icon Type="@comp.Icon" />
-                                        <span style="font-size:13px">@I18n.T(comp.LabelKey)</span>
-                                    </div>
-                                }
-                            </div>
-                        </Panel>
-                    </Collapse>
-                </div>
-            </div>
+        <div class="designer-main">
+            <aside class="designer-panel designer-toolbox" @onclick:stopPropagation>
+                <h3>@I18n.T("LBL_COMPONENTS")</h3>
+                <Collapse Accordion="false" DefaultActiveKey="@(new[]{ "entity", "1", "2" })">
+                    <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
+                        <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
+                    </Panel>
+                    <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
+                        <div class="designer-palette">
+                            @foreach (var comp in WidgetRegistry.BasicWidgets)
+                            {
+                                <div class="designer-palette-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
+                                     @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd">
+                                    <Icon Type="@comp.Icon" />
+                                    <span>@I18n.T(comp.LabelKey)</span>
+                                </div>
+                            }
+                        </div>
+                    </Panel>
+                    <Panel Header="@I18n.T("LBL_LAYOUT_COMPONENTS")" Key="2">
+                        <div class="designer-palette">
+                            @foreach (var comp in WidgetRegistry.LayoutWidgets)
+                            {
+                                <div class="designer-palette-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
+                                     @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd">
+                                    <Icon Type="@comp.Icon" />
+                                    <span>@I18n.T(comp.LabelKey)</span>
+                                </div>
+                            }
+                        </div>
+                    </Panel>
+                </Collapse>
+            </aside>
 
-            <!-- Center Canvas -->
-            <div class="designer-canvas" style="flex:1; overflow:auto; background-image:radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size:5px 5px; background-color:#fafafa;"
+            <section class="designer-canvas"
                  @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault
                  @onclick="OnCanvasBackgroundClick">
-                <div @ref="canvasRef" class="layout-widgets-container" style="display:flex; flex-wrap:wrap; align-content:flex-start; align-items:flex-start; padding:24px; position:relative"
+                <div @ref="canvasRef" class="designer-canvas-content layout-widgets-container"
                      @onclick:stopPropagation>
                     @foreach (var widget in layoutWidgets)
                     {
@@ -124,8 +118,7 @@ else
                                      @onmousedown="@((e) => OnResizeStart(e, widget))"
                                      @onmousedown:stopPropagation
                                      @onmousedown:preventDefault
-                                     @ondragstart:preventDefault="true"
-                                     style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); width:4px; height:48px; cursor:ew-resize; background:#1890ff; border-radius:2px; z-index:10; box-shadow:0 2px 8px rgba(24,144,255,0.6); opacity:0.8;">
+                                     @ondragstart:preventDefault="true">
                                 </div>
                             }
 
@@ -136,62 +129,62 @@ else
                     }
                     @if (!layoutWidgets.Any())
                     {
-                        <div style="width:100%; text-align:center; padding:60px 20px; color:#999; pointer-events:none">
+                        <div class="designer-empty-state">
                             <Icon Type="@IconType.Outline.Inbox" Style="font-size:48px; margin-bottom:12px" />
                             <div>@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
                         </div>
                     }
                 </div>
-            </div>
+            </section>
 
-            <!-- Right Properties Panel -->
-            <div class="designer-properties" style="width:280px; border-left:1px solid var(--border); overflow-y:auto; overflow-x:hidden; background:#fafafa"
+            <aside class="designer-panel designer-properties"
                  @onclick="OnCanvasBackgroundClick">
                 @if (selectedWidget != null)
                 {
-                    <div style="padding:16px" @onclick:stopPropagation>
-                        <h3 style="margin:0 0 16px 0; font-size:14px; font-weight:600">@I18n.T("LBL_WIDGET_PROPERTIES")</h3>
+                    <div class="designer-section" @onclick:stopPropagation>
+                        <h3>@I18n.T("LBL_WIDGET_PROPERTIES")</h3>
 
-                        <div style="margin-bottom:16px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENT_TYPE")</label>
-                            <Input Value="@selectedWidget.Type" Disabled />
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_COMPONENT_TYPE")</label>
+                            <Input Value="@selectedWidget.Type" Disabled Class="field-control" />
                         </div>
 
-                        <div style="margin-bottom:16px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_LABEL")</label>
-                            <Input @bind-Value="selectedWidget.Label" OnChange="@((string value) => UpdateWidget())" />
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_LABEL")</label>
+                            <Input @bind-Value="selectedWidget.Label" OnChange="@((string value) => UpdateWidget())" Class="field-control" />
                         </div>
 
-                        <div style="margin-bottom:16px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_WIDTH")</label>
-                            <InputGroup Compact>
+                        <div class="designer-field designer-field-inline">
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_WIDTH")</label>
                                 @{
                                     var widthMax = selectedWidget.GetMaxWidth();
                                 }
                                 @if (widthMax.HasValue)
                                 {
-                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="@widthMax.Value" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="@widthMax.Value" OnChange="@(value => UpdateWidget())" />
                                 }
                                 else
                                 {
-                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Style="width:70%" OnChange="@(value => UpdateWidget())" />
+                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" OnChange="@(value => UpdateWidget())" />
                                 }
-                                <Select TItemValue="string" TItem="string" 
-                                       Value="@selectedWidget.WidthUnit" 
-                                       Style="width:30%" 
-                                       OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
+                            </div>
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_WIDTH_UNIT")</label>
+                                <Select TItemValue="string" TItem="string"
+                                        Value="@selectedWidget.WidthUnit"
+                                        OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
                                     <SelectOptions>
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%" />
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px" />
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%"/>
+                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px"/>
                                     </SelectOptions>
                                 </Select>
-                            </InputGroup>
+                            </div>
                         </div>
 
-                        <div style="margin-bottom:16px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DATA_SOURCE")</label>
-                            <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear Style="width:100%" OnSelectedItemChanged="@(item => UpdateWidget())">
-                                @* ⭐ 从FieldDefinitions加载，不依赖特定实体数据 *@
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_DATA_SOURCE")</label>
+                            <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear OnSelectedItemChanged="@(item => UpdateWidget())">
                                 @foreach (var field in availableFields)
                                 {
                                     <SelectOption Value="@field.Key" Label="@field.DisplayName" />
@@ -199,53 +192,50 @@ else
                             </Select>
                         </div>
 
-                        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
-                            <label style="font-size:12px; color:#666">@I18n.T("LBL_VISIBLE")</label>
+                        <div class="designer-switch-row">
+                            <label>@I18n.T("LBL_VISIBLE")</label>
                             <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
                         </div>
 
-                        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center">
-                            <label style="font-size:12px; color:#666">@I18n.T("LBL_NEW_LINE")</label>
+                        <div class="designer-switch-row">
+                            <label>@I18n.T("LBL_NEW_LINE")</label>
                             <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
                         </div>
 
-                        @* ===== 特定类型属性面板 ===== *@
                         @RenderTypeSpecificPropertyPanel(selectedWidget)
 
-                        <Divider />
+                        <hr class="designer-divider" />
 
-                        <Button Danger Block OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
+                        <Button Danger OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
                     </div>
                 }
                 else
                 {
-                    <div style="padding:16px 16px 8px 16px" @onclick:stopPropagation>
-                        <h3 style="margin:0 0 12px 0; font-size:14px; font-weight:600">@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
-                        
-                        <div style="margin-bottom:12px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_TEMPLATE_NAME")</label>
-                            <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" />
+                    <div class="designer-section" @onclick:stopPropagation>
+                        <h3>@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
+
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_TEMPLATE_NAME")</label>
+                            <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" Class="field-control" />
                         </div>
 
-                        <div style="margin-bottom:12px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_DESCRIPTION")</label>
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_DESCRIPTION")</label>
                             <TextArea @bind-Value="description" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_DESCRIPTION")" Rows="3" />
                         </div>
 
-                        <div style="margin-bottom:12px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_ENTITY_TYPE")</label>
-                            
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_ENTITY_TYPE")</label>
+
                             @if (isEntityTypeLocked)
                             {
-                                <!-- 实体类型已锁定，不可修改 -->
-                                <Input Value="@GetEntityDisplayName()" Disabled Style="width:100%" />
-                                <div style="margin-top:4px; font-size:11px; color:#ff9800">
+                                <Input Value="@GetEntityDisplayName()" Disabled Class="field-control" />
+                                <div class="designer-badge">
                                     🔒 @I18n.T("LBL_ENTITY_TYPE_LOCKED")
                                 </div>
                             }
                             else
                             {
-                                <!-- 未设置实体类型，使用通用实体选择器 -->
                                 <EntitySelector TEntity="EntityTypeItem"
                                                 @bind-Value="entityType"
                                                 Title="@I18n.T("LBL_SELECT_ENTITY_TYPE")"
@@ -267,34 +257,35 @@ else
                                     <IconRenderer>
                                         @if (!string.IsNullOrWhiteSpace(context.Icon))
                                         {
-                                            <Icon Type="@context.Icon" Style="font-size:28px; color:#1890ff" />
+                                            <Icon Type="@context.Icon" Style="font-size:28px; color:var(--primary)" />
                                         }
                                     </IconRenderer>
                                     <MetadataRenderer>
-                                        <Tag Color="blue" Style="margin-right:8px">@context.EntityName</Tag>
+                                        <Tag Color="blue">@context.EntityName</Tag>
                                         <Tag Color="default">@context.ApiEndpoint</Tag>
                                     </MetadataRenderer>
                                 </EntitySelector>
-                                <div style="margin-top:4px; font-size:11px; color:#999">
+                                <div class="designer-hint">
                                     @I18n.T("LBL_ENTITY_TYPE_HINT")
                                 </div>
                             }
                         </div>
 
-                        <Divider Style="margin:12px 0" />
-
-                        <div style="margin-bottom:12px">
-                            <label style="display:block; font-size:12px; color:#666; margin-bottom:4px">@I18n.T("LBL_COMPONENTS")</label>
-                            <div style="font-size:20px; font-weight:600; color:#1890ff">@layoutWidgets.Count</div>
+                        <div class="designer-field">
+                            <label>@I18n.T("LBL_COMPONENTS")</label>
+                            <div class="designer-count">@layoutWidgets.Count</div>
                         </div>
 
-                        <div style="margin-top:8px; padding:8px; background:#e6f7ff; border:1px solid #91d5ff; border-radius:4px; font-size:11px; color:#666; line-height:1.4">
-                            <Icon Type="@IconType.Outline.InfoCircle" Style="color:#1890ff; margin-right:4px" />
-                            @I18n.T("LBL_TEMPLATE_INFO_HINT")
+                        <div class="designer-hint">
+                            <Icon Type="@IconType.Outline.InfoCircle" /> @I18n.T("LBL_TEMPLATE_INFO_HINT")
                         </div>
+
+                        <hr class="designer-divider" />
+
+                        <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
                     </div>
                 }
-            </div>
+            </aside>
         </div>
     </div>
 }
@@ -329,7 +320,6 @@ else
     private DraggableWidget? draggedParentContainer;
     private EntityFieldNode? draggedEntityField; // 拖拽的实体字段
     private bool dropSucceeded = false;
-    private bool isDragging = false; // 全局拖拽状态，用于控制容器wrapper的pointer-events
     private bool isProcessingDrop = false; // 防护标志：正在处理drop，防止OnDragEnd清空状态
 
     // Tab管理
@@ -1266,4 +1256,3 @@ else
         return WidgetNavigationHelper.GetAllWidgets(layoutWidgets);
     }
 }
-

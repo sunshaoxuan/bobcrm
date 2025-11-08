@@ -651,7 +651,7 @@ public static class DatabaseInitializer
 
         // 创建默认客户档案显示模板（customerId = 0 表示全局模板，不绑定具体客户）
         // 所有用户默认使用此模板，除非他们保存了自己的模板
-        if (!await db.Set<UserLayout>().IgnoreQueryFilters().AnyAsync(l => l.UserId == "__default__" && l.CustomerId == 0))
+        if (!await db.Set<UserLayout>().IgnoreQueryFilters().AnyAsync(UserLayoutScope.ForUser("__default__", 0)))
         {
             var defaultTemplate = new
             {
@@ -727,12 +727,13 @@ public static class DatabaseInitializer
             };
 
             var templateJson = System.Text.Json.JsonSerializer.Serialize(defaultTemplate);
-            db.Set<UserLayout>().Add(new UserLayout
+            var defaultLayout = new UserLayout
             {
                 UserId = "__default__",
-                CustomerId = 0,  // 0 表示全局用户级模板
                 LayoutJson = templateJson
-            });
+            };
+            UserLayoutScope.ApplyCustomerScope(defaultLayout, 0); // 0 表示全局用户级模板
+            db.Set<UserLayout>().Add(defaultLayout);
 
             await db.SaveChangesAsync();
         }

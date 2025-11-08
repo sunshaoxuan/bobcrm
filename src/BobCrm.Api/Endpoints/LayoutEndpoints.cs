@@ -122,7 +122,7 @@ public static class LayoutEndpoints
             }
 
             // 忽略 customerId，统一保存到 CustomerId=0
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
             var json = layout.GetRawText();
             if (string.IsNullOrWhiteSpace(json))
             {
@@ -133,7 +133,8 @@ public static class LayoutEndpoints
 
             if (entity == null)
             {
-                entity = new UserLayout { UserId = targetUserId, CustomerId = 0, LayoutJson = json };
+                entity = new UserLayout { UserId = targetUserId, LayoutJson = json };
+                UserLayoutScope.ApplyCustomerScope(entity, 0);
                 await repoLayout.AddAsync(entity);
                 logger.LogInformation("[Layout] Created new layout entry");
             }
@@ -180,7 +181,7 @@ public static class LayoutEndpoints
             }
 
             // 忽略 customerId，统一删除 CustomerId=0
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
             if (entity != null)
             {
                 repoLayout.Remove(entity);
@@ -263,7 +264,7 @@ public static class LayoutEndpoints
             }
 
             var body = System.Text.Json.JsonSerializer.Serialize(layout);
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
 
             if (entity != null)
             {
@@ -276,9 +277,9 @@ public static class LayoutEndpoints
                 entity = new UserLayout
                 {
                     UserId = targetUserId,
-                    CustomerId = 0,  // 0 表示用户级别模板
                     LayoutJson = body
                 };
+                UserLayoutScope.ApplyCustomerScope(entity, 0); // 0 表示用户级别模板
                 await repoLayout.AddAsync(entity);
                 logger.LogInformation("[Layout] Created new user-level layout");
             }
@@ -320,7 +321,7 @@ public static class LayoutEndpoints
             }
 
             var body = System.Text.Json.JsonSerializer.Serialize(layout);
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
 
             if (entity != null)
             {
@@ -333,9 +334,9 @@ public static class LayoutEndpoints
                 entity = new UserLayout
                 {
                     UserId = targetUserId,
-                    CustomerId = 0,
                     LayoutJson = body
                 };
+                UserLayoutScope.ApplyCustomerScope(entity, 0);
                 await repoLayout.AddAsync(entity);
                 logger.LogInformation("[Layout] Created new user-level layout");
             }
@@ -373,7 +374,7 @@ public static class LayoutEndpoints
                 }
             }
 
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
             if (entity != null)
             {
                 repoLayout.Remove(entity);
@@ -417,7 +418,7 @@ public static class LayoutEndpoints
                 }
             }
 
-            var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == 0).FirstOrDefault();
+            var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
             if (entity != null)
             {
                 repoLayout.Remove(entity);
@@ -502,10 +503,10 @@ public static class LayoutEndpoints
                 entity = new UserLayout
                 {
                     UserId = targetUserId,
-                    CustomerId = 0,  // 使用EntityType时，CustomerId设为0
                     EntityType = entityType,
                     LayoutJson = body
                 };
+                UserLayoutScope.ApplyCustomerScope(entity, 0); // 使用EntityType时，CustomerId设为0
                 await repoLayout.AddAsync(entity);
                 logger.LogInformation("[Layout] Created new entity layout");
             }
@@ -644,10 +645,11 @@ public static class LayoutEndpoints
                 }
 
                 var json = System.Text.Json.JsonSerializer.Serialize(jsonObj);
-                var entity = repoLayout.Query(x => x.UserId == targetUserId && x.CustomerId == customerId).FirstOrDefault();
+                var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, customerId)).FirstOrDefault();
                 if (entity == null)
                 {
-                    entity = new UserLayout { UserId = targetUserId, CustomerId = customerId, LayoutJson = json };
+                    entity = new UserLayout { UserId = targetUserId, LayoutJson = json };
+                    UserLayoutScope.ApplyCustomerScope(entity, customerId);
                     await repoLayout.AddAsync(entity);
                     logger.LogInformation("[Layout] Generated and saved new layout");
                 }
@@ -675,3 +677,4 @@ public static class LayoutEndpoints
 }
 
 public record GenerateLayoutRequest(string[] Tags, string? Mode, bool? Save, string? Scope);
+

@@ -54,7 +54,7 @@ public class DynamicEntityCountResponse
 /// </summary>
 public static class FilterOperator
 {
-    public const string Equals = "equals";
+    public new const string Equals = "equals";
     public const string NotEquals = "notEquals";
     public const string Contains = "contains";
     public const string StartsWith = "startsWith";
