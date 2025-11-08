@@ -507,9 +507,10 @@ builder.Services.AddScoped<BobCrm.App.Services.DynamicEntityService>();
 
 - [后端实现文档](./IMPLEMENTATION.md)
 - [架构设计文档](./ARCHITECTURE.md)
-- [测试文档](./TESTING.md)
+- [测试文档](./docs/TEST-00-测试综述.md)
 - [API 文档](./API.md)
 
 ## 支持
 
 如有问题或建议，请联系开发团队或提交 Issue。
+

@@ -613,8 +613,9 @@ foreach (var line in orderAgg.OrderLineVOs.Where(l => l.IsModified))
 - [实体定义系统](./IMPLEMENTATION.md)
 - [代码生成与编译](./ARCHITECTURE.md)
 - [反射持久化](./API.md)
-- [前端集成指南](./FRONTEND_GUIDE.md)
+- [前端集成指南](./docs/DEV-01-前端开发指南.md)
 
 ## 技术支持
 
 如有问题或建议，请联系开发团队或提交 Issue。
+
