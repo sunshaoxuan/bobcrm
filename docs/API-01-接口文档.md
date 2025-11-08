@@ -160,3 +160,24 @@
     - 业务层失败 → `BusinessRuleViolation`
     - 通用层失败 → `ValidationFailed`
     - 持久化失败 → `PersistenceError`
+
+## 文件存储（MinIO/S3）
+
+- 上传文件
+  - 方法：POST `/api/files/upload`
+  - 认证：需要（Bearer）
+  - 请求：`multipart/form-data`，字段名 `file`（必填），可选 `prefix`
+  - 响应：
+```json
+{ "key": "uploads/2025/11/08/xxxxx-filename.txt", "url": "/api/files/uploads/2025/11/08/xxxxx-filename.txt" }
+```
+
+- 下载文件
+  - 方法：GET `/api/files/{key}`
+  - 认证：无（本地默认允许匿名下载，生产建议改为签名 URL）
+
+- 删除文件
+  - 方法：DELETE `/api/files/{key}`
+  - 认证：需要（Bearer）
+
+> 说明：本地通过 MinIO（S3 兼容）实现，详见 `docs/ARCH-12-对象存储（MinIO-S3）使用说明.md`。
