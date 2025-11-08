@@ -1,25 +1,39 @@
 @page "/activate"
+@layout BobCrm.App.Components.Layout.AuthLayout
 
-<h1>@I18n.T("LBL_ACTIVATE_TITLE")</h1>
-
-<div style="max-width:480px;">
-    <FormItem Label='@I18n.T("LBL_USER_ID")'>
-        <Input @bind-Value="_userId" />
-    </FormItem>
-    <FormItem Label='@I18n.T("LBL_CODE")'>
-        <Input @bind-Value="_code" />
-    </FormItem>
-    <FormItem>
-        <Button Type="primary" OnClick="HandleActivateAsync">@I18n.T("BTN_ACTIVATE")</Button>
-    </FormItem>
-
-    <div>@_msg</div>
-</div>
+<AuthShell HeroTitle='@I18n.T("TXT_AUTH_ACTIVATE_TITLE")'
+           HeroSubtitle='@I18n.T("TXT_AUTH_ACTIVATE_SUBTITLE")'
+           Eyebrow='@I18n.T("LBL_SECURE")'
+           PanelEyebrow='@I18n.T("LBL_ACTIVATE_TITLE")'
+           FormTitle='@I18n.T("LBL_ACTIVATE_TITLE")'
+           FormDescription='@I18n.T("TXT_ACTIVATE_DESCRIPTION")'>
+    <ChildContent>
+        <div class="auth-form">
+            <div class="auth-field">
+                <label for="activate-user">@I18n.T("LBL_USER_ID")</label>
+                <Input id="activate-user" @bind-Value="_userId" Class="field-control" />
+            </div>
+            <div class="auth-field">
+                <label for="activate-code">@I18n.T("LBL_CODE")</label>
+                <Input id="activate-code" @bind-Value="_code" Class="field-control" />
+            </div>
+            <Button Type="ButtonType.Primary" OnClick="HandleActivateAsync" Loading="_activating">@I18n.T("BTN_ACTIVATE")</Button>
+            @if (!string.IsNullOrWhiteSpace(_msg))
+            {
+                <div class="auth-message error">@_msg</div>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <span>@I18n.T("TXT_BACK_TO_LOGIN") <a href="/login">@I18n.T("LBL_LOGIN_TITLE")</a></span>
+    </Footer>
+</AuthShell>
 
 @code {
     private string? _userId;
     private string? _code;
     private string? _msg;
+    private bool _activating;
 
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public NavigationManager Nav { get; set; } = default!;
@@ -59,19 +73,41 @@
             _msg = I18n.T("ERR_ACTIVATE_FILL");
             return;
         }
-        var http = HttpFactory.CreateClient("api");
-        // attach X-Lang header
-        try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
-        var url = $"/api/auth/activate?userId={Uri.EscapeDataString(_userId)}&code={Uri.EscapeDataString(_code)}";
-        var resp = await http.GetAsync(url);
-        if (resp.IsSuccessStatusCode)
+
+        _activating = true;
+        _msg = null;
+        try
         {
-            await Message.Success(I18n.T("MSG_ACTIVATE_SUCCESS"));
-            Nav.NavigateTo("/login");
+            var http = HttpFactory.CreateClient("api");
+            try
+            {
+                var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(lang))
+                {
+                    if (http.DefaultRequestHeaders.Contains("X-Lang"))
+                    {
+                        http.DefaultRequestHeaders.Remove("X-Lang");
+                    }
+                    http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant());
+                }
+            }
+            catch { }
+
+            var url = $"/api/auth/activate?userId={Uri.EscapeDataString(_userId)}&code={Uri.EscapeDataString(_code)}";
+            var resp = await http.GetAsync(url);
+            if (resp.IsSuccessStatusCode)
+            {
+                await Message.Success(I18n.T("MSG_ACTIVATE_SUCCESS"));
+                Nav.NavigateTo("/login");
+            }
+            else
+            {
+                _msg = $"{I18n.T("ERR_ACTIVATE_FAILED")}: {resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+            }
         }
-        else
+        finally
         {
-            _msg = $"{I18n.T("ERR_ACTIVATE_FAILED")}: {resp.StatusCode} {await resp.Content.ReadAsStringAsync()}";
+            _activating = false;
         }
     }
 }

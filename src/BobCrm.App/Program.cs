@@ -21,6 +21,9 @@ builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
 builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
+builder.Services.AddScoped<BobCrm.App.Services.ThemeState>();
+builder.Services.AddScoped<BobCrm.App.Services.LayoutState>();
+builder.Services.AddScoped<BobCrm.App.Services.InteractionState>();
 // 动态实体系统服务
 builder.Services.AddScoped<BobCrm.App.Services.EntityDefinitionService>();
 builder.Services.AddScoped<BobCrm.App.Services.DynamicEntityService>();

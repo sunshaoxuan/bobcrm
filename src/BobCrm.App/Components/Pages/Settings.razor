@@ -20,41 +20,13 @@
     else
     {
         <div style="display:grid; gap:24px">
-            <!-- Theme Settings -->
-            <div class="settings-section">
-                <h3 class="section-title">@I18n.T("LBL_THEME")</h3>
-                <div class="settings-card">
-                    <div class="setting-item">
-                        <label class="setting-label">@I18n.T("LBL_THEME")</label>
-                        <select @bind="currentTheme" @bind:after="SaveThemePreference" class="setting-input">
-                            <option value="light">@I18n.T("THEME_LIGHT")</option>
-                            <option value="dark">@I18n.T("THEME_DARK")</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label class="setting-label">@I18n.T("LBL_COLOR")</label>
-                        <div class="color-palette">
-                            @foreach (var color in primaryColors)
-                            {
-                                <button type="button"
-                                        class="color-palette-btn @(currentColor == color.Value ? "active" : "")"
-                                        style="background:@color.Value"
-                                        @onclick="() => SelectColor(color.Value)"
-                                        title="@color.Name">
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Language Settings -->
             <div class="settings-section">
                 <h3 class="section-title">@I18n.T("LBL_LANGUAGE")</h3>
                 <div class="settings-card">
                     <div class="setting-item">
                         <label class="setting-label">@I18n.T("LBL_LANGUAGE")</label>
-                        <select @bind="currentLanguage" @bind:after="SaveLanguagePreference" class="setting-input">
+                        <select @bind="currentLanguage" @bind:after="SaveLanguagePreference" class="field-control" style="max-width:300px">
                             <option value="zh">中文</option>
                             <option value="ja">日本語</option>
                             <option value="en">English</option>
@@ -115,63 +87,6 @@
         font-size: 14px;
     }
 
-    .setting-input {
-        padding: 8px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--card-bg);
-        color: var(--text);
-        font-size: 14px;
-        max-width: 300px;
-        transition: border-color 0.2s ease;
-    }
-
-    .setting-input:focus {
-        outline: none;
-        border-color: var(--primary);
-    }
-
-    .setting-value {
-        color: var(--text);
-        font-size: 14px;
-        padding: 8px 12px;
-        background: rgba(0,0,0,0.02);
-        border-radius: 6px;
-        max-width: 300px;
-    }
-
-    .theme-dark .setting-value {
-        background: rgba(255,255,255,0.05);
-    }
-
-    .color-palette {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        max-width: 400px;
-    }
-
-    .color-palette-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 3px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .color-palette-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .color-palette-btn.active {
-        border-color: var(--text);
-        transform: scale(1.15);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
     .save-message {
         padding: 12px 16px;
         border-radius: 6px;
@@ -192,16 +107,6 @@
         border: 1px solid #fca5a5;
     }
 
-    .theme-dark .save-message.success {
-        background: rgba(14, 165, 233, 0.1);
-        color: #7dd3fc;
-    }
-
-    .theme-dark .save-message.error {
-        background: rgba(239, 68, 68, 0.1);
-        color: #fca5a5;
-    }
-
     @@keyframes slideIn {
         from {
             opacity: 0;
@@ -216,21 +121,9 @@
 
 @code {
     private bool loading = true;
-    private string currentTheme = "light";
     private string currentLanguage = "ja";
-    private string currentColor = "#3f7cff";
     private string saveMessage = "";
     private bool saveSuccess = false;
-
-    private List<(string Name, string Value)> primaryColors = new()
-    {
-        ("Blue", "#3f7cff"),
-        ("Sky Blue", "#1890ff"),
-        ("Green", "#52c41a"),
-        ("Orange", "#fa8c16"),
-        ("Red", "#f5222d"),
-        ("Purple", "#722ed1")
-    };
 
     protected override void OnInitialized()
     {
@@ -263,18 +156,12 @@
             if (prefsResp.IsSuccessStatusCode)
             {
                 var prefs = await prefsResp.Content.ReadFromJsonAsync<UserPreferencesDto>();
-                currentTheme = prefs?.theme ?? "light";
                 currentLanguage = prefs?.language ?? "ja";
-                currentColor = prefs?.udfColor ?? "#3f7cff";
-
-                await JS.InvokeVoidAsync("console.log", $"[Settings] Loaded from server: theme={currentTheme}, language={currentLanguage}, color={currentColor}");
+                await JS.InvokeVoidAsync("console.log", $"[Settings] Loaded from server: language={currentLanguage}");
             }
             else
             {
-                // Fallback to local storage if server fails
-                currentTheme = await JS.InvokeAsync<string?>("bobcrm.getTheme") ?? "light";
                 currentLanguage = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
-                currentColor = await JS.InvokeAsync<string?>("bobcrm.getPrimary") ?? "#3f7cff";
             }
 
             loading = false;
@@ -288,21 +175,6 @@
         }
     }
 
-    private async Task SaveThemePreference()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("bobcrm.setTheme", currentTheme);
-            await SaveToServer();
-            ShowMessage("Theme saved successfully", true);
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("console.error", $"[Settings] Save theme error: {ex.Message}");
-            ShowMessage("Failed to save theme", false);
-        }
-    }
-
     private async Task SaveLanguagePreference()
     {
         try
@@ -311,9 +183,8 @@
             await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", currentLanguage, 365);
             // 加载新语言资源
             await I18n.LoadAsync(currentLanguage);
-            // 保存到服务器
-            await SaveToServer();
-            ShowMessage("Language saved successfully", true);
+            var saved = await SaveToServer();
+            ShowMessage(saved ? "Language saved successfully" : "Language saved locally", saved);
         }
         catch (Exception ex)
         {
@@ -322,48 +193,30 @@
         }
     }
 
-    private async Task SelectColor(string color)
-    {
-        try
-        {
-            currentColor = color;
-            // setPrimary会自动保存到localStorage和cookie
-            await JS.InvokeVoidAsync("bobcrm.setPrimary", color);
-            await SaveToServer();
-            ShowMessage("Color saved successfully", true);
-            // 强制UI更新以显示选中状态
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("console.error", $"[Settings] Select color error: {ex.Message}");
-            ShowMessage("Failed to save color", false);
-        }
-    }
-
-    private async Task SaveToServer()
+    private async Task<bool> SaveToServer()
     {
         try
         {
             var prefs = new
             {
-                theme = currentTheme,
-                udfColor = currentColor,  // 使用 udfColor（用户自定义颜色）
                 language = currentLanguage
             };
             var resp = await Auth.PutAsJsonWithRefreshAsync("/api/user/preferences", prefs);
             if (!resp.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("console.error", $"[Settings] Server save failed: {resp.StatusCode}");
+                return false;
             }
             else
             {
-                await JS.InvokeVoidAsync("console.log", $"[Settings] Preferences saved to server: theme={currentTheme}, color={currentColor}, language={currentLanguage}");
+                await JS.InvokeVoidAsync("console.log", $"[Settings] Preferences saved to server: language={currentLanguage}");
+                return true;
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[Settings] SaveToServer error: {ex.Message}");
+            return false;
         }
     }
 
@@ -388,8 +241,6 @@
 
     private class UserPreferencesDto
     {
-        public string? theme { get; set; }
-        public string? udfColor { get; set; }  // 用户自定义颜色
         public string? language { get; set; }
     }
 }

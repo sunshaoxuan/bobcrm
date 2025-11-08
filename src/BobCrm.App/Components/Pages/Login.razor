@@ -1,42 +1,66 @@
 @page "/login"
 @rendermode RenderMode.InteractiveServer
-@layout BobCrm.App.Components.Layout.EmptyLayout
+@layout BobCrm.App.Components.Layout.AuthLayout
 
 @inject IHttpClientFactory HttpFactory
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 
-<h1>@I18n.T("LBL_LOGIN_TITLE")</h1>
-
-<EditForm Model="model" OnValidSubmit="OnLoginAsync" FormName="login">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-    <div>
-        <div style="margin-bottom:12px">
-            <div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_USERNAME_OR_EMAIL")</div>
-            <Input @bind-Value="model.username" Placeholder="admin" />
-        </div>
-        <div style="margin-bottom:12px">
-            <div style="font-weight:600;margin-bottom:6px">@I18n.T("LBL_PASSWORD")</div>
-            <InputPassword @bind-Value="model.password" />
-        </div>
-        <div>
+<AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
+           HeroSubtitle='@I18n.T("TXT_AUTH_HERO_SUBTITLE")'
+           HeroContent="@HeroHighlights"
+           Eyebrow='@I18n.T("LBL_SECURE")'
+           PanelEyebrow='@I18n.T("LBL_WELCOME_BACK")'
+           FormTitle='@I18n.T("LBL_LOGIN_TITLE")'
+           FormDescription='@I18n.T("TXT_LOGIN_DESCRIPTION")'>
+    <ChildContent>
+        <EditForm Model="model" OnValidSubmit="OnLoginAsync" FormName="login" class="auth-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="auth-message error" />
+            <div class="auth-field">
+                <label for="login-username">@I18n.T("LBL_USERNAME_OR_EMAIL")</label>
+                <Input id="login-username" @bind-Value="model.username" Placeholder="admin" Class="field-control" />
+            </div>
+            <div class="auth-field">
+                <label for="login-password">@I18n.T("LBL_PASSWORD")</label>
+                <Input id="login-password" Password="true" @bind-Value="model.password" Class="field-control" />
+            </div>
             <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
+        </EditForm>
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="auth-message error">@error</div>
+        }
+    </ChildContent>
+    <Footer>
+        <div class="auth-footer">
+            <div class="auth-tagline">@I18n.T("TXT_AUTH_TAGLINE")</div>
+            <span>@I18n.T("TXT_NO_ACCOUNT") <a href="/register">@I18n.T("BTN_REGISTER")</a></span>
         </div>
-    </div>
-    
-</EditForm>
-
-@if (!string.IsNullOrEmpty(error))
-{
-    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
-}
+    </Footer>
+</AuthShell>
 
 @code {
     private LoginModel model = new();
     private bool loading = false;
     private string? error;
+
+    private RenderFragment HeroHighlights => builder =>
+    {
+        builder.OpenElement(0, "p");
+        builder.AddContent(1, I18n.T("TXT_AUTH_HERO_POINT1"));
+        builder.CloseElement();
+        builder.OpenElement(2, "p");
+        builder.AddContent(3, I18n.T("TXT_AUTH_HERO_POINT2"));
+        builder.CloseElement();
+        builder.OpenElement(4, "p");
+        builder.AddContent(5, I18n.T("TXT_AUTH_HERO_POINT3"));
+        builder.CloseElement();
+        builder.OpenElement(6, "p");
+        builder.AddContent(7, I18n.T("TXT_AUTH_HERO_POINT4"));
+        builder.CloseElement();
+    };
 
     protected override void OnInitialized()
     {
@@ -198,12 +222,6 @@
         I18n.OnChanged -= HandleI18nChanged;
     }
 }
-
-
-
-
-
-
 
 
 

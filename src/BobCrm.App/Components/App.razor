@@ -5,27 +5,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <script>
-        // Earliest boot: apply cached theme/color before CSS to avoid flash
-        (function() {
-            try {
-                var savedTheme = localStorage.getItem('theme') || 'light';
-                var udfColor = localStorage.getItem('udfColor');
-                // Apply theme class ASAP
-                document.documentElement.classList.add(savedTheme === 'dark' ? 'theme-dark' : 'theme-light');
-                // Apply inline variable (overrides any later CSS defaults)
-                if (udfColor) { document.documentElement.style.setProperty('--primary', udfColor); }
-            } catch(e) {}
-        })();
-    </script>
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="_content/AntDesign/css/ant-design-blazor.css" />
     <link rel="stylesheet" href="BobCrm.App.styles.css" />
+    <link rel="stylesheet" href="css/design-tokens.css" />
     <link rel="stylesheet" href="css/theme.css" />
-    <style id="dynamic-theme">
-        /* This will be updated by JavaScript and won't be cleared by Blazor navigation */
-        :root { /* --primary will be set at runtime from defaults/cache */ }
-    </style>
+    <link rel="stylesheet" href="css/components/buttons.css" />
+    <link rel="stylesheet" href="css/components/fields.css" />
+    <link rel="stylesheet" href="css/components/cards.css" />
+    <link rel="stylesheet" href="css/components/layout.css" />
+    <link rel="stylesheet" href="css/components/auth.css" />
+    <link rel="stylesheet" href="css/components/collection.css" />
+    <link rel="stylesheet" href="css/components/designer.css" />
+    <link rel="stylesheet" href="css/components/overlays.css" />
+    <link rel="stylesheet" href="css/ant-overrides.css" />
     <HeadOutlet />
 </head>
 
@@ -33,33 +26,6 @@
     <Routes />
     <script src="dragManager.js"></script>
     <script src="app.js?v=3"></script>
-    <script>
-        // Initialize theme only once on page load
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                // Fetch theme defaults once (public endpoint)
-                const resp = await fetch('/api/theme/defaults', { method: 'GET', credentials: 'omit' });
-                if (resp.ok) {
-                    window.APP_DEFAULTS = await resp.json();
-                }
-            } catch (e) { /* ignore */ }
-            if (window.bobcrm && window.bobcrm.initTheme) { window.bobcrm.initTheme(); }
-
-            // Re-init when toolbar becomes available (only once)
-            let toolbarInitialized = false;
-            const checkToolbar = setInterval(() => {
-                const toolbar = document.querySelector('.toolbar');
-                if (toolbar && !toolbarInitialized) {
-                    toolbarInitialized = true;
-                    if (window.bobcrm && window.bobcrm.initTheme) { window.bobcrm.initTheme(); }
-                    clearInterval(checkToolbar);
-                }
-            }, 100);
-
-            // Clear after 5 seconds
-            setTimeout(() => clearInterval(checkToolbar), 5000);
-        });
-    </script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

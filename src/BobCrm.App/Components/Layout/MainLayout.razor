@@ -1,53 +1,190 @@
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
 @using System.Net.Http.Json
 @using BobCrm.App.Services
+@using AntDesign
 @inject AuthService Auth
 @inject NavigationManager Nav
+@inject ThemeState ThemeState
+@inject LayoutState Layout
+@inject InteractionState Interaction
+@inject I18nService I18n
 @implements IDisposable
 
-@* Moved theme.css to App.razor <head> for stable load order *@
+@* Calm App Shell：左侧 rail + glass sider + 顶部导航 *@
 
-<div class="app-shell">
-    <div class="app-sider">
-        <div class="logo-brand">
-            <h1 class="logo-text">OneCRM</h1>
+<div class="chrome-shell @ThemeState.CurrentTheme">
+    <nav class="chrome-rail">
+        <div class="rail-group">
+            <button class="rail-logo-button" @onclick="@(() => NavigateTo(RootHref))">
+                <span class="sr-only">OneCRM</span>
+                <Icon Type="@IconType.Outline.Appstore" />
+            </button>
         </div>
-        <CustomerSider />
-    </div>
-    <div class="app-main">
-        <AppHeader />
-        <div class="app-content">
-            <div class="app-card">
-                @Body
+        <div class="rail-group">
+            @foreach (var item in _railItems)
+            {
+                <Tooltip Title="@item.Label" Placement="Placement.Right">
+                    <button class="rail-item @(IsActiveRail(item) ? "active" : string.Empty)" @onclick="() => NavigateTo(item.Href)">
+                        <Icon Type="@item.Icon" />
+                    </button>
+                </Tooltip>
+            }
+        </div>
+        <div class="rail-group rail-footer">
+            <Tooltip Title="@I18n.T("MENU_SETTINGS")" Placement="Placement.Right">
+                <button class="rail-item" @onclick="@(() => NavigateTo(SettingsHref))">
+                    <Icon Type="@IconType.Outline.Setting" />
+                </button>
+            </Tooltip>
+        </div>
+    </nav>
+
+    <div class="chrome-app app-shell layout-root @(Layout.IsSiderCollapsed ? "sider-collapsed" : "") @(Layout.IsSiderOverlayOpen ? "sider-overlay-open" : "")">
+        <aside class="layout-sider">
+            <div class="sider-frame">
+                <div class="sider-brand">
+                    <div class="sider-brand-info">
+                        <span class="sider-brand-dot"></span>
+                        <div>
+                            <p class="sider-eyebrow">Workspace</p>
+                            <h3>客户目录</h3>
+                        </div>
+                    </div>
+                    <button class="nav-icon mobile-only" @onclick="CloseOverlay">
+                        <Icon Type="@IconType.Outline.Close" />
+                    </button>
+                </div>
+                <CustomerSider />
+            </div>
+        </aside>
+
+        <div class="layout-main">
+            <AppHeader />
+            <div class="layout-content">
+                <div class="layout-body">
+                    @if (Interaction.IsStickyBarVisible)
+                    {
+                        <div class="sticky-bar">
+                            <div class="sticky-info">
+                                <Icon Type="@IconType.Outline.Filter" />
+                                <span>@Interaction.StickyBarMessage</span>
+                            </div>
+                            <div class="sticky-actions">
+                                @foreach (var action in Interaction.StickyActions)
+                                {
+                                    <Button Type="@(action.Tone == InteractionState.InteractionActionTone.Primary ? ButtonType.Primary : ButtonType.Default)" OnClick="() => InvokeSticky(action.Callback)">
+                                        @action.Label
+                                    </Button>
+                                }
+                                <Button Ghost OnClick="HideSticky">关闭</Button>
+                            </div>
+                        </div>
+                    }
+                    @Body
+                </div>
+                @if (Layout.IsRightPanelVisible)
+                {
+                    <aside class="layout-right-panel">
+                        <div class="right-panel-header">
+                            <span>工作栏</span>
+                            <button class="panel-close" @onclick="ToggleRightPanel">
+                                <Icon Type="@IconType.Outline.Close" />
+                            </button>
+                        </div>
+                        <p class="text-muted">此区域预留给提醒、批量操作或时间线等上下文信息。</p>
+                    </aside>
+                }
             </div>
         </div>
+
+        @if (Layout.IsSiderOverlayOpen)
+        {
+            <button class="sider-mask mobile-only" @onclick="CloseOverlay"></button>
+        }
+
+        <GlobalOverlayHost />
     </div>
 </div>
 
 @code {
+    private const string RootHref = "/";
+    private const string SettingsHref = "/settings";
+    private record RailItem(string Icon, string Label, string Href);
+
+    private readonly RailItem[] _railItems =
+    [
+        new(IconType.Outline.Home, "总览", RootHref),
+        new(IconType.Outline.Team, "客户", "/customers"),
+        new(IconType.Outline.Profile, "实体", "/entity-definitions"),
+        new(IconType.Outline.Appstore, "模板", "/templates")
+    ];
+
     [Parameter] public RenderFragment? Body { get; set; }
 
     protected override void OnInitialized()
     {
-        // 全局订阅认证失败事件：当 token 过期且刷新失败时，统一跳转到登录页
         Auth.OnUnauthorized += HandleUnauthorized;
+        ThemeState.OnChanged += HandleThemeChanged;
+        Layout.OnChanged += HandleLayoutChanged;
+        Nav.LocationChanged += HandleLocationChanged;
     }
 
     private void HandleUnauthorized()
     {
         try
         {
-            // 强制导航到登录页（forceLoad 确保完全刷新）
             Nav.NavigateTo("/login", forceLoad: true);
         }
-        catch
+        catch { }
+    }
+
+    private void HandleThemeChanged() => SafeRender();
+    private void HandleLayoutChanged() => SafeRender();
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) => SafeRender();
+
+    private void SafeRender()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private static string NormalizeRelative(string relative)
+    {
+        var trimmed = relative?.Trim('/') ?? string.Empty;
+        return string.IsNullOrEmpty(trimmed) ? "/" : trimmed;
+    }
+
+    private bool IsActiveRail(RailItem item)
+    {
+        var current = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
+        var target = NormalizeRelative(item.Href);
+        if (target == "/")
         {
-            // 忽略导航错误
+            return current == "/";
+        }
+
+        return current.StartsWith(target, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string href) => Nav.NavigateTo(href);
+
+    private void CloseOverlay() => Layout.SetSiderOverlay(false);
+    private void ToggleRightPanel() => Layout.ToggleRightPanel();
+    private async Task InvokeSticky(Func<Task>? callback)
+    {
+        if (callback != null)
+        {
+            await callback();
         }
     }
+
+    private void HideSticky() => Interaction.HideStickyBar();
 
     public void Dispose()
     {
         Auth.OnUnauthorized -= HandleUnauthorized;
+        ThemeState.OnChanged -= HandleThemeChanged;
+        Layout.OnChanged -= HandleLayoutChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
     }
 }

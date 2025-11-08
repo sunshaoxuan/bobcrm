@@ -1,0 +1,223 @@
+/*
+ * Calm Neumorphic Glass CRM — Design Tokens
+ * 来源：docs/UI/UE设计说明书.md（视觉系统 3.x & 交互 5.x）
+ * 说明：
+ *   1. :root 定义语义不随主题变化的原子 Token（颜色基值、半径、阴影、排版、间距、动效等）。
+ *   2. :root.theme-calm-light / :root.theme-calm-dark 负责将 Token 映射为上下文变量（背景、文字、边框等）。
+ *   3. Utility 类（.u-*) 为常见容器/文字/状态提供快速引用。
+ * 后续若新增主题，新增 .theme-xxx-* 块即可；原子 Token 不得直接修改色值，需先更新设计规范。
+ */
+
+:root {
+  /* Color scale */
+  --color-primary-100: #E8F1FD;
+  --color-primary-500: #8CB4E6;
+  --color-primary-600: #739FD6;
+
+  --color-neutral-900: #1F2937;
+  --color-neutral-700: #4B5563;
+  --color-neutral-500: #94A3B8;
+  --color-neutral-300: #CBD5E1;
+
+  --color-semantic-success-100: #E6F6F1;
+  --color-semantic-success-600: #1FA971;
+  --color-semantic-warning-100: #FFF4E5;
+  --color-semantic-warning-600: #C97A11;
+  --color-semantic-danger-100: #FDECEE;
+  --color-semantic-danger-600: #C2414B;
+  --color-semantic-info-100: #E9F0FE;
+  --color-semantic-info-600: #4D7BD6;
+
+  /* Typography */
+  --font-family-base: "Inter", "SF Pro", "Noto Sans JP", "Microsoft YaHei", sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+  --font-display-size: 24px;
+  --font-display-line: 32px;
+  --font-display-weight: 600;
+  --font-title-size: 20px;
+  --font-title-line: 28px;
+  --font-title-weight: 600;
+  --font-subtitle-size: 16px;
+  --font-subtitle-line: 24px;
+  --font-subtitle-weight: 500;
+  --font-body-size: 14px;
+  --font-body-line: 22px;
+  --font-body-weight: 400;
+  --font-meta-size: 12px;
+  --font-meta-line: 18px;
+  --font-meta-weight: 400;
+  --font-letter-spacing: 0.2px;
+
+  /* Radius & spacing */
+  --radius-soft: 12px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-7: 48px;
+
+  /* Elevation & blur */
+  --shadow-flat: none;
+  --shadow-raised: 0 6px 18px rgba(15, 23, 42, 0.08), -2px -2px 6px rgba(255, 255, 255, 0.6) inset;
+  --shadow-pressed: inset 2px 2px 6px rgba(15, 23, 42, 0.10), inset -2px -2px 6px rgba(255, 255, 255, 0.55);
+  --blur-surface: 16px;
+  --blur-elevated: 20px;
+  --overlay-backdrop: rgba(12, 16, 26, 0.45);
+
+  /* Motion & focus */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --motion-emphasize: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-hover: ease-out;
+  --focus-ring: 0 0 0 3px rgba(115, 159, 214, 0.25);
+
+  /* Default (light) contextual tokens — overridden by theme classes */
+  --surface-base: #F3F6FA;
+  --surface-glass: rgba(255, 255, 255, 0.70);
+  --surface-elevated: rgba(255, 255, 255, 0.82);
+  --surface-overlay: rgba(243, 246, 250, 0.92);
+  --text-primary: var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-700);
+  --text-muted: var(--color-neutral-500);
+  --border-soft: rgba(10, 20, 40, 0.08);
+  --border-strong: rgba(10, 20, 40, 0.16);
+  --sider-bg: rgba(10, 20, 40, 0.75);
+  --header-bg: var(--surface-glass);
+  --focus-ring-color: rgba(115, 159, 214, 0.25);
+  --primary: var(--color-primary-600);
+  --primary-contrast: #ffffff;
+
+  /* Legacy bridge (will be removed once所有样式完成迁移) */
+  --bg: var(--surface-base);
+  --card-bg: var(--surface-glass);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-soft);
+  --shadow: var(--shadow-raised);
+
+  /* Designer specific */
+  --designer-selected-border: var(--primary);
+  --designer-selected-shadow: rgba(115, 159, 214, 0.35);
+  --designer-handle-color: var(--primary);
+  --designer-handle-hover: rgba(115, 159, 214, 0.12);
+}
+
+:root.theme-calm-light {
+  --surface-base: #F3F6FA;
+  --surface-glass: rgba(255, 255, 255, 0.70);
+  --surface-elevated: rgba(255, 255, 255, 0.82);
+  --surface-overlay: rgba(255, 255, 255, 0.92);
+  --text-primary: var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-700);
+  --text-muted: var(--color-neutral-500);
+  --border-soft: rgba(10, 20, 40, 0.08);
+  --border-strong: rgba(10, 20, 40, 0.18);
+  --sider-bg: rgba(10, 20, 40, 0.78);
+  --header-bg: rgba(255, 255, 255, 0.82);
+  --shadow-raised: 0 6px 18px rgba(15, 23, 42, 0.08), -2px -2px 6px rgba(255, 255, 255, 0.6) inset;
+  --shadow-pressed: inset 2px 2px 6px rgba(15, 23, 42, 0.10), inset -2px -2px 6px rgba(255, 255, 255, 0.55);
+  --focus-ring-color: rgba(115, 159, 214, 0.25);
+  --primary: var(--color-primary-600);
+  --primary-contrast: #ffffff;
+  --overlay-backdrop: rgba(8, 12, 24, 0.35);
+  --bg: var(--surface-base);
+  --card-bg: var(--surface-glass);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-soft);
+  --shadow: var(--shadow-raised);
+}
+
+:root.theme-calm-dark {
+  --surface-base: #0F1520;
+  --surface-glass: rgba(16, 20, 30, 0.55);
+  --surface-elevated: rgba(18, 24, 38, 0.72);
+  --surface-overlay: rgba(12, 16, 26, 0.88);
+  --text-primary: #E5E7EB;
+  --text-secondary: #9AA4B2;
+  --text-muted: rgba(154, 164, 178, 0.85);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --sider-bg: rgba(5, 8, 15, 0.85);
+  --header-bg: rgba(12, 18, 30, 0.85);
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(115, 159, 214, 0.25);
+  --shadow-pressed: inset 2px 2px 6px rgba(0, 0, 0, 0.35), inset -2px -2px 6px rgba(255, 255, 255, 0.18);
+  --focus-ring-color: rgba(115, 159, 214, 0.35);
+  --primary: var(--color-primary-500);
+  --primary-contrast: #ffffff;
+  --overlay-backdrop: rgba(0, 0, 0, 0.65);
+  --bg: var(--surface-base);
+  --card-bg: var(--surface-glass);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-soft);
+  --shadow: var(--shadow-raised);
+}
+
+/* Utility classes */
+.u-glass-surface {
+  background: var(--surface-glass);
+  backdrop-filter: blur(var(--blur-surface));
+  -webkit-backdrop-filter: blur(var(--blur-surface));
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-flat);
+}
+
+.u-glass-elevated {
+  background: var(--surface-elevated);
+  backdrop-filter: blur(var(--blur-elevated));
+  -webkit-backdrop-filter: blur(var(--blur-elevated));
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-raised);
+}
+
+.u-elev-flat { box-shadow: var(--shadow-flat); border: 1px solid var(--border-soft); }
+.u-elev-raised { box-shadow: var(--shadow-raised); }
+.u-elev-pressed { box-shadow: var(--shadow-pressed); }
+
+.u-text-display { font-size: var(--font-display-size); line-height: var(--font-display-line); font-weight: var(--font-display-weight); }
+.u-text-title { font-size: var(--font-title-size); line-height: var(--font-title-line); font-weight: var(--font-title-weight); }
+.u-text-subtitle { font-size: var(--font-subtitle-size); line-height: var(--font-subtitle-line); font-weight: var(--font-subtitle-weight); }
+.u-text-body { font-size: var(--font-body-size); line-height: var(--font-body-line); font-weight: var(--font-body-weight); }
+.u-text-meta { font-size: var(--font-meta-size); line-height: var(--font-meta-line); font-weight: var(--font-meta-weight); text-transform: uppercase; letter-spacing: var(--font-letter-spacing); }
+
+.u-focusable {
+  outline: none;
+  transition: box-shadow var(--motion-fast) var(--motion-emphasize);
+}
+.u-focusable:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.u-spacing-stack > * + * { margin-top: var(--spacing-4); }
+.u-spacing-inline { gap: var(--spacing-4); }
+
+/* Button baseline (用于后续组件覆写引用，可选) */
+.u-btn {
+  font-family: var(--font-family-base);
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  letter-spacing: var(--font-letter-spacing);
+  border-radius: var(--radius-pill);
+  height: 40px;
+  padding: 0 var(--spacing-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+  transition: all var(--motion-fast) var(--motion-emphasize);
+  border: none;
+}
+
+.u-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

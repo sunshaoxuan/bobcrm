@@ -1,0 +1,104 @@
+@using BobCrm.App.Services
+@inject NavigationManager Nav
+
+<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown notification-popover">
+    <ChildContent>
+        <button class="nav-icon notification-trigger" title="@I18nKey">
+            <Icon Type="@IconType.Outline.Bell" />
+            @if (UnreadCount > 0)
+            {
+                <span class="notification-badge">@UnreadCount</span>
+            }
+        </button>
+    </ChildContent>
+    <Overlay>
+        <div class="calm-dropdown-panel notification-panel">
+            <div class="notification-header">
+                <div>
+                    <strong>@Localize("LBL_NOTIFICATIONS")</strong>
+                    <p>@Localize("TXT_NOTIFICATION_SUBTITLE")</p>
+                </div>
+                <button class="notification-action" @onclick="MarkAllRead">@Localize("BTN_MARK_ALL_READ")</button>
+            </div>
+            @if (_items.Count == 0)
+            {
+                <div class="notification-empty">@Localize("TXT_NOTIFICATION_EMPTY")</div>
+            }
+            else
+            {
+                <ul class="notification-list">
+                    @foreach (var item in _items)
+                    {
+                        <li class="@($"notification-item {(item.IsUnread ? "is-unread" : string.Empty)}")">
+                            <div class="notification-icon @item.Tone">
+                                <Icon Type="@item.Icon" />
+                            </div>
+                            <div class="notification-body">
+                                <strong>@Localize(item.Title)</strong>
+                                <p>@Localize(item.Description)</p>
+                                <span>@item.TimeAgo</span>
+                            </div>
+                            <button class="notification-close" title='@Localize("BTN_DISMISS")' @onclick='() => Dismiss(item)'>
+                                <Icon Type="@IconType.Outline.Close" />
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+            <div class="notification-footer">
+                <button class="notification-action" @onclick='() => Nav.NavigateTo("/customers")'>@Localize("BTN_VIEW_DETAIL")</button>
+            </div>
+        </div>
+    </Overlay>
+</Dropdown>
+
+@code {
+    [Parameter] public Func<string, string>? Localizer { get; set; }
+
+    private readonly Trigger[] _trigger = [Trigger.Click];
+    private readonly List<NotificationItem> _items =
+    [
+        new("LBL_NOTIF_APPROVAL", "TXT_NOTIF_APPROVAL_DESC", "5m ago", IconType.Outline.Check, "success"),
+        new("LBL_NOTIF_IMPORT", "TXT_NOTIF_IMPORT_DESC", "18m ago", IconType.Outline.Upload, "info"),
+        new("LBL_NOTIF_INCIDENT", "TXT_NOTIF_INCIDENT_DESC", "1h ago", IconType.Outline.Warning, "danger", true)
+    ];
+
+    private string I18nKey => Localize("LBL_NOTIFICATIONS");
+
+    private int UnreadCount => _items.Count(i => i.IsUnread);
+
+    private void MarkAllRead()
+    {
+        foreach (var item in _items)
+        {
+            item.IsUnread = false;
+        }
+    }
+
+    private void Dismiss(NotificationItem item)
+    {
+        _items.Remove(item);
+    }
+
+    private string Localize(string key) => Localizer?.Invoke(key) ?? key;
+
+    private class NotificationItem
+    {
+        public NotificationItem(string titleKey, string descKey, string timeAgo, string icon, string tone, bool unread = false)
+        {
+            Title = titleKey;
+            Description = descKey;
+            TimeAgo = timeAgo;
+            Icon = icon;
+            Tone = tone;
+            IsUnread = unread;
+        }
+
+        public string Title { get; }
+        public string Description { get; }
+        public string TimeAgo { get; }
+        public string Icon { get; }
+        public string Tone { get; }
+        public bool IsUnread { get; set; }
+    }
+}

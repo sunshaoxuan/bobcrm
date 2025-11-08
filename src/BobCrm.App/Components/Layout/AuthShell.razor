@@ -1,0 +1,95 @@
+@using BobCrm.App.Services
+@inject I18nService I18n
+
+<div class="auth-shell">
+    <section class="auth-hero">
+        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+        {
+            <p class="auth-eyebrow">@Eyebrow</p>
+        }
+        <h1>@HeroTitle</h1>
+        @if (!string.IsNullOrWhiteSpace(HeroSubtitle))
+        {
+            <p class="auth-hero-subtitle">@HeroSubtitle</p>
+        }
+        @if (HeroContent is not null)
+        {
+            <div class="auth-hero-content">
+                @HeroContent
+            </div>
+        }
+    </section>
+    <section class="auth-panel">
+        <header class="auth-panel-header">
+            <div class="auth-brand">OneCRM</div>
+            <div class="auth-lang-toggle">
+                @foreach (var lang in _languages)
+                {
+                    <button class="@(IsCurrentLang(lang.Code) ? "active" : string.Empty)" @onclick="() => SwitchLangAsync(lang.Code)">
+                        @lang.Label
+                    </button>
+                }
+            </div>
+        </header>
+        <div class="auth-panel-body">
+            @if (!string.IsNullOrWhiteSpace(PanelEyebrow))
+            {
+                <p class="auth-eyebrow">@PanelEyebrow</p>
+            }
+            <h2>@FormTitle</h2>
+            @if (!string.IsNullOrWhiteSpace(FormDescription))
+            {
+                <p class="auth-panel-desc">@FormDescription</p>
+            }
+            @ChildContent
+        </div>
+        @if (Footer is not null)
+        {
+            <footer class="auth-panel-footer">
+                @Footer
+            </footer>
+        }
+    </section>
+</div>
+
+@code {
+    private readonly AuthLanguage[] _languages =
+    [
+        new("zh", "中文"),
+        new("ja", "日本語"),
+        new("en", "EN")
+    ];
+
+    [Parameter] public string HeroTitle { get; set; } = "Calm CRM";
+    [Parameter] public string? HeroSubtitle { get; set; }
+    [Parameter] public string? Eyebrow { get; set; }
+    [Parameter] public RenderFragment? HeroContent { get; set; }
+    [Parameter] public string FormTitle { get; set; } = string.Empty;
+    [Parameter] public string? PanelEyebrow { get; set; }
+    [Parameter] public string? FormDescription { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool IsCurrentLang(string code) =>
+        string.Equals(I18n.CurrentLang, code, StringComparison.OrdinalIgnoreCase);
+
+    private async Task SwitchLangAsync(string code)
+    {
+        if (IsCurrentLang(code))
+        {
+            return;
+        }
+
+        try
+        {
+            await I18n.LoadAsync(code);
+            StateHasChanged();
+        }
+        catch
+        {
+            // ignore network errors here; UI 会保留当前语言
+        }
+    }
+
+    private record AuthLanguage(string Code, string Label);
+}

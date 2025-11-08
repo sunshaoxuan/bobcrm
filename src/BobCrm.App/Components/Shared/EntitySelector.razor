@@ -2,19 +2,20 @@
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
-<div style="position:relative">
-    <Input Value="@DisplayText" 
-           Placeholder="@Placeholder" 
-           ReadOnly 
-           Style="@($"width:100%; padding-right:32px; cursor:pointer; {(Disabled ? "background:#f5f5f5" : "")}")"
+<div class="@($"entity-selector-trigger {(Disabled ? "is-disabled" : string.Empty)}")">
+    <Input Value="@DisplayText"
+           Placeholder="@Placeholder"
+           ReadOnly
+           Class="entity-selector-input field-control"
            Disabled="@Disabled"
            @onclick="OpenSelector" />
-    <Icon Type="@IconType.Outline.Search" 
-          Style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:16px; color:#bfbfbf; cursor:pointer; pointer-events:auto"
+    <Icon Type="@IconType.Outline.Search"
+          Class="entity-selector-trigger-icon"
           @onclick="OpenSelector" />
 </div>
 
 <Modal Title="@Title"
+       WrapClassName="calm-modal"
        Visible="@modalVisible"
        OnOk="@(() => modalVisible = false)"
        OnCancel="@(() => modalVisible = false)"
@@ -22,9 +23,9 @@
        Width="700">
     @if (loading)
     {
-        <div style="text-align:center; padding:60px 0">
+        <div class="entity-selector-feedback">
             <Spin Size="@("large")" />
-            <div style="margin-top:16px; color:#999; font-size:14px">@I18n.T("LBL_LOADING")</div>
+            <div>@I18n.T("LBL_LOADING")</div>
         </div>
     }
     else if (string.IsNullOrWhiteSpace(errorMessage) == false)
@@ -45,7 +46,7 @@
     {
         @if (EnableSearch && dataSource.Count > 5)
         {
-            <div style="margin-bottom:16px">
+            <div class="entity-selector-search">
                 <Input @bind-Value="searchKeyword" 
                        Placeholder="@I18n.T("LBL_SEARCH_PLACEHOLDER")" 
                        AllowClear 
@@ -53,61 +54,50 @@
             </div>
         }
         
-        <div style="max-height:450px; overflow-y:auto">
+        <div class="entity-selector-list">
             @foreach (var item in filteredData)
             {
                 <div @onclick="@(() => SelectItem(item))" 
-                     class="entity-selector-item"
-                     style="cursor:pointer; padding:16px; border:1px solid #f0f0f0; margin-bottom:8px; border-radius:6px; display:flex; align-items:center; gap:16px; transition:all 0.2s; background:#fff"
-                     @onmouseenter="@((MouseEventArgs e) => {})"
-                     @onmouseleave="@((MouseEventArgs e) => {})">
+                     class="entity-selector-item">
                     @if (IconRenderer != null)
                     {
-                        <div style="flex-shrink:0">
+                        <div class="entity-selector-avatar">
                             @IconRenderer(item)
                         </div>
                     }
-                    <div style="flex:1; min-width:0">
+                    <div class="entity-selector-content">
                         @if (TitleRenderer != null)
                         {
-                            <div style="font-weight:600; font-size:15px; color:#262626; margin-bottom:4px">
+                            <div class="entity-selector-title">
                                 @TitleRenderer(item)
                             </div>
                         }
                         @if (DescriptionRenderer != null)
                         {
-                            <div style="font-size:13px; color:#8c8c8c; margin-bottom:6px">
+                            <div class="entity-selector-description">
                                 @DescriptionRenderer(item)
                             </div>
                         }
                         @if (MetadataRenderer != null)
                         {
-                            <div style="font-size:12px; color:#bfbfbf">
+                            <div class="entity-selector-meta">
                                 @MetadataRenderer(item)
                             </div>
                         }
                     </div>
-                    <Icon Type="@IconType.Outline.Right" Style="color:#d9d9d9; flex-shrink:0" />
+                    <Icon Type="@IconType.Outline.Right" Class="entity-selector-chevron" />
                 </div>
             }
         </div>
         
         @if (filteredData.Count < dataSource.Count)
         {
-            <div style="margin-top:12px; padding:8px; text-align:center; color:#999; font-size:12px; background:#fafafa; border-radius:4px">
+            <div class="entity-selector-empty-tip">
                 @I18n.T("LBL_SHOWING") @filteredData.Count / @dataSource.Count @I18n.T("LBL_ITEMS")
             </div>
         }
     }
 </Modal>
-
-<style>
-    .entity-selector-item:hover {
-        border-color: #1890ff !important;
-        background: #f0f8ff !important;
-        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1) !important;
-    }
-</style>
 
 @code {
     [Parameter] public string? Value { get; set; }

@@ -1,44 +1,51 @@
 @using Microsoft.AspNetCore.Components
+@using AntDesign
+@using BobCrm.App.Services
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
+@inject LayoutState Layout
 
 <div class="customer-sider">
-  <div style="padding:8px">
-    <input type="text"
-           placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")'
-           @bind="keyword"
-           style="width:100%; padding:6px; border:1px solid #d0d0d0; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; font-size:13px; margin-bottom:8px" />
-    <button @onclick="CreateNew" class="btn-new-customer">
-      + @I18n.T("BTN_NEW_CUSTOMER")
-    </button>
+  <div class="sider-search-box">
+    <div class="sider-search-field">
+        <Icon Type="@IconType.Outline.Search" />
+        <input type="text"
+               placeholder='@($"{I18n.T("LBL_SEARCH")}{I18n.T("COL_NAME")}/{I18n.T("COL_CODE")}")'
+               @bind="keyword" />
+    </div>
+    <div class="sider-actions">
+        <button @onclick="CreateNew" class="btn btn-primary">
+            + @I18n.T("BTN_NEW_CUSTOMER")
+        </button>
+    </div>
   </div>
   @if (!string.IsNullOrWhiteSpace(error))
   {
-    <div style="padding:8px; color:#ff6b6b; font-size:12px">@error</div>
+    <div class="sider-message">@error</div>
   }
-  @if (loading)
+  else if (loading)
   {
-    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_LOADING")...</div>
+    <div class="sider-message loading">@I18n.T("LBL_LOADING")...</div>
   }
-  
-  @* Always show the list, even if empty *@
-  <ul class="sider-list" style="list-style:none; padding:0; margin:0; max-height:600px; overflow-y:auto">
+  <ul class="sider-list">
     @foreach (var c in Filtered())
     {
       var cls = c.id == selectedId ? "sider-item selected" : "sider-item";
-      <li class="@cls" @onclick="(() => Go(c.id))" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.1)">
-        <div class="code" style="font-weight:600; font-size:13px; color:#fff; margin-bottom:2px">@c.code</div>
-        <div class="name" style="font-size:12px; color:rgba(255,255,255,0.7)">@c.name</div>
+      <li class="@cls" @onclick="(() => SelectAndGo(c.id))">
+        <div>
+          <div class="name">@c.name</div>
+          <div class="code">@c.code</div>
+        </div>
+        <Icon Type="@IconType.Outline.Right" />
       </li>
     }
   </ul>
-  
   @if (!loading && _data.Count == 0 && string.IsNullOrWhiteSpace(error))
   {
-    <div style="padding:16px; text-align:center; color:rgba(255,255,255,0.6)">@I18n.T("LBL_NOT_FOUND")</div>
+    <div class="sider-empty">@I18n.T("LBL_NOT_FOUND")</div>
   }
 </div>
 
@@ -131,9 +138,10 @@
     return _data.Where(x => (x.name ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase) || (x.code ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase));
   }
 
-  private void Go(int id)
+  private void SelectAndGo(int id)
   {
     Nav.NavigateTo($"/customer/{id}");
+    Layout.SetSiderOverlay(false);
   }
 
   private void CreateNew()

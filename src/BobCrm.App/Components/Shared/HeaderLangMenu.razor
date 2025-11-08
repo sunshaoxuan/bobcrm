@@ -1,0 +1,97 @@
+@using BobCrm.App.Services
+@inject I18nService I18n
+@inject IHttpClientFactory HttpFactory
+
+<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown">
+    <ChildContent>
+        <button class="nav-icon" title="@CurrentLangLabel">
+            <span>@CurrentLangCode.ToUpper()</span>
+        </button>
+    </ChildContent>
+    <Overlay>
+        <div class="calm-dropdown-panel">
+            <div class="calm-dropdown-menu">
+                @if (_isLoading)
+                {
+                    <div class="notification-empty">@I18n.T("LBL_LOADING")</div>
+                }
+                else
+                {
+                    @foreach (var lang in _languages)
+                    {
+                        <button type="button" @onclick="() => SwitchAsync(lang.Code)">
+                            @lang.Name
+                            <span>@lang.Code.ToUpper()</span>
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </Overlay>
+</Dropdown>
+
+@code {
+    private readonly Trigger[] _trigger = [Trigger.Click];
+    private readonly List<LanguageDto> _languages = [];
+    private bool _isLoading;
+
+    private string CurrentLangCode => I18n.CurrentLang;
+    private string CurrentLangLabel
+        => _languages.FirstOrDefault(l => string.Equals(l.Code, CurrentLangCode, StringComparison.OrdinalIgnoreCase))?.Name
+           ?? CurrentLangCode.ToUpperInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLanguagesAsync();
+    }
+
+    private async Task LoadLanguagesAsync()
+    {
+        _isLoading = true;
+        _languages.Clear();
+        try
+        {
+            var client = HttpFactory.CreateClient("api");
+            var resp = await client.GetAsync("/api/i18n/languages");
+            if (resp.IsSuccessStatusCode)
+            {
+                var result = await resp.Content.ReadFromJsonAsync<List<LanguageDto>>();
+                if (result is not null && result.Count > 0)
+                {
+                    _languages.AddRange(result.OrderBy(l => l.Name));
+                }
+            }
+        }
+        catch
+        {
+            // fallback to default
+        }
+        finally
+        {
+            if (_languages.Count == 0)
+            {
+                _languages.AddRange(new[]
+                {
+                    new LanguageDto("zh", "中文"),
+                    new LanguageDto("ja", "日本語"),
+                    new LanguageDto("en", "English")
+                });
+            }
+
+            _isLoading = false;
+        }
+    }
+
+    private async Task SwitchAsync(string code)
+    {
+        if (string.Equals(code, I18n.CurrentLang, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await I18n.LoadAsync(code);
+        StateHasChanged();
+    }
+
+    private record LanguageDto(string Code, string Name);
+}

@@ -1,37 +1,46 @@
 @page "/register"
 
 @inject BobCrm.App.Services.I18nService I18n
+@layout BobCrm.App.Components.Layout.AuthLayout
 
-<h1>@I18n.T("LBL_REGISTER")</h1>
-
-<EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
-    <DataAnnotationsValidator />
-    <div style="max-width:420px;">
-        <FormItem Label='@I18n.T("LBL_USERNAME")'>
-            <Input @bind-Value="_model.Username" />
-        </FormItem>
-        <FormItem Label='@I18n.T("LBL_EMAIL")'>
-            <Input @bind-Value="_model.Email" />
-        </FormItem>
-        <FormItem Label='@I18n.T("LBL_PASSWORD")'>
-            <InputPassword @bind-Value="_model.Password" />
-        </FormItem>
-        <FormItem>
-            <Button Type="primary" OnClick="HandleRegisterAsync">@I18n.T("BTN_REGISTER")</Button>
-        </FormItem>
-    </div>
-    <ValidationSummary />
-    <div>@_error</div>
-</EditForm>
-
-<div style="margin-top:16px; color:#888;">
-    @I18n.T("TXT_REGISTER_HELP") <a href="/activate">@I18n.T("LBL_ACTIVATE_TITLE")</a>
-    
-</div>
+<AuthShell HeroTitle='@I18n.T("TXT_AUTH_REGISTER_TITLE")'
+           HeroSubtitle='@I18n.T("TXT_AUTH_REGISTER_SUBTITLE")'
+           Eyebrow='@I18n.T("LBL_SECURE")'
+           PanelEyebrow='@I18n.T("LBL_CREATE_ACCOUNT")'
+           FormTitle='@I18n.T("LBL_REGISTER")'
+           FormDescription='@I18n.T("TXT_REGISTER_DESCRIPTION")'>
+    <ChildContent>
+        <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync" class="auth-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="auth-message error" />
+            <div class="auth-field">
+                <label for="register-username">@I18n.T("LBL_USERNAME")</label>
+                <Input id="register-username" @bind-Value="_model.Username" Class="field-control" />
+            </div>
+            <div class="auth-field">
+                <label for="register-email">@I18n.T("LBL_EMAIL")</label>
+                <Input id="register-email" @bind-Value="_model.Email" Class="field-control" />
+            </div>
+            <div class="auth-field">
+                <label for="register-password">@I18n.T("LBL_PASSWORD")</label>
+                <Input id="register-password" Password="true" @bind-Value="_model.Password" Class="field-control" />
+            </div>
+            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="_submitting">@I18n.T("BTN_REGISTER")</Button>
+        </EditForm>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="auth-message error">@_error</div>
+        }
+    </ChildContent>
+    <Footer>
+        <span>@I18n.T("TXT_REGISTER_HELP") <a href="/activate">@I18n.T("LBL_ACTIVATE_TITLE")</a></span>
+    </Footer>
+</AuthShell>
 
 @code {
     private RegModel _model = new();
     private string? _error;
+    private bool _submitting;
 
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
@@ -54,23 +63,42 @@
 
     private async Task HandleRegisterAsync()
     {
+        _submitting = true;
+        _error = null;
         try
         {
             var http = HttpFactory.CreateClient("api");
-            // attach X-Lang header
-            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
+            try
+            {
+                var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
+                if (!string.IsNullOrWhiteSpace(lang))
+                {
+                    if (http.DefaultRequestHeaders.Contains("X-Lang"))
+                    {
+                        http.DefaultRequestHeaders.Remove("X-Lang");
+                    }
+                    http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant());
+                }
+            }
+            catch { }
+
             var resp = await http.PostAsJsonAsync("/api/auth/register", new { username = _model.Username, password = _model.Password, email = _model.Email });
             if (!resp.IsSuccessStatusCode)
             {
                 _error = await resp.Content.ReadAsStringAsync();
                 return;
             }
+
             await Message.Success(I18n.T("MSG_REGISTER_SUCCESS"));
             Nav.NavigateTo("/activate");
         }
         catch (Exception ex)
         {
             _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
         }
     }
 

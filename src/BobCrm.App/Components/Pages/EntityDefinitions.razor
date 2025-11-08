@@ -4,26 +4,43 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
 @using BobCrm.App.Models
+@using System.Linq
 
 <AuthChecker>
-    <PageHeader Title="实体定义管理" SubTitle="管理系统和自定义实体定义">
-        <PageHeaderExtra>
-            <Space>
-                <SpaceItem>
-                    <Button Type="@ButtonType.Primary" OnClick="NavigateToCreate">
-                        <Icon Type="plus" /> 新建实体
-                    </Button>
-                </SpaceItem>
-                <SpaceItem>
-                    <Button OnClick="LoadData">
-                        <Icon Type="reload" /> 刷新
-                    </Button>
-                </SpaceItem>
-            </Space>
-        </PageHeaderExtra>
-    </PageHeader>
+    <div class="collection-shell">
+        <CollectionHeader Title="@I18n.T("LBL_ENTITY_DEFINITION_MANAGEMENT")"
+                          Subtitle="@I18n.T("TXT_ENTITY_DEFINITION_DESC")"
+                          Eyebrow="@I18n.T("LBL_COLLECTION")">
+            <Actions>
+                <Button Type="@ButtonType.Default" OnClick="LoadData" Icon="@IconType.Outline.Reload">
+                    @I18n.T("BTN_REFRESH")
+                </Button>
+                <Button Type="@ButtonType.Primary" OnClick="NavigateToCreate" Icon="@IconType.Outline.Plus">
+                    @I18n.T("BTN_NEW_ENTITY")
+                </Button>
+            </Actions>
+            <Filters>
+                <div class="collection-search">
+                    <Input Placeholder="@I18n.T("LBL_SEARCH")" PrefixIcon="@IconType.Outline.Search" AllowClear @bind-Value="_search" Class="field-control" />
+                </div>
+                <Select TItemValue="string" TItem="string" @bind-Value="_sourceFilter" Style="min-width:160px">
+                    <SelectOption Value="@("all")">@I18n.T("LBL_SOURCE_ALL")</SelectOption>
+                    <SelectOption Value="@("system")">@I18n.T("LBL_SOURCE_SYSTEM")</SelectOption>
+                    <SelectOption Value="@("custom")">@I18n.T("LBL_SOURCE_CUSTOM")</SelectOption>
+                </Select>
+                <Select TItemValue="string" TItem="string" @bind-Value="_statusFilter" Style="min-width:160px">
+                    <SelectOption Value="@("all")">@I18n.T("LBL_STATUS_ALL")</SelectOption>
+                    <SelectOption Value="@("published")">@I18n.T("LBL_STATUS_PUBLISHED")</SelectOption>
+                    <SelectOption Value="@("draft")">@I18n.T("LBL_STATUS_DRAFT")</SelectOption>
+                </Select>
+            </Filters>
+        </CollectionHeader>
 
-    @if (_loading)
+        @{
+            var filtered = FilteredEntities().ToList();
+        }
+
+        @if (_loading)
     {
         <div style="text-align: center; padding: 50px;">
             <Spin Size="large" />
@@ -34,25 +51,29 @@
         <Card>
             <Tabs DefaultActiveKey="all">
                 <TabPane Key="all" Tab="全部">
-                    <EntityDefinitionsTable Entities="@_entities" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                    <EntityDefinitionsTable Entities="@filtered" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
                 <TabPane Key="system" Tab="系统实体">
-                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Source == EntitySource.System).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                    <EntityDefinitionsTable Entities="@filtered.Where(e => e.Source == EntitySource.System).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
                 <TabPane Key="custom" Tab="自定义实体">
-                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Source == EntitySource.Custom).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                    <EntityDefinitionsTable Entities="@filtered.Where(e => e.Source == EntitySource.Custom).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
                 <TabPane Key="draft" Tab="草稿">
-                    <EntityDefinitionsTable Entities="@_entities.Where(e => e.Status == EntityStatus.Draft).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
+                    <EntityDefinitionsTable Entities="@filtered.Where(e => e.Status == EntityStatus.Draft).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
             </Tabs>
         </Card>
     }
+    </div>
 </AuthChecker>
 
 @code {
     private bool _loading = false;
     private List<EntityDefinitionDto> _entities = new();
+    private string _search = string.Empty;
+    private string _sourceFilter = "all";
+    private string _statusFilter = "all";
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,6 +97,32 @@
         }
     }
 
+    private IEnumerable<EntityDefinitionDto> FilteredEntities()
+    {
+        var query = _entities.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            query = query.Where(e =>
+                (I18n.T(e.DisplayNameKey)).Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || e.EntityName.Contains(_search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_sourceFilter != "all")
+        {
+            query = query.Where(e => (_sourceFilter == "system" && e.Source == EntitySource.System)
+                                     || (_sourceFilter == "custom" && e.Source == EntitySource.Custom));
+        }
+
+        if (_statusFilter != "all")
+        {
+            query = query.Where(e => (_statusFilter == "published" && e.Status == EntityStatus.Published)
+                                     || (_statusFilter == "draft" && e.Status == EntityStatus.Draft));
+        }
+
+        return query;
+    }
+
     private void NavigateToCreate()
     {
         Nav.NavigateTo("/entity-definitions/create");
@@ -97,6 +144,7 @@
         {
             Title = "确认删除",
             Content = "确定要删除此实体定义吗？此操作不可恢复。",
+            ClassName = "calm-modal",
             OkText = "删除",
             CancelText = "取消",
             OkType = "danger"

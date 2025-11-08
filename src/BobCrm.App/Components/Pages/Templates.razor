@@ -12,11 +12,11 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
         <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">模板管理</h2>
         <div style="display:flex; gap:12px; align-items:center">
-            <select @onchange="OnGroupByChanged" class="group-selector" value="@groupBy">
+            <select @onchange="OnGroupByChanged" class="field-control" style="width:200px" value="@groupBy">
                 <option value="none">平铺列表</option>
                 <option value="entity">按实体分组</option>
             </select>
-            <button @onclick="CreateNewTemplate" class="btn-primary">
+            <button @onclick="CreateNewTemplate" class="btn btn-primary">
                 ➕ 新建模板
             </button>
         </div>
@@ -64,7 +64,7 @@
         }
         else
         {
-            <div class="info-card">
+            <div class="panel info-card">
                 <div class="info-icon">ℹ️</div>
                 <div class="info-content">
                     <div class="info-title">暂无模板</div>
@@ -77,41 +77,12 @@
 
         @if (!string.IsNullOrWhiteSpace(message))
         {
-            <div class="message-box @(messageSuccess ? "success" : "error")">
-                @message
-            </div>
+            <Alert Message="@message" Type="@(messageSuccess ? AlertType.Success : AlertType.Error)" ShowIcon="true" />
         }
     }
 </div>
 
 <style>
-    .group-selector {
-        padding: 8px 12px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--card-bg);
-        color: var(--text);
-        font-size: 14px;
-        cursor: pointer;
-    }
-
-    .btn-primary {
-        padding: 8px 16px;
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-primary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-
     .template-section {
         margin-bottom: 32px;
     }
@@ -126,20 +97,10 @@
     }
 
     .template-card {
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 20px;
-        transition: all 0.2s;
-    }
-
-    .template-card:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-color: var(--primary);
     }
 
     .template-info {
@@ -159,28 +120,6 @@
         margin-bottom: 8px;
     }
 
-    .badge {
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 500;
-    }
-
-    .badge-default {
-        background: #e3f2fd;
-        color: #1976d2;
-    }
-
-    .badge-system {
-        background: #f3e5f5;
-        color: #7b1fa2;
-    }
-
-    .badge-entity {
-        background: #e8f5e9;
-        color: #388e3c;
-    }
-
     .template-desc {
         font-size: 13px;
         color: var(--muted);
@@ -197,44 +136,8 @@
         gap: 8px;
     }
 
-    .btn-action {
-        padding: 6px 12px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--card-bg);
-        color: var(--text);
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-action:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-    }
-
-    .btn-action:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .btn-danger {
-        color: #d32f2f;
-    }
-
-    .btn-danger:hover {
-        background: #d32f2f;
-        color: white;
-        border-color: #d32f2f;
-    }
-
     .info-card {
-        background: linear-gradient(135deg, rgba(63, 124, 255, 0.05) 0%, rgba(63, 124, 255, 0.02) 100%);
-        border: 1px solid var(--border);
         border-left: 4px solid var(--primary);
-        border-radius: 8px;
-        padding: 24px;
         display: flex;
         gap: 16px;
         align-items: flex-start;
@@ -259,30 +162,6 @@
         font-size: 14px;
         color: var(--muted);
         line-height: 1.6;
-    }
-
-    .message-box {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 6px;
-        font-size: 14px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        animation: slideIn 0.3s ease;
-        z-index: 1000;
-    }
-
-    .message-box.success {
-        background: #f0f9ff;
-        color: #0c4a6e;
-        border: 1px solid #7dd3fc;
-    }
-
-    .message-box.error {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fca5a5;
     }
 
     @@keyframes slideIn {
@@ -458,7 +337,7 @@
     private RenderFragment RenderTemplateCard(FormTemplate template) => builder =>
     {
         builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "template-card");
+        builder.AddAttribute(1, "class", "card template-card");
 
         // 模板信息
         builder.OpenElement(2, "div");
@@ -485,15 +364,15 @@
         if (template.IsSystemDefault)
         {
             builder.OpenElement(12, "span");
-            builder.AddAttribute(13, "class", "badge badge-system");
+            builder.AddAttribute(13, "class", "badge badge-info");
             builder.AddContent(14, "系统默认");
             builder.CloseElement();
         }
 
         if (!string.IsNullOrWhiteSpace(template.EntityType))
         {
-            builder.OpenElement(15, "span");
-            builder.AddAttribute(16, "class", "badge badge-entity");
+        builder.OpenElement(15, "span");
+        builder.AddAttribute(16, "class", "badge badge-success");
             builder.AddContent(17, GetEntityDisplayName(template.EntityType));
             builder.CloseElement();
         }
@@ -523,7 +402,7 @@
 
         // 编辑按钮
         builder.OpenElement(26, "button");
-        builder.AddAttribute(27, "class", "btn-action");
+        builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
         builder.AddContent(29, "编辑");
         builder.CloseElement();
@@ -532,7 +411,7 @@
         if (!template.IsUserDefault && !string.IsNullOrWhiteSpace(template.EntityType))
         {
             builder.OpenElement(30, "button");
-            builder.AddAttribute(31, "class", "btn-action");
+            builder.AddAttribute(31, "class", "btn btn-ghost btn-sm");
             builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => SetAsDefault(template.Id)));
             builder.AddContent(33, "设为默认");
             builder.CloseElement();
@@ -541,7 +420,7 @@
         // 删除按钮
         var canDelete = !template.IsUserDefault && !template.IsSystemDefault && !template.IsInUse;
         builder.OpenElement(34, "button");
-        builder.AddAttribute(35, "class", "btn-action btn-danger");
+        builder.AddAttribute(35, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(36, "disabled", !canDelete);
         builder.AddAttribute(37, "onclick", EventCallback.Factory.Create(this, () => DeleteTemplate(template.Id)));
         builder.AddContent(38, "删除");

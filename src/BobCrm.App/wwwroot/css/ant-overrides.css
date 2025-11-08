@@ -1,0 +1,154 @@
+:root,
+:root.theme-calm-light,
+:root.theme-calm-dark {
+  --ant-primary-color: var(--primary);
+  --ant-primary-color-hover: var(--color-primary-500);
+  --ant-primary-color-active: #5f89c4;
+  --ant-success-color: var(--color-semantic-success-600);
+  --ant-warning-color: var(--color-semantic-warning-600);
+  --ant-error-color: var(--color-semantic-danger-600);
+  --ant-info-color: var(--color-semantic-info-600);
+}
+
+/* Button baseline */
+.ant-btn {
+  border-radius: var(--radius-pill);
+  height: 40px;
+  padding: 0 var(--spacing-5);
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  letter-spacing: var(--font-letter-spacing);
+  transition: all var(--motion-fast) var(--motion-emphasize);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.ant-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.ant-btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-contrast);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background: var(--ant-primary-color-hover);
+  border-color: var(--ant-primary-color-hover);
+}
+
+.ant-btn-default {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+}
+
+.ant-btn-default:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(115,159,214,0.08);
+}
+
+/* Input / select / text areas */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-password,
+.ant-select-selector,
+.ant-picker,
+.ant-input-number {
+  height: 40px;
+  border-radius: var(--radius-soft) !important;
+  background: var(--surface-glass) !important;
+  border-color: var(--border-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+  color: var(--text-primary);
+  transition: border-color var(--motion-fast) var(--motion-emphasize), box-shadow var(--motion-fast) var(--motion-emphasize);
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-select-selector:focus,
+.ant-picker-focused,
+.ant-input-number-focused {
+  border-color: var(--primary) !important;
+  box-shadow: var(--focus-ring);
+}
+
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-dropdown,
+.ant-tooltip-inner {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-raised);
+  backdrop-filter: blur(var(--blur-elevated));
+  -webkit-backdrop-filter: blur(var(--blur-elevated));
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.ant-dropdown-menu-item:hover {
+  background: rgba(115,159,214,0.12);
+}
+
+/* Table */
+.ant-table {
+  background: transparent;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--surface-glass) !important;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-primary);
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(10, 20, 40, 0.04);
+}
+
+.ant-table-row-selected > td {
+  background: var(--color-primary-100) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Modal / Drawer */
+.ant-modal-content,
+.ant-drawer-content {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-raised);
+  backdrop-filter: blur(var(--blur-elevated));
+  -webkit-backdrop-filter: blur(var(--blur-elevated));
+}
+
+.ant-modal-header,
+.ant-drawer-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--border-soft);
+}
+
+.ant-message-notice-content,
+.ant-notification-notice {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-soft);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-raised);
+  color: var(--text-primary);
+}

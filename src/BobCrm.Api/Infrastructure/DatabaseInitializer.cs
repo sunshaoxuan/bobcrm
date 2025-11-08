@@ -345,18 +345,24 @@ public static class DatabaseInitializer
             // Best-effort backfill: ensure critical UI keys exist and update if needed
             void Ensure(string key, string zh, string ja, string en)
             {
-                var set = db.Set<LocalizationResource>();
-                var existing = set.FirstOrDefault(x => x.Key == key);
-                if (existing == null)
+                try
                 {
-                    set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+                    var set = db.Set<LocalizationResource>();
+                    var existing = set.FirstOrDefault(x => x.Key == key);
+                    if (existing == null)
+                    {
+                        set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+                    }
+                    else
+                    {
+                        existing.ZH = zh;
+                        existing.JA = ja;
+                        existing.EN = en;
+                    }
                 }
-                else
+                catch (InvalidOperationException)
                 {
-                    // Update existing translations
-                    existing.ZH = zh;
-                    existing.JA = ja;
-                    existing.EN = en;
+                    // In rare cases of duplicate tracking (test startup concurrency), ignore and proceed
                 }
             }
             Ensure("MENU_CUSTOMERS", "客户", "顧客", "Customers");
@@ -424,6 +430,15 @@ public static class DatabaseInitializer
             Ensure("VAL_INVALID_FORMAT", "{0} 格式不正确", "{0} の形式が正しくありません", "{0} format invalid");
             Ensure("VAL_UNKNOWN_FIELD", "未知字段: {0}", "不明なフィールド: {0}", "Unknown field: {0}");
             Ensure("VAL_FIELDS_REQUIRED", "必须提供字段", "フィールドは必須です", "Fields are required");
+            /* Auth hero copy (override to latest wording)
+            Ensure("TXT_AUTH_HERO_TITLE", "智能连接的客户体验中枢", "インテリジェントに接続された顧客体験の中枢", "The Intelligent Hub for Connected Customer Experience");
+            Ensure("TXT_AUTH_HERO_SUBTITLE", "让团队与客户的关系更简单、更高效、更有温度。在同一个平台上完成洞察、协作与成长。", "チームと顧客の関係を、よりシンプルに、より効率的に、より温かく。同じプラットフォームで洞察・協働・成長を完結。", "Make team–customer relationships simpler, faster, and warmer. Gain insight, collaborate, and grow on a single platform.");
+            Ensure("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
+            Ensure("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
+            Ensure("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
+            Ensure("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
+            Ensure("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をよりスマートに、協働をより自然に。", "Make relationships smarter, collaboration more natural.");
+            */
             // New customer keys
             Ensure("BTN_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
             Ensure("LBL_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");

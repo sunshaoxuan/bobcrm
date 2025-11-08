@@ -1,0 +1,12 @@
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.ThemeState ThemeState
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ThemeState.EnsureAppliedAsync();
+        }
+    }
+}

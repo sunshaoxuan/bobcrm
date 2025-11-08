@@ -102,10 +102,10 @@
                     <Table TItem="ChildEntityConfig" DataSource="@_config.Children" Bordered Size="@TableSize.Small">
                         <PropertyColumn Property="c => c.ChildEntityName" Title="子实体名称" />
                         <PropertyColumn Property="c => c.ForeignKeyField" Title="外键字段">
-                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="如: OrderId" />
+                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="如: OrderId" Class="field-control" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CollectionProperty" Title="集合属性名">
-                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="如: OrderLines" />
+                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="如: OrderLines" Class="field-control" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="级联删除">
                             <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Style="width: 120px;">
@@ -160,7 +160,7 @@
     }
 
     <!-- 添加子实体对话框 -->
-    <Modal Title="添加子实体"
+    <Modal Title="添加子实体" WrapClassName="calm-modal"
            @bind-Visible="@_showAddChildDialog"
            OnOk="HandleAddChild"
            OnCancel="() => _showAddChildDialog = false"
@@ -188,11 +188,11 @@
             </FormItem>
 
             <FormItem Label="外键字段">
-                <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="如: OrderId" />
+                <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="如: OrderId" Class="field-control" />
             </FormItem>
 
             <FormItem Label="集合属性名">
-                <Input @bind-Value="@_newChild.CollectionProperty" Placeholder="如: OrderLines" />
+                <Input @bind-Value="@_newChild.CollectionProperty" Placeholder="如: OrderLines" Class="field-control" />
             </FormItem>
 
             <FormItem Label="级联删除">
@@ -211,7 +211,7 @@
     </Modal>
 
     <!-- 结构预览对话框 -->
-    <Modal Title="实体结构预览"
+    <Modal Title="实体结构预览" WrapClassName="calm-modal"
            @bind-Visible="@_showPreviewDialog"
            Width="800"
            Footer="null">

@@ -1,0 +1,35 @@
+<div class="collection-header">
+    <div class="collection-header-text">
+        @if (!string.IsNullOrWhiteSpace(Eyebrow))
+        {
+            <p class="collection-eyebrow">@Eyebrow</p>
+        }
+        <h1>@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p>@Subtitle</p>
+        }
+        @if (Description != null)
+        {
+            @Description
+        }
+    </div>
+    <div class="collection-header-actions">
+        @Actions
+    </div>
+</div>
+@if (Filters != null)
+{
+    <div class="collection-filters">
+        @Filters
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Eyebrow { get; set; }
+    [Parameter] public RenderFragment? Description { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? Filters { get; set; }
+}

@@ -1,0 +1,73 @@
+@using AntDesign
+@using BobCrm.App.Services
+@using System.Threading.Tasks
+@inject InteractionState Interaction
+@implements IDisposable
+
+<div class="global-overlay-root">
+    @if (Interaction.IsBulkBarVisible)
+    {
+        <div class="bulk-bar">
+            <div class="bulk-info">
+                <Icon Type="@IconType.Outline.CheckSquare" />
+                <span>@Interaction.BulkBarMessage</span>
+            </div>
+            <div class="bulk-actions">
+                <Button Type="@ButtonType.Primary" OnClick="OnBulkPrimary">@Interaction.BulkPrimaryLabel</Button>
+                <Button OnClick="OnBulkSecondary">@Interaction.BulkSecondaryLabel</Button>
+            </div>
+        </div>
+    }
+
+    <div class="toast-stack">
+        @foreach (var toast in Interaction.Toasts)
+        {
+            <div class="toast-card @toast.Tone.ToString().ToLower()">
+                <div class="toast-head">
+                    <strong>@toast.Title</strong>
+                    <button class="toast-dismiss" @onclick="() => DismissToast(toast.Id)">
+                        <Icon Type="@IconType.Outline.Close" />
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(toast.Body))
+                {
+                    <p>@toast.Body</p>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Interaction.OnChanged += HandleChanged;
+    }
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task OnBulkPrimary()
+    {
+        if (Interaction.BulkPrimaryAction != null)
+        {
+            await Interaction.BulkPrimaryAction.Invoke();
+        }
+        Interaction.HideBulkBar();
+    }
+
+    private async Task OnBulkSecondary()
+    {
+        if (Interaction.BulkSecondaryAction != null)
+        {
+            await Interaction.BulkSecondaryAction.Invoke();
+        }
+        Interaction.HideBulkBar();
+    }
+
+    private void DismissToast(Guid id) => Interaction.DismissToast(id);
+
+    public void Dispose()
+    {
+        Interaction.OnChanged -= HandleChanged;
+    }
+}

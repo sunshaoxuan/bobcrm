@@ -67,13 +67,13 @@
                 <div class="profile-card">
                     <Form Model="passwordForm" OnFinish="HandlePasswordChange">
                         <FormItem Label="@I18n.T("LBL_CURRENT_PASSWORD")">
-                            <Input Type="password" @bind-Value="passwordForm.CurrentPassword" Placeholder="@I18n.T("LBL_ENTER_CURRENT_PASSWORD")" />
+                            <Input Password="true" @bind-Value="passwordForm.CurrentPassword" Placeholder="@I18n.T("LBL_ENTER_CURRENT_PASSWORD")" Class="field-control" />
                         </FormItem>
                         <FormItem Label="@I18n.T("LBL_NEW_PASSWORD")">
-                            <Input Type="password" @bind-Value="passwordForm.NewPassword" Placeholder="@I18n.T("LBL_ENTER_NEW_PASSWORD")" />
+                            <Input Password="true" @bind-Value="passwordForm.NewPassword" Placeholder="@I18n.T("LBL_ENTER_NEW_PASSWORD")" Class="field-control" />
                         </FormItem>
                         <FormItem Label="@I18n.T("LBL_CONFIRM_PASSWORD")">
-                            <Input Type="password" @bind-Value="passwordForm.ConfirmPassword" Placeholder="@I18n.T("LBL_ENTER_CONFIRM_PASSWORD")" />
+                            <Input Password="true" @bind-Value="passwordForm.ConfirmPassword" Placeholder="@I18n.T("LBL_ENTER_CONFIRM_PASSWORD")" Class="field-control" />
                         </FormItem>
                         <FormItem>
                             <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@changingPassword">

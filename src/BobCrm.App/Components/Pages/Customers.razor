@@ -2,37 +2,139 @@
 @rendermode RenderMode.InteractiveServer
 
 @inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
 
 <AuthChecker>
-    <h1>@I18n.T("MENU_CUSTOMERS")</h1>
-    <div class="text-muted">@I18n.T("LBL_PLEASE_SELECT_CUSTOMER")</div>
+    <div class="collection-shell">
+        <CollectionHeader Title="@I18n.T("MENU_CUSTOMERS")"
+                          Subtitle="@I18n.T("TXT_CUSTOMER_SUMMARY")"
+                          Eyebrow="@I18n.T("LBL_COLLECTION")">
+            <Actions>
+                <Button Type="@ButtonType.Default" Icon="@IconType.Outline.Filter">@I18n.T("BTN_SAVE_VIEW")</Button>
+                <Button Type="@ButtonType.Default" Icon="@IconType.Outline.Download">@I18n.T("BTN_EXPORT")</Button>
+                <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus">@I18n.T("BTN_NEW_CUSTOMER")</Button>
+            </Actions>
+            <Filters>
+                <div class="collection-search">
+                    <Input Placeholder="@I18n.T("LBL_SEARCH")" PrefixIcon="@IconType.Outline.Search" AllowClear @bind-Value="_search" Class="field-control" />
+                </div>
+                <Select TItemValue="string" TItem="string" @bind-Value="_stageFilter" Style="min-width:160px">
+                    <SelectOption Value="@("all")">@I18n.T("LBL_STAGE_ALL")</SelectOption>
+                    <SelectOption Value="@("prospect")">@I18n.T("LBL_STAGE_PROSPECT")</SelectOption>
+                    <SelectOption Value="@("negotiation")">@I18n.T("LBL_STAGE_NEGOTIATION")</SelectOption>
+                    <SelectOption Value="@("won")">@I18n.T("LBL_STAGE_WON")</SelectOption>
+                </Select>
+                <Select TItemValue="string" TItem="string" @bind-Value="_ownerFilter" Style="min-width:160px">
+                    <SelectOption Value="@("all")">@I18n.T("LBL_OWNER_ALL")</SelectOption>
+                    <SelectOption Value="@("alice")">Alice</SelectOption>
+                    <SelectOption Value="@("bob")">Bob</SelectOption>
+                </Select>
+            </Filters>
+        </CollectionHeader>
+
+        <div class="collection-metrics">
+            @foreach (var metric in _metrics)
+            {
+                <div class="collection-card">
+                    <h3>@I18n.T(metric.LabelKey)</h3>
+                    <p>@metric.Value</p>
+                </div>
+            }
+        </div>
+
+        <div class="collection-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>@I18n.T("COL_NAME")</th>
+                        <th>@I18n.T("COL_STAGE")</th>
+                        <th>@I18n.T("COL_OWNER")</th>
+                        <th>@I18n.T("COL_UPDATED")</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in FilteredRows())
+                    {
+                        <tr>
+                            <td>
+                                <strong>@row.Name</strong><br />
+                                <span class="text-muted">@row.Code</span>
+                            </td>
+                            <td>
+                    <span class="collection-badge @row.Stage">@I18n.T(row.StageLabelKey)</span>
+                            </td>
+                            <td>@row.Owner</td>
+                            <td>@row.Updated</td>
+                            <td>
+                                <Button Type="@ButtonType.Link" OnClick="() => ViewCustomer(row.Id)">@I18n.T("BTN_VIEW")</Button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </AuthChecker>
 
 @code {
+    private readonly List<(string LabelKey, string Value)> _metrics =
+    [
+        ("LBL_METRIC_PIPELINE", "¥ 2.8M"),
+        ("LBL_METRIC_ACTIVE", "126"),
+        ("LBL_METRIC_DAYS", "23d"),
+        ("LBL_METRIC_FEEDBACK", "14")
+    ];
+
+    private readonly List<CustomerRow> _rows =
+    [
+        new("C-001", "ACME Holdings", "success", "LBL_STAGE_WON", "Alice", "今天 09:31"),
+        new("C-002", "Nova Retail", "warning", "LBL_STAGE_NEGOTIATION", "Bob", "昨天 17:10"),
+        new("C-003", "Helios Labs", "danger", "LBL_STAGE_ESCALATED", "Carol", "两天前")
+    ];
+
+    private string _search = string.Empty;
+    private string _stageFilter = "all";
+    private string _ownerFilter = "all";
+
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
     }
 
-    private void HandleI18nChanged()
+    private IEnumerable<CustomerRow> FilteredRows()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        var query = _rows.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            query = query.Where(r => r.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) || r.Code.Contains(_search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_stageFilter != "all")
+        {
+            query = query.Where(r => r.Stage == _stageFilter);
+        }
+
+        if (_ownerFilter != "all")
+        {
+            query = query.Where(r => string.Equals(r.Owner, _ownerFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return query;
+    }
+
+    private void ViewCustomer(string id)
+    {
+        Nav.NavigateTo($"/customer/{id}");
+    }
+
+    private void HandleI18nChanged() => InvokeAsync(StateHasChanged);
+
+    private record CustomerRow(string Id, string Name, string Stage, string StageLabelKey, string Owner, string Updated)
+    {
+        public string Code => Id;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

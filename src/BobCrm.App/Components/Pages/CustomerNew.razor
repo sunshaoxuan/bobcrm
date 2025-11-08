@@ -15,23 +15,23 @@
     </div>
 }
 
-<div style="max-width:600px">
-    <div class="form-group" style="margin-bottom:16px">
-        <label style="display:block; margin-bottom:4px; font-weight:600">@I18n.T("COL_CODE") <span style="color:red">*</span></label>
-        <input type="text" @bind="code" class="form-control" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:14px" />
-        <small style="color:var(--muted); font-size:12px">@I18n.T("LBL_CUSTOMER_CODE_HINT")</small>
+<div class="card" style="max-width:600px; padding:24px">
+    <div class="field" style="margin-bottom:16px">
+        <label class="field-label">@I18n.T("COL_CODE") <span style="color:red">*</span></label>
+        <input type="text" @bind="code" class="field-control" />
+        <small class="field-hint">@I18n.T("LBL_CUSTOMER_CODE_HINT")</small>
     </div>
 
-    <div class="form-group" style="margin-bottom:16px">
-        <label style="display:block; margin-bottom:4px; font-weight:600">@I18n.T("COL_NAME") <span style="color:red">*</span></label>
-        <input type="text" @bind="name" class="form-control" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:14px" />
+    <div class="field" style="margin-bottom:16px">
+        <label class="field-label">@I18n.T("COL_NAME") <span style="color:red">*</span></label>
+        <input type="text" @bind="name" class="field-control" />
     </div>
 
     <div style="display:flex; gap:12px">
-        <button @onclick="Save" disabled="@saving" class="btn-primary-custom">
+        <button @onclick="Save" disabled="@saving" class="btn btn-primary">
             @(saving ? I18n.T("LBL_SAVING") : I18n.T("BTN_SAVE"))
         </button>
-        <button @onclick="Cancel" class="btn-secondary-custom">
+        <button @onclick="Cancel" class="btn btn-ghost">
             @I18n.T("BTN_CANCEL")
         </button>
     </div>

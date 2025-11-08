@@ -35,25 +35,25 @@
         <Card>
             <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
                 <FormItem Label="命名空间">
-                    <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" />
+                    <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" Class="field-control" />
                 </FormItem>
 
                 <FormItem Label="实体名称">
-                    <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" />
+                    <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" Class="field-control" />
                     <div class="ant-form-text">
                         将用作C#类名，如: Product
                     </div>
                 </FormItem>
 
                 <FormItem Label="显示名Key">
-                    <Input @bind-Value="@_model.DisplayNameKey" Placeholder="ENTITY_PRODUCT" />
+                    <Input @bind-Value="@_model.DisplayNameKey" Placeholder="ENTITY_PRODUCT" Class="field-control" />
                     <div class="ant-form-text">
                         多语言Key，如: ENTITY_PRODUCT
                     </div>
                 </FormItem>
 
                 <FormItem Label="描述Key">
-                    <Input @bind-Value="@_model.DescriptionKey" Placeholder="ENTITY_PRODUCT_DESC" />
+                    <Input @bind-Value="@_model.DescriptionKey" Placeholder="ENTITY_PRODUCT_DESC" Class="field-control" />
                 </FormItem>
 
                 <FormItem Label="结构类型">
@@ -75,11 +75,11 @@
                 </FormItem>
 
                 <FormItem Label="图标">
-                    <Input @bind-Value="@_model.Icon" Placeholder="database" />
+                    <Input @bind-Value="@_model.Icon" Placeholder="database" Class="field-control" />
                 </FormItem>
 
                 <FormItem Label="分类">
-                    <Input @bind-Value="@_model.Category" Placeholder="业务管理" />
+                    <Input @bind-Value="@_model.Category" Placeholder="业务管理" Class="field-control" />
                 </FormItem>
 
                 <FormItem Label="排序">
@@ -133,13 +133,13 @@
 </AuthChecker>
 
 <!-- 字段编辑模态框 -->
-<Modal Title="@(_editingField.Id == Guid.Empty ? "新建字段" : "编辑字段")" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
+<Modal Title="@(_editingField.Id == Guid.Empty ? "新建字段" : "编辑字段")" WrapClassName="calm-modal" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
     <Form Model="@_editingField" LabelColSpan="6" WrapperColSpan="18">
         <FormItem Label="属性名">
-            <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" />
+            <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" Class="field-control" />
         </FormItem>
         <FormItem Label="显示名Key">
-            <Input @bind-Value="@_editingField.DisplayNameKey" Placeholder="FIELD_PRICE" />
+            <Input @bind-Value="@_editingField.DisplayNameKey" Placeholder="FIELD_PRICE" Class="field-control" />
         </FormItem>
         <FormItem Label="数据类型">
             <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
@@ -169,7 +169,7 @@
             <Switch @bind-Value="@_editingField.IsRequired" />
         </FormItem>
         <FormItem Label="默认值">
-            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="如: 0, NOW, NEWID" />
+            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="如: 0, NOW, NEWID" Class="field-control" />
         </FormItem>
         <FormItem Label="排序">
             <AntDesign.InputNumber TValue="int?" Value="@_editingField.SortOrder" Min="0" ValueChanged="@((int? val) => _editingField.SortOrder = val ?? 0)" />

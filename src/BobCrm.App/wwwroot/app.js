@@ -1,31 +1,4 @@
 window.bobcrm = {
-  // Ensure primary color actually applied to computed styles
-  _ensurePrimaryApplied: function(expected) {
-    try {
-      const want = (expected || this.getPrimary() || '').trim();
-      if (!want) return;
-      const computed = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-      if (computed.toLowerCase() !== want.toLowerCase()) {
-        const styleTag = document.getElementById('dynamic-theme');
-        if (styleTag) styleTag.textContent = `:root { --primary: ${want} !important; }`;
-        document.documentElement.style.setProperty('--primary', want);
-        console.log('[guardian] reapplied --primary, want:', want, 'computed:', computed);
-      }
-    } catch (e) { }
-  },
-  getInitColor: function() {
-    try {
-      if (window.APP_DEFAULTS && window.APP_DEFAULTS.initColor) return window.APP_DEFAULTS.initColor;
-      // Fallback to CSS variable
-      const css = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-      return css;
-    } catch (e) { return ''; }
-  },
-  preferencesCallback: null,
-  skipNextSave: false,
-  registerPreferencesCallback: function(dotnetRef) {
-    this.preferencesCallback = dotnetRef;
-  },
   copyText: async function (text) {
     try {
       await navigator.clipboard.writeText(text || '');
@@ -101,87 +74,8 @@ window.bobcrm = {
       return await resp.json();
     } catch (e) { return null; }
   }
-  , setTheme: function (name, skipSave) {
-    try {
-      name = (name || 'light');
-      const root = document.documentElement;
-      root.classList.remove('theme-light', 'theme-dark');
-      root.classList.add(name === 'dark' ? 'theme-dark' : 'theme-light');
-      localStorage.setItem('theme', name);
-
-      // Save to server (unless explicitly skipped)
-      if (!skipSave && this.preferencesCallback) {
-        this.preferencesCallback.invokeMethodAsync('SaveThemeAsync', name);
-      }
-    } catch (e) { }
-  }
-  , getTheme: function () {
-    try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; }
-  }
-  , setPrimary: function (color) {
-    try {
-      const normalizedColor = color || this.getInitColor();
-
-      console.log('[setPrimary] START - color:', normalizedColor);
-
-      // 1. Update CSS via style tag (won't be cleared by Blazor)
-      const styleTag = document.getElementById('dynamic-theme');
-      console.log('[setPrimary] styleTag found:', !!styleTag);
-      if (styleTag) {
-        styleTag.textContent = `:root { --primary: ${normalizedColor} !important; }`;
-        console.log('[setPrimary] CSS updated');
-      } else {
-        console.error('[setPrimary] styleTag NOT FOUND!');
-      }
-
-      // 1.1 Also set inline custom property on :root to ensure precedence over external stylesheets
-      try {
-        document.documentElement.style.setProperty('--primary', normalizedColor);
-        console.log('[setPrimary] Inline --primary set on :root');
-      } catch (e) { /* ignore */ }
-
-      // 2. Save to localStorage
-      localStorage.setItem('udfColor', normalizedColor);
-      console.log('[setPrimary] localStorage saved:', localStorage.getItem('udfColor'));
-
-      // 3. Update button active states
-      document.querySelectorAll('.color-btn').forEach(btn => {
-        const btnColor = btn.getAttribute('data-color');
-        if (btnColor && btnColor.toLowerCase() === normalizedColor.toLowerCase()) {
-          btn.style.borderColor = '#333';
-          btn.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.1)';
-        } else {
-          btn.style.borderColor = 'transparent';
-          btn.style.boxShadow = 'none';
-        }
-      });
-      console.log('[setPrimary] Button states updated');
-
-      // 4. Save to backend
-      console.log('[setPrimary] preferencesCallback exists:', !!this.preferencesCallback);
-      if (this.preferencesCallback) {
-        console.log('[setPrimary] Calling backend...');
-        this.preferencesCallback.invokeMethodAsync('SavePrimaryColorAsync', normalizedColor);
-      } else {
-        console.warn('[setPrimary] preferencesCallback NOT REGISTERED!');
-      }
-
-      console.log('[setPrimary] DONE');
-    } catch (e) {
-      console.error('[setPrimary] error:', e);
-    }
-  }
-  , getPrimary: function () {
-    try {
-      // Read from cache; fallback to system initColor
-      return localStorage.getItem('udfColor') || this.getInitColor();
-    } catch (e) {
-      return this.getInitColor();
-    }
-  }
   , setDragData: function (type, data) {
-    // This function is kept for compatibility, but we use data-* attributes instead
-    // The actual dataTransfer setup is done in the dragstart event handler
+    // 保留兼容接口，实际 dragstart 中会读取 data-* 属性
   }
   , initDragDrop: function () {
     // Set up global dragstart handler to read data-* attributes and set dataTransfer
@@ -438,55 +332,7 @@ window.bobcrm = {
       const markers = document.querySelectorAll('.drop-marker');
       markers.forEach(m => m.style.display = 'none');
     } catch (e) { }
-  }
-  , initTheme: function () {
-    try {
-      console.log('[initTheme] called');
-
-      // 1. Apply theme (light/dark)
-      const savedTheme = this.getTheme();
-      this.setTheme(savedTheme, true);
-
-      // 2. Apply primary color from localStorage
-      const udfColor = this.getPrimary();
-      console.log('[initTheme] udfColor from localStorage:', udfColor);
-
-      const styleTag = document.getElementById('dynamic-theme');
-      if (styleTag) {
-        styleTag.textContent = `:root { --primary: ${udfColor} !important; }`;
-      }
-      // Debug: readback computed value
-      try {
-        const computed = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-        console.log('[initTheme] computed --primary:', computed);
-      } catch (e) { }
-      // Ensure runtime color wins over defaults in external CSS
-      try { document.documentElement.style.setProperty('--primary', udfColor); } catch (e) { }
-      // Verify application
-      this._ensurePrimaryApplied(udfColor);
-
-      // 3. Update UI elements
-      const themeSelector = document.getElementById('theme-selector');
-      if (themeSelector) {
-        themeSelector.value = savedTheme;
-      }
-
-      // Update color button active states
-      document.querySelectorAll('.color-btn').forEach(btn => {
-        const btnColor = btn.getAttribute('data-color');
-        if (btnColor && btnColor.toLowerCase() === udfColor.toLowerCase()) {
-          btn.style.borderColor = '#333';
-          btn.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.1)';
-        } else {
-          btn.style.borderColor = 'transparent';
-          btn.style.boxShadow = 'none';
-        }
-      });
-    } catch (e) {
-      console.error('[initTheme] error:', e);
-    }
-  }
-  , debugDnD: function() {
+  }, debugDnD: function() {
     // Debug drag and drop events
     const events = ['dragenter', 'dragover', 'drop', 'dragleave', 'dragstart', 'dragend'];
     events.forEach(eventType => {
@@ -859,47 +705,18 @@ window.bobcrm = {
   }
 };
 
-// Monitor localStorage changes for 'udfColor' key
-window.addEventListener('storage', (e) => {
-  if (e.key === 'udfColor') {
-    console.log('=== [theme] localStorage.udfColor changed ===');
-    console.log('  oldValue:', e.oldValue);
-    console.log('  newValue:', e.newValue);
-    console.log('  url:', e.url);
-  }
-});
-
-// Ensure theme reapplies on client-side navigation (history push/replace)
 (function() {
   try {
-    const callInit = () => { try { window.bobcrm && window.bobcrm.initTheme && window.bobcrm.initTheme(); } catch(e) { } };
-    const _push = history.pushState;
-    history.pushState = function() { const r = _push.apply(this, arguments); try { window.dispatchEvent(new Event('bobcrm:navigated')); } catch (_) {} return r; };
-    const _replace = history.replaceState;
-    history.replaceState = function() { const r = _replace.apply(this, arguments); try { window.dispatchEvent(new Event('bobcrm:navigated')); } catch (_) {} return r; };
-    window.addEventListener('bobcrm:navigated', callInit);
-    // Guard against head/style mutations that could revert variables
-    const mo = new MutationObserver(() => {
-      try { window.bobcrm && window.bobcrm._ensurePrimaryApplied && window.bobcrm._ensurePrimaryApplied(); } catch(e) {}
-    });
-    mo.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-    // Also periodically verify for the first few seconds after load
-    let ticks = 0; const t = setInterval(() => { try { window.bobcrm && window.bobcrm._ensurePrimaryApplied && window.bobcrm._ensurePrimaryApplied(); } catch(e) {} if (++ticks > 50) clearInterval(t); }, 100);
-    // Ensure browsers always show allowed drop over canvas
     document.addEventListener('dragover', function(e){
       try {
-        // 优先检查frame-drop-zone（容器内），然后才检查主画布
         let target = e.target && e.target.closest ? e.target.closest('.frame-drop-zone') : null;
         let sel = null;
-
         if (target) {
-          // 在容器内拖拽
           e.preventDefault();
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
           const containerId = target.getAttribute('data-container-id');
           sel = containerId ? `.frame-drop-zone[data-container-id="${containerId}"]` : '.frame-drop-zone';
         } else {
-          // 不在容器内，检查主画布或abs-canvas
           target = e.target && e.target.closest ? e.target.closest('.abs-canvas, .layout-widgets-container') : null;
           if (target) {
             e.preventDefault();
@@ -907,21 +724,41 @@ window.addEventListener('storage', (e) => {
             sel = target.classList.contains('abs-canvas') ? '.abs-canvas' : '.layout-widgets-container';
           }
         }
-
         if (sel) {
-          try { window.bobcrm && window.bobcrm.updateDropMarker && window.bobcrm.updateDropMarker(sel, e.clientX, e.clientY); } catch(_){ }
+          try { window.bobcrm && window.bobcrm.updateDropMarker && window.bobcrm.updateDropMarker(sel, e.clientX, e.clientY); } catch(_) { }
         }
-      } catch(_) {}
+      } catch(_) { }
     }, { capture: true, passive: false });
     document.addEventListener('dragend', function(){
       try {
-        // 移除dragging class
         document.body.classList.remove('is-dragging');
         window.bobcrm && window.bobcrm.clearDropMarker && window.bobcrm.clearDropMarker();
-      } catch(_) {}
+      } catch(_) { }
     }, true);
   } catch(e) { }
 })();
+
+window.bobcrmTheme = window.bobcrmTheme || {
+  apply: function(themeName) {
+    try {
+      const root = document.documentElement;
+      const allowed = ['theme-calm-light', 'theme-calm-dark'];
+      const normalized = allowed.includes(themeName) ? themeName : 'theme-calm-light';
+      allowed.forEach(cls => root.classList.remove(cls));
+      root.classList.add(normalized);
+    } catch (e) {
+      console.error('[bobcrmTheme] apply error', e);
+    }
+  }
+};
+
+window.addEventListener('DOMContentLoaded', function () {
+  try {
+    window.bobcrmTheme.apply('theme-calm-light');
+  } catch (e) {
+    console.error('[bobcrmTheme] init error', e);
+  }
+});
 
 window.logout = function() {
   // 清除本地存储
@@ -931,17 +768,4 @@ window.logout = function() {
   
   // 跳转到登录页
   window.location.href = '/login';
-};
-
-window.changeLang = function(lang) {
-  // 保存语言选择
-  bobcrm.setCookie('lang', lang, 365);
-
-  // Save to server
-  if (bobcrm.preferencesCallback) {
-    bobcrm.preferencesCallback.invokeMethodAsync('SaveLanguageAsync', lang);
-  }
-
-  // 刷新页面以加载新的i18n资源（最简单可靠的方式）
-  window.location.reload();
 };

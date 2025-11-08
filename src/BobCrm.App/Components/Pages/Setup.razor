@@ -19,14 +19,14 @@
         <div class="heading">
             @I18n.T("LBL_API_BASE") <span class="text-muted small">(@I18n.T("LBL_OPTIONAL_DEFAULT"): @(defaultApiBase ?? "http://localhost:5200"))</span>
         </div>
-        <Input @bind-Value="apiBase" Placeholder="@placeholderText" />
+        <Input @bind-Value="apiBase" Placeholder="@placeholderText" Class="field-control" />
         <div class="text-muted small" style="margin-top:6px">
             @I18n.T("LBL_API_BASE_HINT") 如果不填写，将使用配置的默认地址。
         </div>
     </div>
 
     <div class="section"><div class="heading">@I18n.T("LBL_LANG")</div>
-        <select value="@lang" @onchange="OnLangChanged" style="width:220px;height:28px">
+        <select value="@lang" @onchange="OnLangChanged" class="field-control" style="width:220px">
             @if (langs.Count == 0)
             {
                 <option value="zh">中文</option>
@@ -48,13 +48,13 @@
 
     <div class="section"><div class="heading">@I18n.T("LBL_ADMIN_USERNAME")</div>
 
-        <Input @bind-Value="adminUser" Placeholder="admin" />
+        <Input @bind-Value="adminUser" Placeholder="admin" Class="field-control" />
 
     </div>
 
     <div class="section"><div class="heading">@I18n.T("LBL_ADMIN_EMAIL")</div>
 
-        <Input @bind-Value="adminEmail" Placeholder="admin@local" />
+        <Input @bind-Value="adminEmail" Placeholder="admin@local" Class="field-control" />
 
     </div>
 
@@ -512,6 +512,4 @@
         StateHasChanged();
     }
 }
-
-
 
