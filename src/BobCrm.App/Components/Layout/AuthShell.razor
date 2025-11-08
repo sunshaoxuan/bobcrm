@@ -2,16 +2,16 @@
 @inject I18nService I18n
 
 <div class="auth-shell @(HasHeroImage ? "has-hero-image" : string.Empty)">
+    @if (BrandInHero)
+    {
+        <div class="auth-hero-brand-floating">@BrandText</div>
+    }
     <section class="auth-hero">
         @if (HasHeroImage)
         {
             <img class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" src="@PrimaryHeroImage" alt="Hero background" loading="lazy" />
             <img class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" src="@SecondaryHeroImage" alt="Hero background" loading="lazy" />
             <div class="auth-hero-overlay"></div>
-        }
-        @if (BrandInHero)
-        {
-            <div class="auth-hero-brand">@BrandText</div>
         }
         @if (!string.IsNullOrWhiteSpace(Eyebrow))
         {

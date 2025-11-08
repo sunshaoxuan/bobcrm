@@ -8,6 +8,7 @@
               radial-gradient(circle at 20% 20%, rgba(31, 169, 113, 0.12), transparent),
               var(--surface-base);
   color: var(--text-primary);
+  position: relative;
 }
 
 .auth-hero {
@@ -71,17 +72,17 @@
   z-index: 3;
 }
 
-.auth-hero-brand {
+.auth-hero-brand-floating {
   position: absolute;
-  top: var(--spacing-2);
-  left: var(--spacing-2);
+  top: var(--spacing-3);
+  left: var(--spacing-4);
   font-size: 64px;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: rgba(255,255,255,0.96);
-  text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
   mix-blend-mode: lighten;
-  z-index: 4; /* keep brand above overlay */
+  z-index: 5;
   pointer-events: none;
 }
 
