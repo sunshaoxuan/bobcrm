@@ -73,8 +73,8 @@
 
 .auth-hero-brand {
   position: absolute;
-  top: var(--spacing-3);
-  left: var(--spacing-3);
+  top: var(--spacing-2);
+  left: var(--spacing-2);
   font-size: 64px;
   font-weight: 800;
   letter-spacing: 0.02em;
