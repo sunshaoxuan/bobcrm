@@ -1,18 +1,97 @@
+@using AntDesign
+@using System.Threading.Tasks
+@using BobCrm.App.Services
+@using Microsoft.AspNetCore.Components.Routing
 @rendermode RenderMode.InteractiveServer
 @implements IDisposable
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject LayoutState Layout
+@inject InteractionState Interaction
+@inject ThemeState ThemeState
 
 <div class="app-header">
-    <div class="header-nav">
-        <div class="nav-menu">
-            <a href="/settings" class="nav-item">@I18n.T("MENU_SETTINGS")</a>
-            <a href="/templates" class="nav-item">@I18n.T("MENU_TEMPLATES")</a>
+    <div class="header-meta">
+        <div class="header-toggle-group">
+            <button class="nav-icon desktop-only" @onclick="ToggleCollapse" title="折叠侧栏">
+                <Icon Type="@IconType.Outline.MenuFold" />
+            </button>
+            <button class="nav-icon mobile-only" @onclick="ToggleOverlay" title="显示侧栏">
+                <Icon Type="@IconType.Outline.Menu" />
+            </button>
+        </div>
+        <div class="header-brand">
+            <strong>OneCRM</strong>
+            <span>@_headerSubtitle</span>
+        </div>
+        <div class="header-context">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                @if (_breadcrumbs.Count == 0)
+                {
+                    <span aria-current="page">总览</span>
+                }
+                else
+                {
+                    @for (var i = 0; i < _breadcrumbs.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            <span class="breadcrumb-sep">/</span>
+                        }
+
+                        var item = _breadcrumbs[i];
+                        if (i == _breadcrumbs.Count - 1)
+                        {
+                            <span aria-current="page">@item.Label</span>
+                        }
+                        else
+                        {
+                            <a href="@item.Url">@item.Label</a>
+                        }
+                    }
+                }
+            </nav>
+            <span class="context-pill">@_contextLabel</span>
         </div>
     </div>
-    <div class="header-toolbar">
+    <div class="header-nav">
+        @foreach (var nav in _primaryNav)
+        {
+            <NavLink class="primary-nav-link" ActiveClass="active" href="@nav.Href" Match="@nav.Match">
+                <Icon Type="@nav.Icon" />
+                <span>@I18n.T(nav.LabelKey)</span>
+            </NavLink>
+        }
+    </div>
+    <div class="header-utilities">
+        <div class="header-utility-group">
+            <HeaderLangMenu />
+            <NotificationCenter Localizer="I18n.T" />
+        </div>
+        <div class="theme-toggle">
+            <button class="@(IsLightTheme ? "active" : string.Empty)" @onclick="() => SwitchTheme(ThemeState.CalmLight)" title="Calm Light">
+                <Icon Type="@IconType.Outline.Bulb" />
+            </button>
+            <button class="@(IsDarkTheme ? "active" : string.Empty)" @onclick="() => SwitchTheme(ThemeState.CalmDark)" title="Calm Dark">
+                <Icon Type="@IconType.Outline.BgColors" />
+            </button>
+        </div>
+        <div class="header-actions desktop-only">
+            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="ToggleRightPanel">
+                <Icon Type="@IconType.Outline.Layout" /> 工作栏
+            </Button>
+            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoStickyBar">
+                <Icon Type="@IconType.Outline.Filter" /> 工具条
+            </Button>
+            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoBulkBar">
+                <Icon Type="@IconType.Outline.Select" /> 批量条
+            </Button>
+            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoToast">
+                <Icon Type="@IconType.Outline.Notification" /> 通知
+            </Button>
+        </div>
         @if (isAuthenticated)
         {
             <div class="user-profile-group">
@@ -20,7 +99,7 @@
                     <div class="user-avatar">
                         @if (string.IsNullOrWhiteSpace(avatarUrl))
                         {
-                            <Icon Type="@IconType.Outline.User" Style="font-size:18px; color:#fff" />
+                            <Icon Type="@IconType.Outline.User" Style="font-size:18px;" />
                         }
                         else
                         {
@@ -29,28 +108,64 @@
                     </div>
                     <span class="user-name">@userName</span>
                 </a>
-                <button type="button" class="btn-logout" onclick="logout()">@I18n.T("BTN_LOGOUT")</button>
+                <button type="button" class="nav-icon" onclick="logout()" title="@I18n.T("BTN_LOGOUT")">
+                    <Icon Type="@IconType.Outline.Poweroff" />
+                </button>
             </div>
         }
         else
         {
-            <a href="/login" class="btn-login">@I18n.T("BTN_LOGIN")</a>
+            <a href="/login" class="btn btn-primary">@I18n.T("BTN_LOGIN")</a>
         }
     </div>
 </div>
 
 @code {
+    private record BreadcrumbItem(string Label, string Url);
+    private record HeaderNavItem(string LabelKey, string Href, string Icon, NavLinkMatch Match);
+
     private bool isAuthenticated = false;
     private string userName = "";
     private string? avatarUrl = null;
+    private string _contextLabel = "总览";
+    private readonly List<BreadcrumbItem> _breadcrumbs = [];
+    private string _headerSubtitle = "Record workspace";
+    private readonly HeaderNavItem[] _primaryNav =
+    [
+        new HeaderNavItem("MENU_CUSTOMERS", "/customers", IconType.Outline.Team, NavLinkMatch.Prefix),
+        new HeaderNavItem("MENU_TEMPLATES", "/templates", IconType.Outline.Appstore, NavLinkMatch.Prefix),
+                new HeaderNavItem("MENU_FILES", "/files", IconType.Outline.CloudUpload, NavLinkMatch.Prefix),`r`nnew HeaderNavItem("MENU_SETTINGS", "/settings", IconType.Outline.Setting, NavLinkMatch.Prefix)
+    ];
+    private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [""] = "总览",
+        ["customers"] = "客户",
+        ["customers/new"] = "新建客户",
+        ["customer"] = "客户详情",
+        ["templates"] = "模板",
+        ["files"] = "文件",
+        ["settings"] = "设置"
+        ["entity-definitions"] = "实体定义",
+        ["dynamic-entity"] = "动态实体"
+    };
 
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
+        Nav.LocationChanged += HandleLocationChanged;
+        ThemeState.OnChanged += HandleThemeChanged;
+        BuildNavigationMeta();
     }
 
     private void HandleI18nChanged()
     {
+        BuildNavigationMeta();
+        try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        BuildNavigationMeta();
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 
@@ -80,14 +195,93 @@
                 }
                 
                 await InvokeAsync(StateHasChanged);
+                BuildNavigationMeta();
             }
             catch { }
         }
     }
 
+    private bool IsLightTheme => string.Equals(ThemeState.CurrentTheme, ThemeState.CalmLight, StringComparison.OrdinalIgnoreCase);
+    private bool IsDarkTheme => string.Equals(ThemeState.CurrentTheme, ThemeState.CalmDark, StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleCollapse() => Layout.ToggleSiderCollapsed();
+    private void ToggleOverlay() => Layout.ToggleSiderOverlay();
+    private void ToggleRightPanel() => Layout.ToggleRightPanel();
+    private async Task SwitchTheme(string theme)
+    {
+        await ThemeState.SetThemeAsync(theme);
+        StateHasChanged();
+    }
+
+    private void DemoStickyBar()
+    {
+        Interaction.ShowStickyBar("当前筛选：状态=潜在客户, 所属=华北大区",
+            new[]
+            {
+                new InteractionState.StickyAction("重置", InteractionState.InteractionActionTone.Default, async () => { await Task.Delay(0); }),
+                new InteractionState.StickyAction("保存视图", InteractionState.InteractionActionTone.Primary, async () => { await Task.Delay(0); })
+            });
+    }
+
+    private void DemoBulkBar()
+    {
+        Interaction.ShowBulkBar("已选中 3 条记录", "批量更新", async () => await Task.Delay(0), "取消", async () => await Task.Delay(0));
+    }
+
+    private void DemoToast()
+    {
+        Interaction.PushToast("操作成功", "这是一条示例通知", InteractionState.ToastTone.Success);
+    }
+
+    private void BuildNavigationMeta()
+    {
+        var subtitle = I18n.T("TXT_HEADER_SUBTITLE");
+        _headerSubtitle = string.IsNullOrWhiteSpace(subtitle) ? "Record workspace" : subtitle!;
+        _breadcrumbs.Clear();
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        var normalized = string.IsNullOrWhiteSpace(relative) ? Array.Empty<string>() : relative.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var currentPath = "";
+        foreach (var segment in normalized)
+        {
+            currentPath = string.IsNullOrEmpty(currentPath) ? segment : $"{currentPath}/{segment}";
+            var label = ResolveSegmentLabel(segment, currentPath);
+            _breadcrumbs.Add(new BreadcrumbItem(label, "/" + currentPath));
+        }
+        _contextLabel = _breadcrumbs.LastOrDefault()?.Label ?? "总览";
+    }
+
+    private static bool LooksLikeId(string value) => Guid.TryParse(value, out _) || int.TryParse(value, out _);
+
+    private string ResolveSegmentLabel(string segment, string path)
+    {
+        if (RouteLabels.TryGetValue(path, out var label))
+        {
+            return label;
+        }
+
+        if (RouteLabels.TryGetValue(segment, out label))
+        {
+            return label;
+        }
+
+        if (LooksLikeId(segment))
+        {
+            return $"# {segment[..Math.Min(segment.Length, 6)]}";
+        }
+
+        return segment;
+    }
+
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
+        ThemeState.OnChanged -= HandleThemeChanged;
+    }
+
+    private void HandleThemeChanged()
+    {
+        try { InvokeAsync(StateHasChanged); } catch { }
     }
     
     private class UserInfoDto
@@ -97,3 +291,5 @@
         public string? Role { get; set; }
     }
 }
+
+
