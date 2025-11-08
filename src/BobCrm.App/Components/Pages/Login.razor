@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
+@inject IWebHostEnvironment Env
 @using System.Linq
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
@@ -63,6 +64,9 @@
     private string? heroImageUrlAlt = "/images/slider/fujisann01.jpg";
     private bool heroUseAlt;
     private List<string> slider = new();
+    private string sliderSignature = string.Empty;
+    private readonly Random heroRng = new();
+    private int sliderIndex = 0;
     private CancellationTokenSource? cts;
 
     // Hero points removed per new guideline (two lines only)
@@ -119,68 +123,25 @@
         }
     }
 
-    private void InitializeHeroImages()
-    {
-        try
-        {
-            // Try slider folder first
-            var sliderDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "slider");
-            IEnumerable<string> files = Enumerable.Empty<string>();
-            if (Directory.Exists(sliderDir))
-            {
-                files = Directory.GetFiles(sliderDir)
-                    .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
-                             || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
-                             || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                             || f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
-                             || f.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(f => f);
-                slider = files.Select(f => "/images/slider/" + Path.GetFileName(f)).ToList();
-            }
-            if (slider.Count == 0)
-            {
-                // fallback to /images root
-                var imagesDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images");
-                if (Directory.Exists(imagesDir))
-                {
-                    files = Directory.GetFiles(imagesDir)
-                        .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
-                                 || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
-                                 || f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
-                                 || f.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
-                                 || f.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(f => f);
-                    slider = files.Select(f => "/images/" + Path.GetFileName(f)).ToList();
-                }
-            }
-            if (slider.Count == 0)
-            {
-                slider = DefaultHeroImages.ToList();
-            }
-            if (slider.Count > 1)
-            {
-                var rng = new Random();
-                slider = slider.OrderBy(_ => rng.Next()).ToList();
-            }
-            heroImageUrl = slider.FirstOrDefault() ?? heroImageUrl;
-            heroImageUrlAlt = slider.Skip(1).FirstOrDefault() ?? heroImageUrl;
-            heroUseAlt = false;
-        }
-        catch { }
-    }
+    private void InitializeHeroImages() => ReloadSliderImages(forceShuffle: true);
 
     private async Task RunSliderAsync()
     {
         cts?.Cancel();
         cts = new CancellationTokenSource();
         var token = cts.Token;
-        int idx = 0;
         while (!token.IsCancellationRequested)
         {
             try { await Task.Delay(8000, token); } catch { break; }
+            var reloaded = ReloadSliderImages();
             if (slider.Count == 0) continue;
-            idx = (idx + 1) % slider.Count;
-            var next = slider[idx];
+            if (reloaded)
+            {
+                try { await InvokeAsync(StateHasChanged); } catch { }
+                continue;
+            }
+            sliderIndex = (sliderIndex + 1) % slider.Count;
+            var next = slider[sliderIndex];
             if (!heroUseAlt)
             {
                 heroImageUrlAlt = next;
@@ -193,6 +154,80 @@
             }
             try { await InvokeAsync(StateHasChanged); } catch { }
         }
+    }
+
+    private bool ReloadSliderImages(bool forceShuffle = false)
+    {
+        try
+        {
+            var discovered = DiscoverSliderImages();
+            var signature = string.Join("|", discovered);
+            if (!forceShuffle && signature == sliderSignature)
+            {
+                return false;
+            }
+            sliderSignature = signature;
+            if (discovered.Count > 1)
+            {
+                discovered = discovered.OrderBy(_ => heroRng.Next()).ToList();
+            }
+            slider = discovered;
+            sliderIndex = 0;
+            heroImageUrl = slider.FirstOrDefault() ?? heroImageUrl;
+            heroImageUrlAlt = slider.Skip(1).FirstOrDefault() ?? heroImageUrl;
+            heroUseAlt = false;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private List<string> DiscoverSliderImages()
+    {
+        var results = new List<string>();
+        var webRoot = ResolveWebRootPath();
+        void Collect(string relative)
+        {
+            var physical = Path.Combine(webRoot, relative.Replace('/', Path.DirectorySeparatorChar));
+            if (!Directory.Exists(physical)) return;
+            var files = Directory.GetFiles(physical)
+                .Where(IsSupportedImage)
+                .OrderBy(f => f)
+                .Select(f => "/" + relative.Trim('/').Replace('\\', '/') + "/" + Path.GetFileName(f));
+            results.AddRange(files);
+        }
+
+        Collect("images/slider");
+        if (results.Count == 0)
+        {
+            Collect("images");
+        }
+        if (results.Count == 0)
+        {
+            results.AddRange(DefaultHeroImages);
+        }
+        return results.Distinct().ToList();
+    }
+
+    private static bool IsSupportedImage(string filePath)
+    {
+        var ext = Path.GetExtension(filePath);
+        return ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".avif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolveWebRootPath()
+    {
+        if (!string.IsNullOrWhiteSpace(Env?.WebRootPath) && Directory.Exists(Env.WebRootPath))
+        {
+            return Env.WebRootPath;
+        }
+        return Path.Combine(AppContext.BaseDirectory, "wwwroot");
     }
 
     public void Dispose()
