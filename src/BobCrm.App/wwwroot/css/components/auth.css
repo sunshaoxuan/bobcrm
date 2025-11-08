@@ -38,11 +38,29 @@
   color: var(--text-secondary);
 }
 
-.auth-shell.has-hero-image .auth-hero {
+.auth-shell.has-hero-image .auth-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background-image: var(--hero-image);
   background-size: cover;
-  background-position: center;
-  border-right: 1px solid var(--border-soft);
+  background-position: center top;
+  z-index: 0;
+  /* Smooth fade-out at bottom: top fully visible -> bottom transparent */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,0.95) 35%,
+    rgba(0,0,0,0.6) 65%,
+    rgba(0,0,0,0.0) 95%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,0.95) 35%,
+    rgba(0,0,0,0.6) 65%,
+    rgba(0,0,0,0.0) 95%
+  );
 }
 
 .auth-hero-brand {
@@ -55,6 +73,8 @@
   color: rgba(255,255,255,0.96);
   text-shadow: 0 2px 12px rgba(0,0,0,0.25);
   mix-blend-mode: lighten;
+  z-index: 2; /* keep brand above hero image */
+  pointer-events: none;
 }
 
 .auth-panel {
