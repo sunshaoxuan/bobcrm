@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
+@using System.Linq
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
            HeroSubtitle='@I18n.T("TXT_AUTH_TAGLINE")'
@@ -50,8 +51,14 @@
     private LoginModel model = new();
     private bool loading = false;
     private string? error;
-    private string? heroImageUrl = "/images/slider/tokyo01.jpg"; // immediate fallback so first渲染可见
-    private string? heroImageUrlAlt = "/images/slider/fujisann01.jpg"; // 次图
+    private static readonly List<string> DefaultHeroImages = new()
+    {
+        "/images/slider/tokyo01.jpg",
+        "/images/slider/fujisann01.jpg"
+    };
+
+    private string? heroImageUrl = "/images/slider/tokyo01.jpg";
+    private string? heroImageUrlAlt = "/images/slider/fujisann01.jpg";
     private bool heroUseAlt;
     private List<string> slider = new();
     private CancellationTokenSource? cts;
@@ -114,13 +121,6 @@
     {
         try
         {
-            string MapPath(string rel)
-            {
-                var trimmed = rel.TrimStart('/', '\\');
-                var normalized = trimmed.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-                return Path.Combine(AppContext.BaseDirectory, "wwwroot", normalized);
-            }
-
             // Try slider folder first
             var sliderDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "slider");
             IEnumerable<string> files = Enumerable.Empty<string>();
@@ -153,30 +153,10 @@
             }
             if (slider.Count == 0)
             {
-                var fallbackCandidates = new[]
-                {
-                    "/images/slider/tokyo01.jpg",
-                    "/images/slider/fujisann01.jpg",
-                    "/images/tokyo01.jpg",
-                    "/images/fujisann01.jpg"
-                };
-                foreach (var candidate in fallbackCandidates)
-                {
-                    if (File.Exists(MapPath(candidate)))
-                    {
-                        slider.Add(candidate);
-                    }
-                }
+                slider = DefaultHeroImages.ToList();
             }
-            if (slider.Count == 0)
-            {
-                heroImageUrl = null;
-                heroImageUrlAlt = null;
-                heroUseAlt = false;
-                return;
-            }
-            heroImageUrl = slider[0];
-            heroImageUrlAlt = slider.Count > 1 ? slider[1] : slider[0];
+            heroImageUrl = slider.FirstOrDefault() ?? heroImageUrl;
+            heroImageUrlAlt = slider.Skip(1).FirstOrDefault() ?? heroImageUrl;
             heroUseAlt = false;
         }
         catch { }
@@ -328,6 +308,4 @@
 
     
 }
-
-
 

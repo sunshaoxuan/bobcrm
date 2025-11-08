@@ -38,19 +38,37 @@
   color: var(--text-secondary);
 }
 
-.auth-shell.has-hero-image .auth-hero { overflow: hidden; }
+.auth-shell.has-hero-image .auth-hero {
+  overflow: hidden;
+}
+
 .auth-hero .auth-hero-bg {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center top;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   z-index: 1;
   opacity: 0;
   transition: opacity 1200ms ease;
   -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.0) 95%);
   mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.0) 95%);
 }
+
 .auth-hero .auth-hero-bg.show { opacity: 1; }
+
+.auth-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 18, 38, 0.35) 0%, rgba(4, 18, 38, 0.05) 65%, rgba(4, 18, 38, 0) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.auth-hero > *:not(.auth-hero-bg):not(.auth-hero-overlay) {
+  position: relative;
+  z-index: 3;
+}
 
 .auth-hero-brand {
   position: absolute;
@@ -62,7 +80,7 @@
   color: rgba(255,255,255,0.96);
   text-shadow: 0 2px 12px rgba(0,0,0,0.25);
   mix-blend-mode: lighten;
-  z-index: 2; /* keep brand above hero image */
+  z-index: 4; /* keep brand above overlay */
   pointer-events: none;
 }
 
@@ -126,13 +144,23 @@
   margin: 0;
 }
 
-.auth-panel-body h2 {
+.auth-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--spacing-2);
+}
+
+.auth-form-header h2 {
   margin: 0;
 }
 
 .auth-panel-desc {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: right;
+  min-width: 40%;
 }
 
 .auth-form {

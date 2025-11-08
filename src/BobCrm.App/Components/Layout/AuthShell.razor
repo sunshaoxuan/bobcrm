@@ -1,12 +1,13 @@
 @using BobCrm.App.Services
 @inject I18nService I18n
 
-<div class="auth-shell @((string.IsNullOrWhiteSpace(HeroImageUrl) && string.IsNullOrWhiteSpace(HeroImageUrlAlt)) ? string.Empty : "has-hero-image")">
+<div class="auth-shell @(HasHeroImage ? "has-hero-image" : string.Empty)">
     <section class="auth-hero">
-        @if (!string.IsNullOrWhiteSpace(HeroImageUrl) || !string.IsNullOrWhiteSpace(HeroImageUrlAlt))
+        @if (HasHeroImage)
         {
-            <div class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" style="background-image: url('@HeroImageUrl')"></div>
-            <div class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" style="background-image: url('@HeroImageUrlAlt')"></div>
+            <img class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" src="@PrimaryHeroImage" alt="Hero background" loading="lazy" />
+            <img class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" src="@SecondaryHeroImage" alt="Hero background" loading="lazy" />
+            <div class="auth-hero-overlay"></div>
         }
         @if (BrandInHero)
         {
@@ -45,11 +46,13 @@
             {
                 <p class="auth-eyebrow">@PanelEyebrow</p>
             }
-            <h2>@FormTitle</h2>
-            @if (!string.IsNullOrWhiteSpace(FormDescription))
-            {
-                <p class="auth-panel-desc">@FormDescription</p>
-            }
+            <div class="auth-form-header">
+                <h2>@FormTitle</h2>
+                @if (!string.IsNullOrWhiteSpace(FormDescription))
+                {
+                    <p class="auth-panel-desc">@FormDescription</p>
+                }
+            </div>
             @ChildContent
         </div>
         @if (Footer is not null)
@@ -79,6 +82,10 @@
     [Parameter] public string? HeroImageUrl { get; set; }
     [Parameter] public string? HeroImageUrlAlt { get; set; }
     [Parameter] public bool HeroImageUseAlt { get; set; }
+
+    private bool HasHeroImage => !string.IsNullOrWhiteSpace(HeroImageUrl) || !string.IsNullOrWhiteSpace(HeroImageUrlAlt);
+    private string PrimaryHeroImage => !string.IsNullOrWhiteSpace(HeroImageUrl) ? HeroImageUrl! : (HeroImageUrlAlt ?? string.Empty);
+    private string SecondaryHeroImage => !string.IsNullOrWhiteSpace(HeroImageUrlAlt) ? HeroImageUrlAlt! : (HeroImageUrl ?? string.Empty);
     [Parameter] public string FormTitle { get; set; } = string.Empty;
     [Parameter] public string? PanelEyebrow { get; set; }
     [Parameter] public string? FormDescription { get; set; }
