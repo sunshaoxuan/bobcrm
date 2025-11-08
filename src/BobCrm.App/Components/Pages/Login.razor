@@ -157,6 +157,11 @@
             {
                 slider = DefaultHeroImages.ToList();
             }
+            if (slider.Count > 1)
+            {
+                var rng = new Random();
+                slider = slider.OrderBy(_ => rng.Next()).ToList();
+            }
             heroImageUrl = slider.FirstOrDefault() ?? heroImageUrl;
             heroImageUrlAlt = slider.Skip(1).FirstOrDefault() ?? heroImageUrl;
             heroUseAlt = false;
