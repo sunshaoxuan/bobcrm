@@ -49,8 +49,15 @@ function Write-Warn {
 }
 
 # ========================================
-# 步骤 0: Git 同步（新增）
+# 步骤 0: Git 同步（已禁用 - 避免丢失本地修改）
 # ========================================
+# 警告：以下Git同步步骤已被注释，因为会导致本地未提交的修改丢失！
+# 如果需要强制同步，请手动执行以下命令：
+#   git reset --hard HEAD
+#   git clean -fdx -e logs/
+#   git pull origin main
+# ========================================
+<#
 Write-Section "Git 同步"
 
 Write-Host "正在放弃本地所有修改..." -ForegroundColor Gray
@@ -75,6 +82,7 @@ try {
 } catch {
     Write-Check "Git 同步" $false $_.Exception.Message
 }
+#>
 
 # ========================================
 # 步骤 1: 检查前置条件
