@@ -13,6 +13,82 @@ public static class EntityDefinitionEndpoints
 {
     public static IEndpointRouteBuilder MapEntityDefinitionEndpoints(this IEndpointRouteBuilder app)
     {
+        // ==================== 实体元数据端点（公共访问）====================
+        var entitiesGroup = app.MapGroup("/api/entities")
+            .WithTags("实体元数据")
+            .WithOpenApi();
+
+        // 获取可用实体列表（公共端点，不需要认证）
+        entitiesGroup.MapGet("", async (AppDbContext db) =>
+        {
+            var entities = await db.EntityDefinitions
+                .Where(ed => ed.IsEnabled && ed.Status == EntityStatus.Published)
+                .OrderBy(ed => ed.Order)
+                .Select(ed => new
+                {
+                    entityType = ed.EntityRoute,
+                    entityName = ed.EntityName,
+                    displayNameKey = ed.DisplayNameKey,
+                    descriptionKey = ed.DescriptionKey,
+                    apiEndpoint = ed.ApiEndpoint,
+                    icon = ed.Icon,
+                    category = ed.Category,
+                    isRootEntity = ed.IsRootEntity
+                })
+                .ToListAsync();
+
+            return Results.Json(entities);
+        })
+        .WithName("GetAvailableEntities")
+        .WithSummary("获取可用实体列表")
+        .WithDescription("获取所有已启用且已发布的实体元数据（公共访问）")
+        .AllowAnonymous();
+
+        // 获取所有实体（包括禁用的）- 需要管理员权限
+        entitiesGroup.MapGet("/all", async (AppDbContext db) =>
+        {
+            var entities = await db.EntityDefinitions
+                .OrderBy(ed => ed.Order)
+                .Select(ed => new
+                {
+                    entityType = ed.FullTypeName,
+                    entityRoute = ed.EntityRoute,
+                    entityName = ed.EntityName,
+                    displayNameKey = ed.DisplayNameKey,
+                    descriptionKey = ed.DescriptionKey,
+                    apiEndpoint = ed.ApiEndpoint,
+                    icon = ed.Icon,
+                    category = ed.Category,
+                    isEnabled = ed.IsEnabled,
+                    isRootEntity = ed.IsRootEntity,
+                    status = ed.Status
+                })
+                .ToListAsync();
+
+            return Results.Json(entities);
+        })
+        .WithName("GetAllEntities")
+        .WithSummary("获取所有实体列表（包括禁用的）")
+        .WithDescription("管理员用：获取所有实体的元数据，包括已禁用的")
+        .RequireAuthorization();
+
+        // 验证实体路由是否有效
+        entitiesGroup.MapGet("/{entityRoute}/validate", async (string entityRoute, AppDbContext db) =>
+        {
+            var entity = await db.EntityDefinitions
+                .Where(ed => ed.EntityRoute == entityRoute && ed.IsEnabled && ed.Status == EntityStatus.Published)
+                .FirstOrDefaultAsync();
+
+            var isValid = entity != null;
+            
+            return Results.Json(new { isValid, entityRoute, entity });
+        })
+        .WithName("ValidateEntityRoute")
+        .WithSummary("验证实体路由")
+        .WithDescription("检查指定的实体路由是否存在且可用")
+        .AllowAnonymous();
+
+        // ==================== 实体定义管理端点（需要认证）====================
         var group = app.MapGroup("/api/entity-definitions")
             .WithTags("实体定义管理")
             .WithOpenApi()

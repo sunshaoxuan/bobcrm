@@ -1,6 +1,7 @@
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Services.DataMigration;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
@@ -370,16 +371,36 @@ public class DataMigrationEvaluatorTests : IClassFixture<TestWebAppFactory>
         string status,
         FieldMetadata[] fields)
     {
+        var existing = await _db.EntityDefinitions
+            .Include(ed => ed.Fields)
+            .FirstOrDefaultAsync(ed => ed.Namespace == "BobCrm.Domain.Test" && ed.EntityName == entityName);
+
+        if (existing != null)
+        {
+            if (existing.Fields.Any())
+            {
+                _db.Set<FieldMetadata>().RemoveRange(existing.Fields);
+            }
+
+            _db.EntityDefinitions.Remove(existing);
+            await _db.SaveChangesAsync();
+        }
+
+        var uniqueSuffix = Guid.NewGuid().ToString("N")[..8];
+        var entityRoute = $"{entityName.ToLowerInvariant()}-{uniqueSuffix}";
+
         var entity = new EntityDefinition
         {
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Domain.Test",
             EntityName = entityName,
-            FullTypeName = $"BobCrm.Domain.Test.{entityName}",
+            EntityRoute = entityRoute,
+            FullTypeName = $"BobCrm.Domain.Test.{entityName}_{uniqueSuffix}",
             DisplayNameKey = $"ENTITY_{entityName.ToUpper()}",
+            DescriptionKey = $"ENTITY_{entityName.ToUpper()}_DESC",
             StructureType = EntityStructureType.Single,
             Status = status,
-            // DefaultTableName 是计算属性，不需要赋值
+            IsEnabled = true,
             Fields = fields.ToList(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -402,6 +423,7 @@ public class DataMigrationEvaluatorTests : IClassFixture<TestWebAppFactory>
     {
         return new FieldMetadata
         {
+            Id = Guid.NewGuid(),
             PropertyName = propertyName,
             DisplayNameKey = $"FIELD_{propertyName.ToUpper()}",
             DataType = dataType,
@@ -410,7 +432,9 @@ public class DataMigrationEvaluatorTests : IClassFixture<TestWebAppFactory>
             Scale = scale,
             IsRequired = isRequired,
             DefaultValue = defaultValue,
-            SortOrder = 0
+            SortOrder = 0,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
     }
 }

@@ -287,6 +287,24 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var existing = await db.EntityDefinitions
+            .Include(e => e.Fields)
+            .FirstOrDefaultAsync(e => e.Namespace == "BobCrm.Domain.Test" && e.EntityName == entityName);
+
+        if (existing != null)
+        {
+            if (existing.Fields.Any())
+            {
+                db.FieldMetadatas.RemoveRange(existing.Fields);
+            }
+
+            db.EntityDefinitions.Remove(existing);
+            await db.SaveChangesAsync();
+        }
+
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var entityRoute = $"{entityName.ToLowerInvariant()}-{suffix}";
+
         var entity = new EntityDefinition
         {
             Id = Guid.NewGuid(),
@@ -294,18 +312,20 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
             EntityName = entityName,
             FullTypeName = $"BobCrm.Domain.Test.{entityName}",
             DisplayNameKey = $"ENTITY_{entityName.ToUpper()}",
+            EntityRoute = entityRoute,
             StructureType = structureType,
             Status = status,
             IsRootEntity = isRootEntity,
             IsEnabled = true,
             Order = 0,
             Source = "Custom",
+            ApiEndpoint = $"/api/{entityRoute}",
             // DefaultTableName 是计算属性，不需要赋值
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        db.EntityDefinitions.Add(entity);
+        await db.EntityDefinitions.AddAsync(entity);
         await db.SaveChangesAsync();
 
         return entity.Id;

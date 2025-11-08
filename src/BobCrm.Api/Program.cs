@@ -89,6 +89,7 @@ builder.Services.AddAuthentication(o =>
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -293,6 +294,8 @@ app.MapTemplateEndpoints();
 app.MapEntityDefinitionEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
+
+app.MapControllers();
 
 // 管理和调试端点（仅开发环境）
 if (app.Environment.IsDevelopment())

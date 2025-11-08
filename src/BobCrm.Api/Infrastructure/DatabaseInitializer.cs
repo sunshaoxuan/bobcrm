@@ -2,6 +2,7 @@ using BobCrm.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BobCrm.Api.Infrastructure;
 
@@ -9,16 +10,13 @@ public static class DatabaseInitializer
 {
     public static async Task InitializeAsync(DbContext db)
     {
-        // 使用 EF Core Migrations 替代 EnsureCreated
-        // 这样可以支持数据库架构的演进和版本控制
-        try
+        Console.WriteLine("[DatabaseInitializer] Ensuring database is created using EnsureCreatedAsync");
+        await db.Database.EnsureCreatedAsync();
+
+        if (db is AppDbContext appDbContext)
         {
-            await db.Database.MigrateAsync();
-        }
-        catch (Exception ex)
-        {
-            // 如果迁移失败，记录错误但继续运行（开发环境友好）
-            Console.WriteLine($"[DatabaseInitializer] Migration failed: {ex.Message}");
+            var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance);
+            await synchronizer.SyncSystemEntitiesAsync();
         }
 
         var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
