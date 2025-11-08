@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Domain.Models;
 
@@ -59,7 +60,21 @@ public class FieldMetadata
     /// <summary>
     /// 是否必填
     /// </summary>
-    public bool IsRequired { get; set; } = false;
+    private bool _isRequired = true;
+    private bool _isRequiredSet;
+
+    public bool IsRequired
+    {
+        get => _isRequired;
+        set
+        {
+            _isRequired = value;
+            _isRequiredSet = true;
+        }
+    }
+
+    [NotMapped]
+    public bool IsRequiredExplicitlySet => _isRequiredSet;
 
     /// <summary>
     /// 是否为聚合子实体引用
@@ -134,6 +149,7 @@ public static class FieldDataType
     public const string Int64 = "Int64";
     public const string Decimal = "Decimal";
     public const string DateTime = "DateTime";
+    public const string Date = "Date";  // 独立的日期类型（仅日期，不含时间）
     public const string Boolean = "Boolean";
     public const string Guid = "Guid";
     public const string EntityRef = "EntityRef";  // 子实体引用
@@ -142,5 +158,4 @@ public static class FieldDataType
     public const string Integer = Int32;
     public const string Long = Int64;
     public const string Text = String;
-    public const string Date = DateTime;
 }

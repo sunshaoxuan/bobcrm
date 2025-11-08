@@ -148,7 +148,7 @@ public class DynamicEntityService
     /// <summary>
     /// 获取已加载的实体类型
     /// </summary>
-    public Type? GetEntityType(string fullTypeName)
+    public virtual Type? GetEntityType(string fullTypeName)
     {
         lock (_lock)
         {

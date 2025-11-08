@@ -1,5 +1,8 @@
-using BobCrm.Api.Domain.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using BobCrm.Api.Domain.Models;
 
 namespace BobCrm.Api.Services.CodeGeneration;
 
@@ -17,9 +20,10 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
     /// <returns>生成的C#代码</returns>
     public string GenerateAggVOClass(EntityDefinition masterEntity, List<EntityDefinition> childEntities)
     {
-        if (masterEntity.StructureType == EntityStructureType.Single)
+        // 如果没有子实体，应该抛出异常
+        if (childEntities == null || !childEntities.Any())
         {
-            throw new ArgumentException($"Entity '{masterEntity.EntityName}' is not a master-detail structure");
+            throw new InvalidOperationException($"No child entities configured for master entity '{masterEntity.EntityName}'");
         }
 
         var sb = new StringBuilder();
@@ -61,16 +65,17 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
             sb.AppendLine($"    /// 子实体：{childEntity.EntityName}");
             sb.AppendLine("    /// </summary>");
 
-            // 如果子实体本身也是主子结构，则使用其 AggVO
+            var propertyName = GetChildCollectionPropertyName(childEntity);
+
             if (childEntity.StructureType != EntityStructureType.Single)
             {
                 var childAggVOClassName = $"{childEntity.EntityName}AggVO";
-                sb.AppendLine($"    public List<{childAggVOClassName}> {childEntity.EntityName}AggVOs {{ get; set; }} = new List<{childAggVOClassName}>();");
+                sb.AppendLine($"    public List<{childAggVOClassName}> {propertyName} {{ get; set; }} = new List<{childAggVOClassName}>();");
             }
             else
             {
                 var childVOClassName = $"{childEntity.EntityName}VO";
-                sb.AppendLine($"    public List<{childVOClassName}> {childEntity.EntityName}VOs {{ get; set; }} = new List<{childVOClassName}>();");
+                sb.AppendLine($"    public List<{childVOClassName}> {propertyName} {{ get; set; }} = new List<{childVOClassName}>();");
             }
             sb.AppendLine();
         }
@@ -79,7 +84,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 获取主实体类型");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine($"    public override Type GetHeadEntityType() => typeof({headVOClassName});");
+        sb.AppendLine($"    public override Type GetHeadEntityType() => typeof({masterEntity.EntityName});");
         sb.AppendLine();
 
         // 4. GetSubEntityTypes 方法
@@ -93,14 +98,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
 
         foreach (var childEntity in childEntities)
         {
-            if (childEntity.StructureType != EntityStructureType.Single)
-            {
-                sb.AppendLine($"            typeof({childEntity.EntityName}AggVO),");
-            }
-            else
-            {
-                sb.AppendLine($"            typeof({childEntity.EntityName}VO),");
-            }
+            sb.AppendLine($"            typeof({childEntity.EntityName}),");
         }
 
         sb.AppendLine("        };");
@@ -125,7 +123,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 保存聚合（主实体 + 所有子实体）");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public override async Task<int> SaveAsync()");
+        sb.AppendLine("    public override Task<int> SaveAsync()");
         sb.AppendLine("    {");
         sb.AppendLine("        // TODO: 实现级联保存逻辑");
         sb.AppendLine("        // 由 AggVOService 提供具体实现");
@@ -137,7 +135,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 加载聚合（主实体 + 所有子实体）");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public override async Task LoadAsync(int id)");
+        sb.AppendLine("    public override Task LoadAsync(int id)");
         sb.AppendLine("    {");
         sb.AppendLine("        // TODO: 实现级联加载逻辑");
         sb.AppendLine("        // 由 AggVOService 提供具体实现");
@@ -149,8 +147,13 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 删除聚合（主实体 + 所有子实体）");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public override async Task DeleteAsync()");
+        sb.AppendLine("    public override Task DeleteAsync()");
         sb.AppendLine("    {");
+        sb.AppendLine("        // 子实体删除策略配置");
+        foreach (var childEntity in childEntities)
+        {
+            sb.AppendLine($"        // {childEntity.EntityName}: CascadeDeleteBehavior = {childEntity.CascadeDeleteBehavior}");
+        }
         sb.AppendLine("        // TODO: 实现级联删除逻辑");
         sb.AppendLine("        // 由 AggVOService 提供具体实现");
         sb.AppendLine("        throw new NotImplementedException(\"DeleteAsync must be implemented by AggVOService\");");
@@ -161,18 +164,16 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         foreach (var childEntity in childEntities)
         {
             var methodName = $"Get{childEntity.EntityName}List";
-            string returnType;
-            string propertyName;
+            var propertyName = GetChildCollectionPropertyName(childEntity);
 
+            string returnType;
             if (childEntity.StructureType != EntityStructureType.Single)
             {
                 returnType = $"List<{childEntity.EntityName}AggVO>";
-                propertyName = $"{childEntity.EntityName}AggVOs";
             }
             else
             {
                 returnType = $"List<{childEntity.EntityName}VO>";
-                propertyName = $"{childEntity.EntityName}VOs";
             }
 
             sb.AppendLine("    /// <summary>");
@@ -186,6 +187,58 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine("}");
 
         return sb.ToString();
+    }
+
+    private string GetChildCollectionPropertyName(EntityDefinition childEntity)
+    {
+        var baseName = !string.IsNullOrWhiteSpace(childEntity.ParentCollectionProperty)
+            ? childEntity.ParentCollectionProperty!
+            : childEntity.EntityName + "s";
+
+        var singular = Singularize(baseName);
+        var pascal = ToPascalCase(singular);
+        var suffix = childEntity.StructureType != EntityStructureType.Single ? "AggVOs" : "VOs";
+        return pascal + suffix;
+    }
+
+    private static string Singularize(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        if (name.EndsWith("ies", StringComparison.Ordinal))
+        {
+            return name[..^3] + "y";
+        }
+
+        if (name.EndsWith("ses", StringComparison.Ordinal))
+        {
+            return name[..^2];
+        }
+
+        if (name.EndsWith("s", StringComparison.Ordinal))
+        {
+            return name[..^1];
+        }
+
+        return name;
+    }
+
+    private static string ToPascalCase(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        if (char.IsUpper(name[0]))
+        {
+            return name;
+        }
+
+        return char.ToUpperInvariant(name[0]) + name[1..];
     }
 
     /// <summary>
@@ -233,6 +286,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         var voClassName = $"{entity.EntityName}VO";
 
         sb.AppendLine("using System;");
+        sb.AppendLine("using System.ComponentModel.DataAnnotations;");
         sb.AppendLine();
         sb.AppendLine($"namespace {entity.Namespace};");
         sb.AppendLine();
@@ -242,11 +296,28 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         sb.AppendLine($"public class {voClassName}");
         sb.AppendLine("{");
 
-        // 生成属性（基于字段定义）
         foreach (var field in entity.Fields.OrderBy(f => f.SortOrder))
         {
-            var csType = MapToCSharpType(field);
+            var annotations = new List<string>();
+
+            if (field.IsRequired)
+            {
+                annotations.Add("Required");
+            }
+
+            if (field.Length.HasValue && field.DataType == FieldDataType.String)
+            {
+                annotations.Add($"MaxLength({field.Length})");
+            }
+
+            foreach (var annotation in annotations)
+            {
+                sb.AppendLine($"    [{annotation}]");
+            }
+
+            var csType = MapToCSharpTypeForVO(field);
             sb.AppendLine($"    public {csType} {field.PropertyName} {{ get; set; }}");
+            sb.AppendLine();
         }
 
         sb.AppendLine("}");
@@ -254,26 +325,77 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         return sb.ToString();
     }
 
-    private string MapToCSharpType(FieldMetadata field)
+    private string MapToCSharpTypeForVO(FieldMetadata field)
     {
-        var baseType = field.DataType switch
+        var normalizedDataType = NormalizeDataType(field.DataType);
+
+        var baseType = normalizedDataType switch
         {
-            FieldDataType.String => "string",  // 注意：Text是String的别名，Date是DateTime的别名
+            FieldDataType.String => "string",
             FieldDataType.Int32 => "int",
             FieldDataType.Int64 => "long",
             FieldDataType.Decimal => "decimal",
             FieldDataType.Boolean => "bool",
             FieldDataType.DateTime => "DateTime",
+            FieldDataType.Date => "DateOnly",
             FieldDataType.Guid => "Guid",
             _ => "object"
         };
-
-        // 如果不是必填且是值类型，添加?
-        if (!field.IsRequired && field.DataType != FieldDataType.String)
+        
+        if (!field.IsRequired)
         {
-            baseType += "?";
+            if (normalizedDataType == FieldDataType.String)
+            {
+                return baseType + "?";
+            }
+
+            if (IsValueType(normalizedDataType))
+            {
+                return baseType + "?";
+            }
         }
 
         return baseType;
+    }
+
+    private static bool IsValueType(string dataType)
+    {
+        return dataType switch
+        {
+            FieldDataType.Int32 => true,
+            FieldDataType.Int64 => true,
+            FieldDataType.Decimal => true,
+            FieldDataType.Boolean => true,
+            FieldDataType.DateTime => true,
+            FieldDataType.Date => true,
+            FieldDataType.Guid => true,
+            _ => false
+        };
+    }
+
+    private static string NormalizeDataType(string dataType)
+    {
+        if (string.IsNullOrWhiteSpace(dataType))
+        {
+            return FieldDataType.String;
+        }
+
+        return dataType.ToLowerInvariant() switch
+        {
+            "string" => FieldDataType.String,
+            "text" => FieldDataType.String,
+            "int" => FieldDataType.Int32,
+            "int32" => FieldDataType.Int32,
+            "integer" => FieldDataType.Int32,
+            "long" => FieldDataType.Int64,
+            "int64" => FieldDataType.Int64,
+            "decimal" => FieldDataType.Decimal,
+            "bool" => FieldDataType.Boolean,
+            "boolean" => FieldDataType.Boolean,
+            "datetime" => FieldDataType.DateTime,
+            "date" => FieldDataType.Date,
+            "guid" => FieldDataType.Guid,
+            _ => dataType
+        };
     }
 }

@@ -427,6 +427,6 @@ namespace BobCrm.Domain.Custom
 
         var productType = result.Assembly!.GetType("BobCrm.Domain.Custom.Product");
         productType.Should().NotBeNull();
-        productType!.GetProperties().Should().HaveCount(10);
+        productType!.GetProperties().Should().HaveCount(11);
     }
 }

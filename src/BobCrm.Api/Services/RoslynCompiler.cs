@@ -28,7 +28,7 @@ public class RoslynCompiler
     /// <param name="sourceCode">C#源代码</param>
     /// <param name="assemblyName">程序集名称</param>
     /// <returns>编译结果</returns>
-    public CompilationResult Compile(string sourceCode, string assemblyName)
+    public virtual CompilationResult Compile(string sourceCode, string assemblyName)
     {
         var result = new CompilationResult
         {
@@ -91,11 +91,23 @@ public class RoslynCompiler
 
             // 6. 加载程序集到内存
             ms.Seek(0, SeekOrigin.Begin);
-            var assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
+            var loadContext = new AssemblyLoadContext($"Roslyn_{Guid.NewGuid():N}", isCollectible: true);
+            Assembly? assembly = null;
+
+            try
+            {
+                assembly = loadContext.LoadFromStream(ms);
+            }
+            catch
+            {
+                loadContext.Unload();
+                throw;
+            }
 
             result.Success = true;
             result.Assembly = assembly;
             result.LoadedTypes = assembly.GetTypes().Select(t => t.FullName ?? t.Name).ToList();
+            result.LoadContext = loadContext;
 
             _logger.LogInformation("[Roslyn] ✓ Compilation succeeded: {AssemblyName}, Loaded {Count} types",
                 assemblyName, result.LoadedTypes.Count);
@@ -122,7 +134,7 @@ public class RoslynCompiler
     /// <summary>
     /// 编译多个源文件
     /// </summary>
-    public CompilationResult CompileMultiple(Dictionary<string, string> sources, string assemblyName)
+    public virtual CompilationResult CompileMultiple(Dictionary<string, string> sources, string assemblyName)
     {
         var result = new CompilationResult
         {
@@ -159,8 +171,8 @@ public class RoslynCompiler
             );
 
             // 编译
-            using var ms = new MemoryStream();
-            var emitResult = compilation.Emit(ms);
+            using var aggregateStream = new MemoryStream();
+            var emitResult = compilation.Emit(aggregateStream);
 
             if (!emitResult.Success)
             {
@@ -181,13 +193,24 @@ public class RoslynCompiler
                 return result;
             }
 
-            // 加载程序集
-            ms.Seek(0, SeekOrigin.Begin);
-            var assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
+            aggregateStream.Seek(0, SeekOrigin.Begin);
+            var loadContext = new AssemblyLoadContext($"Roslyn_{Guid.NewGuid():N}", isCollectible: true);
+            Assembly? aggregateAssembly = null;
+
+            try
+            {
+                aggregateAssembly = loadContext.LoadFromStream(aggregateStream);
+            }
+            catch
+            {
+                loadContext.Unload();
+                throw;
+            }
 
             result.Success = true;
-            result.Assembly = assembly;
-            result.LoadedTypes = assembly.GetTypes().Select(t => t.FullName ?? t.Name).ToList();
+            result.Assembly = aggregateAssembly;
+            result.LoadedTypes = aggregateAssembly.GetTypes().Select(t => t.FullName ?? t.Name).ToList();
+            result.LoadContext = loadContext;
 
             _logger.LogInformation("[Roslyn] ✓ Multi-file compilation succeeded: {Count} types loaded",
                 result.LoadedTypes.Count);
@@ -209,7 +232,7 @@ public class RoslynCompiler
     /// <summary>
     /// 获取编译所需的引用程序集
     /// </summary>
-    private List<MetadataReference> GetReferences()
+    protected virtual List<MetadataReference> GetReferences()
     {
         var references = new List<MetadataReference>();
 
@@ -244,7 +267,7 @@ public class RoslynCompiler
     /// <summary>
     /// 验证代码语法（不编译）
     /// </summary>
-    public ValidationResult ValidateSyntax(string sourceCode)
+    public virtual ValidationResult ValidateSyntax(string sourceCode)
     {
         var result = new ValidationResult();
 
@@ -297,6 +320,7 @@ public class CompilationResult
     public Assembly? Assembly { get; set; }
     public List<string> LoadedTypes { get; set; } = new();
     public List<CompilationError> Errors { get; set; } = new();
+    public AssemblyLoadContext? LoadContext { get; set; }
 }
 
 /// <summary>

@@ -341,7 +341,7 @@ public class PublishResult
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public string? DDLScript { get; set; }
-    public Guid? ScriptId { get; set; }
+    public Guid ScriptId { get; set; }
     public ChangeAnalysis? ChangeAnalysis { get; set; }
 }
 

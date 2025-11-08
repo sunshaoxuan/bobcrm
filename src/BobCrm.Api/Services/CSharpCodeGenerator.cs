@@ -12,7 +12,7 @@ public class CSharpCodeGenerator
     /// <summary>
     /// 生成C#实体类代码
     /// </summary>
-    public string GenerateEntityClass(EntityDefinition entity)
+    public virtual string GenerateEntityClass(EntityDefinition entity)
     {
         var sb = new StringBuilder();
 
@@ -133,7 +133,13 @@ public class CSharpCodeGenerator
 
         // Property declaration
         var csType = MapFieldTypeToCSharpType(field);
-        var nullableModifier = !field.IsRequired && IsValueType(field.DataType) ? "?" : "";
+        var hasDefaultValue = !string.IsNullOrEmpty(field.DefaultValue);
+
+        // 可空性规则：
+        // 1. 必填或有默认值 → 非可空
+        // 2. 非必填且无默认值的值类型 → 可空
+        var shouldBeNullable = !field.IsRequired && !hasDefaultValue && IsValueType(field.DataType);
+        var nullableModifier = shouldBeNullable ? "?" : string.Empty;
         var defaultValue = GetDefaultValueExpression(field);
 
         sb.AppendLine($"        public {csType}{nullableModifier} {field.PropertyName} {{ get; set; }}{defaultValue}");
@@ -166,6 +172,7 @@ public class CSharpCodeGenerator
             FieldDataType.Decimal => "decimal",
             FieldDataType.Boolean => "bool",
             FieldDataType.DateTime => "DateTime",
+            FieldDataType.Date => "DateOnly",
             FieldDataType.Guid => "Guid",
             _ => "object"
         };
@@ -183,6 +190,7 @@ public class CSharpCodeGenerator
             FieldDataType.Decimal => true,
             FieldDataType.Boolean => true,
             FieldDataType.DateTime => true,
+            FieldDataType.Date => true,
             FieldDataType.Guid => true,
             _ => false
         };
@@ -213,6 +221,7 @@ public class CSharpCodeGenerator
             FieldDataType.Decimal => $" = {field.DefaultValue}m;",
             FieldDataType.Boolean => $" = {field.DefaultValue.ToLower()};",
             FieldDataType.DateTime when field.DefaultValue.ToUpper() == "NOW" => " = DateTime.UtcNow;",
+            FieldDataType.Date when field.DefaultValue.ToUpper() == "TODAY" => " = DateOnly.FromDateTime(DateTime.UtcNow);",
             FieldDataType.Guid when field.DefaultValue.ToUpper() == "NEWID" => " = Guid.NewGuid();",
             _ => string.Empty
         };
@@ -221,7 +230,7 @@ public class CSharpCodeGenerator
     /// <summary>
     /// 生成接口定义代码
     /// </summary>
-    public string GenerateInterfaces()
+    public virtual string GenerateInterfaces()
     {
         return @"using System;
 
