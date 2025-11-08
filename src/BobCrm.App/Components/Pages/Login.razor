@@ -50,8 +50,8 @@
     private LoginModel model = new();
     private bool loading = false;
     private string? error;
-    private string? heroImageUrl;
-    private string? heroImageUrlAlt;
+    private string? heroImageUrl = "/images/slider/tokyo01.jpg"; // immediate fallback so first渲染可见
+    private string? heroImageUrlAlt = "/images/slider/fujisann01.jpg"; // 次图
     private bool heroUseAlt;
     private List<string> slider = new();
     private CancellationTokenSource? cts;
@@ -301,7 +301,6 @@
 
     
 }
-
 
 
 

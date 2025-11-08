@@ -42,10 +42,9 @@
 .auth-hero .auth-hero-bg {
   position: absolute;
   inset: 0;
-  background-image: var(--img);
   background-size: cover;
   background-position: center top;
-  z-index: 0;
+  z-index: 1;
   opacity: 0;
   transition: opacity 1200ms ease;
   -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.6) 65%, rgba(0,0,0,0.0) 95%);

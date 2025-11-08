@@ -5,8 +5,8 @@
     <section class="auth-hero">
         @if (!string.IsNullOrWhiteSpace(HeroImageUrl) || !string.IsNullOrWhiteSpace(HeroImageUrlAlt))
         {
-            <div class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" style="--img: url('@HeroImageUrl')"></div>
-            <div class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" style="--img: url('@HeroImageUrlAlt')"></div>
+            <div class="auth-hero-bg bg1 @(HeroImageUseAlt ? string.Empty : "show")" style="background-image: url('@HeroImageUrl')"></div>
+            <div class="auth-hero-bg bg2 @(HeroImageUseAlt ? "show" : string.Empty)" style="background-image: url('@HeroImageUrlAlt')"></div>
         }
         @if (BrandInHero)
         {
