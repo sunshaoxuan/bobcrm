@@ -369,6 +369,8 @@ public static class DatabaseInitializer
             Ensure("ERR_USERNAME_REQUIRED", "用户名不能为空", "ユーザー名は必須です", "Username is required");
             Ensure("ERR_PASSWORD_REQUIRED", "密码不能为空", "パスワードは必須です", "Password is required");
             Ensure("ERR_LOGIN_FAILED", "登录失败", "ログイン失敗", "Login failed");
+            Ensure("TXT_REDIRECTING", "正在跳转...", "リダイレクト中です...", "Redirecting...");
+            Ensure("TXT_REDIRECTING_HINT", "即将带你进入工作台，请稍候...", "安全なワークスペースを準備しています...", "Preparing your workspace...");
             Ensure("ERR_PARSE_RESPONSE", "无法解析服务器响应", "サーバー応答を解析できません", "Unable to parse server response");
             Ensure("LBL_SETUP", "初始化设置", "初期設定", "Setup");
             Ensure("LBL_API_BASE", "API 基础地址", "API ベースURL", "API Base URL");

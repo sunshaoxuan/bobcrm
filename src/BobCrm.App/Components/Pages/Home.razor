@@ -1,43 +1,29 @@
 @page "/"
 @rendermode RenderMode.InteractiveServer
+@layout BobCrm.App.Components.Layout.AuthLayout
 
+@inject BobCrm.App.Services.AuthService Auth
+@inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 
-<PageTitle>@I18n.T("LBL_HOME")</PageTitle>
-
-<h1>@I18n.T("LBL_WELCOME")</h1>
-
-<p>
-    - <a href="/login">@I18n.T("LBL_LOGIN_TITLE")</a><br />
-    - <a href="/customers">@I18n.T("MENU_CUSTOMERS")</a>
-</p>
+<div class="auth-form auth-redirect">
+    <p>@I18n.T("TXT_REDIRECTING")</p>
+    <small>@I18n.T("TXT_REDIRECTING_HINT")</small>
+</div>
 
 @code {
-    [Inject] IJSRuntime JS { get; set; } = default!;
-
-    protected override void OnInitialized()
-    {
-        I18n.OnChanged += HandleI18nChanged;
-    }
-
-    private void HandleI18nChanged()
-    {
-        try { InvokeAsync(StateHasChanged); } catch { }
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender) return;
+        try
         {
-            try
-            {
-                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
-                await I18n.LoadAsync(langToLoad);
-                // Wait for UI to update after i18n load
-                await InvokeAsync(StateHasChanged);
-            }
-            catch { }
+            var signedIn = await Auth.EnsureAuthenticatedAsync();
+            var target = signedIn ? "/customers" : "/login";
+            Nav.NavigateTo(target, forceLoad: true);
+        }
+        catch
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
         }
     }
 }
