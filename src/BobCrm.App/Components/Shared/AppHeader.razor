@@ -134,7 +134,8 @@
     [
         new HeaderNavItem("MENU_CUSTOMERS", "/customers", IconType.Outline.Team, NavLinkMatch.Prefix),
         new HeaderNavItem("MENU_TEMPLATES", "/templates", IconType.Outline.Appstore, NavLinkMatch.Prefix),
-                new HeaderNavItem("MENU_FILES", "/files", IconType.Outline.CloudUpload, NavLinkMatch.Prefix),`r`nnew HeaderNavItem("MENU_SETTINGS", "/settings", IconType.Outline.Setting, NavLinkMatch.Prefix)
+        new HeaderNavItem("MENU_FILES", "/files", IconType.Outline.CloudUpload, NavLinkMatch.Prefix),
+        new HeaderNavItem("MENU_SETTINGS", "/settings", IconType.Outline.Setting, NavLinkMatch.Prefix)
     ];
     private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -144,7 +145,7 @@
         ["customer"] = "客户详情",
         ["templates"] = "模板",
         ["files"] = "文件",
-        ["settings"] = "设置"
+        ["settings"] = "设置",
         ["entity-definitions"] = "实体定义",
         ["dynamic-entity"] = "动态实体"
     };
@@ -291,5 +292,6 @@
         public string? Role { get; set; }
     }
 }
+
 
 
