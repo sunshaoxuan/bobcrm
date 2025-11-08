@@ -114,6 +114,13 @@
     {
         try
         {
+            string MapPath(string rel)
+            {
+                var trimmed = rel.TrimStart('/', '\\');
+                var normalized = trimmed.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                return Path.Combine(AppContext.BaseDirectory, "wwwroot", normalized);
+            }
+
             // Try slider folder first
             var sliderDir = Path.Combine(AppContext.BaseDirectory, "wwwroot", "images", "slider");
             IEnumerable<string> files = Enumerable.Empty<string>();
@@ -146,7 +153,27 @@
             }
             if (slider.Count == 0)
             {
-                slider = new() { "/images/tokyo01.jpg" };
+                var fallbackCandidates = new[]
+                {
+                    "/images/slider/tokyo01.jpg",
+                    "/images/slider/fujisann01.jpg",
+                    "/images/tokyo01.jpg",
+                    "/images/fujisann01.jpg"
+                };
+                foreach (var candidate in fallbackCandidates)
+                {
+                    if (File.Exists(MapPath(candidate)))
+                    {
+                        slider.Add(candidate);
+                    }
+                }
+            }
+            if (slider.Count == 0)
+            {
+                heroImageUrl = null;
+                heroImageUrlAlt = null;
+                heroUseAlt = false;
+                return;
             }
             heroImageUrl = slider[0];
             heroImageUrlAlt = slider.Count > 1 ? slider[1] : slider[0];
@@ -301,7 +328,6 @@
 
     
 }
-
 
 
 
