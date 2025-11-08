@@ -16,11 +16,12 @@
   flex-direction: column;
   justify-content: center;
   gap: var(--spacing-4);
+  position: relative;
 }
 
 .auth-hero h1 {
   margin: 0;
-  font-size: 48px;
+  font-size: 54px;
   line-height: 1.1;
 }
 
@@ -35,6 +36,25 @@
   flex-direction: column;
   gap: var(--spacing-2);
   color: var(--text-secondary);
+}
+
+.auth-shell.has-hero-image .auth-hero {
+  background-image: var(--hero-image);
+  background-size: cover;
+  background-position: center;
+  border-right: 1px solid var(--border-soft);
+}
+
+.auth-hero-brand {
+  position: absolute;
+  top: var(--spacing-6);
+  left: var(--spacing-6);
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.96);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  mix-blend-mode: lighten;
 }
 
 .auth-panel {
@@ -53,10 +73,7 @@
   align-items: center;
 }
 
-.auth-brand {
-  font-size: 20px;
-  font-weight: 600;
-}
+.auth-brand { font-size: 16px; color: var(--text-secondary); }
 
 .auth-lang-toggle {
   display: inline-flex;

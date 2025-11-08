@@ -1,8 +1,12 @@
 @using BobCrm.App.Services
 @inject I18nService I18n
 
-<div class="auth-shell">
+<div class="auth-shell @(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : "has-hero-image")" style="@(string.IsNullOrWhiteSpace(HeroImageUrl) ? string.Empty : $"--hero-image: url('{HeroImageUrl}')")">
     <section class="auth-hero">
+        @if (BrandInHero)
+        {
+            <div class="auth-hero-brand">@BrandText</div>
+        }
         @if (!string.IsNullOrWhiteSpace(Eyebrow))
         {
             <p class="auth-eyebrow">@Eyebrow</p>
@@ -12,7 +16,7 @@
         {
             <p class="auth-hero-subtitle">@HeroSubtitle</p>
         }
-        @if (HeroContent is not null)
+        @if (HeroContent is not null && ShowHeroContent)
         {
             <div class="auth-hero-content">
                 @HeroContent
@@ -21,7 +25,7 @@
     </section>
     <section class="auth-panel">
         <header class="auth-panel-header">
-            <div class="auth-brand">OneCRM</div>
+            <div class="auth-brand">@I18n.T("LBL_LOGIN_TITLE")</div>
             <div class="auth-lang-toggle">
                 @foreach (var lang in _languages)
                 {
@@ -64,6 +68,10 @@
     [Parameter] public string? HeroSubtitle { get; set; }
     [Parameter] public string? Eyebrow { get; set; }
     [Parameter] public RenderFragment? HeroContent { get; set; }
+    [Parameter] public bool ShowHeroContent { get; set; } = true;
+    [Parameter] public bool BrandInHero { get; set; } = true;
+    [Parameter] public string BrandText { get; set; } = "OneCRM";
+    [Parameter] public string? HeroImageUrl { get; set; }
     [Parameter] public string FormTitle { get; set; } = string.Empty;
     [Parameter] public string? PanelEyebrow { get; set; }
     [Parameter] public string? FormDescription { get; set; }

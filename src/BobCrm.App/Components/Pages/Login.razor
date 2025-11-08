@@ -8,8 +8,10 @@
 @inject BobCrm.App.Services.I18nService I18n
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
-           HeroSubtitle='@I18n.T("TXT_AUTH_HERO_SUBTITLE")'
-           HeroContent="@HeroHighlights"
+           HeroSubtitle='@I18n.T("TXT_AUTH_TAGLINE")'
+           ShowHeroContent="false"
+           BrandInHero='true'
+           BrandText='OneCRM'
            Eyebrow='@I18n.T("LBL_SECURE")'
            PanelEyebrow='@I18n.T("LBL_WELCOME_BACK")'
            FormTitle='@I18n.T("LBL_LOGIN_TITLE")'
@@ -46,21 +48,7 @@
     private bool loading = false;
     private string? error;
 
-    private RenderFragment HeroHighlights => builder =>
-    {
-        builder.OpenElement(0, "p");
-        builder.AddContent(1, I18n.T("TXT_AUTH_HERO_POINT1"));
-        builder.CloseElement();
-        builder.OpenElement(2, "p");
-        builder.AddContent(3, I18n.T("TXT_AUTH_HERO_POINT2"));
-        builder.CloseElement();
-        builder.OpenElement(4, "p");
-        builder.AddContent(5, I18n.T("TXT_AUTH_HERO_POINT3"));
-        builder.CloseElement();
-        builder.OpenElement(6, "p");
-        builder.AddContent(7, I18n.T("TXT_AUTH_HERO_POINT4"));
-        builder.CloseElement();
-    };
+    // Hero points removed per new guideline (two lines only)
 
     protected override void OnInitialized()
     {
@@ -222,7 +210,6 @@
         I18n.OnChanged -= HandleI18nChanged;
     }
 }
-
 
 
 
