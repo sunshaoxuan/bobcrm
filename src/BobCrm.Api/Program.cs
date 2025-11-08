@@ -240,6 +240,7 @@ using (var scope = app.Services.CreateScope())
         Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
         Upsert("TXT_AUTH_TAGLINE", "更快决策，更自然协作。", "意思決定を速く、協働を自然に。", "Decide faster, collaborate naturally.");
         // Missing panel eyebrow
+        Upsert("LBL_SECURE", "智能 · 稳定 · 自由", "スマート · 安定 · 自由", "Smart · Reliable · Open");
         Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
         await db.SaveChangesAsync();
     }

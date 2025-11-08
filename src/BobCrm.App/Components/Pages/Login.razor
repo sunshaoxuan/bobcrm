@@ -18,14 +18,16 @@
            HeroImageUseAlt='@heroUseAlt'
            Eyebrow='@I18n.T("LBL_SECURE")'
            PanelEyebrow='@I18n.T("LBL_WELCOME_BACK")'
-           FormTitle='@I18n.T("LBL_LOGIN_TITLE")'
-           FormDescription='@I18n.T("TXT_LOGIN_DESCRIPTION")'>
+           FormTitle='@I18n.T("LBL_LOGIN_TITLE")'>
     <ChildContent>
         <EditForm Model="model" OnValidSubmit="OnLoginAsync" FormName="login" class="auth-form">
             <DataAnnotationsValidator />
             <ValidationSummary class="auth-message error" />
             <div class="auth-field">
-                <label for="login-username">@I18n.T("LBL_USERNAME_OR_EMAIL")</label>
+                <div class="auth-field-header">
+                    <label for="login-username">@I18n.T("LBL_USERNAME_OR_EMAIL")</label>
+                    <span class="auth-field-hint">@I18n.T("TXT_LOGIN_DESCRIPTION")</span>
+                </div>
                 <Input id="login-username" @bind-Value="model.username" Placeholder="admin" Class="field-control" />
             </div>
             <div class="auth-field">
@@ -308,4 +310,3 @@
 
     
 }
-
