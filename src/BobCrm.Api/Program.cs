@@ -220,6 +220,31 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DatabaseInitializer.InitializeAsync(db);
 
+    // Upgrade login i18n resources to latest copy (idempotent)
+    try
+    {
+        void Upsert(string key, string zh, string ja, string en)
+        {
+            var set = db.Set<LocalizationResource>();
+            var r = set.FirstOrDefault(x => x.Key == key);
+            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+            else { r.ZH = zh; r.JA = ja; r.EN = en; }
+        }
+
+        Upsert("TXT_AUTH_HERO_TITLE", "智能连接的客户体验中枢", "インテリジェントに接続された顧客体験の中枢", "The Intelligent Hub for Connected Customer Experience");
+        Upsert("TXT_AUTH_HERO_SUBTITLE", "让团队与客户的关系更简单、更高效、更有温度。在同一个平台上完成洞察、协作与成长。", "チームと顧客の関係を、よりシンプルに、より効率的に、より温かく。同じプラットフォームで洞察・協働・成長を完結。", "Make team–customer relationships simpler, faster, and warmer. Gain insight, collaborate, and grow on a single platform.");
+        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
+        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
+        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
+        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
+        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をよりスマートに、協働をより自然に。", "Make relationships smarter, collaboration more natural.");
+        await db.SaveChangesAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
+    }
+
     // Sync system entities (IBizEntity implementations) to EntityDefinition table
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
     var synchronizer = new EntityDefinitionSynchronizer(db, logger);
