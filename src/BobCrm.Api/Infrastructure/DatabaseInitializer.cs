@@ -159,8 +159,18 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "ERR_USERNAME_REQUIRED", ZH = "用户名不能为空", JA = "ユーザー名は必須です", EN = "Username is required" },
                 new LocalizationResource { Key = "ERR_PASSWORD_REQUIRED", ZH = "密码不能为空", JA = "パスワードは必須です", EN = "Password is required" },
                 new LocalizationResource { Key = "MSG_REGISTER_SUCCESS", ZH = "注册成功，请进行邮箱激活（开发环境查看 API 控制台）", JA = "登録成功。メール認証を実施してください（開発環境は API コンソール参照）", EN = "Registered. Please verify by email (check API console in dev)." },
-                new LocalizationResource { Key = "TXT_REGISTER_HELP", ZH = "注册成功后，请在 API 控制台查看激活链接，或前往激活页面手动激活。", JA = "登録後、APIコンソールの有効化リンクを確認するか、アクティベートページで手動有効化してください。", EN = "After registering, check activation link in API console or activate manually on the activate page." },
-                new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
+                                new LocalizationResource { Key = "TXT_RAIL_TAGLINE", ZH = "体验中枢", JA = "エクスペリエンスハブ", EN = "Experience Hub" },
+                new LocalizationResource { Key = "TXT_DASH_EYEBROW", ZH = "工作总览", JA = "ワークスペース概況", EN = "Workspace Snapshot" },
+                new LocalizationResource { Key = "TXT_DASH_TITLE", ZH = "客户体验总览", JA = "顧客体験の概況", EN = "Customer Experience Overview" },
+                new LocalizationResource { Key = "TXT_DASH_SUBTITLE", ZH = "快速掌握客户、项目与团队的关键脉搏。", JA = "顧客・案件・チームの脈をワンビューで把握。", EN = "See key signals from customers, projects, and teams in one view." },
+                new LocalizationResource { Key = "LBL_DASH_SEGMENTS", ZH = "客户分层", JA = "セグメント", EN = "Customer Segments" },
+                new LocalizationResource { Key = "LBL_DASH_ACTIVITY", ZH = "动态流", JA = "アクティビティ", EN = "Activity Stream" },
+                new LocalizationResource { Key = "TXT_DASH_ACTIVITY_HINT", ZH = "最近 24 小时的关键事件。", JA = "直近24時間の主要イベント。", EN = "Key events in the last 24 hours." },
+                new LocalizationResource { Key = "LBL_DASH_NEXT_STEPS", ZH = "下一步行动", JA = "次のアクション", EN = "Next Actions" },
+                new LocalizationResource { Key = "LBL_DASH_CUSTOMERS", ZH = "客户总数", JA = "顧客総数", EN = "Customers" },
+                new LocalizationResource { Key = "LBL_DASH_PROJECTS", ZH = "项目", JA = "プロジェクト", EN = "Projects" },
+                new LocalizationResource { Key = "LBL_DASH_TOUCHES", ZH = "互动次数", JA = "タッチポイント", EN = "Touches" },
+                new LocalizationResource { Key = "LBL_DASH_SAT", ZH = "满意度", JA = "満足度", EN = "Satisfaction" },                new LocalizationResource { Key = "LBL_HOME", ZH = "首页", JA = "ホーム", EN = "Home" },
                 new LocalizationResource { Key = "LBL_WELCOME", ZH = "欢迎使用 OneCRM", JA = "OneCRM へようこそ", EN = "Welcome to OneCRM" },
                 new LocalizationResource { Key = "LBL_USER_ID", ZH = "用户ID", JA = "ユーザーID", EN = "User ID" },
                 new LocalizationResource { Key = "LBL_CODE", ZH = "代码", JA = "コード", EN = "Code" },
@@ -438,6 +448,18 @@ public static class DatabaseInitializer
             Ensure("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
             Ensure("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
             Ensure("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をよりスマートに、協働をより自然に。", "Make relationships smarter, collaboration more natural.");
+            Ensure("TXT_RAIL_TAGLINE", "体验中枢", "エクスペリエンスハブ", "Experience Hub");
+            Ensure("TXT_DASH_EYEBROW", "工作总览", "ワークスペース概況", "Workspace Snapshot");
+            Ensure("TXT_DASH_TITLE", "客户体验总览", "顧客体験の概況", "Customer Experience Overview");
+            Ensure("TXT_DASH_SUBTITLE", "快速掌握客户、项目与团队的关键脉搏。", "顧客・案件・チームの脈をワンビューで把握。", "See key signals from customers, projects, and teams in one view.");
+            Ensure("LBL_DASH_SEGMENTS", "客户分层", "セグメント", "Customer Segments");
+            Ensure("LBL_DASH_ACTIVITY", "动态流", "アクティビティ", "Activity Stream");
+            Ensure("TXT_DASH_ACTIVITY_HINT", "最近 24 小时的关键事件。", "直近24時間の主要イベント。", "Key events in the last 24 hours.");
+            Ensure("LBL_DASH_NEXT_STEPS", "下一步行动", "次のアクション", "Next Actions");
+            Ensure("LBL_DASH_CUSTOMERS", "客户总数", "顧客総数", "Customers");
+            Ensure("LBL_DASH_PROJECTS", "项目", "プロジェクト", "Projects");
+            Ensure("LBL_DASH_TOUCHES", "互动次数", "タッチポイント", "Touches");
+            Ensure("LBL_DASH_SAT", "满意度", "満足度", "Satisfaction");
             */
             // New customer keys
             Ensure("BTN_NEW_CUSTOMER", "新建客户", "新規顧客", "New Customer");
@@ -785,3 +807,4 @@ public static class DatabaseInitializer
     }
 
 }
+

@@ -1,29 +1,129 @@
 @page "/"
 @rendermode RenderMode.InteractiveServer
-@layout BobCrm.App.Components.Layout.AuthLayout
+@layout BobCrm.App.Components.Layout.MainLayout
 
-@inject BobCrm.App.Services.AuthService Auth
-@inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 
-<div class="auth-form auth-redirect">
-    <p>@I18n.T("TXT_REDIRECTING")</p>
-    <small>@I18n.T("TXT_REDIRECTING_HINT")</small>
-</div>
+<AuthChecker>
+    <div class="dashboard-shell">
+        <section class="dashboard-hero-card">
+            <div>
+                <p class="dashboard-hero-eyebrow">@I18n.T("TXT_DASH_EYEBROW")</p>
+                <h1>@I18n.T("TXT_DASH_TITLE")</h1>
+                <p>@I18n.T("TXT_DASH_SUBTITLE")</p>
+                <div class="dashboard-hero-metrics">
+                    @foreach (var metric in HeroMetrics)
+                    {
+                        <div class="dashboard-hero-metric">
+                            <span>@I18n.T(metric.LabelKey)</span>
+                            <strong>@metric.Value</strong>
+                            <small>@metric.Trend</small>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="glow"></div>
+        </section>
+
+        <div class="dashboard-grid">
+            <section class="dashboard-card">
+                <div class="dashboard-metrics-grid">
+                    @foreach (var metric in MiniMetrics)
+                    {
+                        <div class="mini-metric">
+                            <span>@I18n.T(metric.LabelKey)</span>
+                            <strong>@metric.Value</strong>
+                            <small>@metric.Hint</small>
+                        </div>
+                    }
+                </div>
+                <div class="dashboard-segments" style="margin-top:var(--spacing-4)">
+                    <h3>@I18n.T("LBL_DASH_SEGMENTS")</h3>
+                    @foreach (var segment in Segments)
+                    {
+                        <div class="segment-row">
+                            <div>
+                                <strong>@segment.Name</strong>
+                                <p class="text-muted">@segment.Description</p>
+                            </div>
+                            <span>@segment.Count</span>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <aside class="dashboard-card dashboard-right-panel">
+                <div>
+                    <h3>@I18n.T("LBL_DASH_ACTIVITY")</h3>
+                    <p class="text-muted">@I18n.T("TXT_DASH_ACTIVITY_HINT")</p>
+                    <div class="dashboard-activity">
+                        @foreach (var item in Activity)
+                        {
+                            <div class="activity-row">
+                                <div>
+                                    <strong>@item.Title</strong>
+                                    <p class="text-muted">@item.Description</p>
+                                </div>
+                                <span>@item.Time</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div>
+                    <h3>@I18n.T("LBL_DASH_NEXT_STEPS")</h3>
+                    <div class="dashboard-actions">
+                        @foreach (var action in NextActions)
+                        {
+                            <Button Type="@ButtonType.Default" Ghost Icon="@action.Icon">@action.Label</Button>
+                        }
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</AuthChecker>
 
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-        try
-        {
-            var signedIn = await Auth.EnsureAuthenticatedAsync();
-            var target = signedIn ? "/customers" : "/login";
-            Nav.NavigateTo(target, forceLoad: true);
-        }
-        catch
-        {
-            Nav.NavigateTo("/login", forceLoad: true);
-        }
-    }
+    private readonly DashboardMetric[] HeroMetrics =
+    [
+        new("LBL_METRIC_PIPELINE", "\u00A5 2.8M", "+8% MoM"),
+        new("LBL_METRIC_ACTIVE", "126", "+12 活跃"),
+        new("LBL_METRIC_DAYS", "23d", "Avg cycle"),
+        new("LBL_METRIC_FEEDBACK", "14", "待反馈")
+    ];
+
+    private readonly DashboardMiniMetric[] MiniMetrics =
+    [
+        new("LBL_DASH_CUSTOMERS", "248", "新增 6"),
+        new("LBL_DASH_PROJECTS", "42", "进行中"),
+        new("LBL_DASH_TOUCHES", "89", "本周互动"),
+        new("LBL_DASH_SAT", "92%", "客服满意")
+    ];
+
+    private readonly DashboardSegment[] Segments =
+    [
+        new("企业客户", "Enterprise Accounts", "68"),
+        new("成长型团队", "Scaling teams", "108"),
+        new("试用期", "In trial window", "72")
+    ];
+
+    private readonly DashboardActivity[] Activity =
+    [
+        new("Nova Retail", "提交新的集成需求", "10:24"),
+        new("Helios Labs", "SLA 审阅完成", "09:10"),
+        new("ACME Holdings", "反馈调查回传", "昨天")
+    ];
+
+    private readonly DashboardAction[] NextActions =
+    [
+        new(IconType.Outline.Plus, "记录下一次跟进"),
+        new(IconType.Outline.Bell, "提醒账户经理"),
+        new(IconType.Outline.CloudUpload, "导入外部联系人")
+    ];
+
+    private record DashboardMetric(string LabelKey, string Value, string Trend);
+    private record DashboardMiniMetric(string LabelKey, string Value, string Hint);
+    private record DashboardSegment(string Name, string Description, string Count);
+    private record DashboardActivity(string Title, string Description, string Time);
+    private record DashboardAction(string Icon, string Label);
 }

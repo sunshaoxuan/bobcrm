@@ -14,14 +14,21 @@
 
 .chrome-rail {
   width: var(--chrome-rail-width);
-  padding: var(--spacing-3) 0;
+  padding: var(--spacing-4) 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-5);
-  background: rgba(10, 20, 40, 0.75);
+  background: var(--surface-overlay);
   backdrop-filter: blur(var(--blur-surface));
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--border-soft);
+}
+
+.rail-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .chrome-rail .rail-group {
@@ -32,15 +39,31 @@
 }
 
 .chrome-rail .rail-logo-button {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-card);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-raised);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.rail-logo-wordmark {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.rail-tagline {
+  font-size: var(--font-meta-size);
+  color: var(--text-muted);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .rail-item {
@@ -49,7 +72,7 @@
   border-radius: var(--radius-card);
   border: 1px solid transparent;
   background: transparent;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,14 +81,14 @@
 }
 
 .rail-item:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-soft);
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .rail-item.active {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.82);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .chrome-app {

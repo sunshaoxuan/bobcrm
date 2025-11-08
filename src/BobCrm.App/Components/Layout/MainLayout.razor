@@ -15,11 +15,11 @@
 
 <div class="chrome-shell @ThemeState.CurrentTheme">
     <nav class="chrome-rail">
-        <div class="rail-group">
+        <div class="rail-brand">
             <button class="rail-logo-button" @onclick="@(() => NavigateTo(RootHref))">
-                <span class="sr-only">OneCRM</span>
-                <Icon Type="@IconType.Outline.Appstore" />
+                <span class="rail-logo-wordmark">OneCRM</span>
             </button>
+            <span class="rail-tagline">@I18n.T("TXT_RAIL_TAGLINE")</span>
         </div>
         <div class="rail-group">
             @foreach (var item in _railItems)
