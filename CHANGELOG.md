@@ -574,7 +574,7 @@
   - `EntityMetadataTests.cs` - 实体元数据端点测试（6个）
   - `UserProfileTests.cs` - 用户个人资料端点测试（9个）
   - `DatabaseInitializerTests.cs` - 数据库初始化逻辑测试（6个）
-  - `docs/测试覆盖率报告.md` - 详细的测试覆盖情况分析文档
+  - `docs/TEST-02-测试覆盖率报告.md` - 详细的测试覆盖情况分析文档
 
 ### 文档 (Documentation)
 - 更新 `CHANGELOG.md` - 添加 v0.5.4 更新内容
@@ -619,8 +619,8 @@
   - 最终通过 EntitySelector 彻底解决
 
 ### 文档 (Documentation)
-- 更新 `docs/实体元数据自动注册机制.md` - 反映 EntityMetadata 结构变更
-- 更新 `docs/客户信息管理系统设计文档.md` - 添加 EntitySelector 组件说明
+- 更新 `docs/ARCH-02-实体元数据自动注册机制.md` - 反映 EntityMetadata 结构变更
+- 更新 `docs/PROD-01-客户信息管理系统设计文档.md` - 添加 EntitySelector 组件说明
 - 新增 `CHANGELOG.md` - 统一管理所有版本更新历史
 
 ---
@@ -687,8 +687,8 @@
 
 ### 文档 (Documentation)
 - 更新 README.md - 标记字段动作功能为已完成
-- 更新 `docs/接口文档.md` - 添加字段动作 API 文档
-- 更新 `docs/客户信息管理系统设计文档.md` - 添加对齐线验证用例
+- 更新 `docs/API-01-接口文档.md` - 添加字段动作 API 文档
+- 更新 `docs/PROD-01-客户信息管理系统设计文档.md` - 添加对齐线验证用例
 
 ---
 
@@ -816,3 +816,4 @@
 
 **维护者**：BobCRM 开发团队  
 **最后更新**：2025-11-05
+
