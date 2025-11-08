@@ -364,6 +364,12 @@ public static class DatabaseInitializer
             Ensure("COL_NAME", "名称", "名称", "Name");
             Ensure("COL_ACTIONS", "操作", "操作", "Actions");
             Ensure("BTN_DETAIL", "详情", "詳細", "Detail");
+            Ensure("LBL_SECURE", "安全", "セキュア", "Secure");
+            Ensure("TXT_AUTH_HERO_TITLE", "一体化客户体验工作台", "OneCRM ワークスペース", "Unified customer experience workspace");
+            Ensure("TXT_AUTH_HERO_SUBTITLE", "登录即可管理客户、模板与布局", "ログインして顧客・テンプレート・レイアウトを一元管理", "Manage customers, templates and layouts in one place");
+            Ensure("TXT_AUTH_HERO_POINT1", "统一工作空间", "統合されたワークスペース", "Unified workspace");
+            Ensure("TXT_AUTH_HERO_POINT2", "实时协作", "リアルタイムコラボレーション", "Real-time collaboration");
+            Ensure("TXT_AUTH_HERO_POINT3", "多语言界面", "多言語 UI", "Multi-language UI");
             Ensure("LBL_LOGIN_TITLE", "登录", "ログイン", "Login");
             Ensure("LBL_USERNAME_OR_EMAIL", "用户名或邮箱", "ユーザー名またはメール", "Username or Email");
             Ensure("ERR_USERNAME_REQUIRED", "用户名不能为空", "ユーザー名は必須です", "Username is required");
@@ -371,6 +377,9 @@ public static class DatabaseInitializer
             Ensure("ERR_LOGIN_FAILED", "登录失败", "ログイン失敗", "Login failed");
             Ensure("TXT_REDIRECTING", "正在跳转...", "リダイレクト中です...", "Redirecting...");
             Ensure("TXT_REDIRECTING_HINT", "即将带你进入工作台，请稍候...", "安全なワークスペースを準備しています...", "Preparing your workspace...");
+            Ensure("TXT_LOGIN_DESCRIPTION", "请输入已激活的账号和密码", "有効化済みのアカウント情報を入力してください", "Enter your activated credentials to continue");
+            Ensure("TXT_NO_ACCOUNT", "还没有账号？", "アカウントがありませんか？", "Don't have an account?");
+            Ensure("BTN_REGISTER", "注册", "登録", "Register");
             Ensure("ERR_PARSE_RESPONSE", "无法解析服务器响应", "サーバー応答を解析できません", "Unable to parse server response");
             Ensure("LBL_SETUP", "初始化设置", "初期設定", "Setup");
             Ensure("LBL_API_BASE", "API 基础地址", "API ベースURL", "API Base URL");
