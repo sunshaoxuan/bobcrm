@@ -20,7 +20,7 @@
 - `GET /api/settings/system`（仅 admin）+ `PUT /api/settings/system`
 - `GET /api/settings/user`（任意登录用户）
 - `PUT /api/settings/user`（写入用户覆写）
-- 旧的 `/api/user/preferences` 入口被保留，并透传到新服务，兼容历史客户端。
+- REST API 只有 `/api/settings/system` 与 `/api/settings/user` 两个入口，所有客户端统一走这套新接口。
 
 ## 前端集成与导航策略
 
