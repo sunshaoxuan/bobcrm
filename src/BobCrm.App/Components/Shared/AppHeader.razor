@@ -57,15 +57,6 @@
             <span class="context-pill">@_contextLabel</span>
         </div>
     </div>
-    <div class="header-nav">
-        @foreach (var nav in _primaryNav)
-        {
-            <NavLink class="primary-nav-link" ActiveClass="active" href="@nav.Href" Match="@nav.Match">
-                <Icon Type="@nav.Icon" />
-                <span>@I18n.T(nav.LabelKey)</span>
-            </NavLink>
-        }
-    </div>
     <div class="header-utilities">
         <div class="header-utility-group">
             <HeaderLangMenu />
@@ -140,7 +131,6 @@
 
 @code {
     private record BreadcrumbItem(string Label, string Url);
-    private record HeaderNavItem(string LabelKey, string Href, string Icon, NavLinkMatch Match);
 
     private bool isAuthenticated = false;
     private string userName = "";
@@ -148,14 +138,6 @@
     private string _contextLabel = "总览";
     private readonly List<BreadcrumbItem> _breadcrumbs = [];
     private string _headerSubtitle = "Record workspace";
-    private readonly HeaderNavItem[] _primaryNav =
-    [
-        new HeaderNavItem("MENU_DASHBOARD", "/", IconType.Outline.Home, NavLinkMatch.All),
-        new HeaderNavItem("MENU_CUSTOMERS", "/customers", IconType.Outline.Team, NavLinkMatch.Prefix),
-        new HeaderNavItem("MENU_TEMPLATES", "/templates", IconType.Outline.Appstore, NavLinkMatch.Prefix),
-        new HeaderNavItem("MENU_FILES", "/files", IconType.Outline.CloudUpload, NavLinkMatch.Prefix),
-        new HeaderNavItem("MENU_SETTINGS", "/settings", IconType.Outline.Setting, NavLinkMatch.Prefix)
-    ];
     private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
     {
         [""] = "总览",

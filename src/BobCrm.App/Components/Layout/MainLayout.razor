@@ -44,33 +44,6 @@
     </nav>
 
     <div class="chrome-app app-shell layout-root @(Layout.IsSiderCollapsed ? "sider-collapsed" : "") @(Layout.IsSiderOverlayOpen ? "sider-overlay-open" : "")">
-        <aside class="layout-sider">
-            <div class="sider-frame">
-                <div class="sider-brand">
-                    <div class="sider-brand-info">
-                        <span class="sider-brand-dot"></span>
-                        <div>
-                            <p class="sider-eyebrow">Workspace</p>
-                            <h3>客户目录</h3>
-                        </div>
-                    </div>
-                    <button class="nav-icon mobile-only" @onclick="CloseOverlay">
-                        <Icon Type="@IconType.Outline.Close" />
-                    </button>
-                </div>
-                @if (ShowCustomerSider)
-                {
-                    <CustomerSider />
-                }
-                else
-                {
-                    <div class="sider-placeholder">
-                        <p>@I18n.T("TXT_SIDER_WELCOME")</p>
-                    </div>
-                }
-            </div>
-        </aside>
-
         <div class="layout-main">
             <AppHeader />
             <div class="layout-content">
@@ -95,7 +68,21 @@
                     }
                     @Body
                 </div>
-                @if (Layout.IsRightPanelVisible)
+                @if (ShowCustomerSider)
+                {
+                    <aside class="layout-right-panel customer-panel">
+                        <div class="customer-panel-header">
+                            <div>
+                                <p class="eyebrow">Workspace</p>
+                                <h3>@I18n.T("MENU_CUSTOMERS")</h3>
+                            </div>
+                        </div>
+                        <div class="customer-panel-body">
+                            <CustomerSider />
+                        </div>
+                    </aside>
+                }
+                else if (Layout.IsRightPanelVisible)
                 {
                     <aside class="layout-right-panel">
                         <div class="right-panel-header">

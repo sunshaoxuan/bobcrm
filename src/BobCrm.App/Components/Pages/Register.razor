@@ -23,7 +23,11 @@
             </div>
             <div class="auth-field">
                 <label for="register-password">@I18n.T("LBL_PASSWORD")</label>
-                <Input id="register-password" Password="true" @bind-Value="_model.Password" Class="field-control" />
+                <input id="register-password"
+                       type="password"
+                       class="field-control"
+                       @bind="_model.Password"
+                       @bind:event="oninput" />
             </div>
             <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="_submitting">@I18n.T("BTN_REGISTER")</Button>
         </EditForm>

@@ -10,6 +10,7 @@ public class I18nService
     private readonly IJSRuntime _js;
     private Dictionary<string, string> _dict = new(StringComparer.OrdinalIgnoreCase);
     public string CurrentLang { get; private set; } = "ja";
+    public bool IsLoaded => _dict.Count > 0;
     public event Action? OnChanged;
 
     public I18nService(IHttpClientFactory httpFactory, AuthService auth, IJSRuntime js)

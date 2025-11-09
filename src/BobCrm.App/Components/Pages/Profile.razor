@@ -67,13 +67,25 @@
                 <div class="profile-card">
                     <Form Model="passwordForm" OnFinish="HandlePasswordChange">
                         <FormItem Label="@I18n.T("LBL_CURRENT_PASSWORD")">
-                            <Input Password="true" @bind-Value="passwordForm.CurrentPassword" Placeholder="@I18n.T("LBL_ENTER_CURRENT_PASSWORD")" Class="field-control" />
+                            <input type="password"
+                                   class="field-control"
+                                   placeholder="@I18n.T("LBL_ENTER_CURRENT_PASSWORD")"
+                                   @bind="passwordForm.CurrentPassword"
+                                   @bind:event="oninput" />
                         </FormItem>
                         <FormItem Label="@I18n.T("LBL_NEW_PASSWORD")">
-                            <Input Password="true" @bind-Value="passwordForm.NewPassword" Placeholder="@I18n.T("LBL_ENTER_NEW_PASSWORD")" Class="field-control" />
+                            <input type="password"
+                                   class="field-control"
+                                   placeholder="@I18n.T("LBL_ENTER_NEW_PASSWORD")"
+                                   @bind="passwordForm.NewPassword"
+                                   @bind:event="oninput" />
                         </FormItem>
                         <FormItem Label="@I18n.T("LBL_CONFIRM_PASSWORD")">
-                            <Input Password="true" @bind-Value="passwordForm.ConfirmPassword" Placeholder="@I18n.T("LBL_ENTER_CONFIRM_PASSWORD")" Class="field-control" />
+                            <input type="password"
+                                   class="field-control"
+                                   placeholder="@I18n.T("LBL_ENTER_CONFIRM_PASSWORD")"
+                                   @bind="passwordForm.ConfirmPassword"
+                                   @bind:event="oninput" />
                         </FormItem>
                         <FormItem>
                             <Button Type="@ButtonType.Primary" HtmlType="submit" Loading="@changingPassword">

@@ -33,7 +33,11 @@
             </div>
             <div class="auth-field">
                 <label for="login-password">@I18n.T("LBL_PASSWORD")</label>
-                <Input id="login-password" Password="true" @bind-Value="model.password" Class="field-control" />
+                <input id="login-password"
+                       type="password"
+                       class="field-control"
+                       @bind="model.password"
+                       @bind:event="oninput" />
             </div>
             <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
         </EditForm>
