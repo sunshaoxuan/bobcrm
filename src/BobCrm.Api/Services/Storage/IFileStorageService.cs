@@ -12,10 +12,9 @@ public interface IFileStorageService
 
 public class S3Options
 {
-    public string ServiceUrl { get; set; } = "http://localhost:9000";
-    public string AccessKey { get; set; } = "minioadmin";
-    public string SecretKey { get; set; } = "minioadmin";
-    public string BucketName { get; set; } = "bobcrm";
-    public string Region { get; set; } = "us-east-1"; // MinIO ignores but AWS SDK requires a value
+    public string ServiceUrl { get; set; } = string.Empty;
+    public string AccessKey { get; set; } = string.Empty;
+    public string SecretKey { get; set; } = string.Empty;
+    public string BucketName { get; set; } = string.Empty;
+    public string Region { get; set; } = string.Empty;
 }
-

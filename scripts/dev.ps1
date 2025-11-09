@@ -76,7 +76,10 @@ function Restart-DockerServices {
         return
     }
     Write-Host '重启 Docker 容器 (postgres, minio)...' -ForegroundColor Cyan
+    $baseArgs = @('compose','-f', $composeFile)
     try {
+        Write-Host '清理旧容器...' -ForegroundColor DarkGray
+        & docker @($baseArgs + @('down','--remove-orphans')) | Out-Null
         $baseArgs = @('compose','-f', $composeFile)
         & docker @($baseArgs + @('up','-d','--remove-orphans','--force-recreate','postgres','minio')) | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "docker compose up postgres/minio 失败" }
@@ -84,7 +87,7 @@ function Restart-DockerServices {
         Write-Host 'Docker 容器已就绪。' -ForegroundColor DarkGreen
     }
     catch {
-        Write-Warning ("Docker 容器启动失败：{0}" -f $_.Exception.Message)
+        throw "Docker 容器启动失败：$($_.Exception.Message)`n请确认 9100/9101 端口未被占用，然后重新运行脚本。"
     }
 }
 

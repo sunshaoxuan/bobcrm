@@ -6,7 +6,7 @@
 
 已在 `docker-compose.yml:1` 增加 MinIO 服务与一次性桶初始化：
 
-- 服务：`minio`（端口 9000 为 S3 API，9001 为 Console）
+- 服务：`minio`（容器内 9000/9001；宿主机映射为 9100（S3 API）、9101（Console））
 - 初始化：`minio-create-bucket` 使用 `mc` 创建默认桶 `bobcrm` 并设置匿名下载（便于快速预览）
 - 缺省凭证：`minioadmin` / `minioadmin`
 
@@ -14,7 +14,7 @@
 ```bash
 docker compose up -d minio minio-create-bucket
 ```
-控制台地址：http://localhost:9001
+控制台地址：http://localhost:9101
 
 ## 2. 后端配置
 
@@ -29,7 +29,7 @@ docker compose up -d minio minio-create-bucket
 ```json
 {
   "S3": {
-    "ServiceUrl": "http://localhost:9000",
+    "ServiceUrl": "http://localhost:9100",
     "AccessKey": "minioadmin",
     "SecretKey": "minioadmin",
     "BucketName": "bobcrm",
@@ -66,4 +66,3 @@ docker compose up -d minio minio-create-bucket
 ---
 
 附：如需在接口文档中补充对象存储端点，请在 `docs/API-01-接口文档.md` 的“文件存储”章节追加说明（示例请求、响应、错误码）。
-
