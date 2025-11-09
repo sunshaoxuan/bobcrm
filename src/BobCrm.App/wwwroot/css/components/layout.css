@@ -1,8 +1,8 @@
 /* Calm Layout & Navigation System */
 
 :root {
-  --chrome-rail-min-width: 80px;
-  --chrome-rail-max-width: 220px;
+  --chrome-rail-min-width: 140px;
+  --chrome-rail-max-width: 240px;
   --chrome-sider-width: 320px;
 }
 
@@ -15,9 +15,7 @@
 }
 
 .chrome-rail {
-  width: fit-content;
-  min-width: var(--chrome-rail-min-width);
-  max-width: var(--chrome-rail-max-width);
+  width: clamp(var(--chrome-rail-min-width), 18vw, var(--chrome-rail-max-width));
   padding: var(--spacing-4) var(--spacing-3);
   display: flex;
   flex-direction: column;
@@ -28,15 +26,15 @@
 }
 
 .chrome-shell.nav-mode-icons .chrome-rail {
-  width: 80px;
+  width: 78px;
 }
 
 .chrome-shell.nav-mode-labels .chrome-rail {
-  width: clamp(110px, 12vw, 180px);
+  width: clamp(130px, 12vw, 200px);
 }
 
 .chrome-shell.nav-mode-icontext .chrome-rail {
-  width: clamp(140px, 15vw, var(--chrome-rail-max-width));
+  width: clamp(170px, 18vw, var(--chrome-rail-max-width));
 }
 
 .rail-brand {
@@ -93,6 +91,7 @@
   padding: 0 var(--spacing-3);
   cursor: pointer;
   transition: all var(--motion-base) var(--motion-hover);
+  text-align: left;
 }
 
 .rail-item:hover {
@@ -109,6 +108,8 @@
 .rail-item-icon {
   font-size: 18px;
   display: inline-flex;
+  width: 24px;
+  justify-content: flex-start;
 }
 
 .rail-item-label {
