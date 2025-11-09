@@ -7,5 +7,7 @@ public class UserPreferences
     public string? Theme { get; set; } = "light"; // "light" or "dark"
     public string? PrimaryColor { get; set; }
     public string? Language { get; set; } = "ja";
+    public string? HomeRoute { get; set; } = "/";
+    public string? NavDisplayMode { get; set; } = NavDisplayModes.IconText;
     public DateTime? UpdatedAt { get; set; }
 }

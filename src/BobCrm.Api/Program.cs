@@ -18,6 +18,7 @@ using BobCrm.Api.Domain;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Endpoints;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Middleware;
 using Serilog;
 
@@ -182,6 +183,7 @@ builder.Services.AddScoped<IPersistenceValidator<UpdateCustomerDto>, UpdateCusto
 builder.Services.AddScoped<ICustomerQueries, CustomerQueries>();
 builder.Services.AddScoped<IFieldQueries, FieldQueries>();
 builder.Services.AddScoped<ILayoutQueries, LayoutQueries>();
+builder.Services.AddScoped<SettingsService>();
 
 // CORS (dev friendly; tighten in production)
 builder.Services.AddCors(options =>
@@ -214,112 +216,64 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
 
-// Auto-initialize database on startup (dev-friendly, idempotent)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DatabaseInitializer.InitializeAsync(db);
-
-    // Upgrade login i18n resources to latest copy (idempotent)
-    try
-    {
-        void Upsert(string key, string zh, string ja, string en)
+// Auto-initialize database on startup (dev-friendly, idempotent)
+var skipDbInit = builder.Configuration.GetValue<bool>("Db:SkipInit");
+if (!skipDbInit)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DatabaseInitializer.InitializeAsync(db);
+
+    // Upgrade login i18n resources to latest copy (idempotent)
+    try
+    {
+        void Upsert(string key, string zh, string ja, string en)
+        {
+            var set = db.Set<LocalizationResource>();
+            var r = set.FirstOrDefault(x => x.Key == key);
+            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+            else { r.ZH = zh; r.JA = ja; r.EN = en; }
+        }
+
+        // Short hero copy to avoid wrapping in JA/EN
+        Upsert("TXT_AUTH_HERO_TITLE", "智能连接 · 体验合一", "インテリジェントにつながり、体験をひとつに", "Smart links, unified experience");
+        Upsert("TXT_AUTH_HERO_SUBTITLE", "在一个平台洞察、协作、成长，让客户关系更高效。", "ひとつのプラットフォームで洞察・協働・成長を実現し、顧客関係をしなやかに。", "One platform for insight, collaboration, and growth.");
+        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
+        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
+        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
+        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
+        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
+        Upsert("LBL_SECURE", "智能 · 稳定 · 开放", "スマート・堅牢・オープン", "Smart · Resilient · Open");
+        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
+        await db.SaveChangesAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
+    }
+
+    // Sync system entities (IBizEntity implementations) to EntityDefinition table
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
+    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
+    await synchronizer.SyncSystemEntitiesAsync();
+
+    // Seed test data (development only)
+        try
         {
-            var set = db.Set<LocalizationResource>();
-            var r = set.FirstOrDefault(x => x.Key == key);
-            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
-            else { r.ZH = zh; r.JA = ja; r.EN = en; }
+            await TestDataSeeder.SeedTestDataAsync(db);
         }
-
-        // Short hero copy to avoid wrapping in JA/EN
-        Upsert("TXT_AUTH_HERO_TITLE", "智能连接，统一体验", "スマート接続、統一体験", "Smart Connection, Unified Experience");
-        Upsert("TXT_AUTH_HERO_SUBTITLE", "更快决策，更自然协作。", "意思決定を速く、協働を自然に。", "Decide faster, collaborate naturally.");
-        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
-        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
-        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
-        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
-        Upsert("TXT_AUTH_TAGLINE", "更快决策，更自然协作。", "意思決定を速く、協働を自然に。", "Decide faster, collaborate naturally.");
-        // Missing panel eyebrow
-        Upsert("LBL_SECURE", "智能 · 稳定 · 自由", "スマート · 安定 · 自由", "Smart · Reliable · Open");
-        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
-        await db.SaveChangesAsync();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
-    }
-
-    // Sync system entities (IBizEntity implementations) to EntityDefinition table
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
-    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
-    await synchronizer.SyncSystemEntitiesAsync();
-
-    // Seed test data (development only)
-    try
-    {
-        var customerCount = await db.Set<Customer>().IgnoreQueryFilters().CountAsync();
-        app.Logger.LogInformation("[TestData] Current customer count: {Count}", customerCount);
-
-        await TestDataSeeder.SeedTestDataAsync(db);
-
-        var newCount = await db.Set<Customer>().IgnoreQueryFilters().CountAsync();
-        app.Logger.LogInformation("[TestData] After seeding, customer count: {Count}", newCount);
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "[TestData] Failed to seed test data");
-    }
-
-    // Seed admin user/role and grant access to all customers
-    try
-    {
-        var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        var rm = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        if (!await rm.RoleExistsAsync("admin"))
-        {
-            await rm.CreateAsync(new IdentityRole("admin"));
-        }
-        var admin = await um.FindByNameAsync("admin");
-        if (admin == null)
-        {
-            admin = new IdentityUser { UserName = "admin", Email = "admin@local", EmailConfirmed = true };
-            await um.CreateAsync(admin, "Admin@12345");
-            await um.AddToRoleAsync(admin, "admin");
-        }
-        else
-        {
-            if (!await um.IsInRoleAsync(admin, "admin")) await um.AddToRoleAsync(admin, "admin");
-            if (!admin.EmailConfirmed)
-            {
-                admin.EmailConfirmed = true; await um.UpdateAsync(admin);
-            }
-        }
-        // Grant admin access to all customers
-        var repo = scope.ServiceProvider.GetRequiredService<IRepository<CustomerAccess>>();
-        // 禁用查询过滤器，初始化时需要访问所有客户
-        var custIds = db.Customers.IgnoreQueryFilters().Select(c => c.Id).ToList();
-        foreach (var cid in custIds)
-        {
-            var exists = repo.Query(a => a.CustomerId == cid && a.UserId == admin.Id).Any();
-            if (!exists)
-            {
-                await repo.AddAsync(new CustomerAccess { CustomerId = cid, UserId = admin.Id, CanEdit = true });
-            }
-        }
-        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "[Init] Failed to grant admin access to customers");
-    }
-}
-
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "[Init] Failed to seed test data");
+    }
+}
 // ========================================
 // 端点注册 - 使用模块化扩展方法
 // ========================================
 app.MapSetupEndpoints();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
+app.MapSettingsEndpoints();
 app.MapI18nEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();

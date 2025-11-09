@@ -34,6 +34,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
             {
                 ["Db:Provider"] = "postgres",
                 ["ConnectionStrings:Default"] = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres",
+                ["Db:SkipInit"] = "true",
                 ["Jwt:Key"] = "dev-secret-change-in-prod-1234567890", // 与开发环境保持一致，避免JWT签名不匹配
                 ["Jwt:Issuer"] = "BobCrm",
                 ["Jwt:Audience"] = "BobCrmUsers",

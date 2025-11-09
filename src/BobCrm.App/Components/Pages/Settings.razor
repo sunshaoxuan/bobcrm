@@ -1,246 +1,574 @@
 @page "/settings"
 @rendermode RenderMode.InteractiveServer
-@implements IDisposable
-@inject BobCrm.App.Services.AuthService Auth
+@using BobCrm.App.Services
+@inject PreferencesService PrefsService
+@inject AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
+@inject ThemeState ThemeState
+@inject LayoutState Layout
 @inject IJSRuntime JS
-@inject NavigationManager Nav
 
-<PageTitle>@I18n.T("MENU_SETTINGS") - OneCRM</PageTitle>
+<PageTitle>@I18n.T("MENU_SETTINGS") · OneCRM</PageTitle>
 
-<div style="max-width:1200px; margin:0 auto">
-    <h2 style="margin-bottom:24px; color:var(--text); font-size:24px; font-weight:600">@I18n.T("MENU_SETTINGS")</h2>
+<div class="settings-shell">
+    <header class="settings-hero">
+        <div>
+            <p class="eyebrow">@I18n.T("TXT_RAIL_TAGLINE")</p>
+            <h1>@I18n.T("MENU_SETTINGS")</h1>
+            <p class="muted">@I18n.T("TXT_SETTINGS_USER_DESC")</p>
+        </div>
+    </header>
 
     @if (loading)
     {
-        <div style="padding:48px; text-align:center; color:var(--muted)">
-            @I18n.T("LBL_LOADING")...
-        </div>
+        <div class="settings-loading">@I18n.T("LBL_LOADING")…</div>
     }
     else
     {
-        <div style="display:grid; gap:24px">
-            <!-- Language Settings -->
-            <div class="settings-section">
-                <h3 class="section-title">@I18n.T("LBL_LANGUAGE")</h3>
-                <div class="settings-card">
-                    <div class="setting-item">
-                        <label class="setting-label">@I18n.T("LBL_LANGUAGE")</label>
-                        <select @bind="currentLanguage" @bind:after="SaveLanguagePreference" class="field-control" style="max-width:300px">
-                            <option value="zh">中文</option>
-                            <option value="ja">日本語</option>
-                            <option value="en">English</option>
+        <div class="settings-grid">
+            <section class="settings-card">
+                <div class="card-header">
+                    <div>
+                        <p class="eyebrow">@I18n.T("LBL_SYSTEM_SETTINGS")</p>
+                        <h3>@I18n.T("TXT_SETTINGS_SYSTEM_DESC")</h3>
+                    </div>
+                    @if (!canEditSystem)
+                    {
+                        <span class="pill warn">@I18n.T("MSG_SETTINGS_ADMIN_ONLY")</span>
+                    }
+                </div>
+                @if (systemMessage is not null)
+                {
+                    <div class="settings-alert @(systemMessageSuccess ? "ok" : "error")">
+                        @systemMessage
+                    </div>
+                }
+                <div class="settings-form">
+                    <label>
+                        <span>@I18n.T("LBL_COMPANY_NAME")</span>
+                        <input class="field-control"
+                               @bind="systemForm.CompanyName"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_DEFAULT_THEME")</span>
+                        <div class="chip-group">
+                            @foreach (var option in ThemeOptions)
+                            {
+                                <button type="button"
+                                        class="chip @(systemForm.DefaultTheme == option.Value ? "active" : string.Empty)"
+                                        disabled="@(!canEditSystem)"
+                                        @onclick="@(() => systemForm.DefaultTheme = option.Value)">
+                                    @I18n.T(option.LabelKey)
+                                </button>
+                            }
+                        </div>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_DEFAULT_PRIMARY")</span>
+                        <input class="field-control color"
+                               type="color"
+                               @bind="systemForm.DefaultPrimaryColor"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_DEFAULT_LANGUAGE")</span>
+                        <select class="field-control"
+                                @bind="systemForm.DefaultLanguage"
+                                disabled="@(!canEditSystem)">
+                            @foreach (var lang in LanguageOptions)
+                            {
+                                <option value="@lang.Code">@lang.Label</option>
+                            }
                         </select>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_DEFAULT_HOME")</span>
+                        <select class="field-control"
+                                @bind="systemForm.DefaultHomeRoute"
+                                disabled="@(!canEditSystem)">
+                            @foreach (var route in HomeRoutes)
+                            {
+                                <option value="@route.Value">@I18n.T(route.LabelKey)</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_DEFAULT_NAV_MODE")</span>
+                        <select class="field-control"
+                                @bind="systemForm.DefaultNavMode"
+                                disabled="@(!canEditSystem)">
+                            @foreach (var nav in NavModeOptions)
+                            {
+                                <option value="@nav.Mode">@I18n.T(nav.LabelKey)</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_TIME_ZONE")</span>
+                        <input class="field-control"
+                               @bind="systemForm.TimeZoneId"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label class="toggle">
+                        <span>@I18n.T("LBL_ALLOW_SELF_REG")</span>
+                        <input type="checkbox"
+                               @bind="systemForm.AllowSelfRegistration"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <button type="button"
+                            class="primary"
+                            disabled="@(!canEditSystem || savingSystem)"
+                            @onclick="SaveSystemAsync">
+                        @(savingSystem ? I18n.T("LBL_SAVING") : I18n.T("BTN_SAVE_SETTINGS"))
+                    </button>
+                </div>
+            </section>
+
+            <section class="settings-card">
+                <div class="card-header">
+                    <div>
+                        <p class="eyebrow">@I18n.T("LBL_USER_SETTINGS")</p>
+                        <h3>@I18n.T("TXT_SETTINGS_USER_DESC")</h3>
                     </div>
                 </div>
-            </div>
-
-            <!-- Save Status -->
-            @if (!string.IsNullOrWhiteSpace(saveMessage))
-            {
-                <div class="save-message @(saveSuccess ? "success" : "error")">
-                    @saveMessage
+                @if (userMessage is not null)
+                {
+                    <div class="settings-alert @(userMessageSuccess ? "ok" : "error")">
+                        @userMessage
+                    </div>
+                }
+                <div class="settings-form">
+                    <label>
+                        <span>@I18n.T("LBL_THEME")</span>
+                        <div class="chip-group">
+                            @foreach (var option in ThemeOptions)
+                            {
+                                <button type="button"
+                                        class="chip @(userForm.Theme == option.Value ? "active" : string.Empty)"
+                                        @onclick="@(() => userForm.Theme = option.Value)">
+                                    @I18n.T(option.LabelKey)
+                                </button>
+                            }
+                        </div>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_PRIMARY_COLOR")</span>
+                        <input class="field-control color"
+                               type="color"
+                               @bind="userForm.PrimaryColor" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_LANGUAGE")</span>
+                        <select class="field-control" @bind="userForm.Language">
+                            @foreach (var lang in LanguageOptions)
+                            {
+                                <option value="@lang.Code">@lang.Label</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_HOME_ROUTE")</span>
+                        <select class="field-control" @bind="userForm.HomeRoute">
+                            @foreach (var route in HomeRoutes)
+                            {
+                                <option value="@route.Value">@I18n.T(route.LabelKey)</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_NAV_DISPLAY_MODE")</span>
+                        <select class="field-control" @bind="userForm.NavMode">
+                            @foreach (var nav in NavModeOptions)
+                            {
+                                <option value="@nav.Mode">@I18n.T(nav.LabelKey)</option>
+                            }
+                        </select>
+                    </label>
+                    <button type="button"
+                            class="primary"
+                            disabled="@(savingUser)"
+                            @onclick="SaveUserAsync">
+                        @(savingUser ? I18n.T("LBL_SAVING") : I18n.T("BTN_SAVE_SETTINGS"))
+                    </button>
                 </div>
-            }
+            </section>
         </div>
     }
 </div>
 
 <style>
-    .settings-section {
-        margin-bottom: 16px;
+    .settings-shell {
+        padding: 32px;
+        max-width: 1200px;
+        margin: 0 auto;
     }
 
-    .section-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text);
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid var(--primary);
+    .settings-hero {
+        margin-bottom: 32px;
+    }
+
+    .settings-grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     }
 
     .settings-card {
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: var(--shadow);
+        background: var(--surface-card, rgba(255,255,255,0.85));
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: var(--shadow, 0 12px 30px rgba(15,23,42,0.08));
     }
 
-    .setting-item {
-        display: grid;
-        grid-template-columns: 200px 1fr;
+    .card-header {
+        display: flex;
+        justify-content: space-between;
         gap: 16px;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid var(--border);
+        margin-bottom: 16px;
     }
 
-    .setting-item:last-child {
-        border-bottom: none;
+    .settings-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
 
-    .setting-label {
+    .settings-form label {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
         font-weight: 500;
-        color: var(--text);
-        font-size: 14px;
+        color: var(--text, #1f2933);
     }
 
-    .save-message {
-        padding: 12px 16px;
-        border-radius: 6px;
-        font-size: 14px;
+    .field-control {
+        border: 1px solid var(--border-soft);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: rgba(255,255,255,0.9);
+    }
+
+    .field-control.color {
+        width: 64px;
+        padding: 0;
+        height: 40px;
+    }
+
+    .chip-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    .chip {
+        border: 1px solid var(--border-soft);
+        border-radius: 999px;
+        padding: 6px 14px;
+        background: transparent;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .chip.active {
+        background: var(--primary, #739FD6);
+        color: white;
+        border-color: transparent;
+    }
+
+    .toggle {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .primary {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 20px;
+        background: var(--primary, #739FD6);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        align-self: flex-start;
+    }
+
+    .primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .settings-alert {
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+
+    .settings-alert.ok {
+        background: rgba(34,197,94,0.12);
+        color: #15803d;
+    }
+
+    .settings-alert.error {
+        background: rgba(239,68,68,0.12);
+        color: #b91c1c;
+    }
+
+    .settings-loading {
+        padding: 48px;
         text-align: center;
-        animation: slideIn 0.3s ease;
+        color: var(--text-muted, #64748b);
     }
 
-    .save-message.success {
-        background: #f0f9ff;
-        color: #0c4a6e;
-        border: 1px solid #7dd3fc;
+    .pill {
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
     }
 
-    .save-message.error {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fca5a5;
-    }
-
-    @@keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .pill.warn {
+        background: rgba(248,113,113,0.16);
+        color: #b91c1c;
+        border: 1px solid rgba(248,113,113,0.3);
     }
 </style>
 
 @code {
     private bool loading = true;
-    private string currentLanguage = "ja";
-    private string saveMessage = "";
-    private bool saveSuccess = false;
+    private bool savingSystem;
+    private bool savingUser;
+    private bool canEditSystem = true;
+    private string? systemMessage;
+    private bool systemMessageSuccess;
+    private string? userMessage;
+    private bool userMessageSuccess;
 
-    protected override void OnInitialized()
-    {
-        I18n.OnChanged += HandleI18nChanged;
-    }
+    private readonly ThemeOption[] ThemeOptions =
+    [
+        new("calm-light", "LBL_THEME_LIGHT"),
+        new("calm-dark", "LBL_THEME_DARK")
+    ];
 
-    private void HandleI18nChanged()
-    {
-        try { InvokeAsync(StateHasChanged); } catch { }
-    }
+    private readonly LanguageOption[] LanguageOptions =
+    [
+        new("zh", "简体中文"),
+        new("ja", "日本語"),
+        new("en", "English")
+    ];
+
+    private readonly HomeRouteOption[] HomeRoutes =
+    [
+        new("/", "MENU_DASHBOARD"),
+        new("/customers", "MENU_CUSTOMERS"),
+        new("/templates", "MENU_TEMPLATES")
+    ];
+
+    private readonly NavModeOption[] NavModeOptions =
+    [
+        new(LayoutState.NavDisplayMode.Icons, "LBL_NAV_MODE_ICONS"),
+        new(LayoutState.NavDisplayMode.Labels, "LBL_NAV_MODE_TEXT"),
+        new(LayoutState.NavDisplayMode.IconText, "LBL_NAV_MODE_BOTH")
+    ];
+
+    private SystemSettingsModel systemForm = new();
+    private UserSettingsModel userForm = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!firstRender)
+        {
+            return;
+        }
 
         try
         {
-            // 预检查：确保已认证，触发单飞刷新机制，避免并发刷新
             var authenticated = await Auth.EnsureAuthenticatedAsync();
             if (!authenticated)
             {
-                // 全局 OnUnauthorized 事件会处理跳转
                 loading = false;
                 await InvokeAsync(StateHasChanged);
                 return;
             }
 
-            // Load current preferences from server (database)
-            var prefsResp = await Auth.GetWithRefreshAsync("/api/user/preferences");
-            if (prefsResp.IsSuccessStatusCode)
+            var snapshot = await PrefsService.LoadSnapshotAsync(forceRefresh: true);
+            if (snapshot is not null)
             {
-                var prefs = await prefsResp.Content.ReadFromJsonAsync<UserPreferencesDto>();
-                currentLanguage = prefs?.language ?? "ja";
-                await JS.InvokeVoidAsync("console.log", $"[Settings] Loaded from server: language={currentLanguage}");
+                ApplyUserSnapshot(snapshot);
+            }
+
+            var sys = await PrefsService.LoadSystemSettingsAsync();
+            if (sys is null)
+            {
+                canEditSystem = false;
             }
             else
             {
-                currentLanguage = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
+                canEditSystem = true;
+                systemForm = MapSystem(sys);
             }
-
-            loading = false;
-            await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
+        catch
         {
-            await JS.InvokeVoidAsync("console.error", $"[Settings] Error: {ex.Message}");
+            canEditSystem = false;
+        }
+        finally
+        {
             loading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task SaveLanguagePreference()
+    private async Task SaveUserAsync()
     {
-        try
-        {
-            // 保存语言到cookie（365天有效期）
-            await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", currentLanguage, 365);
-            // 加载新语言资源
-            await I18n.LoadAsync(currentLanguage);
-            var saved = await SaveToServer();
-            ShowMessage(saved ? "Language saved successfully" : "Language saved locally", saved);
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("console.error", $"[Settings] Save language error: {ex.Message}");
-            ShowMessage("Failed to save language", false);
-        }
-    }
+        savingUser = true;
+        userMessage = null;
+        await InvokeAsync(StateHasChanged);
 
-    private async Task<bool> SaveToServer()
-    {
         try
         {
-            var prefs = new
+            var update = new PreferencesService.UpdateUserSettingsRequest
             {
-                language = currentLanguage
+                Theme = userForm.Theme,
+                PrimaryColor = userForm.PrimaryColor,
+                Language = userForm.Language,
+                HomeRoute = userForm.HomeRoute,
+                NavDisplayMode = PreferencesService.ToApiNavMode(userForm.NavMode)
             };
-            var resp = await Auth.PutAsJsonWithRefreshAsync("/api/user/preferences", prefs);
-            if (!resp.IsSuccessStatusCode)
+
+            var snapshot = await PrefsService.SaveUserSettingsAsync(update);
+            if (snapshot is null)
             {
-                await JS.InvokeVoidAsync("console.error", $"[Settings] Server save failed: {resp.StatusCode}");
-                return false;
+                userMessageSuccess = false;
+                userMessage = I18n.T("MSG_SETTINGS_FAILED");
             }
             else
             {
-                await JS.InvokeVoidAsync("console.log", $"[Settings] Preferences saved to server: language={currentLanguage}");
-                return true;
+                ApplyUserSnapshot(snapshot);
+                userMessageSuccess = true;
+                userMessage = I18n.T("MSG_SETTINGS_SAVED");
+                await ThemeState.SetThemeAsync(snapshot.Effective.Theme);
+                Layout.SetNavMode(PreferencesService.ToLayoutMode(snapshot.Effective.NavDisplayMode));
+                await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", snapshot.Effective.Language, 365);
             }
         }
-        catch (Exception ex)
+        catch
         {
-            await JS.InvokeVoidAsync("console.error", $"[Settings] SaveToServer error: {ex.Message}");
-            return false;
+            userMessageSuccess = false;
+            userMessage = I18n.T("MSG_SETTINGS_FAILED");
+        }
+        finally
+        {
+            savingUser = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private void ShowMessage(string message, bool success)
+    private async Task SaveSystemAsync()
     {
-        saveMessage = message;
-        saveSuccess = success;
-        StateHasChanged();
-
-        // Clear message after 3 seconds
-        _ = Task.Delay(3000).ContinueWith(_ =>
+        if (!canEditSystem)
         {
-            saveMessage = "";
-            InvokeAsync(StateHasChanged);
-        });
+            systemMessageSuccess = false;
+            systemMessage = I18n.T("MSG_SETTINGS_ADMIN_ONLY");
+            return;
+        }
+
+        savingSystem = true;
+        systemMessage = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var update = new PreferencesService.UpdateSystemSettingsRequest
+            {
+                CompanyName = systemForm.CompanyName,
+                DefaultTheme = systemForm.DefaultTheme,
+                DefaultPrimaryColor = systemForm.DefaultPrimaryColor,
+                DefaultLanguage = systemForm.DefaultLanguage,
+                DefaultHomeRoute = systemForm.DefaultHomeRoute,
+                DefaultNavDisplayMode = PreferencesService.ToApiNavMode(systemForm.DefaultNavMode),
+                TimeZoneId = systemForm.TimeZoneId,
+                AllowSelfRegistration = systemForm.AllowSelfRegistration
+            };
+
+            var updated = await PrefsService.SaveSystemSettingsAsync(update);
+            if (updated is null)
+            {
+                systemMessageSuccess = false;
+                systemMessage = I18n.T("MSG_SETTINGS_FAILED");
+            }
+            else
+            {
+                systemForm = MapSystem(updated);
+                systemMessageSuccess = true;
+                systemMessage = I18n.T("MSG_SETTINGS_SAVED");
+            }
+        }
+        catch
+        {
+            systemMessageSuccess = false;
+            systemMessage = I18n.T("MSG_SETTINGS_FAILED");
+        }
+        finally
+        {
+            savingSystem = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ApplyUserSnapshot(PreferencesService.UserSettingsSnapshot snapshot)
+    {
+        var source = snapshot.Overrides ?? snapshot.Effective;
+        userForm = new UserSettingsModel
+        {
+            Theme = source.Theme,
+            PrimaryColor = source.PrimaryColor ?? snapshot.System.DefaultPrimaryColor ?? "#739FD6",
+            Language = source.Language,
+            HomeRoute = source.HomeRoute,
+            NavMode = PreferencesService.ToLayoutMode(source.NavDisplayMode)
+        };
+    }
+
+    private static SystemSettingsModel MapSystem(PreferencesService.SystemSettingsDto dto) =>
+        new()
+        {
+            CompanyName = dto.CompanyName,
+            DefaultTheme = dto.DefaultTheme,
+            DefaultPrimaryColor = dto.DefaultPrimaryColor ?? "#739FD6",
+            DefaultLanguage = dto.DefaultLanguage,
+            DefaultHomeRoute = dto.DefaultHomeRoute,
+            DefaultNavMode = PreferencesService.ToLayoutMode(dto.DefaultNavDisplayMode),
+            TimeZoneId = dto.TimeZoneId,
+            AllowSelfRegistration = dto.AllowSelfRegistration
+        };
+
+    private record ThemeOption(string Value, string LabelKey);
+    private record LanguageOption(string Code, string Label);
+    private record HomeRouteOption(string Value, string LabelKey);
+    private record NavModeOption(LayoutState.NavDisplayMode Mode, string LabelKey);
+
+    private class SystemSettingsModel
+    {
+        public string CompanyName { get; set; } = "OneCRM";
+        public string DefaultTheme { get; set; } = "calm-light";
+        public string? DefaultPrimaryColor { get; set; } = "#739FD6";
+        public string DefaultLanguage { get; set; } = "ja";
+        public string DefaultHomeRoute { get; set; } = "/";
+        public LayoutState.NavDisplayMode DefaultNavMode { get; set; } = LayoutState.NavDisplayMode.IconText;
+        public string TimeZoneId { get; set; } = "Asia/Tokyo";
+        public bool AllowSelfRegistration { get; set; }
+    }
+
+    private class UserSettingsModel
+    {
+        public string Theme { get; set; } = "calm-light";
+        public string? PrimaryColor { get; set; } = "#739FD6";
+        public string Language { get; set; } = "ja";
+        public string HomeRoute { get; set; } = "/";
+        public LayoutState.NavDisplayMode NavMode { get; set; } = LayoutState.NavDisplayMode.IconText;
     }
 
     public void Dispose()
     {
-        I18n.OnChanged -= HandleI18nChanged;
-    }
-
-    private class UserPreferencesDto
-    {
-        public string? language { get; set; }
     }
 }

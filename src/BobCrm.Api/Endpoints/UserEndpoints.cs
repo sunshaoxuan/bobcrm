@@ -1,28 +1,34 @@
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain;
 using BobCrm.Api.Contracts.DTOs;
+using Microsoft.AspNetCore.Routing;
+using BobCrm.Api.Services.Settings;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
-/// 用户相关端点（偏好设置、主题等）
+/// 用户与偏好接口（遗留 Theme API + 新增设置快照透出）
 /// </summary>
 public static class UserEndpoints
 {
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder app)
     {
         var themeGroup = app.MapGroup("/api/theme")
-            .WithTags("主题")
+            .WithTags("Theme")
             .WithOpenApi();
 
         var userGroup = app.MapGroup("/api/user")
-            .WithTags("用户设置")
+            .WithTags("Users")
             .WithOpenApi()
             .RequireAuthorization();
 
-        // 获取主题默认配置（公开访问）
+        MapThemeDefaults(themeGroup);
+        MapLegacyPreferences(userGroup);
+
+        return app;
+    }
+
+    private static void MapThemeDefaults(IEndpointRouteBuilder themeGroup)
+    {
         themeGroup.MapGet("/defaults", (IConfiguration cfg, ILogger<Program> logger) =>
         {
             var initColor = cfg.GetValue<string>("Theme:InitColor");
@@ -31,128 +37,82 @@ public static class UserEndpoints
             return Results.Json(new { initColor, initTheme });
         })
         .WithName("GetThemeDefaults")
-        .WithSummary("获取主题默认配置")
-        .WithDescription("获取系统默认的主题和主色配置，无需认证")
+        .WithSummary("获取主题默认值")
+        .WithDescription("供早期客户端快速读取开箱即用的主题信息")
         .AllowAnonymous();
+    }
 
-        // 获取用户偏好设置
+    private static void MapLegacyPreferences(RouteGroupBuilder userGroup)
+    {
+        // Legacy preference GET (kept for backward compatibility)
         userGroup.MapGet("/preferences", async (
-            AppDbContext db,
             ClaimsPrincipal user,
+            SettingsService settings,
             IConfiguration cfg,
             ILogger<Program> logger) =>
         {
-            var uid = user?.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(uid))
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
             {
                 logger.LogWarning("[Preferences] Unauthorized access attempt");
                 return Results.Unauthorized();
             }
 
-            var prefs = await db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == uid);
-            if (prefs == null)
-            {
-                // 返回配置中的默认值
-                var initColor = cfg.GetValue<string>("Theme:InitColor");
-                var initTheme = cfg.GetValue<string>("Theme:InitTheme") ?? "light";
-                logger.LogInformation("[Preferences] User {UserId} has no saved preferences, returning defaults", uid);
-                return Results.Json(new { theme = initTheme, udfColor = initColor, language = "ja" });
-            }
-
-            logger.LogDebug("[Preferences] Retrieved preferences for user {UserId}: theme={Theme}, color={Color}, lang={Language}", 
-                uid, prefs.Theme, prefs.PrimaryColor, prefs.Language);
-            return Results.Json(new
-            {
-                theme = prefs.Theme ?? "light",
-                udfColor = prefs.PrimaryColor ?? cfg.GetValue<string>("Theme:InitColor"),
-                language = prefs.Language ?? "ja"
-            });
+            var snapshot = await settings.GetUserSettingsAsync(uid);
+            logger.LogDebug("[Preferences] Snapshot served for user {UserId}", uid);
+            return Results.Json(ToLegacyPreferences(snapshot, cfg));
         })
         .WithName("GetUserPreferences")
-        .WithSummary("获取用户偏好设置")
-        .WithDescription("获取当前用户的主题、颜色和语言偏好");
+        .WithSummary("获取用户偏好（兼容旧接口）")
+        .WithDescription("返回主题/颜色/语言等信息，底层已统一走 SettingsService");
 
-        // 更新用户偏好设置
+        // Legacy preference PUT (writes via SettingsService to keep single source of truth)
         userGroup.MapPut("/preferences", async (
             UserPreferencesDto dto,
-            AppDbContext db,
             ClaimsPrincipal user,
+            SettingsService settings,
+            IConfiguration cfg,
             ILogger<Program> logger) =>
         {
-            var uid = user?.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(uid))
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
             {
                 logger.LogWarning("[Preferences] Unauthorized update attempt");
                 return Results.Unauthorized();
             }
 
-            logger.LogInformation("[Preferences] Updating preferences for user {UserId}: theme={Theme}, color={Color}, lang={Lang}", 
-                uid, dto.theme, dto.udfColor, dto.language);
+            logger.LogInformation("[Preferences] Updating preferences for user {UserId}", uid);
+            var snapshot = await settings.UpdateUserSettingsAsync(uid, new UpdateUserSettingsRequest(
+                dto.theme,
+                dto.udfColor,
+                dto.language,
+                dto.homeRoute,
+                dto.navMode));
 
-            // 使用 Upsert 模式避免并发冲突
-            var prefs = await db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == uid);
-            if (prefs == null)
-            {
-                // 创建新记录
-                prefs = new UserPreferences 
-                { 
-                    UserId = uid,
-                    Theme = dto.theme ?? "light",
-                    PrimaryColor = dto.udfColor ?? "#3f7cff",  // DTO 的 udfColor 映射到数据库的 PrimaryColor
-                    Language = dto.language ?? "ja",
-                    UpdatedAt = DateTime.UtcNow
-                };
-                db.UserPreferences.Add(prefs);
-                
-                try
-                {
-                    await db.SaveChangesAsync();
-                    logger.LogInformation("[Preferences] New preferences created for user {UserId}", uid);
-                }
-                catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_UserPreferences_UserId") == true)
-                {
-                    // 并发冲突：其他请求已创建记录，重新查询并更新
-                    logger.LogWarning("[Preferences] Concurrent insert detected for user {UserId}, retrying as update", uid);
-                    db.Entry(prefs).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                    prefs = await db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == uid);
-                    if (prefs == null)
-                    {
-                        logger.LogError("[Preferences] Failed to retrieve preferences after concurrent conflict for user {UserId}", uid);
-                        return Results.StatusCode(500);
-                    }
-                    
-                    // 更新现有记录（DTO udfColor → DB PrimaryColor）
-                    if (!string.IsNullOrEmpty(dto.theme)) prefs.Theme = dto.theme;
-                    if (!string.IsNullOrEmpty(dto.udfColor)) prefs.PrimaryColor = dto.udfColor;
-                    if (!string.IsNullOrEmpty(dto.language)) prefs.Language = dto.language;
-                    prefs.UpdatedAt = DateTime.UtcNow;
-                    
-                    await db.SaveChangesAsync();
-                    logger.LogInformation("[Preferences] Preferences updated after retry for user {UserId}", uid);
-                }
-            }
-            else
-            {
-                // 更新现有记录（DTO udfColor → DB PrimaryColor）
-                if (!string.IsNullOrEmpty(dto.theme)) prefs.Theme = dto.theme;
-                if (!string.IsNullOrEmpty(dto.udfColor)) prefs.PrimaryColor = dto.udfColor;
-                if (!string.IsNullOrEmpty(dto.language)) prefs.Language = dto.language;
-                prefs.UpdatedAt = DateTime.UtcNow;
-                
-                await db.SaveChangesAsync();
-                logger.LogInformation("[Preferences] Preferences updated successfully for user {UserId}", uid);
-            }
-            return Results.Json(new
-            {
-                theme = prefs.Theme,
-                udfColor = prefs.PrimaryColor,  // DB PrimaryColor → 响应 udfColor
-                language = prefs.Language
-            });
+            return Results.Json(ToLegacyPreferences(snapshot, cfg));
         })
         .WithName("UpdateUserPreferences")
-        .WithSummary("更新用户偏好设置")
-        .WithDescription("更新当前用户的主题、颜色和语言偏好");
+        .WithSummary("更新用户偏好（兼容旧接口）")
+        .WithDescription("向新的设置管道写入，同时保持旧数据结构响应");
+    }
 
-        return app;
+    private static object ToLegacyPreferences(UserSettingsSnapshotDto snapshot, IConfiguration cfg)
+    {
+        var fallbackColor = snapshot.Effective.PrimaryColor
+                            ?? snapshot.System.DefaultPrimaryColor
+                            ?? cfg.GetValue<string>("Theme:InitColor");
+
+        var language = string.IsNullOrWhiteSpace(snapshot.Effective.Language)
+            ? snapshot.System.DefaultLanguage
+            : snapshot.Effective.Language;
+
+        return new
+        {
+            theme = snapshot.Effective.Theme,
+            udfColor = fallbackColor,
+            language,
+            homeRoute = snapshot.Effective.HomeRoute,
+            navMode = snapshot.Effective.NavDisplayMode
+        };
     }
 }

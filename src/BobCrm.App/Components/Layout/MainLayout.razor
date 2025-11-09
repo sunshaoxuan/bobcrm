@@ -9,11 +9,12 @@
 @inject LayoutState Layout
 @inject InteractionState Interaction
 @inject I18nService I18n
+@inject IJSRuntime JS
 @implements IDisposable
 
 @* Calm App Shell：左侧 rail + glass sider + 顶部导航 *@
 
-<div class="chrome-shell @ThemeState.CurrentTheme">
+<div class="chrome-shell @ThemeState.CurrentTheme @NavModeClass">
     <nav class="chrome-rail">
         <div class="rail-brand">
             <button class="rail-logo-button" @onclick="@(() => NavigateTo(RootHref))">
@@ -24,9 +25,10 @@
         <div class="rail-group">
             @foreach (var item in _railItems)
             {
-                <Tooltip Title="@item.Label" Placement="Placement.Right">
+                <Tooltip Title="@I18n.T(item.LabelKey)" Placement="Placement.Right">
                     <button class="rail-item @(IsActiveRail(item) ? "active" : string.Empty)" @onclick="() => NavigateTo(item.Href)">
-                        <Icon Type="@item.Icon" />
+                        <span class="rail-item-icon"><Icon Type="@item.Icon" /></span>
+                        <span class="rail-item-label">@I18n.T(item.LabelKey)</span>
                     </button>
                 </Tooltip>
             }
@@ -34,7 +36,8 @@
         <div class="rail-group rail-footer">
             <Tooltip Title="@I18n.T("MENU_SETTINGS")" Placement="Placement.Right">
                 <button class="rail-item" @onclick="@(() => NavigateTo(SettingsHref))">
-                    <Icon Type="@IconType.Outline.Setting" />
+                    <span class="rail-item-icon"><Icon Type="@IconType.Outline.Setting" /></span>
+                    <span class="rail-item-label">@I18n.T("MENU_SETTINGS")</span>
                 </button>
             </Tooltip>
         </div>
@@ -55,7 +58,16 @@
                         <Icon Type="@IconType.Outline.Close" />
                     </button>
                 </div>
-                <CustomerSider />
+                @if (ShowCustomerSider)
+                {
+                    <CustomerSider />
+                }
+                else
+                {
+                    <div class="sider-placeholder">
+                        <p>@I18n.T("TXT_SIDER_WELCOME")</p>
+                    </div>
+                }
             </div>
         </aside>
 
@@ -110,14 +122,14 @@
 @code {
     private const string RootHref = "/";
     private const string SettingsHref = "/settings";
-    private record RailItem(string Icon, string Label, string Href);
+    private record RailItem(string Icon, string LabelKey, string Href);
 
     private readonly RailItem[] _railItems =
     [
-        new(IconType.Outline.Home, "总览", RootHref),
-        new(IconType.Outline.Team, "客户", "/customers"),
-        new(IconType.Outline.Profile, "实体", "/entity-definitions"),
-        new(IconType.Outline.Appstore, "模板", "/templates")
+        new(IconType.Outline.Home, "MENU_DASHBOARD", RootHref),
+        new(IconType.Outline.Team, "MENU_CUSTOMERS", "/customers"),
+        new(IconType.Outline.Profile, "MENU_ENTITY", "/entity-definitions"),
+        new(IconType.Outline.Appstore, "MENU_TEMPLATES", "/templates")
     ];
 
     [Parameter] public RenderFragment? Body { get; set; }
@@ -128,6 +140,27 @@
         ThemeState.OnChanged += HandleThemeChanged;
         Layout.OnChanged += HandleLayoutChanged;
         Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadNavModeAsync();
+        }
+    }
+
+    private async Task LoadNavModeAsync()
+    {
+        try
+        {
+            var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "navMode");
+            if (!string.IsNullOrWhiteSpace(stored) && Enum.TryParse<LayoutState.NavDisplayMode>(stored, true, out var mode))
+            {
+                Layout.SetNavMode(mode);
+            }
+        }
+        catch { }
     }
 
     private void HandleUnauthorized()
@@ -170,6 +203,13 @@
 
     private void CloseOverlay() => Layout.SetSiderOverlay(false);
     private void ToggleRightPanel() => Layout.ToggleRightPanel();
+    private bool ShowCustomerSider => IsCustomerRoute();
+    private bool IsCustomerRoute()
+    {
+        var current = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
+        return current.StartsWith("customers", StringComparison.OrdinalIgnoreCase) ||
+               current.StartsWith("customer", StringComparison.OrdinalIgnoreCase);
+    }
     private async Task InvokeSticky(Func<Task>? callback)
     {
         if (callback != null)
@@ -179,6 +219,7 @@
     }
 
     private void HideSticky() => Interaction.HideStickyBar();
+    private string NavModeClass => $"nav-mode-{Layout.NavMode.ToString().ToLowerInvariant()}";
 
     public void Dispose()
     {
@@ -188,3 +229,4 @@
         Nav.LocationChanged -= HandleLocationChanged;
     }
 }
+

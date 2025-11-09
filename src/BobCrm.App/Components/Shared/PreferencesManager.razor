@@ -4,40 +4,71 @@
 @inject AuthService Auth
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
-@inject NavigationManager Nav
+@inject ThemeState ThemeState
+@inject LayoutState Layout
 @implements IDisposable
 
 @code {
+    private bool _initialized;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
+        if (!firstRender || _initialized)
         {
             return;
         }
+
+        _initialized = true;
 
         try
         {
             var authenticated = await Auth.EnsureAuthenticatedAsync();
             if (!authenticated)
             {
+                await LoadLanguageFallbackAsync();
                 return;
             }
 
-            var prefs = await PrefsService.LoadPreferencesAsync();
-            var lang = !string.IsNullOrWhiteSpace(prefs.Language) ? prefs.Language! : "ja";
+            var snapshot = await PrefsService.LoadSnapshotAsync();
+            if (snapshot is null)
+            {
+                await LoadLanguageFallbackAsync();
+                return;
+            }
 
-            try { await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { }
-            try { await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+            await ApplySnapshotAsync(snapshot);
+        }
+        catch
+        {
+            await LoadLanguageFallbackAsync();
+        }
+    }
+
+    private async Task ApplySnapshotAsync(PreferencesService.UserSettingsSnapshot snapshot)
+    {
+        var lang = string.IsNullOrWhiteSpace(snapshot.Effective.Language)
+            ? "ja"
+            : snapshot.Effective.Language;
+        await I18n.LoadAsync(lang);
+        await ThemeState.SetThemeAsync(snapshot.Effective.Theme);
+        Layout.SetNavMode(PreferencesService.ToLayoutMode(snapshot.Effective.NavDisplayMode));
+    }
+
+    private async Task LoadLanguageFallbackAsync()
+    {
+        try
+        {
+            var lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
             await I18n.LoadAsync(lang);
         }
         catch
         {
-            // Ignore preference initialization errors
+            // ignore
         }
     }
 
     public void Dispose()
     {
-        // No cleanup needed
+        // no-op
     }
 }

@@ -11,6 +11,7 @@
 @inject LayoutState Layout
 @inject InteractionState Interaction
 @inject ThemeState ThemeState
+@inject PreferencesService PrefsService
 
 <div class="app-header">
     <div class="header-meta">
@@ -78,6 +79,23 @@
                 <Icon Type="@IconType.Outline.BgColors" />
             </button>
         </div>
+        <div class="nav-mode-toggle">
+            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.Icons))"
+                    title="@I18n.T("LBL_NAV_MODE_ICONS")"
+                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.Icons)">
+                <Icon Type="@IconType.Outline.Appstore" />
+            </button>
+            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.Labels))"
+                    title="@I18n.T("LBL_NAV_MODE_TEXT")"
+                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.Labels)">
+                <span>Ab</span>
+            </button>
+            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.IconText))"
+                    title="@I18n.T("LBL_NAV_MODE_BOTH")"
+                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.IconText)">
+                <Icon Type="@IconType.Outline.ColumnWidth" />
+            </button>
+        </div>
         <div class="header-actions desktop-only">
             <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="ToggleRightPanel">
                 <Icon Type="@IconType.Outline.Layout" /> 工作栏
@@ -132,6 +150,7 @@
     private string _headerSubtitle = "Record workspace";
     private readonly HeaderNavItem[] _primaryNav =
     [
+        new HeaderNavItem("MENU_DASHBOARD", "/", IconType.Outline.Home, NavLinkMatch.All),
         new HeaderNavItem("MENU_CUSTOMERS", "/customers", IconType.Outline.Team, NavLinkMatch.Prefix),
         new HeaderNavItem("MENU_TEMPLATES", "/templates", IconType.Outline.Appstore, NavLinkMatch.Prefix),
         new HeaderNavItem("MENU_FILES", "/files", IconType.Outline.CloudUpload, NavLinkMatch.Prefix),
@@ -213,6 +232,22 @@
         await ThemeState.SetThemeAsync(theme);
         StateHasChanged();
     }
+    private string NavModeButtonClass(LayoutState.NavDisplayMode mode) => Layout.NavMode == mode ? "active" : string.Empty;
+    private async Task ChangeNavMode(LayoutState.NavDisplayMode mode)
+    {
+        if (Layout.NavMode == mode)
+        {
+            return;
+        }
+
+        Layout.SetNavMode(mode);
+        var apiValue = PreferencesService.ToApiNavMode(mode);
+        try { await JS.InvokeVoidAsync("localStorage.setItem", "navMode", apiValue); } catch { }
+        _ = PrefsService.SaveUserSettingsAsync(new PreferencesService.UpdateUserSettingsRequest
+        {
+            NavDisplayMode = apiValue
+        });
+    }
 
     private void DemoStickyBar()
     {
@@ -292,6 +327,7 @@
         public string? Role { get; set; }
     }
 }
+
 
 
 

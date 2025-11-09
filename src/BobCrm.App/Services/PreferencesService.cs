@@ -1,16 +1,23 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 
 namespace BobCrm.App.Services;
 
+/// <summary>
+/// Centralized bridge for system/user settings + local side-effects (lang cookie, nav mode, etc).
+/// </summary>
 public class PreferencesService
 {
-    private const string DefaultTheme = "calm-light";
-    private const string DefaultPrimary = "#739FD6";
-    private const string DefaultLanguage = "ja";
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private readonly AuthService _auth;
     private readonly IJSRuntime _js;
+    private UserSettingsSnapshot? _cache;
 
     public PreferencesService(AuthService auth, IJSRuntime js)
     {
@@ -18,100 +25,257 @@ public class PreferencesService
         _js = js;
     }
 
-    public async Task<UserPreferences> LoadPreferencesAsync()
+    public async Task<UserSettingsSnapshot?> LoadSnapshotAsync(bool forceRefresh = false)
     {
+        if (!forceRefresh && _cache is not null)
+        {
+            return _cache;
+        }
+
         try
         {
-            var resp = await _auth.GetWithRefreshAsync("/api/user/preferences");
-            if (resp.IsSuccessStatusCode)
+            var resp = await _auth.GetWithRefreshAsync("/api/settings/user");
+            if (!resp.IsSuccessStatusCode)
             {
-                var serverPrefs = await resp.Content.ReadFromJsonAsync<UserPreferences>();
-                if (serverPrefs != null)
-                {
-                    await SyncToLocalStorageAsync(serverPrefs);
-                    return Normalize(serverPrefs);
-                }
+                return _cache;
             }
-        }
-        catch
-        {
-            // ignore network errors, fall back to local data
-        }
 
-        return await LoadFromLocalStorageAsync();
-    }
-
-    public async Task<bool> SavePreferencesAsync(UserPreferences prefs)
-    {
-        var normalized = Normalize(prefs);
-        await SyncToLocalStorageAsync(normalized);
-
-        try
-        {
-            var dto = new UserPreferencesDto(normalized.Theme, normalized.UdfColor, normalized.Language);
-            var resp = await _auth.PutAsJsonWithRefreshAsync("/api/user/preferences", dto);
-            return resp.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private async Task<UserPreferences> LoadFromLocalStorageAsync()
-    {
-        try
-        {
-            var language = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? DefaultLanguage;
-            return new UserPreferences
+            var snapshot = await resp.Content.ReadFromJsonAsync<UserSettingsSnapshot>(JsonOptions);
+            if (snapshot is null)
             {
-                Theme = DefaultTheme,
-                UdfColor = DefaultPrimary,
-                Language = language
-            };
-        }
-        catch
-        {
-            return new UserPreferences
-            {
-                Theme = DefaultTheme,
-                UdfColor = DefaultPrimary,
-                Language = DefaultLanguage
-            };
-        }
-    }
-
-    private async Task SyncToLocalStorageAsync(UserPreferences prefs)
-    {
-        try
-        {
-            if (!string.IsNullOrEmpty(prefs.Language))
-            {
-                await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", prefs.Language, 365);
+                return _cache;
             }
+
+            await ApplyLocalSideEffectsAsync(snapshot.Effective);
+            _cache = snapshot;
+            return snapshot;
         }
         catch
         {
-            // Ignore client persistence errors
+            return _cache;
         }
     }
 
-    private static UserPreferences Normalize(UserPreferences prefs)
+    public async Task<UserSettingsSnapshot?> SaveUserSettingsAsync(UpdateUserSettingsRequest update)
     {
-        return new UserPreferences
+        if (update is null || update.IsEmpty)
         {
-            Theme = string.IsNullOrWhiteSpace(prefs.Theme) ? DefaultTheme : prefs.Theme,
-            UdfColor = string.IsNullOrWhiteSpace(prefs.UdfColor) ? DefaultPrimary : prefs.UdfColor,
-            Language = string.IsNullOrWhiteSpace(prefs.Language) ? DefaultLanguage : prefs.Language
+            return _cache;
+        }
+
+        try
+        {
+            var resp = await _auth.PutAsJsonWithRefreshAsync("/api/settings/user", update);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var snapshot = await resp.Content.ReadFromJsonAsync<UserSettingsSnapshot>(JsonOptions);
+            if (snapshot is null)
+            {
+                return null;
+            }
+
+            await ApplyLocalSideEffectsAsync(snapshot.Effective);
+            _cache = snapshot;
+            return snapshot;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<SystemSettingsDto?> LoadSystemSettingsAsync()
+    {
+        try
+        {
+            var resp = await _auth.GetWithRefreshAsync("/api/settings/system");
+            if (!resp.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await resp.Content.ReadFromJsonAsync<SystemSettingsDto>(JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<SystemSettingsDto?> SaveSystemSettingsAsync(UpdateSystemSettingsRequest update)
+    {
+        try
+        {
+            var resp = await _auth.PutAsJsonWithRefreshAsync("/api/settings/system", update);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await resp.Content.ReadFromJsonAsync<SystemSettingsDto>(JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task ApplyLocalSideEffectsAsync(UserSettingsDto effective)
+    {
+        try
+        {
+            var lang = string.IsNullOrWhiteSpace(effective.Language) ? "ja" : effective.Language;
+            await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365);
+            await _js.InvokeVoidAsync("bobcrm.setLang", lang);
+        }
+        catch
+        {
+            // Ignore client language sync failures.
+        }
+
+        try
+        {
+            var navMode = string.IsNullOrWhiteSpace(effective.NavDisplayMode)
+                ? "icon-text"
+                : effective.NavDisplayMode.ToLowerInvariant();
+            await _js.InvokeVoidAsync("localStorage.setItem", "navMode", navMode);
+        }
+        catch
+        {
+            // Ignore localStorage errors (Safari private mode, etc.)
+        }
+    }
+
+    public static LayoutState.NavDisplayMode ToLayoutMode(string? navMode) =>
+        navMode?.ToLowerInvariant() switch
+        {
+            "icons" => LayoutState.NavDisplayMode.Icons,
+            "labels" => LayoutState.NavDisplayMode.Labels,
+            _ => LayoutState.NavDisplayMode.IconText
         };
-    }
 
-    public class UserPreferences
+    public static string ToApiNavMode(LayoutState.NavDisplayMode mode) =>
+        mode switch
+        {
+            LayoutState.NavDisplayMode.Icons => "icons",
+            LayoutState.NavDisplayMode.Labels => "labels",
+            _ => "icon-text"
+        };
+
+    #region DTOs
+
+    public class UserSettingsSnapshot
     {
-        public string? Theme { get; set; }
-        public string? UdfColor { get; set; }
-        public string? Language { get; set; }
+        [JsonPropertyName("system")]
+        public SystemSettingsDto System { get; set; } = new();
+
+        [JsonPropertyName("effective")]
+        public UserSettingsDto Effective { get; set; } = new();
+
+        [JsonPropertyName("overrides")]
+        public UserSettingsDto? Overrides { get; set; }
     }
 
-    private record UserPreferencesDto(string? theme, string? udfColor, string? language);
+    public class SystemSettingsDto
+    {
+        [JsonPropertyName("companyName")]
+        public string CompanyName { get; set; } = "OneCRM";
+
+        [JsonPropertyName("defaultTheme")]
+        public string DefaultTheme { get; set; } = "calm-light";
+
+        [JsonPropertyName("defaultPrimaryColor")]
+        public string? DefaultPrimaryColor { get; set; } = "#739FD6";
+
+        [JsonPropertyName("defaultLanguage")]
+        public string DefaultLanguage { get; set; } = "ja";
+
+        [JsonPropertyName("defaultHomeRoute")]
+        public string DefaultHomeRoute { get; set; } = "/";
+
+        [JsonPropertyName("defaultNavDisplayMode")]
+        public string DefaultNavDisplayMode { get; set; } = "icon-text";
+
+        [JsonPropertyName("timeZoneId")]
+        public string TimeZoneId { get; set; } = "Asia/Tokyo";
+
+        [JsonPropertyName("allowSelfRegistration")]
+        public bool AllowSelfRegistration { get; set; }
+    }
+
+    public class UserSettingsDto
+    {
+        [JsonPropertyName("theme")]
+        public string Theme { get; set; } = "calm-light";
+
+        [JsonPropertyName("primaryColor")]
+        public string? PrimaryColor { get; set; }
+
+        [JsonPropertyName("language")]
+        public string Language { get; set; } = "ja";
+
+        [JsonPropertyName("homeRoute")]
+        public string HomeRoute { get; set; } = "/";
+
+        [JsonPropertyName("navDisplayMode")]
+        public string NavDisplayMode { get; set; } = "icon-text";
+    }
+
+    public class UpdateUserSettingsRequest
+    {
+        [JsonPropertyName("theme")]
+        public string? Theme { get; set; }
+
+        [JsonPropertyName("primaryColor")]
+        public string? PrimaryColor { get; set; }
+
+        [JsonPropertyName("language")]
+        public string? Language { get; set; }
+
+        [JsonPropertyName("homeRoute")]
+        public string? HomeRoute { get; set; }
+
+        [JsonPropertyName("navDisplayMode")]
+        public string? NavDisplayMode { get; set; }
+
+        [JsonIgnore]
+        public bool IsEmpty =>
+            Theme is null &&
+            PrimaryColor is null &&
+            Language is null &&
+            HomeRoute is null &&
+            NavDisplayMode is null;
+    }
+
+    public class UpdateSystemSettingsRequest
+    {
+        [JsonPropertyName("companyName")]
+        public string? CompanyName { get; set; }
+
+        [JsonPropertyName("defaultTheme")]
+        public string? DefaultTheme { get; set; }
+
+        [JsonPropertyName("defaultPrimaryColor")]
+        public string? DefaultPrimaryColor { get; set; }
+
+        [JsonPropertyName("defaultLanguage")]
+        public string? DefaultLanguage { get; set; }
+
+        [JsonPropertyName("defaultHomeRoute")]
+        public string? DefaultHomeRoute { get; set; }
+
+        [JsonPropertyName("defaultNavDisplayMode")]
+        public string? DefaultNavDisplayMode { get; set; }
+
+        [JsonPropertyName("timeZoneId")]
+        public string? TimeZoneId { get; set; }
+
+        [JsonPropertyName("allowSelfRegistration")]
+        public bool? AllowSelfRegistration { get; set; }
+    }
+
+    #endregion
 }

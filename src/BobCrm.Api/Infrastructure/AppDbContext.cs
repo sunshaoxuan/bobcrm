@@ -37,6 +37,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
+    public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
 
     // 本地化
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();

@@ -15,6 +15,7 @@
 - ARCH-02-实体元数据自动注册机制.md
 - ARCH-10-AggVO系统指南.md
 - ARCH-11-动态实体指南.md
+- ARCH-13-系统与用户设置模型.md
 
 ## 界面（UI）
 - UI-01-UIUE设计说明书.md

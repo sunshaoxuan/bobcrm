@@ -10,6 +10,7 @@ public class LayoutState
     public bool IsSiderCollapsed { get; private set; }
     public bool IsSiderOverlayOpen { get; private set; }
     public bool IsRightPanelVisible { get; private set; }
+    public NavDisplayMode NavMode { get; private set; } = NavDisplayMode.IconText;
 
     public event Action? OnChanged;
 
@@ -38,6 +39,20 @@ public class LayoutState
         if (visible == IsRightPanelVisible) return;
         IsRightPanelVisible = visible;
         Notify();
+    }
+
+    public void SetNavMode(NavDisplayMode mode)
+    {
+        if (NavMode == mode) return;
+        NavMode = mode;
+        Notify();
+    }
+
+    public enum NavDisplayMode
+    {
+        Icons,
+        Labels,
+        IconText
     }
 
     private void Notify() => OnChanged?.Invoke();
