@@ -171,6 +171,7 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "ERR_PASSWORD_REQUIRED", ZH = "密码不能为空", JA = "パスワードは必須です", EN = "Password is required" },
                 new LocalizationResource { Key = "MSG_REGISTER_SUCCESS", ZH = "注册成功，请进行邮箱激活（开发环境查看 API 控制台）", JA = "登録成功。メール認証を実施してください（開発環境は API コンソール参照）", EN = "Registered. Please verify by email (check API console in dev)." },
                                 new LocalizationResource { Key = "TXT_RAIL_TAGLINE", ZH = "体验中枢", JA = "エクスペリエンスハブ", EN = "Experience Hub" },
+                                new LocalizationResource { Key = "TXT_HEADER_SUBTITLE", ZH = "洞察、协作与成长的一体化入口", JA = "洞察と協働をつなぐスマートハブ", EN = "Unified hub for insight and collaboration" },
                 new LocalizationResource { Key = "TXT_DASH_EYEBROW", ZH = "工作总览", JA = "ワークスペース概況", EN = "Workspace Snapshot" },
                 new LocalizationResource { Key = "TXT_DASH_TITLE", ZH = "客户体验总览", JA = "顧客体験の概況", EN = "Customer Experience Overview" },
                 new LocalizationResource { Key = "TXT_DASH_SUBTITLE", ZH = "快速掌握客户、项目与团队的关键脉搏。", JA = "顧客・案件・チームの脈をワンビューで把握。", EN = "See key signals from customers, projects, and teams in one view." },
@@ -463,6 +464,7 @@ public static class DatabaseInitializer
             Ensure("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
             Ensure("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
             Ensure("TXT_RAIL_TAGLINE", "体验中枢", "エクスペリエンスハブ", "Experience Hub");
+            Ensure("TXT_HEADER_SUBTITLE", "洞察、协作与成长的一体化入口", "洞察と協働をつなぐスマートハブ", "Unified hub for insight and collaboration");
             Ensure("TXT_DASH_EYEBROW", "工作总览", "ワークスペース概況", "Workspace Snapshot");
             Ensure("TXT_DASH_TITLE", "客户体验总览", "顧客体験の概況", "Customer Experience Overview");
             Ensure("TXT_DASH_SUBTITLE", "快速掌握客户、项目与团队的关键脉搏。", "顧客・案件・チームの脈をワンビューで把握。", "See key signals from customers, projects, and teams in one view.");
