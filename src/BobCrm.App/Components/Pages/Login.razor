@@ -106,7 +106,7 @@
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(token))
                 {
-                    Nav.NavigateTo("/customers", forceLoad: true);
+                    Nav.NavigateTo("/", forceLoad: true);
                     return;
                 }
                 // Initialize hero slider images
@@ -324,7 +324,7 @@
             await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
             var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
             await JS.InvokeVoidAsync("localStorage.setItem", "user", userStr);
-            Nav.NavigateTo("/customers", forceLoad: true);
+            Nav.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
         {
