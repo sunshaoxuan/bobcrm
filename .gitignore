@@ -18,6 +18,7 @@ x86/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+.dev/
 
 # Visual Studio 2015/2017/2019/2022 cache/options directory
 .vs/

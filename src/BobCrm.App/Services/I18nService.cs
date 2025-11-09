@@ -27,17 +27,39 @@ public class I18nService
     public async Task LoadAsync(string lang, CancellationToken ct = default)
     {
         lang = (lang ?? "ja").ToLowerInvariant();
-        var http = await _auth.CreateClientWithLangAsync();
-        var resp = await http.GetAsync($"/api/i18n/{lang}", ct);
-        if (!resp.IsSuccessStatusCode) return;
-        using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var p in doc.RootElement.EnumerateObject())
+        try
         {
-            map[p.Name] = p.Value.GetString() ?? p.Name;
+            var http = await _auth.CreateClientWithLangAsync();
+            using var resp = await http.GetAsync($"/api/i18n/{lang}", ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                await HandleLoadFailureAsync(lang);
+                return;
+            }
+            using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in doc.RootElement.EnumerateObject())
+            {
+                map[p.Name] = p.Value.GetString() ?? p.Name;
+            }
+            _dict = map;
+            CurrentLang = lang;
+            OnChanged?.Invoke();
+            try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+            try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { }
         }
-        _dict = map; CurrentLang = lang; OnChanged?.Invoke();
-        try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
-        try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { }
+        catch
+        {
+            await HandleLoadFailureAsync(lang);
+        }
+    }
+
+    private Task HandleLoadFailureAsync(string lang)
+    {
+        // 仍然触发 OnChanged，让外层 UI 不至于永久卡在“正在准备”状态
+        _dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        CurrentLang = lang;
+        OnChanged?.Invoke();
+        return Task.CompletedTask;
     }
 }

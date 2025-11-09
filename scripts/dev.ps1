@@ -87,7 +87,7 @@ function Restart-DockerServices {
         Write-Host 'Docker 容器已就绪。' -ForegroundColor DarkGreen
     }
     catch {
-        throw "Docker 容器启动失败：$($_.Exception.Message)`n请确认 9100/9101 端口未被占用，然后重新运行脚本。"
+        throw "Docker 容器启动失败：$($_.Exception.Message)`n请确认 19100/19101 端口未被占用，然后重新运行脚本。"
     }
 }
 

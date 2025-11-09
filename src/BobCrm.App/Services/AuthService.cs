@@ -28,34 +28,53 @@ public class AuthService
     private async Task<HttpClient> CreateBaseClientAsync()
     {
         var http = _httpFactory.CreateClient("api");
-        // Prefer localStorage apiBase (来自 Setup 保存)，其次 cookie，再次同源
+        string? resolvedBase = null;
+
+        // Prefer localStorage apiBase (来自 Setup 保存)，其次 cookie
         try
         {
             var lsBase = await _js.InvokeAsync<string?>("localStorage.getItem", "apiBase");
             if (!string.IsNullOrWhiteSpace(lsBase))
             {
-                http.BaseAddress = new Uri(NormalizeBase(lsBase!) , UriKind.Absolute);
+                resolvedBase = NormalizeBase(lsBase!);
             }
             else
             {
                 var cookieBase = await _js.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
                 if (!string.IsNullOrWhiteSpace(cookieBase))
                 {
-                    var normalized = NormalizeBase(cookieBase!);
-                    http.BaseAddress = new Uri(normalized, UriKind.Absolute);
+                    resolvedBase = NormalizeBase(cookieBase!);
                     // 同步回写，避免再次回退
-                    try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", normalized); } catch { }
-                    try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", normalized, 365); } catch { }
-                }
-                else
-                {
-                    var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
-                    if (!string.IsNullOrWhiteSpace(origin))
-                        http.BaseAddress = new Uri(origin!, UriKind.Absolute);
+                    try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase); } catch { }
+                    try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365); } catch { }
                 }
             }
         }
         catch { }
+
+        // 如果配置已经设置了 BaseAddress，就不要再强行覆盖成前端 Origin；
+        // 只有当配置为空时，才回退到浏览器 Origin，避免出现“前端调用自己”导致死循环。
+        if (string.IsNullOrWhiteSpace(resolvedBase) && http.BaseAddress == null)
+        {
+            try
+            {
+                var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
+                if (!string.IsNullOrWhiteSpace(origin))
+                {
+                    resolvedBase = NormalizeBase(origin!);
+                }
+            }
+            catch { }
+        }
+
+        if (!string.IsNullOrWhiteSpace(resolvedBase))
+        {
+            try
+            {
+                http.BaseAddress = new Uri(resolvedBase, UriKind.Absolute);
+            }
+            catch { }
+        }
         // attach language header (no auth required)
         try
         {
