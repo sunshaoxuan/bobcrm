@@ -56,15 +56,17 @@
 
     private async Task LoadLanguageFallbackAsync()
     {
+        var lang = "ja";
         try
         {
-            var lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
-            await I18n.LoadAsync(lang);
+            lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
         }
         catch
         {
-            // ignore
+            // JS 尚未准备好时直接使用默认语言
         }
+
+        await I18n.LoadAsync(lang);
     }
 
     public void Dispose()
