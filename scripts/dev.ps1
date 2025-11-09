@@ -68,6 +68,26 @@ function New-LogFiles {
     }
 }
 
+function Restart-DockerServices {
+    param([string]$repoRoot)
+    $composeFile = Join-Path $repoRoot 'docker-compose.yml'
+    if (-not (Test-Path $composeFile)) {
+        Write-Host '未检测到 docker-compose.yml，跳过容器启动步骤。' -ForegroundColor DarkGray
+        return
+    }
+    Write-Host '重启 Docker 容器 (postgres, minio)...' -ForegroundColor Cyan
+    try {
+        $baseArgs = @('compose','-f', $composeFile)
+        & docker @($baseArgs + @('up','-d','--remove-orphans','--force-recreate','postgres','minio')) | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "docker compose up postgres/minio 失败" }
+        & docker @($baseArgs + @('up','-d','minio-create-bucket')) | Out-Null
+        Write-Host 'Docker 容器已就绪。' -ForegroundColor DarkGreen
+    }
+    catch {
+        Write-Warning ("Docker 容器启动失败：{0}" -f $_.Exception.Message)
+    }
+}
+
 function Start-ServiceProcess {
     param(
         [string]$name,
@@ -138,6 +158,7 @@ function Get-IdsFromNode {
 
 function Start-Services {
     param($paths, [string]$Configuration, [switch]$NoLogs)
+    Restart-DockerServices -repoRoot $paths.WorkDir
     Build-SolutionIfNeeded -repoRoot $paths.WorkDir -NoBuild:$NoBuild -Configuration $Configuration
 
     $logs = if ($NoLogs) { @{} } else { New-LogFiles -paths $paths }

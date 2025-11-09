@@ -4,7 +4,7 @@
 @inject NavigationManager Nav
 @inject I18nService I18n
 
-<div class="@($"app-stage {(I18n.IsLoaded ? "ready" : "loading")}")">
+<div class="@($"app-stage {( _isReady ? "ready" : "loading")}")">
     <BobCrm.App.Components.Shared.ThemeInitializer />
     <BobCrm.App.Components.Shared.PreferencesManager />
     <Router AppAssembly="typeof(Program).Assembly">
@@ -14,21 +14,23 @@
         </Found>
     </Router>
 </div>
-
-@if (!I18n.IsLoaded)
+@if (!_isReady)
 {
     <div class="app-splash">
         <div class="app-splash-card">
             <strong>OneCRM</strong>
-            <p>正在准备界面，请稍候…</p>
+            <p>画面を準備しています。少々お待ちください…</p>
         </div>
     </div>
 }
 @* 初次运行引导：如果未配置，建议用户访问 /setup *@
 
 @code {
+    private bool _isReady;
+
     protected override void OnInitialized()
     {
+        _isReady = I18n.IsLoaded;
         // 订阅全局未授权事件，统一跳转登录页
         Auth.OnUnauthorized += HandleUnauthorized;
         I18n.OnChanged += HandleI18nChanged;
@@ -42,6 +44,7 @@
 
     private void HandleI18nChanged()
     {
+        _isReady = true;
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 
