@@ -935,8 +935,8 @@ public static class DatabaseInitializer
             Ensure("ERR_PUBLISH_FAILED", "发布失败", "公開に失敗しました", "Publish failed");
             Ensure("MSG_CODE_GENERATE_SUCCESS", "代码生成成功", "コード生成に成功しました", "Code generated successfully");
             Ensure("ERR_CODE_GENERATE_FAILED", "生成代码失败", "コード生成に失敗しました", "Code generation failed");
-            Ensure("MSG_CLICK_GENERATE_CODE", "点击"生成代码"按钮查看", "「コード生成」ボタンをクリックして確認", "Click 'Generate Code' button to view");
-            Ensure("MSG_CLICK_COMPILE", "点击"编译"按钮查看", "「コンパイル」ボタンをクリックして確認", "Click 'Compile' button to view");
+            Ensure("MSG_CLICK_GENERATE_CODE", "点击「生成代码」按钮查看", "「コード生成」ボタンをクリックして確認", "Click 'Generate Code' button to view");
+            Ensure("MSG_CLICK_COMPILE", "点击「编译」按钮查看", "「コンパイル」ボタンをクリックして確認", "Click 'Compile' button to view");
             Ensure("ERR_LOAD_DDL_FAILED", "加载DDL失败", "DDL読み込みに失敗しました", "Failed to load DDL");
             Ensure("ERR_LOAD_HISTORY_FAILED", "加载历史失败", "履歴の読み込みに失敗しました", "Failed to load history");
             Ensure("MSG_COMPILE_SUCCESS_EXCLAIM", "编译成功！", "コンパイル成功！", "Compile succeeded!");
@@ -948,7 +948,7 @@ public static class DatabaseInitializer
             Ensure("LBL_GROUP_BY_ENTITY", "按实体分组", "エンティティ別にグループ化", "Group by Entity");
             Ensure("BTN_NEW_TEMPLATE", "新建模板", "新規テンプレート", "New Template");
             Ensure("MSG_NO_TEMPLATES", "暂无模板", "テンプレートがありません", "No templates");
-            Ensure("TXT_NO_TEMPLATES_DESC", "点击右上角"新建模板"按钮创建您的第一个表单模板", "右上の「新規テンプレート」ボタンをクリックして最初のフォームテンプレートを作成します", "Click the 'New Template' button in the top right to create your first form template");
+            Ensure("TXT_NO_TEMPLATES_DESC", "点击右上角「新建模板」按钮创建您的第一个表单模板", "右上の「新規テンプレート」ボタンをクリックして最初のフォームテンプレートを作成します", "Click the 'New Template' button in the top right to create your first form template");
             Ensure("BTN_SET_AS_DEFAULT", "设为默认", "デフォルトに設定", "Set as Default");
             Ensure("LBL_USER_DEFAULT", "用户默认", "ユーザーデフォルト", "User Default");
             Ensure("LBL_SYSTEM_DEFAULT", "系统默认", "システムデフォルト", "System Default");
