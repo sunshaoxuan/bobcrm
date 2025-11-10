@@ -33,13 +33,13 @@ public class Customer : IBizEntity
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Customer",
             EntityRoute = "customer",
-            DisplayName = new Dictionary<string, string>
+            DisplayName = new Dictionary<string, string?>
             {
                 { "ja", "顧客" },
                 { "zh", "客户" },
                 { "en", "Customer" }
             },
-            Description = new Dictionary<string, string>
+            Description = new Dictionary<string, string?>
             {
                 { "ja", "顧客情報を管理します" },
                 { "zh", "管理客户信息" },
@@ -62,7 +62,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Id",
-                DisplayName = new Dictionary<string, string>
+                DisplayName = new Dictionary<string, string?>
                 {
                     { "ja", "ID" },
                     { "zh", "ID" },
@@ -75,7 +75,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Code",
-                DisplayName = new Dictionary<string, string>
+                DisplayName = new Dictionary<string, string?>
                 {
                     { "ja", "顧客コード" },
                     { "zh", "客户代码" },
@@ -89,7 +89,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Name",
-                DisplayName = new Dictionary<string, string>
+                DisplayName = new Dictionary<string, string?>
                 {
                     { "ja", "顧客名" },
                     { "zh", "客户名称" },
@@ -103,7 +103,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Version",
-                DisplayName = new Dictionary<string, string>
+                DisplayName = new Dictionary<string, string?>
                 {
                     { "ja", "バージョン" },
                     { "zh", "版本" },
@@ -117,7 +117,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "ExtData",
-                DisplayName = new Dictionary<string, string>
+                DisplayName = new Dictionary<string, string?>
                 {
                     { "ja", "拡張データ" },
                     { "zh", "扩展数据" },

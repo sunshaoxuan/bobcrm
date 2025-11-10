@@ -8,7 +8,7 @@
             @context.EntityName
         </a>
     </PropertyColumn>
-    <Column Title="显示名">
+    <Column TData="string" Title="显示名">
         @MultilingualResolver.Resolve(context.DisplayName, context.EntityName)
     </Column>
     <PropertyColumn Property="e => e.Namespace" Title="命名空间" />

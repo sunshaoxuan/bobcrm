@@ -333,7 +333,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Id",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "ID" },
                         { "zh", "ID" },
@@ -349,7 +349,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Code",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "コード" },
                         { "zh", "代码" },
@@ -363,7 +363,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Name",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "名称" },
                         { "zh", "名称" },
@@ -380,7 +380,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "CreatedAt",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "作成日時" },
                         { "zh", "创建时间" },
@@ -394,7 +394,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "CreatedBy",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "作成者" },
                         { "zh", "创建人" },
@@ -408,7 +408,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "UpdatedAt",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "更新日時" },
                         { "zh", "更新时间" },
@@ -422,7 +422,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "UpdatedBy",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "更新者" },
                         { "zh", "更新人" },
@@ -436,7 +436,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Version",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "バージョン" },
                         { "zh", "版本" },
@@ -453,7 +453,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Version",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "バージョン" },
                         { "zh", "版本" },
@@ -470,7 +470,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "ValidFrom",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "有効開始日時" },
                         { "zh", "生效起始时间" },
@@ -484,7 +484,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "ValidTo",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "有効終了日時" },
                         { "zh", "生效结束时间" },
@@ -497,7 +497,7 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "VersionNo",
-                    DisplayName = new Dictionary<string, string>
+                    DisplayName = new Dictionary<string, string?>
                     {
                         { "ja", "バージョン番号" },
                         { "zh", "版本号" },

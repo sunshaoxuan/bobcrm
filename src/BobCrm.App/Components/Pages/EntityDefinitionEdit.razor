@@ -103,7 +103,7 @@
             <Body>
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
                     <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
-                    <Column Title="显示名">
+                    <Column TData="string" Title="显示名">
                         @MultilingualResolver.Resolve(context.DisplayName, context.PropertyName)
                     </Column>
                     <PropertyColumn Property="f => f.DataType" Title="数据类型">
