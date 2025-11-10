@@ -1,29 +1,30 @@
 @page "/entity-definitions/publish/{Id:guid}"
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 
 <AuthChecker>
-    <PageHeader Title="实体发布" OnBack="GoBack">
+    <PageHeader Title="@I18n.T("LBL_ENTITY_PUBLISH")" OnBack="GoBack">
         <PageHeaderExtra>
             <Space>
                 @if (!string.IsNullOrEmpty(_entity?.Status) && (_entity.Status == EntityStatus.Draft || _entity.Status == EntityStatus.Modified))
                 {
                     <SpaceItem>
                         <Button Type="@ButtonType.Primary" OnClick="HandlePublish" Loading="@_publishing">
-                            <Icon Type="upload" /> 发布实体
+                            <Icon Type="upload" /> @I18n.T("BTN_PUBLISH_ENTITY")
                         </Button>
                     </SpaceItem>
                 }
                 <SpaceItem>
                     <Button OnClick="HandleGenerateCode" Loading="@_generatingCode">
-                        <Icon Type="code" /> 生成代码
+                        <Icon Type="code" /> @I18n.T("BTN_GENERATE_CODE")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="HandleCompile" Loading="@_compiling">
-                        <Icon Type="build" /> 编译
+                        <Icon Type="build" /> @I18n.T("BTN_COMPILE")
                     </Button>
                 </SpaceItem>
             </Space>
@@ -38,44 +39,44 @@
     }
     else if (_entity != null)
     {
-        <Card Title="实体信息" Style="margin-bottom: 16px;">
+        <Card Title="@I18n.T("LBL_ENTITY_INFO")" Style="margin-bottom: 16px;">
             <Descriptions Bordered Column="2">
-                <DescriptionsItem Title="实体名称">@_entity.EntityName</DescriptionsItem>
-                <DescriptionsItem Title="命名空间">@_entity.Namespace</DescriptionsItem>
-                <DescriptionsItem Title="完整类型名">@_entity.FullTypeName</DescriptionsItem>
-                <DescriptionsItem Title="状态">
+                <DescriptionsItem Title="@I18n.T("LBL_ENTITY_NAME")">@_entity.EntityName</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_NAMESPACE")">@_entity.Namespace</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_FULL_TYPE_NAME")">@_entity.FullTypeName</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_STATUS")">
                     @if (_entity.Status == EntityStatus.Draft)
                     {
-                        <Tag Color="orange">草稿</Tag>
+                        <Tag Color="orange">@I18n.T("LBL_DRAFT")</Tag>
                     }
                     else if (_entity.Status == EntityStatus.Published)
                     {
-                        <Tag Color="green">已发布</Tag>
+                        <Tag Color="green">@I18n.T("LBL_PUBLISHED")</Tag>
                     }
                     else if (_entity.Status == EntityStatus.Modified)
                     {
-                        <Tag Color="blue">已修改</Tag>
+                        <Tag Color="blue">@I18n.T("LBL_MODIFIED")</Tag>
                     }
                 </DescriptionsItem>
-                <DescriptionsItem Title="来源">
+                <DescriptionsItem Title="@I18n.T("LBL_SOURCE")">
                     <Tag Color="@(_entity.Source == EntitySource.System ? "blue" : "green")">
                         @_entity.Source
                     </Tag>
                 </DescriptionsItem>
-                <DescriptionsItem Title="是否锁定">
-                    @(_entity.IsLocked ? "是" : "否")
+                <DescriptionsItem Title="@I18n.T("LBL_IS_LOCKED")">
+                    @(_entity.IsLocked ? I18n.T("TXT_YES") : I18n.T("TXT_NO"))
                 </DescriptionsItem>
-                <DescriptionsItem Title="字段数">@_entity.Fields.Count</DescriptionsItem>
-                <DescriptionsItem Title="接口数">@_entity.Interfaces.Count</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_FIELD_COUNT")">@_entity.Fields.Count</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_INTERFACE_COUNT")">@_entity.Interfaces.Count</DescriptionsItem>
             </Descriptions>
         </Card>
 
         <Tabs DefaultActiveKey="ddl">
-            <TabPane Key="ddl" Tab="DDL脚本">
-                <Card Title="DDL预览" Style="margin-bottom: 16px;">
+            <TabPane Key="ddl" Tab="@I18n.T("LBL_DDL_SCRIPT")">
+                <Card Title="@I18n.T("LBL_DDL_PREVIEW")" Style="margin-bottom: 16px;">
                     <Extra>
                         <Button OnClick="LoadDDLPreview" Size="@ButtonSize.Small">
-                            <Icon Type="reload" /> 刷新
+                            <Icon Type="reload" /> @I18n.T("BTN_REFRESH")
                         </Button>
                     </Extra>
                     <Body>
@@ -89,41 +90,41 @@
                         }
                         else
                         {
-                            <Empty Description="@("暂无DDL脚本")" />
+                            <Empty Description="@I18n.T("MSG_NO_DDL_SCRIPT")" />
                         }
                     </Body>
                 </Card>
 
-                <Card Title="DDL历史">
+                <Card Title="@I18n.T("LBL_DDL_HISTORY")">
                     <Table TItem="DDLHistoryDto" DataSource="@_ddlHistory" Loading="@_loadingHistory" Size="@TableSize.Small">
-                        <PropertyColumn Property="h => h.ScriptType" Title="类型">
+                        <PropertyColumn Property="h => h.ScriptType" Title="@I18n.T("LBL_TYPE")">
                             <Tag>@context.ScriptType</Tag>
                         </PropertyColumn>
-                        <PropertyColumn Property="h => h.Status" Title="状态">
+                        <PropertyColumn Property="h => h.Status" Title="@I18n.T("LBL_STATUS")">
                             @if (context.Status == "Success")
                             {
-                                <Tag Color="green">成功</Tag>
+                                <Tag Color="green">@I18n.T("LBL_SUCCESS")</Tag>
                             }
                             else if (context.Status == "Failed")
                             {
-                                <Tag Color="red">失败</Tag>
+                                <Tag Color="red">@I18n.T("LBL_FAILED")</Tag>
                             }
                             else
                             {
                                 <Tag Color="orange">@context.Status</Tag>
                             }
                         </PropertyColumn>
-                        <PropertyColumn Property="h => h.CreatedAt" Title="创建时间" Format="yyyy-MM-dd HH:mm:ss" />
-                        <PropertyColumn Property="h => h.ExecutedAt" Title="执行时间" Format="yyyy-MM-dd HH:mm:ss" />
-                        <PropertyColumn Property="h => h.CreatedBy" Title="创建人" />
-                        <PropertyColumn Property="h => h.ScriptPreview" Title="脚本预览">
+                        <PropertyColumn Property="h => h.CreatedAt" Title="@I18n.T("LBL_CREATED_TIME")" Format="yyyy-MM-dd HH:mm:ss" />
+                        <PropertyColumn Property="h => h.ExecutedAt" Title="@I18n.T("LBL_EXECUTED_TIME")" Format="yyyy-MM-dd HH:mm:ss" />
+                        <PropertyColumn Property="h => h.CreatedBy" Title="@I18n.T("LBL_CREATED_BY")" />
+                        <PropertyColumn Property="h => h.ScriptPreview" Title="@I18n.T("LBL_SCRIPT_PREVIEW")">
                             <Text Ellipsis>@context.ScriptPreview</Text>
                         </PropertyColumn>
                     </Table>
                 </Card>
             </TabPane>
 
-            <TabPane Key="code" Tab="生成代码">
+            <TabPane Key="code" Tab="@I18n.T("LBL_GENERATED_CODE")">
                 <Card>
                     @if (!string.IsNullOrEmpty(_generatedCode))
                     {
@@ -131,24 +132,24 @@
                     }
                     else
                     {
-                        <Empty Description='@("点击\"生成代码\"按钮查看")' />
+                        <Empty Description="@I18n.T("MSG_CLICK_GENERATE_CODE")" />
                     }
                 </Card>
             </TabPane>
 
-            <TabPane Key="compilation" Tab="编译状态">
+            <TabPane Key="compilation" Tab="@I18n.T("LBL_COMPILATION_STATUS")">
                 <Card>
                     @if (_compilationResult != null)
                     {
                         <Result Status="@(_compilationResult.Success ? "success" : "error")"
-                                Title="@(_compilationResult.Success ? "编译成功" : "编译失败")"
+                                Title="@(_compilationResult.Success ? I18n.T("MSG_COMPILATION_SUCCESS") : I18n.T("MSG_COMPILATION_FAILED"))"
                                 SubTitle="@_compilationResult.Message">
                             <Extra>
                                 @if (_compilationResult.Success)
                                 {
                                     <Descriptions Bordered>
-                                        <DescriptionsItem Title="程序集">@_compilationResult.AssemblyName</DescriptionsItem>
-                                        <DescriptionsItem Title="加载的类型">
+                                        <DescriptionsItem Title="@I18n.T("LBL_ASSEMBLY")">@_compilationResult.AssemblyName</DescriptionsItem>
+                                        <DescriptionsItem Title="@I18n.T("LBL_LOADED_TYPES")">
                                             @foreach (var type in _compilationResult.LoadedTypes)
                                             {
                                                 <Tag>@type</Tag>
@@ -158,13 +159,13 @@
                                 }
                                 else if (_compilationResult.Errors.Any())
                                 {
-                                    <Alert Type="@AlertType.Error" Message="编译错误" ShowIcon="true">
+                                    <Alert Type="@AlertType.Error" Message="@I18n.T("MSG_COMPILATION_ERROR")" ShowIcon="true">
                                         <MessageTemplate>
                                             <ul>
                                                 @foreach (var error in _compilationResult.Errors)
                                                 {
                                                     <li>
-                                                        <strong>[@error.Code]</strong> 第@error.Line行,第@error.Column列: @error.Message
+                                                        <strong>[@error.Code]</strong> @I18n.T("LBL_LINE")@error.Line@I18n.T("LBL_COLUMN")@error.Column: @error.Message
                                                     </li>
                                                 }
                                             </ul>
@@ -176,7 +177,7 @@
                     }
                     else
                     {
-                        <Empty Description='@("点击\"编译\"按钮查看")' />
+                        <Empty Description="@I18n.T("MSG_CLICK_COMPILE")" />
                     }
                 </Card>
             </TabPane>
@@ -186,6 +187,7 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
     [Inject] private IMessageService MessageService { get; set; } = default!;
 
     private bool _loading = false;
@@ -194,6 +196,7 @@
     private bool _publishing = false;
     private bool _generatingCode = false;
     private bool _compiling = false;
+    private int _lastI18nRenderVersion = -1;
 
     private EntityDefinitionDto? _entity;
     private string _ddlScript = string.Empty;
@@ -208,6 +211,15 @@
         await LoadDDLHistory();
     }
 
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nRenderVersion != I18nRenderVersion)
+        {
+            _lastI18nRenderVersion = I18nRenderVersion;
+            StateHasChanged();
+        }
+    }
+
     private async Task LoadEntity()
     {
         _loading = true;
@@ -217,7 +229,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -235,7 +247,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载DDL失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_LOAD_DDL_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -252,7 +264,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载历史失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_LOAD_HISTORY_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -277,18 +289,18 @@
 
             if (result?.Success == true)
             {
-                await MessageService.Success("发布成功！");
+                await MessageService.Success(I18n.T("MSG_PUBLISH_SUCCESS"));
                 await LoadEntity();
                 await LoadDDLHistory();
             }
             else
             {
-                await MessageService.Error($"发布失败: {result?.ErrorMessage}");
+                await MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {result?.ErrorMessage}");
             }
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"发布失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -303,11 +315,11 @@
         {
             var result = await EntityDefService.GenerateCodeAsync(Id);
             _generatedCode = result?.Code ?? string.Empty;
-            await MessageService.Success("代码生成成功");
+            await MessageService.Success(I18n.T("MSG_CODE_GENERATION_SUCCESS"));
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"生成代码失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_CODE_GENERATION_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -323,16 +335,16 @@
             _compilationResult = await EntityDefService.CompileAsync(Id);
             if (_compilationResult?.Success == true)
             {
-                await MessageService.Success("编译成功！");
+                await MessageService.Success(I18n.T("MSG_COMPILATION_SUCCESS"));
             }
             else
             {
-                await MessageService.Error("编译失败，请查看错误详情");
+                await MessageService.Error(I18n.T("MSG_COMPILATION_FAILED_DETAIL"));
             }
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"编译失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_COMPILATION_FAILED")}: {ex.Message}");
         }
         finally
         {

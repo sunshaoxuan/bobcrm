@@ -2,21 +2,22 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.DynamicEntityService DynamicEntitySvc
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@inject BobCrm.App.Services.I18nService I18n
 @using BobCrm.App.Models
 @using System.Text.Json
 
 <AuthChecker>
-    <PageHeader Title="@($"{_entityName} - 数据管理")" OnBack="GoBack">
+    <PageHeader Title="@($"{_entityName} - {I18n.T("LBL_DATA_MANAGEMENT")}")" OnBack="GoBack">
         <PageHeaderExtra>
             <Space>
                 <SpaceItem>
                     <Button Type="@ButtonType.Primary" OnClick="ShowCreateModal">
-                        <Icon Type="plus" /> 新建
+                        <Icon Type="plus" /> @I18n.T("BTN_CREATE")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="LoadData">
-                        <Icon Type="reload" /> 刷新
+                        <Icon Type="reload" /> @I18n.T("BTN_REFRESH")
                     </Button>
                 </SpaceItem>
             </Space>
@@ -32,15 +33,15 @@
     else
     {
         <Card>
-            <Alert Type="@AlertType.Info" Message="动态实体数据管理" ShowIcon="true">
+            <Alert Type="@AlertType.Info" Message="@I18n.T("LBL_DYNAMIC_ENTITY_DATA_MANAGEMENT")" ShowIcon="true">
                 <MessageTemplate>
-                    <p>实体类型: <Tag>@FullTypeName</Tag></p>
-                    <p>此页面用于管理动态编译加载的实体数据。请确保实体已成功编译加载。</p>
+                    <p>@I18n.T("LBL_ENTITY_TYPE"): <Tag>@FullTypeName</Tag></p>
+                    <p>@I18n.T("TXT_DYNAMIC_ENTITY_DESC")</p>
                 </MessageTemplate>
             </Alert>
 
             <div style="margin-top: 16px;">
-                <h4>数据列表</h4>
+                <h4>@I18n.T("LBL_DATA_LIST")</h4>
                 @if (_data.Any())
                 {
                     <Table TItem="Dictionary<string, object>" DataSource="@_data" Loading="@_loading" PageSize="20">
@@ -53,17 +54,17 @@
                                 }
                             </Column>
                         }
-                        <ActionColumn Title="操作">
+                        <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
                             <Space>
                                 <SpaceItem>
                                     <Button Size="@ButtonSize.Small" OnClick="() => ShowEditModal(context)">
-                                        编辑
+                                        @I18n.T("BTN_EDIT")
                                     </Button>
                                 </SpaceItem>
                                 <SpaceItem>
-                                    <Popconfirm Title="确定删除？" OnConfirm="() => HandleDelete(context)">
+                                    <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => HandleDelete(context)">
                                         <Button Danger Size="@ButtonSize.Small">
-                                            删除
+                                            @I18n.T("BTN_DELETE")
                                         </Button>
                                     </Popconfirm>
                                 </SpaceItem>
@@ -73,7 +74,7 @@
                 }
                 else
                 {
-                    <Empty Description="@("暂无数据")" />
+                    <Empty Description="@I18n.T("MSG_NO_DATA")" />
                 }
             </div>
         </Card>
@@ -82,6 +83,7 @@
 
 @code {
     [Parameter] public string FullTypeName { get; set; } = string.Empty;
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private IMessageService MessageService { get; set; } = default!;
 
@@ -89,11 +91,21 @@
     private string _entityName = string.Empty;
     private List<Dictionary<string, object>> _data = new();
     private int _total = 0;
+    private int _lastI18nRenderVersion = -1;
 
     protected override async Task OnInitializedAsync()
     {
         _entityName = FullTypeName.Split('.').LastOrDefault() ?? FullTypeName;
         await LoadData();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nRenderVersion != I18nRenderVersion)
+        {
+            _lastI18nRenderVersion = I18nRenderVersion;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadData()
@@ -118,7 +130,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载数据失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_LOAD_DATA_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -154,13 +166,13 @@
     private void ShowCreateModal()
     {
         // TODO: 实现创建模态框
-        MessageService.Info("创建功能开发中...");
+        MessageService.Info(I18n.T("MSG_CREATE_FEATURE_IN_DEVELOPMENT"));
     }
 
     private void ShowEditModal(Dictionary<string, object> entity)
     {
         // TODO: 实现编辑模态框
-        MessageService.Info("编辑功能开发中...");
+        MessageService.Info(I18n.T("MSG_EDIT_FEATURE_IN_DEVELOPMENT"));
     }
 
     private async Task HandleDelete(Dictionary<string, object> entity)
@@ -171,12 +183,12 @@
             {
                 var id = Convert.ToInt32(entity["Id"]);
                 await DynamicEntitySvc.DeleteAsync(FullTypeName, id);
-                await MessageService.Success("删除成功");
+                await MessageService.Success(I18n.T("MSG_DELETE_SUCCESS"));
                 await LoadData();
             }
             catch (Exception ex)
             {
-                await MessageService.Error($"删除失败: {ex.Message}");
+                await MessageService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
             }
         }
     }

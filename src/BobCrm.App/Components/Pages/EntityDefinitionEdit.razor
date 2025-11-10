@@ -9,17 +9,17 @@
 @inject IMultilingualTextResolver MultilingualResolver
 
 <AuthChecker>
-    <PageHeader Title="@(_isNew ? "新建实体定义" : "编辑实体定义")" OnBack="GoBack">
+    <PageHeader Title="@(_isNew ? I18n.T("LBL_CREATE_ENTITY_DEF") : I18n.T("LBL_EDIT_ENTITY_DEF"))" OnBack="GoBack">
         <PageHeaderExtra>
             <Space>
                 <SpaceItem>
                     <Button OnClick="HandleSave" Type="@ButtonType.Primary" Loading="@_saving">
-                        <Icon Type="save" /> 保存
+                        <Icon Type="save" /> @I18n.T("BTN_SAVE")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="GoBack">
-                        取消
+                        @I18n.T("BTN_CANCEL")
                     </Button>
                 </SpaceItem>
             </Space>
@@ -36,95 +36,95 @@
     {
         <Card>
             <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
-                <FormItem Label="命名空间">
+                <FormItem Label="@I18n.T("LBL_NAMESPACE")">
                     <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" Class="field-control" />
                 </FormItem>
 
-                <FormItem Label="实体名称">
+                <FormItem Label="@I18n.T("LBL_ENTITY_NAME")">
                     <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" Class="field-control" />
                     <div class="ant-form-text">
-                        将用作C#类名，如: Product
+                        @I18n.T("TXT_ENTITY_NAME_HINT")
                     </div>
                 </FormItem>
 
-                <FormItem Label="显示名">
+                <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
                     <MultilingualInput @bind-Value="@_model.DisplayName" />
                     <div class="ant-form-text">
-                        请提供实体的多语言显示名称（至少一种语言）
+                        @I18n.T("TXT_MULTILINGUAL_DISPLAY_NAME_HINT")
                     </div>
                 </FormItem>
 
-                <FormItem Label="描述">
+                <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
                     <MultilingualInput @bind-Value="@_model.Description" />
                 </FormItem>
 
-                <FormItem Label="结构类型">
+                <FormItem Label="@I18n.T("LBL_STRUCTURE_TYPE")">
                     <RadioGroup @bind-Value="@_model.StructureType" Disabled="@(!_isNew)">
-                        <Radio Value="@("Single")">单一实体</Radio>
-                        <Radio Value="@("MasterDetail")">主从实体</Radio>
-                        <Radio Value="@("MasterDetailGrandchild")">主从孙实体</Radio>
+                        <Radio Value="@("Single")">@I18n.T("LBL_SINGLE_ENTITY")</Radio>
+                        <Radio Value="@("MasterDetail")">@I18n.T("LBL_MASTER_DETAIL_ENTITY")</Radio>
+                        <Radio Value="@("MasterDetailGrandchild")">@I18n.T("LBL_MASTER_DETAIL_GRANDCHILD_ENTITY")</Radio>
                     </RadioGroup>
                 </FormItem>
 
-                <FormItem Label="接口">
+                <FormItem Label="@I18n.T("LBL_INTERFACES")">
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">Base (IEntity - Id)</Checkbox>
                         <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">Archive (IArchive - Code, Name)</Checkbox>
-                        <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">Audit (IAuditable - 审计字段)</Checkbox>
-                        <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">Version (IVersioned - 版本)</Checkbox>
-                        <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">TimeVersion (ITimeVersioned - 时间版本)</Checkbox>
+                        <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">Audit (IAuditable - @I18n.T("TXT_AUDIT_FIELDS"))</Checkbox>
+                        <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">Version (IVersioned - @I18n.T("TXT_VERSION"))</Checkbox>
+                        <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">TimeVersion (ITimeVersioned - @I18n.T("TXT_TIME_VERSION"))</Checkbox>
                     </div>
                 </FormItem>
 
-                <FormItem Label="图标">
+                <FormItem Label="@I18n.T("LBL_ICON")">
                     <Input @bind-Value="@_model.Icon" Placeholder="database" Class="field-control" />
                 </FormItem>
 
-                <FormItem Label="分类">
-                    <Input @bind-Value="@_model.Category" Placeholder="业务管理" Class="field-control" />
+                <FormItem Label="@I18n.T("LBL_CATEGORY")">
+                    <Input @bind-Value="@_model.Category" Placeholder="@I18n.T("TXT_CATEGORY_PLACEHOLDER")" Class="field-control" />
                 </FormItem>
 
-                <FormItem Label="排序">
+                <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
                     <AntDesign.InputNumber TValue="int" @bind-Value="@_model.Order" Min="0" />
                 </FormItem>
 
-                <FormItem Label="启用">
+                <FormItem Label="@I18n.T("LBL_ENABLED")">
                     <Switch @bind-Value="@_model.IsEnabled" />
                 </FormItem>
             </Form>
         </Card>
 
-        <Card Title="字段定义" Style="margin-top: 16px;">
+        <Card Title="@I18n.T("LBL_FIELD_DEFINITION")" Style="margin-top: 16px;">
             <Extra>
                 <Button OnClick="AddField" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
-                    <Icon Type="plus" /> 添加字段
+                    <Icon Type="plus" /> @I18n.T("BTN_ADD_FIELD")
                 </Button>
             </Extra>
             <Body>
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
-                    <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
-                    <Column TData="string" Title="显示名">
+                    <PropertyColumn Property="f => f.PropertyName" Title="@I18n.T("LBL_PROPERTY_NAME")" />
+                    <Column TData="string" Title="@I18n.T("LBL_DISPLAY_NAME")">
                         @MultilingualResolver.Resolve(context.DisplayName, context.PropertyName)
                     </Column>
-                    <PropertyColumn Property="f => f.DataType" Title="数据类型">
+                    <PropertyColumn Property="f => f.DataType" Title="@I18n.T("LBL_DATA_TYPE")">
                         <Tag>@context.DataType</Tag>
                     </PropertyColumn>
-                    <PropertyColumn Property="f => f.Length" Title="长度" />
-                    <PropertyColumn Property="f => f.IsRequired" Title="必填">
-                        @(context.IsRequired ? "是" : "否")
+                    <PropertyColumn Property="f => f.Length" Title="@I18n.T("LBL_LENGTH")" />
+                    <PropertyColumn Property="f => f.IsRequired" Title="@I18n.T("LBL_REQUIRED")">
+                        @(context.IsRequired ? I18n.T("TXT_YES") : I18n.T("TXT_NO"))
                     </PropertyColumn>
-                    <PropertyColumn Property="f => f.SortOrder" Title="排序" />
-                    <ActionColumn Title="操作">
+                    <PropertyColumn Property="f => f.SortOrder" Title="@I18n.T("LBL_SORT_ORDER")" />
+                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
                         <Space>
                             <SpaceItem>
                                 <Button Size="@ButtonSize.Small" OnClick="() => EditField(context)">
-                                    编辑
+                                    @I18n.T("BTN_EDIT")
                                 </Button>
                             </SpaceItem>
                             <SpaceItem>
-                                <Popconfirm Title="确定删除？" OnConfirm="() => RemoveField(context)">
+                                <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => RemoveField(context)">
                                     <Button Danger Size="@ButtonSize.Small">
-                                        删除
+                                        @I18n.T("BTN_DELETE")
                                     </Button>
                                 </Popconfirm>
                             </SpaceItem>
@@ -137,15 +137,15 @@
 </AuthChecker>
 
 <!-- 字段编辑模态框 -->
-<Modal Title="@(_editingField.Id == Guid.Empty ? "新建字段" : "编辑字段")" WrapClassName="calm-modal" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
+<Modal Title="@(_editingField.Id == Guid.Empty ? I18n.T("LBL_CREATE_FIELD") : I18n.T("LBL_EDIT_FIELD"))" WrapClassName="calm-modal" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
     <Form Model="@_editingField" LabelColSpan="6" WrapperColSpan="18">
-        <FormItem Label="属性名">
+        <FormItem Label="@I18n.T("LBL_PROPERTY_NAME")">
             <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" Class="field-control" />
         </FormItem>
-        <FormItem Label="显示名">
+        <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
             <MultilingualInput @bind-Value="@_editingField.DisplayName" />
         </FormItem>
-        <FormItem Label="数据类型">
+        <FormItem Label="@I18n.T("LBL_DATA_TYPE")">
             <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
                 <SelectOptions>
                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String" />
@@ -160,22 +160,22 @@
                 </SelectOptions>
             </Select>
         </FormItem>
-        <FormItem Label="长度">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Length" Min="0" Placeholder="对于String类型" ValueChanged="@((int? val) => _editingField.Length = val)" />
+        <FormItem Label="@I18n.T("LBL_LENGTH")">
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Length" Min="0" Placeholder="@I18n.T("TXT_FOR_STRING_TYPE")" ValueChanged="@((int? val) => _editingField.Length = val)" />
         </FormItem>
-        <FormItem Label="精度">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Precision" Min="0" Placeholder="对于Decimal类型" ValueChanged="@((int? val) => _editingField.Precision = val)" />
+        <FormItem Label="@I18n.T("LBL_PRECISION")">
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Precision" Min="0" Placeholder="@I18n.T("TXT_FOR_DECIMAL_TYPE")" ValueChanged="@((int? val) => _editingField.Precision = val)" />
         </FormItem>
-        <FormItem Label="小数位">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Scale" Min="0" Placeholder="对于Decimal类型" ValueChanged="@((int? val) => _editingField.Scale = val)" />
+        <FormItem Label="@I18n.T("LBL_SCALE")">
+            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Scale" Min="0" Placeholder="@I18n.T("TXT_FOR_DECIMAL_TYPE")" ValueChanged="@((int? val) => _editingField.Scale = val)" />
         </FormItem>
-        <FormItem Label="必填">
+        <FormItem Label="@I18n.T("LBL_REQUIRED")">
             <Switch @bind-Value="@_editingField.IsRequired" />
         </FormItem>
-        <FormItem Label="默认值">
-            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="如: 0, NOW, NEWID" Class="field-control" />
+        <FormItem Label="@I18n.T("LBL_DEFAULT_VALUE")">
+            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="@I18n.T("TXT_DEFAULT_VALUE_HINT")" Class="field-control" />
         </FormItem>
-        <FormItem Label="排序">
+        <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
             <AntDesign.InputNumber TValue="int?" Value="@_editingField.SortOrder" Min="0" ValueChanged="@((int? val) => _editingField.SortOrder = val ?? 0)" />
         </FormItem>
     </Form>
@@ -183,12 +183,14 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
     [Inject] private IMessageService MessageService { get; set; } = default!;
 
     private bool _isNew => !Id.HasValue;
     private bool _loading = false;
     private bool _saving = false;
     private bool _fieldModalVisible = false;
+    private int _lastI18nRenderVersion = -1;
 
     private EditModel _model = new();
     private FieldMetadataDto _editingField = new();
@@ -252,6 +254,15 @@
         }
     }
 
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nRenderVersion != I18nRenderVersion)
+        {
+            _lastI18nRenderVersion = I18nRenderVersion;
+            StateHasChanged();
+        }
+    }
+
     private async Task LoadEntity()
     {
         _loading = true;
@@ -299,7 +310,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -315,7 +326,7 @@
             // 验证多语言显示名
             if (_model.DisplayName == null || !_model.DisplayName.HasValue())
             {
-                await MessageService.Error("显示名至少需要提供一种语言的文本");
+                await MessageService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
                 _saving = false;
                 return;
             }
@@ -334,7 +345,7 @@
                 };
 
                 await EntityDefService.CreateAsync(request);
-                await MessageService.Success("创建成功");
+                await MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
             }
             else
             {
@@ -351,14 +362,14 @@
                 };
 
                 await EntityDefService.UpdateAsync(Id!.Value, request);
-                await MessageService.Success("更新成功");
+                await MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
             }
 
             GoBack();
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"保存失败: {ex.Message}");
+            await MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -401,7 +412,7 @@
         // 验证字段显示名
         if (_editingField.DisplayName == null || !_editingField.DisplayName.HasValue())
         {
-            MessageService.Error("字段显示名至少需要提供一种语言的文本");
+            MessageService.Error(I18n.T("MSG_FIELD_DISPLAY_NAME_REQUIRED"));
             return Task.CompletedTask;
         }
 
