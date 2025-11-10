@@ -42,7 +42,6 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     // 本地化
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
-    public DbSet<MetadataLocalizationValue> MetadataLocalizationValues => Set<MetadataLocalizationValue>();
 
     // 实体自定义与发布（统一的实体定义系统）
     public DbSet<EntityDefinition> EntityDefinitions => Set<EntityDefinition>();
@@ -59,6 +58,19 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         // 应用所有配置
         b.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // PostgreSQL jsonb 映射配置 - 多语言字段
+        b.Entity<EntityDefinition>()
+            .Property(e => e.DisplayName)
+            .HasColumnType("jsonb");
+
+        b.Entity<EntityDefinition>()
+            .Property(e => e.Description)
+            .HasColumnType("jsonb");
+
+        b.Entity<FieldMetadata>()
+            .Property(f => f.DisplayName)
+            .HasColumnType("jsonb");
 
         // 全局过滤器已移除：访问控制由业务层（CustomerQueries）统一处理
         // 原因：
