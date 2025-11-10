@@ -101,7 +101,15 @@
             <Body>
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
                     <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
-                    <PropertyColumn Property="f => f.DisplayNameKey" Title="显示名Key" />
+                    <Column Title="显示名">
+                        @{
+                            var fieldDisplayName = context.DisplayName?.GetValueOrDefault("ja")
+                                                ?? context.DisplayName?.GetValueOrDefault("zh")
+                                                ?? context.DisplayName?.GetValueOrDefault("en")
+                                                ?? context.PropertyName;
+                        }
+                        @fieldDisplayName
+                    </Column>
                     <PropertyColumn Property="f => f.DataType" Title="数据类型">
                         <Tag>@context.DataType</Tag>
                     </PropertyColumn>
@@ -275,7 +283,6 @@
                     {
                         Id = f.Id,
                         PropertyName = f.PropertyName,
-                        DisplayNameKey = f.DisplayNameKey,
                         DisplayName = f.DisplayName,
                         DataType = f.DataType,
                         Length = f.Length,
@@ -381,7 +388,6 @@
         {
             Id = field.Id,
             PropertyName = field.PropertyName,
-            DisplayNameKey = field.DisplayNameKey,
             DisplayName = field.DisplayName ?? new MultilingualTextDto(),
             DataType = field.DataType,
             Length = field.Length,
@@ -414,7 +420,6 @@
             {
                 Id = _editingField.Id,
                 PropertyName = _editingField.PropertyName,
-                DisplayNameKey = _editingField.DisplayNameKey,
                 DisplayName = _editingField.DisplayName,
                 DataType = _editingField.DataType,
                 Length = _editingField.Length,
@@ -436,7 +441,6 @@
                     {
                         Id = _editingField.Id,
                         PropertyName = _editingField.PropertyName,
-                        DisplayNameKey = _editingField.DisplayNameKey,
                         DisplayName = _editingField.DisplayName,
                         DataType = _editingField.DataType,
                         Length = _editingField.Length,

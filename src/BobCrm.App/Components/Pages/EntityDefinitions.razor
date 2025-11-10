@@ -104,8 +104,9 @@
         if (!string.IsNullOrWhiteSpace(_search))
         {
             query = query.Where(e =>
-                (I18n.T(e.DisplayNameKey)).Contains(_search, StringComparison.OrdinalIgnoreCase)
-                || e.EntityName.Contains(_search, StringComparison.OrdinalIgnoreCase));
+                e.EntityName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (e.DisplayName != null && e.DisplayName.Values.Any(v =>
+                    v != null && v.Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
 
         if (_sourceFilter != "all")

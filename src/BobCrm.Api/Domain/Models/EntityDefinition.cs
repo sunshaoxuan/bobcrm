@@ -49,14 +49,14 @@ public class EntityDefinition
     /// 示例：{"ja": "商品", "zh": "产品", "en": "Product"}
     /// </summary>
     [Column(TypeName = "jsonb")]
-    public Dictionary<string, string>? DisplayName { get; set; }
+    public Dictionary<string, string?>? DisplayName { get; set; }
 
     /// <summary>
     /// 描述（多语言）- PostgreSQL jsonb 类型
     /// 示例：{"ja": "商品情報", "zh": "产品信息", "en": "Product info"}
     /// </summary>
     [Column(TypeName = "jsonb")]
-    public Dictionary<string, string>? Description { get; set; }
+    public Dictionary<string, string?>? Description { get; set; }
 
     /// <summary>
     /// API端点基础路径（如 /api/customers）

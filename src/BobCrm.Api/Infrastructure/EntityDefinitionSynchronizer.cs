@@ -195,8 +195,8 @@ public class EntityDefinitionSynchronizer
         existing.Namespace = initialDef.Namespace;
         existing.EntityName = initialDef.EntityName;
         existing.EntityRoute = initialDef.EntityRoute;
-        existing.DisplayNameKey = initialDef.DisplayNameKey;
-        existing.DescriptionKey = initialDef.DescriptionKey;
+        existing.DisplayName = initialDef.DisplayName;
+        existing.Description = initialDef.Description;
         existing.ApiEndpoint = initialDef.ApiEndpoint;
         existing.StructureType = initialDef.StructureType;
         existing.Status = initialDef.Status;

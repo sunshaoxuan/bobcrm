@@ -33,8 +33,18 @@ public class Customer : IBizEntity
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Customer",
             EntityRoute = "customer",
-            DisplayNameKey = "ENTITY_CUSTOMER",
-            DescriptionKey = "ENTITY_CUSTOMER_DESC",
+            DisplayName = new Dictionary<string, string>
+            {
+                { "ja", "顧客" },
+                { "zh", "客户" },
+                { "en", "Customer" }
+            },
+            Description = new Dictionary<string, string>
+            {
+                { "ja", "顧客情報を管理します" },
+                { "zh", "管理客户信息" },
+                { "en", "Manage customer information" }
+            },
             ApiEndpoint = "/api/customers",
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
@@ -52,7 +62,12 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Id",
-                DisplayNameKey = "FIELD_ID",
+                DisplayName = new Dictionary<string, string>
+                {
+                    { "ja", "ID" },
+                    { "zh", "ID" },
+                    { "en", "ID" }
+                },
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 SortOrder = 1
@@ -60,7 +75,12 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Code",
-                DisplayNameKey = "FIELD_CODE",
+                DisplayName = new Dictionary<string, string>
+                {
+                    { "ja", "顧客コード" },
+                    { "zh", "客户代码" },
+                    { "en", "Customer Code" }
+                },
                 DataType = FieldDataType.String,
                 Length = 64,
                 IsRequired = true,
@@ -69,7 +89,12 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Name",
-                DisplayNameKey = "FIELD_NAME",
+                DisplayName = new Dictionary<string, string>
+                {
+                    { "ja", "顧客名" },
+                    { "zh", "客户名称" },
+                    { "en", "Customer Name" }
+                },
                 DataType = FieldDataType.String,
                 Length = 256,
                 IsRequired = true,
@@ -78,7 +103,12 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Version",
-                DisplayNameKey = "FIELD_VERSION",
+                DisplayName = new Dictionary<string, string>
+                {
+                    { "ja", "バージョン" },
+                    { "zh", "版本" },
+                    { "en", "Version" }
+                },
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 DefaultValue = "1",
@@ -87,7 +117,12 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "ExtData",
-                DisplayNameKey = "FIELD_EXT_DATA",
+                DisplayName = new Dictionary<string, string>
+                {
+                    { "ja", "拡張データ" },
+                    { "zh", "扩展数据" },
+                    { "en", "Extended Data" }
+                },
                 DataType = FieldDataType.Text,
                 IsRequired = false,
                 SortOrder = 5
