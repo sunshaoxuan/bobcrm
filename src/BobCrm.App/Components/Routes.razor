@@ -5,7 +5,7 @@
 @inject NavigationManager Nav
 @inject I18nService I18n
 
-<div class="@($"app-stage {( _isReady ? "ready" : "loading")}")">
+<div class="@($"app-stage {( _isReady ? "ready" : "loading")}")" @key="_i18nRenderVersion">
     <BobCrm.App.Components.Shared.ThemeInitializer />
     <BobCrm.App.Components.Shared.PreferencesManager />
     <Router AppAssembly="typeof(Program).Assembly">
@@ -28,6 +28,7 @@
 
 @code {
     private bool _isReady;
+    private int _i18nRenderVersion;
 
     protected override void OnInitialized()
     {
@@ -46,6 +47,7 @@
     private void HandleI18nChanged()
     {
         _isReady = true;
+        _i18nRenderVersion++;
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 
