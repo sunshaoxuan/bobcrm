@@ -97,9 +97,6 @@
             <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoBulkBar">
                 <Icon Type="@IconType.Outline.Select" /> 批量条
             </Button>
-            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoToast">
-                <Icon Type="@IconType.Outline.Notification" /> 通知
-            </Button>
         </div>
         @if (isAuthenticated)
         {
@@ -244,11 +241,6 @@
     private void DemoBulkBar()
     {
         Interaction.ShowBulkBar("已选中 3 条记录", "批量更新", async () => await Task.Delay(0), "取消", async () => await Task.Delay(0));
-    }
-
-    private void DemoToast()
-    {
-        Interaction.PushToast("操作成功", "这是一条示例通知", InteractionState.ToastTone.Success);
     }
 
     private void BuildNavigationMeta()
