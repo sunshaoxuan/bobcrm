@@ -130,7 +130,7 @@ public static class EntityDefinitionEndpoints
 
         // 获取单个实体定义详情
         group.MapGet("/{id:guid}", async (
-            Guid id, 
+            Guid id,
             AppDbContext db,
             BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
         {
@@ -142,22 +142,54 @@ public static class EntityDefinitionEndpoints
             if (definition == null)
                 return Results.NotFound(new { error = "实体定义不存在" });
 
-            // 加载多语言数据
-            var result = new
+            // 加载实体的多语言数据
+            var displayName = !string.IsNullOrEmpty(definition.DisplayNameKey)
+                ? await metadataI18nService.GetMetadataI18nAsync(definition.DisplayNameKey)
+                : null;
+
+            var description = !string.IsNullOrEmpty(definition.DescriptionKey)
+                ? await metadataI18nService.GetMetadataI18nAsync(definition.DescriptionKey)
+                : null;
+
+            // 加载字段的多语言数据
+            var fieldsWithI18n = new List<object>();
+            foreach (var field in definition.Fields.OrderBy(f => f.SortOrder))
+            {
+                var fieldDisplayName = !string.IsNullOrEmpty(field.DisplayNameKey)
+                    ? await metadataI18nService.GetMetadataI18nAsync(field.DisplayNameKey)
+                    : null;
+
+                fieldsWithI18n.Add(new
+                {
+                    field.Id,
+                    field.PropertyName,
+                    field.DisplayNameKey,
+                    DisplayName = fieldDisplayName,
+                    field.DataType,
+                    field.Length,
+                    field.Precision,
+                    field.Scale,
+                    field.IsRequired,
+                    field.IsEntityRef,
+                    field.ReferencedEntityId,
+                    field.TableName,
+                    field.SortOrder,
+                    field.DefaultValue,
+                    field.ValidationRules
+                });
+            }
+
+            return Results.Json(new
             {
                 definition.Id,
                 definition.Namespace,
                 definition.EntityName,
-                definition.FullName,
+                definition.FullTypeName,
                 definition.EntityRoute,
                 definition.DisplayNameKey,
+                DisplayName = displayName,
                 definition.DescriptionKey,
-                DisplayName = !string.IsNullOrEmpty(definition.DisplayNameKey) 
-                    ? await metadataI18nService.GetMetadataI18nAsync(definition.DisplayNameKey)
-                    : null,
-                Description = !string.IsNullOrEmpty(definition.DescriptionKey)
-                    ? await metadataI18nService.GetMetadataI18nAsync(definition.DescriptionKey)
-                    : null,
+                Description = description,
                 definition.ApiEndpoint,
                 definition.StructureType,
                 definition.Status,
@@ -172,39 +204,18 @@ public static class EntityDefinitionEndpoints
                 definition.UpdatedAt,
                 definition.CreatedBy,
                 definition.UpdatedBy,
-                Fields = await Task.WhenAll(definition.Fields.Select(async f => new
-                {
-                    f.Id,
-                    f.PropertyName,
-                    f.DisplayNameKey,
-                    DisplayName = !string.IsNullOrEmpty(f.DisplayNameKey)
-                        ? await metadataI18nService.GetMetadataI18nAsync(f.DisplayNameKey)
-                        : null,
-                    f.DataType,
-                    f.Length,
-                    f.Precision,
-                    f.Scale,
-                    f.IsRequired,
-                    f.IsEntityRef,
-                    f.ReferencedEntityId,
-                    f.TableName,
-                    f.SortOrder,
-                    f.DefaultValue,
-                    f.ValidationRules
-                })).ContinueWith(t => t.Result.ToList()),
+                Fields = fieldsWithI18n,
                 Interfaces = definition.Interfaces.Select(i => new
                 {
                     i.Id,
                     i.InterfaceType,
                     i.IsEnabled
-                }).ToList()
-            };
-
-            return Results.Json(result);
+                })
+            });
         })
         .WithName("GetEntityDefinition")
         .WithSummary("获取实体定义详情")
-        .WithDescription("获取指定实体定义的完整信息，包括所有字段和接口");
+        .WithDescription("获取指定实体定义的完整信息，包括所有字段、接口和多语言数据");
 
         // 根据实体类型名称获取实体定义（用于表单设计器）
         group.MapGet("/by-type/{entityType}", async (string entityType, AppDbContext db) =>
@@ -964,13 +975,20 @@ public static class EntityDefinitionEndpoints
 /// 创建实体定义DTO
 /// </summary>
 /// <summary>
-/// 多语言文本类 - 动态结构，支持任意语言
+/// 多语言文本 - 动态结构，支持任意语言
 /// Key: 语言代码（如 "ja", "zh", "en"）
 /// Value: 该语言的文本
 /// </summary>
 public class MultilingualText : Dictionary<string, string?>
 {
     public MultilingualText() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
+
+    /// <summary>
+    /// 构造函数 - 从字典创建（用于API反序列化）
+    /// </summary>
+    public MultilingualText(Dictionary<string, string> source) : base(source, StringComparer.OrdinalIgnoreCase)
     {
     }
 }

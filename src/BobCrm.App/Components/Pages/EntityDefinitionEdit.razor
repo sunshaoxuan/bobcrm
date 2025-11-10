@@ -269,12 +269,14 @@
                 {
                     Namespace = entity.Namespace,
                     EntityName = entity.EntityName,
-                    DisplayName = entity.DisplayName != null 
-                        ? new MultilingualTextDto(entity.DisplayName) 
+                    DisplayName = entity.DisplayName != null
+                        ? new MultilingualTextDto(entity.DisplayName)
                         : new MultilingualTextDto(),
-                    Description = entity.Description != null 
-                        ? new MultilingualTextDto(entity.Description) 
+                    Description = entity.Description != null
+                        ? new MultilingualTextDto(entity.Description)
                         : null,
+                    DisplayNameKey = entity.DisplayNameKey,
+                    DescriptionKey = entity.DescriptionKey,
                     StructureType = entity.StructureType,
                     Icon = entity.Icon,
                     Category = entity.Category,
