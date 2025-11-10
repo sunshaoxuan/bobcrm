@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Domain.Models;
 
@@ -8,19 +9,20 @@ namespace BobCrm.Api.Domain.Models;
 /// 用于存储实体定义和字段的多语言文本
 /// </summary>
 [Table("MetadataLocalizationValues")]
+[PrimaryKey(nameof(Key), nameof(Language))]
 public class MetadataLocalizationValue
 {
     /// <summary>
     /// 资源Key（如：ENTITY_PRODUCT、FIELD_PRODUCT_PRICE）
     /// </summary>
-    [Key, Column(Order = 0), MaxLength(256)]
+    [MaxLength(256)]
     public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// 语言代码（如：ja、zh、en）
     /// 从 LocalizationLanguages 表动态获取
     /// </summary>
-    [Key, Column(Order = 1), MaxLength(8)]
+    [MaxLength(8)]
     public string Language { get; set; } = string.Empty;
 
     /// <summary>
