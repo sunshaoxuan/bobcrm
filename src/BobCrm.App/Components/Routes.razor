@@ -5,15 +5,17 @@
 @inject NavigationManager Nav
 @inject I18nService I18n
 
-<div class="@($"app-stage {( _isReady ? "ready" : "loading")}")" @key="_i18nRenderVersion">
+<div class="@($"app-stage {( _isReady ? "ready" : "loading")}")">
     <BobCrm.App.Components.Shared.ThemeInitializer />
     <BobCrm.App.Components.Shared.PreferencesManager />
-    <Router AppAssembly="typeof(Program).Assembly">
-        <Found Context="routeData">
-            <RouteView RouteData="routeData" DefaultLayout="typeof(BobCrm.App.Components.Layout.MainLayout)" />
-            <FocusOnNavigate RouteData="routeData" Selector="h1" />
-        </Found>
-    </Router>
+    <CascadingValue Value="_i18nRenderVersion">
+        <Router AppAssembly="typeof(Program).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(BobCrm.App.Components.Layout.MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </Found>
+        </Router>
+    </CascadingValue>
 </div>
 @if (!_isReady)
 {
@@ -47,7 +49,10 @@
     private void HandleI18nChanged()
     {
         _isReady = true;
-        _i18nRenderVersion++;
+        if (I18n.IsLoaded)
+        {
+            _i18nRenderVersion++;
+        }
         try { InvokeAsync(StateHasChanged); } catch { }
     }
 

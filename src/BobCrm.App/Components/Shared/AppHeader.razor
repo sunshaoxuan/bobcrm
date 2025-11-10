@@ -89,13 +89,13 @@
         </div>
         <div class="header-actions desktop-only">
             <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="ToggleRightPanel">
-                <Icon Type="@IconType.Outline.Layout" /> 工作栏
+                <Icon Type="@IconType.Outline.Layout" /> @I18n.T("BTN_WORK_BAR")
             </Button>
             <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoStickyBar">
-                <Icon Type="@IconType.Outline.Filter" /> 工具条
+                <Icon Type="@IconType.Outline.Filter" /> @I18n.T("BTN_TOOL_BAR")
             </Button>
             <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoBulkBar">
-                <Icon Type="@IconType.Outline.Select" /> 批量条
+                <Icon Type="@IconType.Outline.Select" /> @I18n.T("BTN_BULK_BAR")
             </Button>
         </div>
         @if (isAuthenticated)
@@ -127,6 +127,8 @@
 </div>
 
 @code {
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
+
     private record BreadcrumbItem(string Label, string Url);
 
     private bool isAuthenticated = false;
@@ -135,31 +137,36 @@
     private string _contextLabel = "总览";
     private readonly List<BreadcrumbItem> _breadcrumbs = [];
     private string _headerSubtitle = "Record workspace";
-    private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [""] = "总览",
-        ["customers"] = "客户",
-        ["customers/new"] = "新建客户",
-        ["customer"] = "客户详情",
-        ["templates"] = "模板",
-        ["files"] = "文件",
-        ["settings"] = "设置",
-        ["entity-definitions"] = "实体定义",
-        ["dynamic-entity"] = "动态实体"
+    private static readonly Dictionary<string, (string LabelKey, string Fallback)> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [""] = ("MENU_DASHBOARD", "??"),
+        ["customers"] = ("MENU_CUSTOMERS", "�q?"),
+        ["customers/new"] = ("BTN_NEW_CUSTOMER", "�V���q?"),
+        ["customer"] = ("LBL_CUSTOMER_DETAIL", "�q??��"),
+        ["templates"] = ("MENU_TEMPLATES", "�͔�"),
+        ["files"] = ("MENU_FILES", "����"),
+        ["settings"] = ("MENU_SETTINGS", "?�u"),
+        ["entity-definitions"] = ("MENU_ENTITY", "?�̒�?"),
+        ["dynamic-entity"] = ("MENU_ENTITY", "???��"),
+        ["profile"] = ("MENU_PROFILE", "�T���v��")
     };
 
     protected override void OnInitialized()
     {
-        I18n.OnChanged += HandleI18nChanged;
         Nav.LocationChanged += HandleLocationChanged;
         ThemeState.OnChanged += HandleThemeChanged;
         BuildNavigationMeta();
     }
 
-    private void HandleI18nChanged()
+    private int _lastI18nRenderVersion = -1;
+
+    protected override void OnParametersSet()
     {
-        BuildNavigationMeta();
-        try { InvokeAsync(StateHasChanged); } catch { }
+        if (_lastI18nRenderVersion != I18nRenderVersion)
+        {
+            _lastI18nRenderVersion = I18nRenderVersion;
+            BuildNavigationMeta();
+        }
     }
 
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -264,14 +271,16 @@
 
     private string ResolveSegmentLabel(string segment, string path)
     {
-        if (RouteLabels.TryGetValue(path, out var label))
+        var label = TryResolveRouteLabel(path);
+        if (!string.IsNullOrWhiteSpace(label))
         {
-            return label;
+            return label!;
         }
 
-        if (RouteLabels.TryGetValue(segment, out label))
+        label = TryResolveRouteLabel(segment);
+        if (!string.IsNullOrWhiteSpace(label))
         {
-            return label;
+            return label!;
         }
 
         if (LooksLikeId(segment))
@@ -282,9 +291,24 @@
         return segment;
     }
 
+    private string? TryResolveRouteLabel(string token)
+    {
+        if (!RouteLabels.TryGetValue(token, out var meta))
+        {
+            return null;
+        }
+
+        var localized = I18n.T(meta.LabelKey);
+        if (!string.IsNullOrWhiteSpace(localized) && !string.Equals(localized, meta.LabelKey, StringComparison.Ordinal))
+        {
+            return localized!;
+        }
+
+        return meta.Fallback;
+    }
+
     public void Dispose()
     {
-        I18n.OnChanged -= HandleI18nChanged;
         Nav.LocationChanged -= HandleLocationChanged;
         ThemeState.OnChanged -= HandleThemeChanged;
     }

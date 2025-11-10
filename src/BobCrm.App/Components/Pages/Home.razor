@@ -1,10 +1,11 @@
 @page "/"
 @rendermode RenderMode.InteractiveServer
 @layout BobCrm.App.Components.Layout.MainLayout
+@using System
 
 @inject BobCrm.App.Services.I18nService I18n
 
-<AuthChecker>
+<AuthChecker @key="_contentKey">
     <div class="dashboard-shell">
         <section class="dashboard-hero-card">
             <div>
@@ -84,6 +85,20 @@
 </AuthChecker>
 
 @code {
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
+
+    private string _contentKey = Guid.NewGuid().ToString();
+    private int _lastI18nVersion = -1;
+
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nVersion != I18nRenderVersion)
+        {
+            _lastI18nVersion = I18nRenderVersion;
+            _contentKey = $"home-lang-{I18nRenderVersion}";
+        }
+    }
+
     private readonly DashboardMetric[] HeroMetrics =
     [
         new("LBL_METRIC_PIPELINE", "\u00A5 2.8M", "TXT_METRIC_PIPELINE_TREND"),

@@ -120,8 +120,10 @@
     ];
 
     [Parameter] public RenderFragment? Body { get; set; }
+    [CascadingParameter] public int I18nRenderVersion { get; set; }
 
     private string _railTagline = "体验中枢";
+    private int _lastI18nVersion = -1;
 
     protected override void OnInitialized()
     {
@@ -138,6 +140,15 @@
         if (firstRender)
         {
             await LoadNavModeAsync();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nVersion != I18nRenderVersion)
+        {
+            _lastI18nVersion = I18nRenderVersion;
+            UpdateRailTagline();
         }
     }
 
