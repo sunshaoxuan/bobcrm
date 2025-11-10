@@ -270,11 +270,12 @@
   display: grid;
   grid-template-columns: minmax(280px, 1fr) auto auto;
   gap: var(--spacing-4);
-  padding: var(--spacing-3) var(--spacing-6);
+  padding: var(--spacing-2) var(--spacing-6);
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface-glass);
   backdrop-filter: blur(var(--blur-surface));
   align-items: center;
+  min-height: 72px;
 }
 
 .header-meta {

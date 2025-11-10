@@ -151,6 +151,21 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_ADMIN", ZH = "管理员", JA = "管理者", EN = "Admin" },
                 new LocalizationResource { Key = "LBL_SEARCH", ZH = "搜索", JA = "検索", EN = "Search" },
                 new LocalizationResource { Key = "BTN_LOGOUT", ZH = "退出", JA = "ログアウト", EN = "Logout" },
+                new LocalizationResource { Key = "LBL_NOTIFICATIONS", ZH = "通知中心", JA = "通知センター", EN = "Notifications" },
+                new LocalizationResource { Key = "TXT_NOTIFICATION_SUBTITLE", ZH = "最近的互动提醒", JA = "最近のインサイト", EN = "Latest interaction updates" },
+                new LocalizationResource { Key = "BTN_MARK_ALL_READ", ZH = "全部标记已读", JA = "すべて既読にする", EN = "Mark all read" },
+                new LocalizationResource { Key = "TXT_NOTIFICATION_EMPTY", ZH = "暂无新的通知", JA = "新しい通知はありません", EN = "You're all caught up" },
+                new LocalizationResource { Key = "BTN_DISMISS", ZH = "忽略", JA = "閉じる", EN = "Dismiss" },
+                new LocalizationResource { Key = "BTN_VIEW_DETAIL", ZH = "查看详情", JA = "詳細を見る", EN = "View detail" },
+                new LocalizationResource { Key = "LBL_NOTIF_APPROVAL", ZH = "审批通过", JA = "承認完了", EN = "Approval completed" },
+                new LocalizationResource { Key = "TXT_NOTIF_APPROVAL_DESC", ZH = "募资申请获批，请准备资料", JA = "資金調達申請が承認されました。資料をご準備ください", EN = "Funding request approved—prep the package." },
+                new LocalizationResource { Key = "LBL_NOTIF_IMPORT", ZH = "导入成功", JA = "インポート成功", EN = "Import completed" },
+                new LocalizationResource { Key = "TXT_NOTIF_IMPORT_DESC", ZH = "客户资料已经导入 CRM", JA = "顧客データを CRM に取り込みました", EN = "Customer data has been imported into CRM." },
+                new LocalizationResource { Key = "LBL_NOTIF_INCIDENT", ZH = "重点事件", JA = "重要インシデント", EN = "Critical incident" },
+                new LocalizationResource { Key = "TXT_NOTIF_INCIDENT_DESC", ZH = "SLA 即将到期，请快速处理", JA = "SLA 期限が迫っています。対応してください。", EN = "SLA is about to expire—please act quickly." },
+                new LocalizationResource { Key = "TXT_TIME_5M_AGO", ZH = "5 分钟前", JA = "5 分前", EN = "5m ago" },
+                new LocalizationResource { Key = "TXT_TIME_18M_AGO", ZH = "18 分钟前", JA = "18 分前", EN = "18m ago" },
+                new LocalizationResource { Key = "TXT_TIME_1H_AGO", ZH = "1 小时前", JA = "1 時間前", EN = "1h ago" },
                 new LocalizationResource { Key = "LBL_LOAD_FAILED", ZH = "加载失败", JA = "読み込み失敗", EN = "Load failed" },
                 new LocalizationResource { Key = "PH_API_BASE_EXAMPLE", ZH = "例如 http://localhost:5200 或 https://your.api", JA = "例 http://localhost:5200 または https://your.api", EN = "e.g. http://localhost:5200 or https://your.api" },
                 new LocalizationResource { Key = "LBL_API_BASE_HINT", ZH = "为空则使用内置默认地址（appsettings 的 Api:BaseUrl）。建议填写实际后端地址。", JA = "未指定の場合は既定のアドレス（appsettings の Api:BaseUrl）を使用します。実際の API を推奨。", EN = "If empty, uses default (appsettings Api:BaseUrl). Prefer your real API." },
@@ -426,6 +441,21 @@ public static class DatabaseInitializer
             Ensure("LBL_ADMIN", "管理员", "管理者", "Admin");
             Ensure("LBL_SEARCH", "搜索", "検索", "Search");
             Ensure("BTN_LOGOUT", "退出", "ログアウト", "Logout");
+            Ensure("LBL_NOTIFICATIONS", "通知中心", "通知センター", "Notifications");
+            Ensure("TXT_NOTIFICATION_SUBTITLE", "最近的互动提醒", "最近のインサイト", "Latest interaction updates");
+            Ensure("BTN_MARK_ALL_READ", "全部标记已读", "すべて既読にする", "Mark all read");
+            Ensure("TXT_NOTIFICATION_EMPTY", "暂无新的通知", "新しい通知はありません", "You're all caught up");
+            Ensure("BTN_DISMISS", "忽略", "閉じる", "Dismiss");
+            Ensure("BTN_VIEW_DETAIL", "查看详情", "詳細を見る", "View detail");
+            Ensure("LBL_NOTIF_APPROVAL", "审批通过", "承認完了", "Approval completed");
+            Ensure("TXT_NOTIF_APPROVAL_DESC", "募资申请获批，请准备资料", "資金調達申請が承認されました。資料をご準備ください", "Funding request approved—prep the package.");
+            Ensure("LBL_NOTIF_IMPORT", "导入成功", "インポート成功", "Import completed");
+            Ensure("TXT_NOTIF_IMPORT_DESC", "客户资料已经导入 CRM", "顧客データを CRM に取り込みました", "Customer data has been imported into CRM.");
+            Ensure("LBL_NOTIF_INCIDENT", "重点事件", "重要インシデント", "Critical incident");
+            Ensure("TXT_NOTIF_INCIDENT_DESC", "SLA 即将到期，请快速处理", "SLA 期限が迫っています。対応してください。", "SLA is about to expire—please act quickly.");
+            Ensure("TXT_TIME_5M_AGO", "5 分钟前", "5 分前", "5m ago");
+            Ensure("TXT_TIME_18M_AGO", "18 分钟前", "18 分前", "18m ago");
+            Ensure("TXT_TIME_1H_AGO", "1 小时前", "1 時間前", "1h ago");
             Ensure("LBL_EMAIL", "邮箱", "メール", "Email");
             Ensure("BTN_ACTIVATE", "激活", "有効化", "Activate");
             Ensure("BTN_CHANGE_PASSWORD", "修改密码", "パスワード変更", "Change Password");

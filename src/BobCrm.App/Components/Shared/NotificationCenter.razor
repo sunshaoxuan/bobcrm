@@ -36,7 +36,7 @@
                             <div class="notification-body">
                                 <strong>@Localize(item.Title)</strong>
                                 <p>@Localize(item.Description)</p>
-                                <span>@item.TimeAgo</span>
+                                <span>@Localize(item.TimeAgoKey)</span>
                             </div>
                             <button class="notification-close" title='@Localize("BTN_DISMISS")' @onclick='() => Dismiss(item)'>
                                 <Icon Type="@IconType.Outline.Close" />
@@ -58,9 +58,9 @@
     private readonly Trigger[] _trigger = [Trigger.Click];
     private readonly List<NotificationItem> _items =
     [
-        new("LBL_NOTIF_APPROVAL", "TXT_NOTIF_APPROVAL_DESC", "5m ago", IconType.Outline.Check, "success"),
-        new("LBL_NOTIF_IMPORT", "TXT_NOTIF_IMPORT_DESC", "18m ago", IconType.Outline.Upload, "info"),
-        new("LBL_NOTIF_INCIDENT", "TXT_NOTIF_INCIDENT_DESC", "1h ago", IconType.Outline.Warning, "danger", true)
+        new("LBL_NOTIF_APPROVAL", "TXT_NOTIF_APPROVAL_DESC", "TXT_TIME_5M_AGO", IconType.Outline.Check, "success"),
+        new("LBL_NOTIF_IMPORT", "TXT_NOTIF_IMPORT_DESC", "TXT_TIME_18M_AGO", IconType.Outline.Upload, "info"),
+        new("LBL_NOTIF_INCIDENT", "TXT_NOTIF_INCIDENT_DESC", "TXT_TIME_1H_AGO", IconType.Outline.Warning, "danger", true)
     ];
 
     private string I18nKey => Localize("LBL_NOTIFICATIONS");
@@ -84,11 +84,11 @@
 
     private class NotificationItem
     {
-        public NotificationItem(string titleKey, string descKey, string timeAgo, string icon, string tone, bool unread = false)
+        public NotificationItem(string titleKey, string descKey, string timeAgoKey, string icon, string tone, bool unread = false)
         {
             Title = titleKey;
             Description = descKey;
-            TimeAgo = timeAgo;
+            TimeAgoKey = timeAgoKey;
             Icon = icon;
             Tone = tone;
             IsUnread = unread;
@@ -96,7 +96,7 @@
 
         public string Title { get; }
         public string Description { get; }
-        public string TimeAgo { get; }
+        public string TimeAgoKey { get; }
         public string Icon { get; }
         public string Tone { get; }
         public bool IsUnread { get; set; }
