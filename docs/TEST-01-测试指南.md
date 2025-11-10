@@ -29,7 +29,7 @@ pwsh scripts/verify-setup.ps1
 - ✅ Docker 安装状态
 - ✅ 项目文件完整性
 - ✅ PostgreSQL 数据库连接
-- ✅ 端口占用情况（8080, 5200）
+- ✅ 端口占用情况（3000, 5200）
 - ✅ 项目编译状态
 - ✅ 集成测试执行
 
@@ -201,7 +201,7 @@ dotnet test --filter "FullyQualifiedName~AdminTests"
 pwsh scripts/dev.ps1 -Action start
 ```
 
-2. 访问前端：http://localhost:8080
+2. 访问前端：http://localhost:3000
 
 3. 准备测试账号：
    - 管理员：`admin` / `Admin@12345`
@@ -213,7 +213,7 @@ pwsh scripts/dev.ps1 -Action start
 
 | 步骤 | 操作 | 预期结果 |
 |------|------|----------|
-| 1.1 | 访问 http://localhost:8080 | 自动跳转到登录页 |
+| 1.1 | 访问 http://localhost:3000 | 自动跳转到登录页 |
 | 1.2 | 使用 admin/Admin@12345 登录 | 登录成功，跳转到客户列表 |
 | 1.3 | 点击右上角用户菜单 → 登出 | 成功登出，返回登录页 |
 | 1.4 | 点击"注册" | 显示注册表单 |
@@ -376,7 +376,7 @@ cat src/BobCrm.App/appsettings.json | grep BaseUrl
 curl -X POST http://localhost:5200/api/admin/db/recreate
 
 # 2. 或使用Setup页面重新配置管理员
-# 访问 http://localhost:8080/setup
+# 访问 http://localhost:3000/setup
 ```
 
 ### 问题5：测试覆盖率报告生成失败

@@ -129,7 +129,10 @@ public static class EntityDefinitionEndpoints
         .WithDescription("获取所有实体定义的列表，包括字段数量和接口类型");
 
         // 获取单个实体定义详情
-        group.MapGet("/{id:guid}", async (Guid id, AppDbContext db) =>
+        group.MapGet("/{id:guid}", async (
+            Guid id, 
+            AppDbContext db,
+            BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
         {
             var definition = await db.EntityDefinitions
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
@@ -139,7 +142,65 @@ public static class EntityDefinitionEndpoints
             if (definition == null)
                 return Results.NotFound(new { error = "实体定义不存在" });
 
-            return Results.Json(definition);
+            // 加载多语言数据
+            var result = new
+            {
+                definition.Id,
+                definition.Namespace,
+                definition.EntityName,
+                definition.FullName,
+                definition.EntityRoute,
+                definition.DisplayNameKey,
+                definition.DescriptionKey,
+                DisplayName = !string.IsNullOrEmpty(definition.DisplayNameKey) 
+                    ? await metadataI18nService.GetMetadataI18nAsync(definition.DisplayNameKey)
+                    : null,
+                Description = !string.IsNullOrEmpty(definition.DescriptionKey)
+                    ? await metadataI18nService.GetMetadataI18nAsync(definition.DescriptionKey)
+                    : null,
+                definition.ApiEndpoint,
+                definition.StructureType,
+                definition.Status,
+                definition.Source,
+                definition.IsLocked,
+                definition.IsRootEntity,
+                definition.IsEnabled,
+                definition.Order,
+                definition.Icon,
+                definition.Category,
+                definition.CreatedAt,
+                definition.UpdatedAt,
+                definition.CreatedBy,
+                definition.UpdatedBy,
+                Fields = await Task.WhenAll(definition.Fields.Select(async f => new
+                {
+                    f.Id,
+                    f.PropertyName,
+                    f.DisplayNameKey,
+                    DisplayName = !string.IsNullOrEmpty(f.DisplayNameKey)
+                        ? await metadataI18nService.GetMetadataI18nAsync(f.DisplayNameKey)
+                        : null,
+                    f.DataType,
+                    f.Length,
+                    f.Precision,
+                    f.Scale,
+                    f.IsRequired,
+                    f.IsEntityRef,
+                    f.ReferencedEntityId,
+                    f.TableName,
+                    f.SortOrder,
+                    f.DefaultValue,
+                    f.ValidationRules
+                })).ContinueWith(t => t.Result.ToList()),
+                Interfaces = definition.Interfaces.Select(i => new
+                {
+                    i.Id,
+                    i.InterfaceType,
+                    i.IsEnabled
+                }).ToList()
+            };
+
+            return Results.Json(result);
         })
         .WithName("GetEntityDefinition")
         .WithSummary("获取实体定义详情")
@@ -351,7 +412,8 @@ public static class EntityDefinitionEndpoints
             UpdateEntityDefinitionDto dto,
             AppDbContext db,
             HttpContext http,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
         {
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
@@ -422,9 +484,25 @@ public static class EntityDefinitionEndpoints
             // 更新基本信息
             if (dto.Namespace != null) definition.Namespace = dto.Namespace;
             if (dto.EntityName != null) definition.EntityName = dto.EntityName;
-            if (dto.DisplayNameKey != null) definition.DisplayNameKey = dto.DisplayNameKey;
-            if (dto.DescriptionKey != null) definition.DescriptionKey = dto.DescriptionKey;
             if (dto.StructureType != null) definition.StructureType = dto.StructureType;
+
+            // 更新多语言显示名
+            if (dto.DisplayName != null && dto.DisplayName.Any() &&
+                dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                var displayNameKey = metadataI18nService.GenerateEntityDisplayNameKey(definition.EntityName);
+                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(displayNameKey, dto.DisplayName);
+                definition.DisplayNameKey = displayNameKey;
+            }
+
+            // 更新多语言描述
+            if (dto.Description != null && dto.Description.Any() &&
+                dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                var descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(definition.EntityName);
+                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(descriptionKey, dto.Description);
+                definition.DescriptionKey = descriptionKey;
+            }
 
             definition.UpdatedAt = DateTime.UtcNow;
             definition.UpdatedBy = uid;
@@ -886,11 +964,11 @@ public static class EntityDefinitionEndpoints
 /// 创建实体定义DTO
 /// </summary>
 /// <summary>
-/// 多语言文本记录 - 动态结构，支持任意语言
+/// 多语言文本类 - 动态结构，支持任意语言
 /// Key: 语言代码（如 "ja", "zh", "en"）
 /// Value: 该语言的文本
 /// </summary>
-public record MultilingualText : Dictionary<string, string?>
+public class MultilingualText : Dictionary<string, string?>
 {
     public MultilingualText() : base(StringComparer.OrdinalIgnoreCase)
     {

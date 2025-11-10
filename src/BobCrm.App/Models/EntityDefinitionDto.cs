@@ -12,6 +12,16 @@ public class EntityDefinitionDto
     public string EntityRoute { get; set; } = string.Empty;
     public string DisplayNameKey { get; set; } = string.Empty;
     public string? DescriptionKey { get; set; }
+    
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public Dictionary<string, string>? DisplayName { get; set; }
+    
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public Dictionary<string, string>? Description { get; set; }
     public string ApiEndpoint { get; set; } = string.Empty;
     public string StructureType { get; set; } = "Single";
     public string Status { get; set; } = "Draft";
@@ -48,6 +58,11 @@ public class FieldMetadataDto
     /// 显示名（多语言）
     /// </summary>
     public MultilingualTextDto? DisplayName { get; set; }
+    
+    /// <summary>
+    /// 显示名（多语言，从API返回的Dictionary格式）
+    /// </summary>
+    public Dictionary<string, string>? DisplayNameDict { get; set; }
 
     public string DataType { get; set; } = "String";
     public int? Length { get; set; }

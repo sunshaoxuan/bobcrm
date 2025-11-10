@@ -128,6 +128,17 @@ function Start-ServiceProcess {
     return @{ ShellId = $null; DotnetId = $p.Id }
 }
 
+function Clear-LogFiles {
+    param($paths)
+    if (-not (Test-Path $paths.LogDir)) { return }
+    Write-Host '�K�؂��� logs �t�@�C���𑗂�... (restart �����O�a)' -ForegroundColor DarkGray
+    try {
+        Get-ChildItem -Path $paths.LogDir -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "logs �폜�����ɃG���[�����܂����F$($_.Exception.Message)" -ForegroundColor DarkYellow
+    }
+}
+
 function Save-Pids {
     param([string]$pidFile, [hashtable]$pids)
     $json = $pids | ConvertTo-Json -Depth 3
@@ -257,6 +268,7 @@ switch ($Action) {
     }
     'restart' {
         Stop-Services -paths $paths
+        Clear-LogFiles -paths $paths
         Start-Services -paths $paths -Configuration $Configuration -NoLogs:$NoLogs
         if (-not $Detached) { Wait-InteractiveStop -paths $paths }
     }

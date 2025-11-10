@@ -14,6 +14,9 @@ if (-not (Test-Path $logDir)) {
 }
 $logFile = "$logDir/verify-$timestamp.log"
 
+$frontendPort = 3000
+$apiPort = 5200
+
 # 启动日志记录
 Start-Transcript -Path $logFile -Force
 
@@ -211,11 +214,11 @@ function Test-Port {
     }
 }
 
-$port8080Free = Test-Port -port 8080
-$port5200Free = Test-Port -port 5200
+$portFrontendFree = Test-Port -port $frontendPort
+$portApiFree = Test-Port -port $apiPort
 
-Write-Check "端口 8080 (前端) 可用" $port8080Free
-Write-Check "端口 5200 (API) 可用" $port5200Free
+Write-Check "端口 $frontendPort (前端) 可用" $portFrontendFree
+Write-Check "端口 $apiPort (API) 可用" $portApiFree
 
 # ========================================
 # 步骤 6: 运行测试
@@ -245,7 +248,7 @@ if ($script:errors.Count -eq 0 -and $script:warnings.Count -eq 0) {
     Write-Host "✓ 所有检查通过！系统已就绪。" -ForegroundColor Green
     Write-Host "`n下一步：" -ForegroundColor Cyan
     Write-Host "  1. 启动系统: pwsh scripts/run.ps1" -ForegroundColor White
-    Write-Host "  2. 访问前端: http://localhost:8080" -ForegroundColor White
+    Write-Host "  2. 访问前端: http://localhost:$frontendPort" -ForegroundColor White
     Write-Host "  3. 使用管理员账号登录: admin / Admin@12345" -ForegroundColor White
     Write-Host "`n日志已保存到: $logFile" -ForegroundColor Cyan
     Stop-Transcript
