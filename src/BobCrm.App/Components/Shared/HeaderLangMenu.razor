@@ -2,7 +2,7 @@
 @inject I18nService I18n
 @inject IHttpClientFactory HttpFactory
 
-<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown">
+<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown" Visible="@_visible" OnVisibleChange="HandleVisibleChange">
     <ChildContent>
         <button class="nav-icon" title="@CurrentLangLabel">
             <span>@CurrentLangCode.ToUpper()</span>
@@ -14,6 +14,13 @@
                 @if (_isLoading)
                 {
                     <div class="notification-empty">@I18n.T("LBL_LOADING")</div>
+                }
+                else if (!string.IsNullOrEmpty(_loadError))
+                {
+                    <div class="notification-empty">
+                        @_loadError
+                        <button type="button" class="link-button" @onclick="ReloadAsync">@I18n.T("BTN_RETRY")</button>
+                    </div>
                 }
                 else
                 {
@@ -34,50 +41,46 @@
     private readonly Trigger[] _trigger = [Trigger.Click];
     private readonly List<LanguageDto> _languages = [];
     private bool _isLoading;
+    private bool _visible;
+    private string? _loadError;
 
     private string CurrentLangCode => I18n.CurrentLang;
-    private string CurrentLangLabel
-        => _languages.FirstOrDefault(l => string.Equals(l.Code, CurrentLangCode, StringComparison.OrdinalIgnoreCase))?.Name
-           ?? CurrentLangCode.ToUpperInvariant();
+    private string CurrentLangLabel =>
+        _languages.FirstOrDefault(l => string.Equals(l.Code, CurrentLangCode, StringComparison.OrdinalIgnoreCase))?.Name
+        ?? CurrentLangCode.ToUpperInvariant();
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadLanguagesAsync();
-    }
+    protected override async Task OnInitializedAsync() => await LoadLanguagesAsync();
 
     private async Task LoadLanguagesAsync()
     {
         _isLoading = true;
+        _loadError = null;
         _languages.Clear();
         try
         {
             var client = HttpFactory.CreateClient("api");
             var resp = await client.GetAsync("/api/i18n/languages");
-            if (resp.IsSuccessStatusCode)
+            if (!resp.IsSuccessStatusCode)
             {
-                var result = await resp.Content.ReadFromJsonAsync<List<LanguageDto>>();
-                if (result is not null && result.Count > 0)
-                {
-                    _languages.AddRange(result.OrderBy(l => l.Name));
-                }
+                _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "利用可能な言語を取得できません。しばらくしてから再度お試しください。");
+                return;
             }
+            var result = await resp.Content.ReadFromJsonAsync<List<LanguageDto>>();
+            if (result is null || result.Count == 0)
+            {
+                _loadError = LocalizeOrFallback("TXT_LANG_EMPTY", "利用可能な言語がまだ設定されていません。管理画面で言語を追加してください。");
+                return;
+            }
+            _languages.AddRange(result
+                .Where(l => !string.IsNullOrWhiteSpace(l.Code))
+                .OrderBy(l => l.Name));
         }
         catch
         {
-            // fallback to default
+            _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "利用可能な言語を取得できません。しばらくしてから再度お試しください。");
         }
         finally
         {
-            if (_languages.Count == 0)
-            {
-                _languages.AddRange(new[]
-                {
-                    new LanguageDto("zh", "中文"),
-                    new LanguageDto("ja", "日本語"),
-                    new LanguageDto("en", "English")
-                });
-            }
-
             _isLoading = false;
         }
     }
@@ -90,7 +93,19 @@
         }
 
         await I18n.LoadAsync(code);
+        _visible = false;
         StateHasChanged();
+    }
+
+    private void HandleVisibleChange(bool visible) => _visible = visible;
+    private Task ReloadAsync() => LoadLanguagesAsync();
+
+    private string LocalizeOrFallback(string key, string fallback)
+    {
+        var translated = I18n.T(key);
+        return string.IsNullOrWhiteSpace(translated) || string.Equals(translated, key, StringComparison.Ordinal)
+            ? fallback
+            : translated!;
     }
 
     private record LanguageDto(string Code, string Name);

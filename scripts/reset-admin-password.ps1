@@ -12,7 +12,7 @@ Write-Host ""
 Write-Host "如果您修改过密码但忘记了，可以通过以下方式重置：" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "方法1：使用 API 端点（需要知道当前密码）" -ForegroundColor Cyan
-Write-Host "  访问个人中心页面: http://localhost:8080/profile" -ForegroundColor White
+Write-Host "  访问个人中心页面: http://localhost:3000/profile" -ForegroundColor White
 Write-Host "  点击'修改密码'，输入当前密码和新密码" -ForegroundColor White
 Write-Host ""
 Write-Host "方法2：重建开发数据库（会丢失所有数据）" -ForegroundColor Cyan

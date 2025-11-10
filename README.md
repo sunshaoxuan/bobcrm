@@ -24,7 +24,7 @@ docker compose up -d
 pwsh scripts/dev.ps1 -Action start
 ```
 
-- 前端：http://localhost:8080
+- 前端：http://localhost:3000
 - 接口文档（Swagger）：http://localhost:5200/swagger
 - 默认账号：`admin` / `Admin@12345`
 

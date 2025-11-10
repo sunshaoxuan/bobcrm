@@ -423,7 +423,8 @@ public static class EntityDefinitionEndpoints
             UpdateEntityDefinitionDto dto,
             AppDbContext db,
             HttpContext http,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
         {
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
@@ -494,9 +495,25 @@ public static class EntityDefinitionEndpoints
             // 更新基本信息
             if (dto.Namespace != null) definition.Namespace = dto.Namespace;
             if (dto.EntityName != null) definition.EntityName = dto.EntityName;
-            if (dto.DisplayNameKey != null) definition.DisplayNameKey = dto.DisplayNameKey;
-            if (dto.DescriptionKey != null) definition.DescriptionKey = dto.DescriptionKey;
             if (dto.StructureType != null) definition.StructureType = dto.StructureType;
+
+            // 更新多语言显示名
+            if (dto.DisplayName != null && dto.DisplayName.Any() &&
+                dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                var displayNameKey = metadataI18nService.GenerateEntityDisplayNameKey(definition.EntityName);
+                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(displayNameKey, dto.DisplayName);
+                definition.DisplayNameKey = displayNameKey;
+            }
+
+            // 更新多语言描述
+            if (dto.Description != null && dto.Description.Any() &&
+                dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                var descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(definition.EntityName);
+                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(descriptionKey, dto.Description);
+                definition.DescriptionKey = descriptionKey;
+            }
 
             definition.UpdatedAt = DateTime.UtcNow;
             definition.UpdatedBy = uid;
