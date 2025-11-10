@@ -971,7 +971,7 @@ public class MultilingualText : Dictionary<string, string?>
     /// <summary>
     /// 构造函数 - 从字典创建（用于API反序列化）
     /// </summary>
-    public MultilingualText(Dictionary<string, string> source) : base(source, StringComparer.OrdinalIgnoreCase)
+    public MultilingualText(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
     {
     }
 }

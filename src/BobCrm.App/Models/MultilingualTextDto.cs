@@ -7,6 +7,20 @@ namespace BobCrm.App.Models;
 public class MultilingualTextDto : Dictionary<string, string?>
 {
     /// <summary>
+    /// 默认构造函数
+    /// </summary>
+    public MultilingualTextDto() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
+
+    /// <summary>
+    /// 构造函数 - 从字典创建（用于从API响应反序列化）
+    /// </summary>
+    public MultilingualTextDto(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
+    {
+    }
+
+    /// <summary>
     /// 检查是否有任何非空值
     /// </summary>
     public bool HasValue() => this.Values.Any(v => !string.IsNullOrWhiteSpace(v));
