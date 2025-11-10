@@ -22,13 +22,13 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "Product",
-            DisplayNameKey = "ENTITY_PRODUCT",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_PRODUCT" } },
             Fields = new List<FieldMetadata>
             {
                 new FieldMetadata
                 {
                     PropertyName = "Id",
-                    DisplayNameKey = "FIELD_ID",
+                    DisplayName = new Dictionary<string, string?> { { "en", "FIELD_ID" } },
                     DataType = FieldDataType.Integer,
                     IsRequired = true,
                     SortOrder = 1
@@ -36,7 +36,7 @@ public class PostgreSQLDDLGeneratorTests
                 new FieldMetadata
                 {
                     PropertyName = "Name",
-                    DisplayNameKey = "FIELD_NAME",
+                    DisplayName = new Dictionary<string, string?> { { "en", "FIELD_NAME" } },
                     DataType = FieldDataType.String,
                     Length = 100,
                     IsRequired = true,
@@ -45,7 +45,7 @@ public class PostgreSQLDDLGeneratorTests
                 new FieldMetadata
                 {
                     PropertyName = "Price",
-                    DisplayNameKey = "FIELD_PRICE",
+                    DisplayName = new Dictionary<string, string?> { { "en", "FIELD_PRICE" } },
                     DataType = FieldDataType.Decimal,
                     Precision = 10,
                     Scale = 2,
@@ -76,7 +76,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "Customer",
-            DisplayNameKey = "ENTITY_CUSTOMER",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_CUSTOMER" } },
             Fields = new List<FieldMetadata>
             {
                 new FieldMetadata
@@ -121,7 +121,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "TestEntity",
-            DisplayNameKey = "ENTITY_TEST",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_TEST" } },
             Fields = new List<FieldMetadata>
             {
                 new FieldMetadata
@@ -183,7 +183,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "Product",
-            DisplayNameKey = "ENTITY_PRODUCT"
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_PRODUCT" } }
         };
 
         var newFields = new List<FieldMetadata>
@@ -191,7 +191,7 @@ public class PostgreSQLDDLGeneratorTests
             new FieldMetadata
             {
                 PropertyName = "Description",
-                DisplayNameKey = "FIELD_DESCRIPTION",
+                DisplayName = new Dictionary<string, string?> { { "en", "FIELD_DESCRIPTION" } },
                 DataType = FieldDataType.Text,
                 IsRequired = false,
                 SortOrder = 10
@@ -199,7 +199,7 @@ public class PostgreSQLDDLGeneratorTests
             new FieldMetadata
             {
                 PropertyName = "Stock",
-                DisplayNameKey = "FIELD_STOCK",
+                DisplayName = new Dictionary<string, string?> { { "en", "FIELD_STOCK" } },
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 DefaultValue = "0",
@@ -224,7 +224,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "Product",
-            DisplayNameKey = "ENTITY_PRODUCT"
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_PRODUCT" } }
         };
 
         var field1 = new FieldMetadata
@@ -264,7 +264,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "Product",
-            DisplayNameKey = "ENTITY_PRODUCT"
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_PRODUCT" } }
         };
 
         // Act
@@ -383,7 +383,7 @@ public class PostgreSQLDDLGeneratorTests
             Id = Guid.NewGuid(),
             Namespace = "BobCrm.Test",
             EntityName = "TestAllTypes",
-            DisplayNameKey = "ENTITY_TEST_ALL_TYPES",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_TEST_ALL_TYPES" } },
             Fields = new List<FieldMetadata>
             {
                 new FieldMetadata { PropertyName = "Id", DataType = FieldDataType.Integer, IsRequired = true, SortOrder = 1 },

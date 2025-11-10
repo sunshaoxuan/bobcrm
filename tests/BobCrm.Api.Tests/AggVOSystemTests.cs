@@ -142,7 +142,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
             new()
             {
                 PropertyName = "Email",
-                DisplayNameKey = "FIELD_EMAIL",
+                DisplayName = new Dictionary<string, string?> { { "en", "FIELD_EMAIL" } },
                 DataType = "String",
                 Length = 100,
                 IsRequired = false
@@ -174,7 +174,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
             new()
             {
                 PropertyName = "Name",
-                DisplayNameKey = "FIELD_NAME",
+                DisplayName = new Dictionary<string, string?> { { "en", "FIELD_NAME" } },
                 DataType = "String",
                 Length = 100,
                 IsRequired = true
@@ -311,7 +311,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
             Namespace = "BobCrm.Domain.Test",
             EntityName = entityName,
             FullTypeName = $"BobCrm.Domain.Test.{entityName}",
-            DisplayNameKey = $"ENTITY_{entityName.ToUpper()}",
+            DisplayName = new Dictionary<string, string?> { { "en", $"ENTITY_{entityName.ToUpper()}" } },
             EntityRoute = entityRoute,
             StructureType = structureType,
             Status = status,
@@ -438,7 +438,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
     private class FieldMetadataDto
     {
         public string PropertyName { get; set; } = "";
-        public string DisplayNameKey { get; set; } = "";
+        public Dictionary<string, string?>? DisplayName { get; set; }
         public string DataType { get; set; } = "String";
         public int? Length { get; set; }
         public int? Precision { get; set; }
@@ -454,7 +454,7 @@ public class AggVOSystemTests : IClassFixture<TestWebAppFactory>
         public string EntityName { get; set; } = "";
         public string FullTypeName { get; set; } = "";
         public string StructureType { get; set; } = "";
-        public string DisplayNameKey { get; set; } = "";
+        public Dictionary<string, string?>? DisplayName { get; set; }
         public int FieldCount { get; set; }
         public int? CurrentChildCount { get; set; }
     }

@@ -272,7 +272,7 @@ public class AggVOCodeGeneratorTests
             Namespace = namespaceName,
             EntityName = entityName,
             FullTypeName = $"{namespaceName}.{entityName}",
-            DisplayNameKey = $"ENTITY_{entityName.ToUpper()}",
+            DisplayName = new Dictionary<string, string?> { { "en", $"ENTITY_{entityName.ToUpper()}" } },
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
             // DefaultTableName 是计算属性，不需要赋值
@@ -294,7 +294,7 @@ public class AggVOCodeGeneratorTests
         return new FieldMetadata
         {
             PropertyName = propertyName,
-            DisplayNameKey = $"FIELD_{propertyName.ToUpper()}",
+            DisplayName = new Dictionary<string, string?> { { "en", $"FIELD_{propertyName.ToUpper()}" } },
             DataType = dataType,
             Length = length,
             Precision = precision,
