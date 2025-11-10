@@ -14,16 +14,10 @@ public class MultilingualTextDto : Dictionary<string, string?>
     }
 
     /// <summary>
-    /// 构造函数 - 从可空值字典创建
+    /// 构造函数 - 从字典创建（用于从API响应反序列化）
+    /// 支持 Dictionary&lt;string, string&gt; 和 Dictionary&lt;string, string?&gt;
     /// </summary>
-    public MultilingualTextDto(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
-    {
-    }
-
-    /// <summary>
-    /// 构造函数 - 从非空值字典创建（用于从API响应反序列化）
-    /// </summary>
-    public MultilingualTextDto(IDictionary<string, string> source) : base(StringComparer.OrdinalIgnoreCase)
+    public MultilingualTextDto(IEnumerable<KeyValuePair<string, string>> source) : base(StringComparer.OrdinalIgnoreCase)
     {
         if (source != null)
         {
