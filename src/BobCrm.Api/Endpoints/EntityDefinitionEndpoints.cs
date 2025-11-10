@@ -210,10 +210,8 @@ public static class EntityDefinitionEndpoints
                 return Results.BadRequest(new { error = "实体名不能为空" });
 
             // 验证多语言显示名
-            if (dto.DisplayName == null ||
-                (string.IsNullOrWhiteSpace(dto.DisplayName.ZH) &&
-                 string.IsNullOrWhiteSpace(dto.DisplayName.JA) &&
-                 string.IsNullOrWhiteSpace(dto.DisplayName.EN)))
+            if (dto.DisplayName == null || !dto.DisplayName.Any() ||
+                !dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
             {
                 return Results.BadRequest(new { error = "显示名至少需要提供一种语言的文本" });
             }
@@ -235,22 +233,16 @@ public static class EntityDefinitionEndpoints
             // 保存实体显示名多语言资源
             await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
                 displayNameKey,
-                dto.DisplayName.ZH,
-                dto.DisplayName.JA,
-                dto.DisplayName.EN);
+                dto.DisplayName);
 
             // 保存实体描述多语言资源（如果提供）
-            if (dto.Description != null &&
-                (!string.IsNullOrWhiteSpace(dto.Description.ZH) ||
-                 !string.IsNullOrWhiteSpace(dto.Description.JA) ||
-                 !string.IsNullOrWhiteSpace(dto.Description.EN)))
+            if (dto.Description != null && dto.Description.Any() &&
+                dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
             {
                 descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(dto.EntityName);
                 await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
                     descriptionKey,
-                    dto.Description.ZH,
-                    dto.Description.JA,
-                    dto.Description.EN);
+                    dto.Description);
             }
 
             // 创建实体定义
@@ -272,10 +264,8 @@ public static class EntityDefinitionEndpoints
                 foreach (var fieldDto in dto.Fields)
                 {
                     // 验证字段显示名
-                    if (fieldDto.DisplayName == null ||
-                        (string.IsNullOrWhiteSpace(fieldDto.DisplayName.ZH) &&
-                         string.IsNullOrWhiteSpace(fieldDto.DisplayName.JA) &&
-                         string.IsNullOrWhiteSpace(fieldDto.DisplayName.EN)))
+                    if (fieldDto.DisplayName == null || !fieldDto.DisplayName.Any() ||
+                        !fieldDto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
                     {
                         return Results.BadRequest(new {
                             error = $"字段 {fieldDto.PropertyName} 的显示名至少需要提供一种语言的文本"
@@ -289,9 +279,7 @@ public static class EntityDefinitionEndpoints
                     // 保存字段显示名多语言资源
                     await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
                         fieldDisplayNameKey,
-                        fieldDto.DisplayName.ZH,
-                        fieldDto.DisplayName.JA,
-                        fieldDto.DisplayName.EN);
+                        fieldDto.DisplayName);
 
                     definition.Fields.Add(new FieldMetadata
                     {
