@@ -133,12 +133,22 @@
 }
 
 .chrome-shell.nav-mode-icons .rail-logo-wordmark {
-  width: 34px;
-  font-size: 32px;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  font-size: 0;
   letter-spacing: 0;
-  text-transform: uppercase;
   text-align: center;
   overflow: hidden;
+}
+
+.chrome-shell.nav-mode-icons .rail-logo-wordmark::before {
+  content: "O";
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 36px;
+  display: block;
 }
 
 .chrome-shell.nav-mode-icons .rail-tagline {
