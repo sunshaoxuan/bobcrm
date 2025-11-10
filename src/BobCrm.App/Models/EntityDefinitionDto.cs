@@ -14,12 +14,12 @@ public class EntityDefinitionDto
     /// <summary>
     /// 显示名（多语言）- 从 API 加载的 jsonb 数据
     /// </summary>
-    public Dictionary<string, string>? DisplayName { get; set; }
+    public Dictionary<string, string?>? DisplayName { get; set; }
 
     /// <summary>
     /// 描述（多语言）- 从 API 加载的 jsonb 数据
     /// </summary>
-    public Dictionary<string, string>? Description { get; set; }
+    public Dictionary<string, string?>? Description { get; set; }
 
     public string ApiEndpoint { get; set; } = string.Empty;
     public string StructureType { get; set; } = "Single";

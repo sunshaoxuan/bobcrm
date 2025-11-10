@@ -231,7 +231,7 @@ public class EntityAdvancedFeaturesController : ControllerBase
                 e.EntityName,
                 e.FullTypeName,
                 e.StructureType,
-                e.DisplayNameKey,
+                e.DisplayName,
                 CurrentChildCount = _context.EntityDefinitions.Count(c => c.ParentEntityId == e.Id)
             })
             .ToListAsync();
@@ -254,7 +254,7 @@ public class EntityAdvancedFeaturesController : ControllerBase
                 e.EntityName,
                 e.FullTypeName,
                 e.StructureType,
-                e.DisplayNameKey,
+                e.DisplayName,
                 FieldCount = e.Fields.Count
             })
             .ToListAsync();

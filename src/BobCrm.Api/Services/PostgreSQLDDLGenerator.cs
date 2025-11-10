@@ -17,7 +17,12 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        sb.AppendLine($"-- 创建表：{entity.DisplayNameKey} ({entity.EntityName})");
+        // 从 DisplayName 字典获取显示名（优先日语）
+        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
+                       ?? entity.DisplayName?.GetValueOrDefault("zh")
+                       ?? entity.DisplayName?.GetValueOrDefault("en")
+                       ?? entity.EntityName;
+        sb.AppendLine($"-- 创建表：{displayName} ({entity.EntityName})");
         sb.AppendLine($"CREATE TABLE IF NOT EXISTS \"{tableName}\" (");
 
         var columns = new List<string>();
@@ -63,7 +68,11 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        sb.AppendLine($"-- 修改表：{entity.DisplayNameKey} - 添加新字段");
+        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
+                       ?? entity.DisplayName?.GetValueOrDefault("zh")
+                       ?? entity.DisplayName?.GetValueOrDefault("en")
+                       ?? entity.EntityName;
+        sb.AppendLine($"-- 修改表：{displayName} - 添加新字段");
 
         foreach (var field in newFields.OrderBy(f => f.SortOrder))
         {
@@ -82,7 +91,11 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        sb.AppendLine($"-- 修改表：{entity.DisplayNameKey} - 修改字段长度");
+        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
+                       ?? entity.DisplayName?.GetValueOrDefault("zh")
+                       ?? entity.DisplayName?.GetValueOrDefault("en")
+                       ?? entity.EntityName;
+        sb.AppendLine($"-- 修改表：{displayName} - 修改字段长度");
 
         foreach (var (field, newLength) in fieldLengthChanges)
         {
@@ -290,11 +303,19 @@ public class PostgreSQLDDLGenerator
         var sb = new StringBuilder();
 
         sb.AppendLine("-- 表注释");
-        sb.AppendLine($"COMMENT ON TABLE \"{tableName}\" IS '{entity.DisplayNameKey}';");
+        var entityDisplayName = entity.DisplayName?.GetValueOrDefault("ja")
+                             ?? entity.DisplayName?.GetValueOrDefault("zh")
+                             ?? entity.DisplayName?.GetValueOrDefault("en")
+                             ?? entity.EntityName;
+        sb.AppendLine($"COMMENT ON TABLE \"{tableName}\" IS '{entityDisplayName}';");
 
         foreach (var field in entity.Fields)
         {
-            sb.AppendLine($"COMMENT ON COLUMN \"{tableName}\".\"{field.PropertyName}\" IS '{field.DisplayNameKey}';");
+            var fieldDisplayName = field.DisplayName?.GetValueOrDefault("ja")
+                                ?? field.DisplayName?.GetValueOrDefault("zh")
+                                ?? field.DisplayName?.GetValueOrDefault("en")
+                                ?? field.PropertyName;
+            sb.AppendLine($"COMMENT ON COLUMN \"{tableName}\".\"{field.PropertyName}\" IS '{fieldDisplayName}';");
         }
 
         return sb.ToString();
@@ -308,7 +329,11 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        sb.AppendLine($"-- 删除表：{entity.DisplayNameKey} ({entity.EntityName})");
+        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
+                       ?? entity.DisplayName?.GetValueOrDefault("zh")
+                       ?? entity.DisplayName?.GetValueOrDefault("en")
+                       ?? entity.EntityName;
+        sb.AppendLine($"-- 删除表：{displayName} ({entity.EntityName})");
         sb.AppendLine($"DROP TABLE IF EXISTS \"{tableName}\" CASCADE;");
 
         return sb.ToString();
@@ -327,7 +352,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Id",
-                    DisplayNameKey = "FIELD_ID",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "ID" },
+                        { "zh", "ID" },
+                        { "en", "ID" }
+                    },
                     DataType = FieldDataType.Integer,
                     IsRequired = true,
                     SortOrder = 1
@@ -338,7 +368,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Code",
-                    DisplayNameKey = "FIELD_CODE",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "コード" },
+                        { "zh", "代码" },
+                        { "en", "Code" }
+                    },
                     DataType = FieldDataType.String,
                     Length = 64,
                     IsRequired = true,
@@ -347,7 +382,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Name",
-                    DisplayNameKey = "FIELD_NAME",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "名称" },
+                        { "zh", "名称" },
+                        { "en", "Name" }
+                    },
                     DataType = FieldDataType.String,
                     Length = 256,
                     IsRequired = true,
@@ -359,7 +399,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "CreatedAt",
-                    DisplayNameKey = "FIELD_CREATED_AT",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "作成日時" },
+                        { "zh", "创建时间" },
+                        { "en", "Created At" }
+                    },
                     DataType = FieldDataType.DateTime,
                     IsRequired = true,
                     DefaultValue = "NOW",
@@ -368,7 +413,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "CreatedBy",
-                    DisplayNameKey = "FIELD_CREATED_BY",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "作成者" },
+                        { "zh", "创建人" },
+                        { "en", "Created By" }
+                    },
                     DataType = FieldDataType.String,
                     Length = 100,
                     IsRequired = false,
@@ -377,7 +427,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "UpdatedAt",
-                    DisplayNameKey = "FIELD_UPDATED_AT",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "更新日時" },
+                        { "zh", "更新时间" },
+                        { "en", "Updated At" }
+                    },
                     DataType = FieldDataType.DateTime,
                     IsRequired = true,
                     DefaultValue = "NOW",
@@ -386,7 +441,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "UpdatedBy",
-                    DisplayNameKey = "FIELD_UPDATED_BY",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "更新者" },
+                        { "zh", "更新人" },
+                        { "en", "Updated By" }
+                    },
                     DataType = FieldDataType.String,
                     Length = 100,
                     IsRequired = false,
@@ -395,7 +455,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Version",
-                    DisplayNameKey = "FIELD_VERSION",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "バージョン" },
+                        { "zh", "版本" },
+                        { "en", "Version" }
+                    },
                     DataType = FieldDataType.Integer,
                     IsRequired = true,
                     DefaultValue = "1",
@@ -407,7 +472,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "Version",
-                    DisplayNameKey = "FIELD_VERSION",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "バージョン" },
+                        { "zh", "版本" },
+                        { "en", "Version" }
+                    },
                     DataType = FieldDataType.Integer,
                     IsRequired = true,
                     DefaultValue = "1",
@@ -419,7 +489,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "ValidFrom",
-                    DisplayNameKey = "FIELD_VALID_FROM",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "有効開始日時" },
+                        { "zh", "生效起始时间" },
+                        { "en", "Valid From" }
+                    },
                     DataType = FieldDataType.DateTime,
                     IsRequired = true,
                     DefaultValue = "NOW",
@@ -428,7 +503,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "ValidTo",
-                    DisplayNameKey = "FIELD_VALID_TO",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "有効終了日時" },
+                        { "zh", "生效结束时间" },
+                        { "en", "Valid To" }
+                    },
                     DataType = FieldDataType.DateTime,
                     IsRequired = false,
                     SortOrder = 211
@@ -436,7 +516,12 @@ public class PostgreSQLDDLGenerator
                 fields.Add(new FieldMetadata
                 {
                     PropertyName = "VersionNo",
-                    DisplayNameKey = "FIELD_VERSION_NO",
+                    DisplayName = new Dictionary<string, string>
+                    {
+                        { "ja", "バージョン番号" },
+                        { "zh", "版本号" },
+                        { "en", "Version Number" }
+                    },
                     DataType = FieldDataType.Integer,
                     IsRequired = true,
                     DefaultValue = "1",

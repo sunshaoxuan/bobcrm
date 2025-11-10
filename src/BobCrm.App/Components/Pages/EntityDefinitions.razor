@@ -2,6 +2,7 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.MultilingualHelper ML
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 @using System.Linq
@@ -104,8 +105,9 @@
         if (!string.IsNullOrWhiteSpace(_search))
         {
             query = query.Where(e =>
-                (I18n.T(e.DisplayNameKey)).Contains(_search, StringComparison.OrdinalIgnoreCase)
-                || e.EntityName.Contains(_search, StringComparison.OrdinalIgnoreCase));
+                e.EntityName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (e.DisplayName != null && e.DisplayName.Values.Any(v =>
+                    v != null && v.Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
 
         if (_sourceFilter != "all")

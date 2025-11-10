@@ -1,4 +1,5 @@
 @using BobCrm.App.Models
+@inject BobCrm.App.Services.MultilingualHelper ML
 
 <Table TItem="EntityDefinitionDto" DataSource="@Entities" Loading="@false" PageSize="20">
     <PropertyColumn Property="e => e.EntityName" Title="实体名称" Sortable>
@@ -6,7 +7,9 @@
             @context.EntityName
         </a>
     </PropertyColumn>
-    <PropertyColumn Property="e => e.DisplayNameKey" Title="显示名" />
+    <Column Title="显示名">
+        @ML.GetText(context.DisplayName, context.EntityName)
+    </Column>
     <PropertyColumn Property="e => e.Namespace" Title="命名空间" />
     <PropertyColumn Property="e => e.Source" Title="来源">
         <Tag Color="@(context.Source == EntitySource.System ? "blue" : "green")">

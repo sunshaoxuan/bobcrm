@@ -35,7 +35,7 @@ public class FieldMetadata
     /// 示例：{"ja": "価格", "zh": "价格", "en": "Price"}
     /// </summary>
     [Column(TypeName = "jsonb")]
-    public Dictionary<string, string>? DisplayName { get; set; }
+    public Dictionary<string, string?>? DisplayName { get; set; }
 
     /// <summary>
     /// 数据类型（String、Int32、DateTime、Decimal、Boolean、Guid、EntityRef）
