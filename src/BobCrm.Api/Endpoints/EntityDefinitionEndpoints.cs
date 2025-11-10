@@ -898,13 +898,15 @@ public static class EntityDefinitionEndpoints
 /// 创建实体定义DTO
 /// </summary>
 /// <summary>
-/// 多语言文本记录
+/// 多语言文本记录 - 动态结构，支持任意语言
+/// Key: 语言代码（如 "ja", "zh", "en"）
+/// Value: 该语言的文本
 /// </summary>
-public record MultilingualText
+public record MultilingualText : Dictionary<string, string?>
 {
-    public string? ZH { get; init; }
-    public string? JA { get; init; }
-    public string? EN { get; init; }
+    public MultilingualText() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
 }
 
 public record CreateEntityDefinitionDto

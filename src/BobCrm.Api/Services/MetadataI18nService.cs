@@ -1,4 +1,5 @@
 using BobCrm.Api.Domain;
+using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace BobCrm.Api.Services;
 /// <summary>
 /// 元数据国际化服务
 /// 负责管理实体定义和字段的多语言资源
+/// 使用动态语言支持，从 LocalizationLanguages 表获取可用语言列表
 /// </summary>
 public class MetadataI18nService
 {
@@ -23,6 +25,29 @@ public class MetadataI18nService
         _logger = logger;
         _localization = localization;
     }
+
+    #region Language Management
+
+    /// <summary>
+    /// 获取系统支持的所有语言代码
+    /// </summary>
+    public async Task<List<string>> GetAvailableLanguagesAsync()
+    {
+        var languages = await _db.LocalizationLanguages
+            .AsNoTracking()
+            .Select(l => l.Code.ToLower())
+            .ToListAsync();
+
+        // 如果没有配置语言，返回默认的三种语言
+        if (!languages.Any())
+        {
+            return new List<string> { "ja", "zh", "en" };
+        }
+
+        return languages;
+    }
+
+    #endregion
 
     #region Key Generation
 
@@ -66,46 +91,64 @@ public class MetadataI18nService
     #region Save/Update
 
     /// <summary>
-    /// 保存或更新元数据多语言资源
+    /// 保存或更新元数据多语言资源（动态语言支持）
     /// </summary>
     /// <param name="key">资源Key</param>
-    /// <param name="zh">中文文本</param>
-    /// <param name="ja">日语文本</param>
-    /// <param name="en">英文文本</param>
+    /// <param name="translations">语言代码和翻译文本的字典</param>
     /// <returns>是否成功</returns>
     public async Task<bool> SaveOrUpdateMetadataI18nAsync(
         string key,
-        string? zh,
-        string? ja,
-        string? en)
+        Dictionary<string, string?> translations)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(translations);
+
+        if (!translations.Any())
+        {
+            _logger.LogWarning("[MetadataI18n] No translations provided for key: {Key}", key);
+            return false;
+        }
 
         try
         {
-            var existing = await _db.LocalizationResources
-                .FirstOrDefaultAsync(r => r.Key == key);
+            // 获取现有的所有语言版本
+            var existingValues = await _db.MetadataLocalizationValues
+                .Where(v => v.Key == key)
+                .ToListAsync();
 
-            if (existing != null)
+            foreach (var (lang, text) in translations)
             {
-                // 更新现有资源
-                existing.ZH = zh;
-                existing.JA = ja;
-                existing.EN = en;
-                _logger.LogInformation("[MetadataI18n] Updated resource: {Key}", key);
-            }
-            else
-            {
-                // 创建新资源
-                var resource = new LocalizationResource
+                if (string.IsNullOrWhiteSpace(text))
                 {
-                    Key = key,
-                    ZH = zh,
-                    JA = ja,
-                    EN = en
-                };
-                _db.LocalizationResources.Add(resource);
-                _logger.LogInformation("[MetadataI18n] Created resource: {Key}", key);
+                    // 如果文本为空，删除该语言版本
+                    var toRemove = existingValues.FirstOrDefault(v =>
+                        v.Language.Equals(lang, StringComparison.OrdinalIgnoreCase));
+                    if (toRemove != null)
+                    {
+                        _db.MetadataLocalizationValues.Remove(toRemove);
+                    }
+                    continue;
+                }
+
+                var existing = existingValues.FirstOrDefault(v =>
+                    v.Language.Equals(lang, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                {
+                    // 更新现有资源
+                    existing.Value = text;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    // 创建新资源
+                    _db.MetadataLocalizationValues.Add(new MetadataLocalizationValue
+                    {
+                        Key = key,
+                        Language = lang.ToLowerInvariant(),
+                        Value = text
+                    });
+                }
             }
 
             await _db.SaveChangesAsync();
@@ -113,6 +156,8 @@ public class MetadataI18nService
             // 清除缓存，强制重新加载
             _localization.InvalidateCache();
 
+            _logger.LogInformation("[MetadataI18n] Saved {Count} translations for key: {Key}",
+                translations.Count, key);
             return true;
         }
         catch (Exception ex)
@@ -122,89 +167,42 @@ public class MetadataI18nService
         }
     }
 
-    /// <summary>
-    /// 批量保存或更新元数据多语言资源
-    /// </summary>
-    public async Task<bool> SaveOrUpdateBatchAsync(
-        Dictionary<string, (string? zh, string? ja, string? en)> resources)
-    {
-        ArgumentNullException.ThrowIfNull(resources);
-
-        try
-        {
-            foreach (var kvp in resources)
-            {
-                var key = kvp.Key;
-                var (zh, ja, en) = kvp.Value;
-
-                var existing = await _db.LocalizationResources
-                    .FirstOrDefaultAsync(r => r.Key == key);
-
-                if (existing != null)
-                {
-                    existing.ZH = zh;
-                    existing.JA = ja;
-                    existing.EN = en;
-                }
-                else
-                {
-                    _db.LocalizationResources.Add(new LocalizationResource
-                    {
-                        Key = key,
-                        ZH = zh,
-                        JA = ja,
-                        EN = en
-                    });
-                }
-            }
-
-            await _db.SaveChangesAsync();
-            _localization.InvalidateCache();
-
-            _logger.LogInformation("[MetadataI18n] Batch saved {Count} resources", resources.Count);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[MetadataI18n] Failed to batch save resources");
-            return false;
-        }
-    }
-
     #endregion
 
     #region Delete
 
     /// <summary>
-    /// 删除元数据多语言资源
+    /// 删除元数据多语言资源（所有语言版本）
     /// </summary>
     /// <param name="key">资源Key</param>
-    /// <returns>是否成功</returns>
-    public async Task<bool> DeleteMetadataI18nAsync(string key)
+    /// <returns>删除的记录数</returns>
+    public async Task<int> DeleteMetadataI18nAsync(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
         try
         {
-            var resource = await _db.LocalizationResources
-                .FirstOrDefaultAsync(r => r.Key == key);
+            var values = await _db.MetadataLocalizationValues
+                .Where(v => v.Key == key)
+                .ToListAsync();
 
-            if (resource != null)
+            if (values.Any())
             {
-                _db.LocalizationResources.Remove(resource);
+                _db.MetadataLocalizationValues.RemoveRange(values);
                 await _db.SaveChangesAsync();
                 _localization.InvalidateCache();
 
-                _logger.LogInformation("[MetadataI18n] Deleted resource: {Key}", key);
-                return true;
+                _logger.LogInformation("[MetadataI18n] Deleted {Count} translations for key: {Key}",
+                    values.Count, key);
+                return values.Count;
             }
 
-            return false;
+            return 0;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[MetadataI18n] Failed to delete resource: {Key}", key);
-            return false;
+            return 0;
         }
     }
 
@@ -236,22 +234,22 @@ public class MetadataI18nService
                 }
             }
 
-            var resources = await _db.LocalizationResources
-                .Where(r => keysToDelete.Contains(r.Key))
+            var values = await _db.MetadataLocalizationValues
+                .Where(v => keysToDelete.Contains(v.Key))
                 .ToListAsync();
 
-            if (resources.Any())
+            if (values.Any())
             {
-                _db.LocalizationResources.RemoveRange(resources);
+                _db.MetadataLocalizationValues.RemoveRange(values);
                 await _db.SaveChangesAsync();
                 _localization.InvalidateCache();
 
                 _logger.LogInformation(
-                    "[MetadataI18n] Deleted {Count} resources for entity: {EntityName}",
-                    resources.Count,
+                    "[MetadataI18n] Deleted {Count} translations for entity: {EntityName}",
+                    values.Count,
                     entityName);
 
-                return resources.Count;
+                return values.Count;
             }
 
             return 0;
@@ -273,21 +271,17 @@ public class MetadataI18nService
     /// 获取元数据多语言资源
     /// </summary>
     /// <param name="key">资源Key</param>
-    /// <returns>多语言文本（ZH, JA, EN）</returns>
-    public async Task<(string? zh, string? ja, string? en)?> GetMetadataI18nAsync(string key)
+    /// <returns>语言代码和翻译文本的字典</returns>
+    public async Task<Dictionary<string, string>?> GetMetadataI18nAsync(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        var resource = await _db.LocalizationResources
+        var values = await _db.MetadataLocalizationValues
             .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Key == key);
+            .Where(v => v.Key == key)
+            .ToDictionaryAsync(v => v.Language, v => v.Value);
 
-        if (resource == null)
-        {
-            return null;
-        }
-
-        return (resource.ZH, resource.JA, resource.EN);
+        return values.Any() ? values : null;
     }
 
     /// <summary>
@@ -296,7 +290,7 @@ public class MetadataI18nService
     public async Task<bool> ExistsAsync(string key)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        return await _db.LocalizationResources.AnyAsync(r => r.Key == key);
+        return await _db.MetadataLocalizationValues.AnyAsync(v => v.Key == key);
     }
 
     #endregion
