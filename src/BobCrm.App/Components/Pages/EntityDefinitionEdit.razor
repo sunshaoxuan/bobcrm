@@ -3,6 +3,7 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.MultilingualHelper ML
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 
@@ -102,13 +103,7 @@
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
                     <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
                     <Column Title="显示名">
-                        @{
-                            var fieldDisplayName = context.DisplayName?.GetValueOrDefault("ja")
-                                                ?? context.DisplayName?.GetValueOrDefault("zh")
-                                                ?? context.DisplayName?.GetValueOrDefault("en")
-                                                ?? context.PropertyName;
-                        }
-                        @fieldDisplayName
+                        @ML.GetText(context.DisplayName, context.PropertyName)
                     </Column>
                     <PropertyColumn Property="f => f.DataType" Title="数据类型">
                         <Tag>@context.DataType</Tag>

@@ -20,6 +20,7 @@ builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
+builder.Services.AddScoped<BobCrm.App.Services.MultilingualHelper>();
 builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
 builder.Services.AddScoped<BobCrm.App.Services.ThemeState>();
 builder.Services.AddScoped<BobCrm.App.Services.LayoutState>();
