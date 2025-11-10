@@ -6,19 +6,18 @@ namespace BobCrm.App.Models;
 /// </summary>
 public class MultilingualTextDto : Dictionary<string, string?>
 {
+    /// <summary>
+    /// 默认构造函数
+    /// </summary>
     public MultilingualTextDto() : base(StringComparer.OrdinalIgnoreCase)
     {
     }
 
-    public MultilingualTextDto(Dictionary<string, string> source) : base(StringComparer.OrdinalIgnoreCase)
+    /// <summary>
+    /// 构造函数 - 从字典创建（用于从API响应反序列化）
+    /// </summary>
+    public MultilingualTextDto(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
     {
-        if (source != null)
-        {
-            foreach (var kvp in source)
-            {
-                this[kvp.Key] = kvp.Value;
-            }
-        }
     }
 
     /// <summary>

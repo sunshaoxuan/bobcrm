@@ -275,8 +275,6 @@
                     Description = entity.Description != null
                         ? new MultilingualTextDto(entity.Description)
                         : null,
-                    DisplayNameKey = entity.DisplayNameKey,
-                    DescriptionKey = entity.DescriptionKey,
                     StructureType = entity.StructureType,
                     Icon = entity.Icon,
                     Category = entity.Category,
@@ -287,7 +285,7 @@
                         Id = f.Id,
                         PropertyName = f.PropertyName,
                         DisplayNameKey = f.DisplayNameKey,
-                        DisplayName = f.DisplayName != null ? new MultilingualTextDto(f.DisplayName.ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? string.Empty)) : null,
+                        DisplayName = f.DisplayName != null ? new MultilingualTextDto(f.DisplayName) : null,
                         DataType = f.DataType,
                         Length = f.Length,
                         Precision = f.Precision,
