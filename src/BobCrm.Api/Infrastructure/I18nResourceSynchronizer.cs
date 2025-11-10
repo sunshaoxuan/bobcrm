@@ -23,9 +23,10 @@ public class I18nResourceSynchronizer
     public async Task SyncResourcesAsync()
     {
         var resources = GetAllRequiredResources();
-        var existingKeys = await _db.LocalizationResources
+        var existingKeysList = await _db.LocalizationResources
             .Select(r => r.Key)
-            .ToHashSetAsync();
+            .ToListAsync();
+        var existingKeys = existingKeysList.ToHashSet();
 
         var missingResources = resources
             .Where(r => !existingKeys.Contains(r.Key))
