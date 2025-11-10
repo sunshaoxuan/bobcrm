@@ -46,20 +46,14 @@
                 </FormItem>
 
                 <FormItem Label="显示名">
-                    <MultilingualInput @bind-Value="@_model.DisplayName"
-                                     PlaceholderJA="商品"
-                                     PlaceholderZH="产品"
-                                     PlaceholderEN="Product" />
+                    <MultilingualInput @bind-Value="@_model.DisplayName" />
                     <div class="ant-form-text">
                         请提供实体的多语言显示名称（至少一种语言）
                     </div>
                 </FormItem>
 
                 <FormItem Label="描述">
-                    <MultilingualInput @bind-Value="@_model.Description"
-                                     PlaceholderJA="商品情報を管理します"
-                                     PlaceholderZH="管理产品信息"
-                                     PlaceholderEN="Manage product information" />
+                    <MultilingualInput @bind-Value="@_model.Description" />
                 </FormItem>
 
                 <FormItem Label="结构类型">
@@ -145,10 +139,7 @@
             <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" Class="field-control" />
         </FormItem>
         <FormItem Label="显示名">
-            <MultilingualInput @bind-Value="@_editingField.DisplayName"
-                             PlaceholderJA="価格"
-                             PlaceholderZH="价格"
-                             PlaceholderEN="Price" />
+            <MultilingualInput @bind-Value="@_editingField.DisplayName" />
         </FormItem>
         <FormItem Label="数据类型">
             <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
