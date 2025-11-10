@@ -14,10 +14,23 @@ public class MultilingualTextDto : Dictionary<string, string?>
     }
 
     /// <summary>
-    /// 构造函数 - 从字典创建（用于从API响应反序列化）
-    /// 支持 Dictionary&lt;string, string&gt; 和 Dictionary&lt;string, string?&gt;
+    /// 构造函数 - 从 Dictionary&lt;string, string&gt; 创建（API 响应格式）
     /// </summary>
-    public MultilingualTextDto(IEnumerable<KeyValuePair<string, string>> source) : base(StringComparer.OrdinalIgnoreCase)
+    public MultilingualTextDto(Dictionary<string, string>? source) : base(StringComparer.OrdinalIgnoreCase)
+    {
+        if (source != null)
+        {
+            foreach (var kvp in source)
+            {
+                this[kvp.Key] = kvp.Value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 构造函数 - 从泛型集合创建
+    /// </summary>
+    public MultilingualTextDto(IEnumerable<KeyValuePair<string, string>>? source) : base(StringComparer.OrdinalIgnoreCase)
     {
         if (source != null)
         {
