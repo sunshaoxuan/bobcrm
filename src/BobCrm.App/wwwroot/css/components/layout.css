@@ -41,6 +41,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  align-items: center;
 }
 
 .chrome-rail .rail-group {
@@ -51,22 +52,23 @@
 
 .chrome-rail .rail-logo-button {
   width: 100%;
-  height: 64px;
+  height: 72px;
   border-radius: var(--radius-card);
   border: 1px solid var(--border-soft);
   background: rgba(255, 255, 255, 0.95);
   box-shadow: var(--shadow-raised);
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   padding: 0 var(--spacing-3);
+  text-align: center;
   cursor: pointer;
 }
 
 .rail-logo-wordmark {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   color: var(--primary);
   text-transform: none;
 }
@@ -120,6 +122,31 @@
 
 .nav-mode-icons .rail-item-label {
   display: none;
+}
+
+.chrome-shell.nav-mode-icons .rail-logo-button {
+  height: 56px;
+  padding: 0;
+  justify-content: center;
+}
+
+.chrome-shell.nav-mode-icons .rail-logo-wordmark {
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.chrome-shell.nav-mode-icons .rail-tagline {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.chrome-shell.nav-mode-icons .rail-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.chrome-shell.nav-mode-icons .rail-item-icon {
+  justify-content: center;
 }
 
 .nav-mode-labels .rail-item-icon {

@@ -20,7 +20,7 @@
             <button class="rail-logo-button" @onclick="@(() => NavigateTo(RootHref))">
                 <span class="rail-logo-wordmark">OneCRM</span>
             </button>
-            <span class="rail-tagline">@I18n.T("TXT_RAIL_TAGLINE")</span>
+            <span class="rail-tagline">@_railTagline</span>
         </div>
         <div class="rail-group">
             @foreach (var item in _railItems)
@@ -121,12 +121,16 @@
 
     [Parameter] public RenderFragment? Body { get; set; }
 
+    private string _railTagline = "体验中枢";
+
     protected override void OnInitialized()
     {
         Auth.OnUnauthorized += HandleUnauthorized;
         ThemeState.OnChanged += HandleThemeChanged;
         Layout.OnChanged += HandleLayoutChanged;
         Nav.LocationChanged += HandleLocationChanged;
+        I18n.OnChanged += HandleI18nChanged;
+        UpdateRailTagline();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -162,10 +166,21 @@
     private void HandleThemeChanged() => SafeRender();
     private void HandleLayoutChanged() => SafeRender();
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) => SafeRender();
+    private void HandleI18nChanged()
+    {
+        UpdateRailTagline();
+        SafeRender();
+    }
 
     private void SafeRender()
     {
         try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private void UpdateRailTagline()
+    {
+        var tagline = I18n.T("TXT_RAIL_TAGLINE");
+        _railTagline = string.IsNullOrWhiteSpace(tagline) ? "体验中枢" : tagline!;
     }
 
     private static string NormalizeRelative(string relative)
@@ -214,6 +229,7 @@
         ThemeState.OnChanged -= HandleThemeChanged;
         Layout.OnChanged -= HandleLayoutChanged;
         Nav.LocationChanged -= HandleLocationChanged;
+        I18n.OnChanged -= HandleI18nChanged;
     }
 }
 
