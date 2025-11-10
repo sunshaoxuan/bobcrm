@@ -1,65 +1,182 @@
 @using BobCrm.App.Models
 @inject HttpClient Http
-@* 多语言输入组件 - 动态语言支持 *@
-<div class="multilingual-input">
-    @if (_languages == null || !_languages.Any())
+@inject BobCrm.App.Services.I18nService I18n
+
+@* 重构后的多语言输入组件 - 下拉展开式设计 *@
+<div class="multilingual-input-wrapper" tabindex="0" @onfocusin="OnFocusIn" @onfocusout="OnFocusOut">
+    @if (_isExpanded)
     {
-        <Spin />
+        <!-- 展开状态：显示所有语言的输入框 -->
+        <div class="multilingual-input-expanded">
+            @if (_languages == null || !_languages.Any())
+            {
+                <div class="multilingual-loading">
+                    <Spin Size="small" />
+                </div>
+            }
+            else
+            {
+                @foreach (var lang in _languages)
+                {
+                    var isDefault = string.Equals(lang.Code, _defaultLanguage, StringComparison.OrdinalIgnoreCase);
+                    <div class="multilingual-input-row @(isDefault ? "default-language" : "")">
+                        <span class="language-label" title="@(isDefault ? I18n.T("LBL_DEFAULT_LANGUAGE") : "")">
+                            @lang.Name
+                            @if (isDefault)
+                            {
+                                <Icon Type="star" Theme="filled" Style="font-size: 10px; color: #faad14; margin-left: 4px;" />
+                            }
+                        </span>
+                        <Input Value="@_values[lang.Code]"
+                               ValueChanged="@((string? v) => OnValueChanged(lang.Code, v))"
+                               Placeholder="@GetPlaceholder(lang.Code)"
+                               Class="multilingual-field"
+                               @onfocus="@(() => _focusedInputCode = lang.Code)"
+                               AllowClear="true" />
+                    </div>
+                }
+            }
+        </div>
     }
     else
     {
-        <Tabs>
-            @foreach (var lang in _languages)
-            {
-                <TabPane Key="@lang.code" Tab="@lang.name">
-                    <Input Value="@_values[lang.code]"
-                           ValueChanged="@((string? v) => OnValueChanged(lang.code, v))"
-                           Placeholder="@GetPlaceholder(lang.code)"
-                           Class="field-control" />
-                </TabPane>
-            }
-        </Tabs>
+        <!-- 收起状态：只显示默认语言，带有多语标记 -->
+        <div class="multilingual-input-collapsed" @onclick="ExpandInput">
+            <Input Value="@GetDefaultValue()"
+                   ReadOnly="true"
+                   Placeholder="@GetDefaultPlaceholder()"
+                   Class="multilingual-field-collapsed"
+                   Suffix="@suffixTemplate" />
+        </div>
     }
 </div>
 
+@code {
+    private RenderFragment suffixTemplate = @<text>
+        <Icon Type="global" Style="color: #1890ff;" />
+        <Icon Type="down" Style="margin-left: 4px; font-size: 10px;" />
+    </text>;
+}
+
 <style>
-    .multilingual-input {
-        border: 1px solid #d9d9d9;
-        border-radius: 4px;
-        padding: 8px;
+    .multilingual-input-wrapper {
+        position: relative;
+        width: 100%;
+        outline: none;
     }
-    .multilingual-input .ant-tabs-nav {
-        margin-bottom: 8px;
+
+    .multilingual-input-expanded {
+        border: 1px solid #1890ff;
+        border-radius: 4px;
+        padding: 12px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .multilingual-input-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        gap: 12px;
+    }
+
+    .multilingual-input-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .multilingual-input-row.default-language {
+        background: #f0f5ff;
+        padding: 8px;
+        margin-left: -8px;
+        margin-right: -8px;
+        border-radius: 4px;
+    }
+
+    .language-label {
+        min-width: 80px;
+        font-weight: 500;
+        color: #262626;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .multilingual-field {
+        flex: 1;
+    }
+
+    .multilingual-input-collapsed {
+        cursor: pointer;
+    }
+
+    .multilingual-field-collapsed {
+        cursor: pointer;
+    }
+
+    .multilingual-loading {
+        text-align: center;
+        padding: 20px;
+    }
+
+    /* 滚动条美化 */
+    .multilingual-input-expanded::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .multilingual-input-expanded::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 3px;
+    }
+
+    .multilingual-input-expanded::-webkit-scrollbar-thumb {
+        background: #bfbfbf;
+        border-radius: 3px;
+    }
+
+    .multilingual-input-expanded::-webkit-scrollbar-thumb:hover {
+        background: #999;
     }
 </style>
 
 @code {
     [Parameter] public MultilingualTextDto? Value { get; set; }
     [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
+    [Parameter] public string? DefaultLanguage { get; set; }
 
     private List<LanguageInfo>? _languages;
     private Dictionary<string, string?> _values = new();
+    private bool _isExpanded = false;
+    private string _defaultLanguage = "ja";
+    private string? _focusedInputCode;
+    private bool _isBlurring = false;
 
     private class LanguageInfo
     {
-        public string code { get; set; } = string.Empty;
-        public string name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
     }
 
     protected override async Task OnInitializedAsync()
     {
+        _defaultLanguage = DefaultLanguage?.ToLowerInvariant() ?? I18n.CurrentLang.ToLowerInvariant();
+
         try
         {
             // 从API获取可用语言列表
-            _languages = await Http.GetFromJsonAsync<List<LanguageInfo>>("/api/i18n/languages");
-
-            // 初始化值字典
-            if (_languages != null)
+            var apiLanguages = await Http.GetFromJsonAsync<List<ApiLanguageDto>>("/api/i18n/languages");
+            if (apiLanguages != null && apiLanguages.Any())
             {
-                foreach (var lang in _languages)
-                {
-                    _values[lang.code] = Value?.GetValue(lang.code);
-                }
+                _languages = apiLanguages
+                    .Select(l => new LanguageInfo { Code = l.code.ToLowerInvariant(), Name = l.name })
+                    .OrderBy(l => l.Code != _defaultLanguage)  // 默认语言排在最前面
+                    .ThenBy(l => l.Name)
+                    .ToList();
+            }
+            else
+            {
+                throw new Exception("No languages returned from API");
             }
         }
         catch (Exception ex)
@@ -68,15 +185,16 @@
             // 如果API调用失败，使用默认语言
             _languages = new List<LanguageInfo>
             {
-                new() { code = "ja", name = "日本語" },
-                new() { code = "zh", name = "中文" },
-                new() { code = "en", name = "English" }
+                new() { Code = "ja", Name = "日本語" },
+                new() { Code = "zh", Name = "中文" },
+                new() { Code = "en", Name = "English" }
             };
+        }
 
-            foreach (var lang in _languages)
-            {
-                _values[lang.code] = Value?.GetValue(lang.code);
-            }
+        // 初始化值字典
+        foreach (var lang in _languages)
+        {
+            _values[lang.Code] = Value?.GetValue(lang.Code);
         }
     }
 
@@ -86,7 +204,7 @@
         {
             foreach (var lang in _languages)
             {
-                _values[lang.code] = Value.GetValue(lang.code);
+                _values[lang.Code] = Value.GetValue(lang.Code);
             }
         }
     }
@@ -114,6 +232,59 @@
         }
     }
 
+    private void OnFocusIn()
+    {
+        _isBlurring = false;
+        if (!_isExpanded)
+        {
+            ExpandInput();
+        }
+    }
+
+    private async Task OnFocusOut(FocusEventArgs e)
+    {
+        // 延迟一小段时间，让用户有时间点击输入框
+        _isBlurring = true;
+        await Task.Delay(200);
+
+        if (_isBlurring)
+        {
+            CollapseInput();
+        }
+    }
+
+    private void ExpandInput()
+    {
+        _isExpanded = true;
+        _isBlurring = false;
+        StateHasChanged();
+    }
+
+    private void CollapseInput()
+    {
+        _isExpanded = false;
+        StateHasChanged();
+    }
+
+    private string? GetDefaultValue()
+    {
+        // 先尝试获取默认语言的值
+        if (_values.TryGetValue(_defaultLanguage, out var defaultValue) && !string.IsNullOrWhiteSpace(defaultValue))
+        {
+            return defaultValue;
+        }
+
+        // 如果默认语言为空，返回第一个非空值
+        var firstNonEmpty = _values.FirstOrDefault(kvp => !string.IsNullOrWhiteSpace(kvp.Value));
+        return firstNonEmpty.Value;
+    }
+
+    private string GetDefaultPlaceholder()
+    {
+        var langName = _languages?.FirstOrDefault(l => l.Code == _defaultLanguage)?.Name ?? _defaultLanguage.ToUpperInvariant();
+        return $"{I18n.T("LBL_CLICK_TO_EDIT_MULTILINGUAL")} ({langName})";
+    }
+
     private string GetPlaceholder(string langCode)
     {
         return langCode?.ToLowerInvariant() switch
@@ -127,5 +298,11 @@
             "es" => "Ingrese en español",
             _ => "Enter text"
         };
+    }
+
+    private class ApiLanguageDto
+    {
+        public string code { get; set; } = string.Empty;
+        public string name { get; set; } = string.Empty;
     }
 }
