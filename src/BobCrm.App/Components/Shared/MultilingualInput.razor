@@ -1,0 +1,130 @@
+@inject HttpClient Http
+@* 多语言输入组件 - 动态语言支持 *@
+<div class="multilingual-input">
+    @if (_languages == null || !_languages.Any())
+    {
+        <Spin />
+    }
+    else
+    {
+        <Tabs>
+            @foreach (var lang in _languages)
+            {
+                <TabPane Key="@lang.code" Tab="@lang.name">
+                    <Input @bind-Value="@_values[lang.code]"
+                           ValueChanged="@((string? v) => OnValueChanged(lang.code, v))"
+                           Placeholder="@GetPlaceholder(lang.code)"
+                           Class="field-control" />
+                </TabPane>
+            }
+        </Tabs>
+    }
+</div>
+
+<style>
+    .multilingual-input {
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        padding: 8px;
+    }
+    .multilingual-input .ant-tabs-nav {
+        margin-bottom: 8px;
+    }
+</style>
+
+@code {
+    [Parameter] public MultilingualTextDto? Value { get; set; }
+    [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
+
+    private List<LanguageInfo>? _languages;
+    private Dictionary<string, string?> _values = new();
+
+    private class LanguageInfo
+    {
+        public string code { get; set; } = string.Empty;
+        public string name { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 从API获取可用语言列表
+            _languages = await Http.GetFromJsonAsync<List<LanguageInfo>>("/api/i18n/languages");
+
+            // 初始化值字典
+            if (_languages != null)
+            {
+                foreach (var lang in _languages)
+                {
+                    _values[lang.code] = Value?.GetValue(lang.code);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MultilingualInput] Failed to load languages: {ex.Message}");
+            // 如果API调用失败，使用默认语言
+            _languages = new List<LanguageInfo>
+            {
+                new() { code = "ja", name = "日本語" },
+                new() { code = "zh", name = "中文" },
+                new() { code = "en", name = "English" }
+            };
+
+            foreach (var lang in _languages)
+            {
+                _values[lang.code] = Value?.GetValue(lang.code);
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null && _languages != null)
+        {
+            foreach (var lang in _languages)
+            {
+                _values[lang.code] = Value.GetValue(lang.code);
+            }
+        }
+    }
+
+    private async Task OnValueChanged(string lang, string? value)
+    {
+        _values[lang] = value;
+        await NotifyValueChanged();
+    }
+
+    private async Task NotifyValueChanged()
+    {
+        var newValue = new MultilingualTextDto();
+        foreach (var kvp in _values)
+        {
+            if (!string.IsNullOrWhiteSpace(kvp.Value))
+            {
+                newValue[kvp.Key] = kvp.Value;
+            }
+        }
+
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+        }
+    }
+
+    private string GetPlaceholder(string langCode)
+    {
+        return langCode?.ToLowerInvariant() switch
+        {
+            "ja" => "日本語で入力してください",
+            "zh" => "请输入中文",
+            "en" => "Enter in English",
+            "ko" => "한국어로 입력하세요",
+            "fr" => "Entrez en français",
+            "de" => "Auf Deutsch eingeben",
+            "es" => "Ingrese en español",
+            _ => "Enter text"
+        };
+    }
+}

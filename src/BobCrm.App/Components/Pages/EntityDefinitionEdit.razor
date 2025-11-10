@@ -45,15 +45,21 @@
                     </div>
                 </FormItem>
 
-                <FormItem Label="显示名Key">
-                    <Input @bind-Value="@_model.DisplayNameKey" Placeholder="ENTITY_PRODUCT" Class="field-control" />
+                <FormItem Label="显示名">
+                    <MultilingualInput @bind-Value="@_model.DisplayName"
+                                     PlaceholderJA="商品"
+                                     PlaceholderZH="产品"
+                                     PlaceholderEN="Product" />
                     <div class="ant-form-text">
-                        多语言Key，如: ENTITY_PRODUCT
+                        请提供实体的多语言显示名称（至少一种语言）
                     </div>
                 </FormItem>
 
-                <FormItem Label="描述Key">
-                    <Input @bind-Value="@_model.DescriptionKey" Placeholder="ENTITY_PRODUCT_DESC" Class="field-control" />
+                <FormItem Label="描述">
+                    <MultilingualInput @bind-Value="@_model.Description"
+                                     PlaceholderJA="商品情報を管理します"
+                                     PlaceholderZH="管理产品信息"
+                                     PlaceholderEN="Manage product information" />
                 </FormItem>
 
                 <FormItem Label="结构类型">
@@ -138,8 +144,11 @@
         <FormItem Label="属性名">
             <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" Class="field-control" />
         </FormItem>
-        <FormItem Label="显示名Key">
-            <Input @bind-Value="@_editingField.DisplayNameKey" Placeholder="FIELD_PRICE" Class="field-control" />
+        <FormItem Label="显示名">
+            <MultilingualInput @bind-Value="@_editingField.DisplayName"
+                             PlaceholderJA="価格"
+                             PlaceholderZH="价格"
+                             PlaceholderEN="Price" />
         </FormItem>
         <FormItem Label="数据类型">
             <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
@@ -288,14 +297,22 @@
         _saving = true;
         try
         {
+            // 验证多语言显示名
+            if (_model.DisplayName == null || !_model.DisplayName.HasValue())
+            {
+                await MessageService.Error("显示名至少需要提供一种语言的文本");
+                _saving = false;
+                return;
+            }
+
             if (_isNew)
             {
                 var request = new CreateEntityDefinitionRequest
                 {
                     Namespace = _model.Namespace,
                     EntityName = _model.EntityName,
-                    DisplayNameKey = _model.DisplayNameKey,
-                    DescriptionKey = _model.DescriptionKey,
+                    DisplayName = _model.DisplayName,
+                    Description = _model.Description,
                     StructureType = _model.StructureType,
                     Interfaces = _selectedInterfaces.ToList(),
                     Fields = _model.Fields
@@ -308,8 +325,8 @@
             {
                 var request = new UpdateEntityDefinitionRequest
                 {
-                    DisplayNameKey = _model.DisplayNameKey,
-                    DescriptionKey = _model.DescriptionKey,
+                    DisplayName = _model.DisplayName,
+                    Description = _model.Description,
                     Icon = _model.Icon,
                     Category = _model.Category,
                     IsEnabled = _model.IsEnabled,
@@ -340,7 +357,8 @@
         {
             Id = Guid.Empty,
             SortOrder = (_model.Fields != null && _model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100),
-            DataType = FieldDataType.String
+            DataType = FieldDataType.String,
+            DisplayName = new MultilingualTextDto()
         };
         _fieldModalVisible = true;
     }
@@ -352,6 +370,7 @@
             Id = field.Id,
             PropertyName = field.PropertyName,
             DisplayNameKey = field.DisplayNameKey,
+            DisplayName = field.DisplayName ?? new MultilingualTextDto(),
             DataType = field.DataType,
             Length = field.Length,
             Precision = field.Precision,
@@ -365,6 +384,13 @@
 
     private Task SaveField()
     {
+        // 验证字段显示名
+        if (_editingField.DisplayName == null || !_editingField.DisplayName.HasValue())
+        {
+            MessageService.Error("字段显示名至少需要提供一种语言的文本");
+            return Task.CompletedTask;
+        }
+
         if (_editingField.Id == Guid.Empty)
         {
             _editingField.Id = Guid.NewGuid();
@@ -377,6 +403,7 @@
                 Id = _editingField.Id,
                 PropertyName = _editingField.PropertyName,
                 DisplayNameKey = _editingField.DisplayNameKey,
+                DisplayName = _editingField.DisplayName,
                 DataType = _editingField.DataType,
                 Length = _editingField.Length,
                 Precision = _editingField.Precision,
@@ -398,6 +425,7 @@
                         Id = _editingField.Id,
                         PropertyName = _editingField.PropertyName,
                         DisplayNameKey = _editingField.DisplayNameKey,
+                        DisplayName = _editingField.DisplayName,
                         DataType = _editingField.DataType,
                         Length = _editingField.Length,
                         Precision = _editingField.Precision,
@@ -433,8 +461,8 @@
     {
         public string Namespace { get; set; } = "BobCrm.Domain.Custom";
         public string EntityName { get; set; } = string.Empty;
-        public string DisplayNameKey { get; set; } = string.Empty;
-        public string? DescriptionKey { get; set; }
+        public MultilingualTextDto DisplayName { get; set; } = new();
+        public MultilingualTextDto? Description { get; set; }
         public string StructureType { get; set; } = "Single";
         public string? Icon { get; set; }
         public string? Category { get; set; }

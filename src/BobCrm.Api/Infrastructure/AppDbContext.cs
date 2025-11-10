@@ -42,6 +42,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     // 本地化
     public DbSet<LocalizationResource> LocalizationResources => Set<LocalizationResource>();
     public DbSet<LocalizationLanguage> LocalizationLanguages => Set<LocalizationLanguage>();
+    public DbSet<MetadataLocalizationValue> MetadataLocalizationValues => Set<MetadataLocalizationValue>();
 
     // 实体自定义与发布（统一的实体定义系统）
     public DbSet<EntityDefinition> EntityDefinitions => Set<EntityDefinition>();
