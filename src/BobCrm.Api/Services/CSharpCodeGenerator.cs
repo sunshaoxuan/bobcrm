@@ -29,22 +29,13 @@ public class CSharpCodeGenerator
         // XML文档注释
         sb.AppendLine("    /// <summary>");
 
-        // 从 DisplayName 字典获取显示名（优先日语，然后中文、英语）
-        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
-                       ?? entity.DisplayName?.GetValueOrDefault("zh")
-                       ?? entity.DisplayName?.GetValueOrDefault("en")
-                       ?? entity.EntityName;
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"    /// {displayName}");
 
-        if (entity.Description != null && entity.Description.Any())
+        var description = MultilingualTextHelper.Resolve(entity.Description, string.Empty);
+        if (!string.IsNullOrEmpty(description))
         {
-            var description = entity.Description?.GetValueOrDefault("ja")
-                           ?? entity.Description?.GetValueOrDefault("zh")
-                           ?? entity.Description?.GetValueOrDefault("en");
-            if (!string.IsNullOrEmpty(description))
-            {
-                sb.AppendLine($"    /// {description}");
-            }
+            sb.AppendLine($"    /// {description}");
         }
         sb.AppendLine($"    /// 自动生成于: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         sb.AppendLine("    /// </summary>");
@@ -108,11 +99,7 @@ public class CSharpCodeGenerator
         // XML文档注释
         sb.AppendLine("        /// <summary>");
 
-        // 从 DisplayName 字典获取显示名（优先日语，然后中文、英语）
-        var fieldDisplayName = field.DisplayName?.GetValueOrDefault("ja")
-                            ?? field.DisplayName?.GetValueOrDefault("zh")
-                            ?? field.DisplayName?.GetValueOrDefault("en")
-                            ?? field.PropertyName;
+        var fieldDisplayName = MultilingualTextHelper.Resolve(field.DisplayName, field.PropertyName);
         sb.AppendLine($"        /// {fieldDisplayName}");
         sb.AppendLine("        /// </summary>");
 

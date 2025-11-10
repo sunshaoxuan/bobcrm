@@ -3,9 +3,10 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.I18nService I18n
-@inject BobCrm.App.Services.MultilingualHelper ML
 @inject NavigationManager Nav
 @using BobCrm.App.Models
+@using BobCrm.App.Services.Multilingual
+@inject IMultilingualTextResolver MultilingualResolver
 
 <AuthChecker>
     <PageHeader Title="@(_isNew ? "新建实体定义" : "编辑实体定义")" OnBack="GoBack">
@@ -103,7 +104,7 @@
                 <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
                     <PropertyColumn Property="f => f.PropertyName" Title="属性名" />
                     <Column Title="显示名">
-                        @ML.GetText(context.DisplayName, context.PropertyName)
+                        @MultilingualResolver.Resolve(context.DisplayName, context.PropertyName)
                     </Column>
                     <PropertyColumn Property="f => f.DataType" Title="数据类型">
                         <Tag>@context.DataType</Tag>

@@ -1,5 +1,6 @@
 using AntDesign;
 using BobCrm.App.Components;
+using BobCrm.App.Services.Multilingual;
 using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +21,14 @@ builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
-builder.Services.AddScoped<BobCrm.App.Services.MultilingualHelper>();
+// Multilingual text resolution services
+builder.Services.Configure<MultilingualOptions>(options =>
+{
+    options.DefaultLanguage = "ja";
+    options.FallbackLanguages = new List<string> { "en", "zh" };
+});
+builder.Services.AddScoped<ILanguageContext, I18nLanguageContext>();
+builder.Services.AddScoped<IMultilingualTextResolver, MultilingualTextResolver>();
 builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
 builder.Services.AddScoped<BobCrm.App.Services.ThemeState>();
 builder.Services.AddScoped<BobCrm.App.Services.LayoutState>();
