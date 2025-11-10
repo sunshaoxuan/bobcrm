@@ -256,6 +256,18 @@ if (!skipDbInit)
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
     var synchronizer = new EntityDefinitionSynchronizer(db, logger);
     await synchronizer.SyncSystemEntitiesAsync();
+
+    // Sync internationalization resources (add missing i18n keys to database)
+    try
+    {
+        var i18nLogger = scope.ServiceProvider.GetRequiredService<ILogger<I18nResourceSynchronizer>>();
+        var i18nSynchronizer = new I18nResourceSynchronizer(db, i18nLogger);
+        await i18nSynchronizer.SyncResourcesAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "[Init] Failed to sync i18n resources");
+    }
 
     // Seed test data (development only)
         try
