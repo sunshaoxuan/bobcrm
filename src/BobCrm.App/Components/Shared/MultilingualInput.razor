@@ -1,3 +1,4 @@
+@using BobCrm.App.Models
 @inject HttpClient Http
 @* 多语言输入组件 - 动态语言支持 *@
 <div class="multilingual-input">
@@ -11,7 +12,7 @@
             @foreach (var lang in _languages)
             {
                 <TabPane Key="@lang.code" Tab="@lang.name">
-                    <Input @bind-Value="@_values[lang.code]"
+                    <Input Value="@_values[lang.code]"
                            ValueChanged="@((string? v) => OnValueChanged(lang.code, v))"
                            Placeholder="@GetPlaceholder(lang.code)"
                            Class="field-control" />

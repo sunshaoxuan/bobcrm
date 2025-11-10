@@ -6,6 +6,21 @@ namespace BobCrm.App.Models;
 /// </summary>
 public class MultilingualTextDto : Dictionary<string, string?>
 {
+    public MultilingualTextDto() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
+
+    public MultilingualTextDto(Dictionary<string, string> source) : base(StringComparer.OrdinalIgnoreCase)
+    {
+        if (source != null)
+        {
+            foreach (var kvp in source)
+            {
+                this[kvp.Key] = kvp.Value;
+            }
+        }
+    }
+
     /// <summary>
     /// 检查是否有任何非空值
     /// </summary>

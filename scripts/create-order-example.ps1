@@ -334,7 +334,7 @@ Write-Host ""
 Write-Host "后续步骤：" -ForegroundColor Cyan
 Write-Host "  1. 发布实体：POST /api/entity-definitions/{id}/publish" -ForegroundColor White
 Write-Host "  2. 查看文档：docs/examples/ORDER_MANAGEMENT_EXAMPLE.md" -ForegroundColor White
-Write-Host "  3. 访问前端：http://localhost:8080/entity-definitions" -ForegroundColor White
+Write-Host "  3. 访问前端：http://localhost:3000/entity-definitions" -ForegroundColor White
 Write-Host ""
 Write-Host "测试API：" -ForegroundColor Cyan
 Write-Host "  查看主子表配置：" -ForegroundColor White

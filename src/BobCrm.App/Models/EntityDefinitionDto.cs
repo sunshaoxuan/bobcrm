@@ -60,6 +60,11 @@ public class FieldMetadataDto
     /// 显示名（多语言）
     /// </summary>
     public MultilingualTextDto? DisplayName { get; set; }
+    
+    /// <summary>
+    /// 显示名（多语言，从API返回的Dictionary格式）
+    /// </summary>
+    public Dictionary<string, string>? DisplayNameDict { get; set; }
 
     public string DataType { get; set; } = "String";
     public int? Length { get; set; }

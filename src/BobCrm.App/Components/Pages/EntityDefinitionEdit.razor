@@ -282,7 +282,24 @@
                     Category = entity.Category,
                     Order = entity.Order,
                     IsEnabled = entity.IsEnabled,
-                    Fields = entity.Fields
+                    Fields = entity.Fields.Select(f => new FieldMetadataDto
+                    {
+                        Id = f.Id,
+                        PropertyName = f.PropertyName,
+                        DisplayNameKey = f.DisplayNameKey,
+                        DisplayName = f.DisplayName != null ? new MultilingualTextDto(f.DisplayName.ToDictionary(kvp => kvp.Key, kvp => kvp.Value ?? string.Empty)) : null,
+                        DataType = f.DataType,
+                        Length = f.Length,
+                        Precision = f.Precision,
+                        Scale = f.Scale,
+                        IsRequired = f.IsRequired,
+                        IsEntityRef = f.IsEntityRef,
+                        ReferencedEntityId = f.ReferencedEntityId,
+                        TableName = f.TableName,
+                        SortOrder = f.SortOrder,
+                        DefaultValue = f.DefaultValue,
+                        ValidationRules = f.ValidationRules
+                    }).ToList()
                 };
 
                 _selectedInterfaces = entity.Interfaces.Where(i => i.IsEnabled).Select(i => i.InterfaceType).ToArray();

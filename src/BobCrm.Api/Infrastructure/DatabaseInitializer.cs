@@ -154,6 +154,9 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "LBL_NOTIFICATIONS", ZH = "通知中心", JA = "通知センター", EN = "Notifications" },
                 new LocalizationResource { Key = "TXT_NOTIFICATION_SUBTITLE", ZH = "最近的互动提醒", JA = "最近のインサイト", EN = "Latest interaction updates" },
                 new LocalizationResource { Key = "BTN_MARK_ALL_READ", ZH = "全部标记已读", JA = "すべて既読にする", EN = "Mark all read" },
+                new LocalizationResource { Key = "BTN_WORK_BAR", ZH = "工作栏", JA = "ワークバー", EN = "Work Bar" },
+                new LocalizationResource { Key = "BTN_TOOL_BAR", ZH = "工具条", JA = "ツールバー", EN = "Tool Bar" },
+                new LocalizationResource { Key = "BTN_BULK_BAR", ZH = "批量条", JA = "一括バー", EN = "Bulk Bar" },
                 new LocalizationResource { Key = "TXT_NOTIFICATION_EMPTY", ZH = "暂无新的通知", JA = "新しい通知はありません", EN = "You're all caught up" },
                 new LocalizationResource { Key = "BTN_DISMISS", ZH = "忽略", JA = "閉じる", EN = "Dismiss" },
                 new LocalizationResource { Key = "BTN_VIEW_DETAIL", ZH = "查看详情", JA = "詳細を見る", EN = "View detail" },
@@ -185,8 +188,8 @@ public static class DatabaseInitializer
                 new LocalizationResource { Key = "ERR_USERNAME_REQUIRED", ZH = "用户名不能为空", JA = "ユーザー名は必須です", EN = "Username is required" },
                 new LocalizationResource { Key = "ERR_PASSWORD_REQUIRED", ZH = "密码不能为空", JA = "パスワードは必須です", EN = "Password is required" },
                 new LocalizationResource { Key = "MSG_REGISTER_SUCCESS", ZH = "注册成功，请进行邮箱激活（开发环境查看 API 控制台）", JA = "登録成功。メール認証を実施してください（開発環境は API コンソール参照）", EN = "Registered. Please verify by email (check API console in dev)." },
-                                new LocalizationResource { Key = "TXT_RAIL_TAGLINE", ZH = "体验中枢", JA = "エクスペリエンスハブ", EN = "Experience Hub" },
-                                new LocalizationResource { Key = "TXT_HEADER_SUBTITLE", ZH = "洞察、协作与成长的一体化入口", JA = "洞察と協働をつなぐスマートハブ", EN = "Unified hub for insight and collaboration" },
+                new LocalizationResource { Key = "TXT_RAIL_TAGLINE", ZH = "体验中枢", JA = "エクスペリエンスハブ", EN = "Experience Hub" },
+                new LocalizationResource { Key = "TXT_HEADER_SUBTITLE", ZH = "洞察、协作与成长的一体化入口", JA = "洞察と協働をつなぐスマートハブ", EN = "Unified hub for insight and collaboration" },
                 new LocalizationResource { Key = "TXT_DASH_EYEBROW", ZH = "工作总览", JA = "ワークスペース概況", EN = "Workspace Snapshot" },
                 new LocalizationResource { Key = "TXT_DASH_TITLE", ZH = "客户体验总览", JA = "顧客体験の概況", EN = "Customer Experience Overview" },
                 new LocalizationResource { Key = "TXT_DASH_SUBTITLE", ZH = "快速掌握客户、项目与团队的关键脉搏。", JA = "顧客・案件・チームの脈をワンビューで把握。", EN = "See key signals from customers, projects, and teams in one view." },
@@ -444,6 +447,9 @@ public static class DatabaseInitializer
             Ensure("LBL_NOTIFICATIONS", "通知中心", "通知センター", "Notifications");
             Ensure("TXT_NOTIFICATION_SUBTITLE", "最近的互动提醒", "最近のインサイト", "Latest interaction updates");
             Ensure("BTN_MARK_ALL_READ", "全部标记已读", "すべて既読にする", "Mark all read");
+            Ensure("BTN_WORK_BAR", "工作栏", "ワークバー", "Work Bar");
+            Ensure("BTN_TOOL_BAR", "工具条", "ツールバー", "Tool Bar");
+            Ensure("BTN_BULK_BAR", "批量条", "一括バー", "Bulk Bar");
             Ensure("TXT_NOTIFICATION_EMPTY", "暂无新的通知", "新しい通知はありません", "You're all caught up");
             Ensure("BTN_DISMISS", "忽略", "閉じる", "Dismiss");
             Ensure("BTN_VIEW_DETAIL", "查看详情", "詳細を見る", "View detail");
