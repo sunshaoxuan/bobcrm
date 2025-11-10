@@ -17,7 +17,7 @@
                         <div class="dashboard-hero-metric">
                             <span>@I18n.T(metric.LabelKey)</span>
                             <strong>@metric.Value</strong>
-                            <small>@metric.Trend</small>
+                            <small>@I18n.T(metric.TrendKey)</small>
                         </div>
                     }
                 </div>
@@ -33,7 +33,7 @@
                         <div class="mini-metric">
                             <span>@I18n.T(metric.LabelKey)</span>
                             <strong>@metric.Value</strong>
-                            <small>@metric.Hint</small>
+                            <small>@I18n.T(metric.HintKey)</small>
                         </div>
                     }
                 </div>
@@ -43,8 +43,8 @@
                     {
                         <div class="segment-row">
                             <div>
-                                <strong>@segment.Name</strong>
-                                <p class="text-muted">@segment.Description</p>
+                                <strong>@I18n.T(segment.NameKey)</strong>
+                                <p class="text-muted">@I18n.T(segment.DescriptionKey)</p>
                             </div>
                             <span>@segment.Count</span>
                         </div>
@@ -62,9 +62,9 @@
                             <div class="activity-row">
                                 <div>
                                     <strong>@item.Title</strong>
-                                    <p class="text-muted">@item.Description</p>
+                                    <p class="text-muted">@I18n.T(item.DescriptionKey)</p>
                                 </div>
-                                <span>@item.Time</span>
+                                <span>@(item.TimeIsKey ? I18n.T(item.TimeOrKey) : item.TimeOrKey)</span>
                             </div>
                         }
                     </div>
@@ -74,7 +74,7 @@
                     <div class="dashboard-actions">
                         @foreach (var action in NextActions)
                         {
-                            <Button Type="@ButtonType.Default" Ghost Icon="@action.Icon">@action.Label</Button>
+                            <Button Type="@ButtonType.Default" Ghost Icon="@action.Icon">@I18n.T(action.LabelKey)</Button>
                         }
                     </div>
                 </div>
@@ -86,44 +86,44 @@
 @code {
     private readonly DashboardMetric[] HeroMetrics =
     [
-        new("LBL_METRIC_PIPELINE", "\u00A5 2.8M", "+8% MoM"),
-        new("LBL_METRIC_ACTIVE", "126", "+12 活跃"),
-        new("LBL_METRIC_DAYS", "23d", "Avg cycle"),
-        new("LBL_METRIC_FEEDBACK", "14", "待反馈")
+        new("LBL_METRIC_PIPELINE", "\u00A5 2.8M", "TXT_METRIC_PIPELINE_TREND"),
+        new("LBL_METRIC_ACTIVE", "126", "TXT_METRIC_ACTIVE_TREND"),
+        new("LBL_METRIC_DAYS", "23d", "TXT_METRIC_DAYS_TREND"),
+        new("LBL_METRIC_FEEDBACK", "14", "TXT_METRIC_FEEDBACK_TREND")
     ];
 
     private readonly DashboardMiniMetric[] MiniMetrics =
     [
-        new("LBL_DASH_CUSTOMERS", "248", "新增 6"),
-        new("LBL_DASH_PROJECTS", "42", "进行中"),
-        new("LBL_DASH_TOUCHES", "89", "本周互动"),
-        new("LBL_DASH_SAT", "92%", "客服满意")
+        new("LBL_DASH_CUSTOMERS", "248", "TXT_DASH_CUSTOMERS_HINT"),
+        new("LBL_DASH_PROJECTS", "42", "TXT_DASH_PROJECTS_HINT"),
+        new("LBL_DASH_TOUCHES", "89", "TXT_DASH_TOUCHES_HINT"),
+        new("LBL_DASH_SAT", "92%", "TXT_DASH_SAT_HINT")
     ];
 
     private readonly DashboardSegment[] Segments =
     [
-        new("企业客户", "Enterprise Accounts", "68"),
-        new("成长型团队", "Scaling teams", "108"),
-        new("试用期", "In trial window", "72")
+        new("LBL_SEG_ENTERPRISE", "TXT_SEG_ENTERPRISE_DESC", "68"),
+        new("LBL_SEG_GROWTH", "TXT_SEG_GROWTH_DESC", "108"),
+        new("LBL_SEG_TRIAL", "TXT_SEG_TRIAL_DESC", "72")
     ];
 
     private readonly DashboardActivity[] Activity =
     [
-        new("Nova Retail", "提交新的集成需求", "10:24"),
-        new("Helios Labs", "SLA 审阅完成", "09:10"),
-        new("ACME Holdings", "反馈调查回传", "昨天")
+        new("Nova Retail", "TXT_ACTIVITY_NOVA_DESC", "10:24"),
+        new("Helios Labs", "TXT_ACTIVITY_HELIOS_DESC", "09:10"),
+        new("ACME Holdings", "TXT_ACTIVITY_ACME_DESC", "TXT_TIME_YESTERDAY", true)
     ];
 
     private readonly DashboardAction[] NextActions =
     [
-        new(IconType.Outline.Plus, "记录下一次跟进"),
-        new(IconType.Outline.Bell, "提醒账户经理"),
-        new(IconType.Outline.CloudUpload, "导入外部联系人")
+        new(IconType.Outline.Plus, "BTN_RECORD_NEXT_TOUCH"),
+        new(IconType.Outline.Bell, "BTN_NOTIFY_ACCOUNT"),
+        new(IconType.Outline.CloudUpload, "BTN_IMPORT_CONTACTS")
     ];
 
-    private record DashboardMetric(string LabelKey, string Value, string Trend);
-    private record DashboardMiniMetric(string LabelKey, string Value, string Hint);
-    private record DashboardSegment(string Name, string Description, string Count);
-    private record DashboardActivity(string Title, string Description, string Time);
-    private record DashboardAction(string Icon, string Label);
+    private record DashboardMetric(string LabelKey, string Value, string TrendKey);
+    private record DashboardMiniMetric(string LabelKey, string Value, string HintKey);
+    private record DashboardSegment(string NameKey, string DescriptionKey, string Count);
+    private record DashboardActivity(string Title, string DescriptionKey, string TimeOrKey, bool TimeIsKey = false);
+    private record DashboardAction(string Icon, string LabelKey);
 }
