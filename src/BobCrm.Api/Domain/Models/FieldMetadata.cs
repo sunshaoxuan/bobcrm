@@ -31,10 +31,11 @@ public class FieldMetadata
     public string PropertyName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 显示名多语言键
+    /// 显示名（多语言）- PostgreSQL jsonb 类型
+    /// 示例：{"ja": "価格", "zh": "价格", "en": "Price"}
     /// </summary>
-    [Required, MaxLength(100)]
-    public string DisplayNameKey { get; set; } = string.Empty;
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string>? DisplayName { get; set; }
 
     /// <summary>
     /// 数据类型（String、Int32、DateTime、Decimal、Boolean、Guid、EntityRef）

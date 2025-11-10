@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Domain.Models;
 
@@ -44,16 +45,18 @@ public class EntityDefinition
     public string EntityRoute { get; set; } = string.Empty;
 
     /// <summary>
-    /// 显示名多语言键（如 ENTITY_CUSTOMER）
+    /// 显示名（多语言）- PostgreSQL jsonb 类型
+    /// 示例：{"ja": "商品", "zh": "产品", "en": "Product"}
     /// </summary>
-    [Required, MaxLength(100)]
-    public string DisplayNameKey { get; set; } = string.Empty;
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string>? DisplayName { get; set; }
 
     /// <summary>
-    /// 描述多语言键
+    /// 描述（多语言）- PostgreSQL jsonb 类型
+    /// 示例：{"ja": "商品情報", "zh": "产品信息", "en": "Product info"}
     /// </summary>
-    [MaxLength(100)]
-    public string? DescriptionKey { get; set; }
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string>? Description { get; set; }
 
     /// <summary>
     /// API端点基础路径（如 /api/customers）

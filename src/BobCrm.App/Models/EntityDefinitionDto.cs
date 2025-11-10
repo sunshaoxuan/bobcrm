@@ -10,17 +10,14 @@ public class EntityDefinitionDto
     public string EntityName { get; set; } = string.Empty;
     public string FullTypeName { get; set; } = string.Empty;
     public string EntityRoute { get; set; } = string.Empty;
-    public string DisplayNameKey { get; set; } = string.Empty;
 
     /// <summary>
-    /// 显示名（多语言）- 从 API 加载
+    /// 显示名（多语言）- 从 API 加载的 jsonb 数据
     /// </summary>
     public Dictionary<string, string>? DisplayName { get; set; }
 
-    public string? DescriptionKey { get; set; }
-
     /// <summary>
-    /// 描述（多语言）- 从 API 加载
+    /// 描述（多语言）- 从 API 加载的 jsonb 数据
     /// </summary>
     public Dictionary<string, string>? Description { get; set; }
 
@@ -52,19 +49,10 @@ public class FieldMetadataDto
     public string PropertyName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 显示名Key（自动生成，保留用于向后兼容）
-    /// </summary>
-    public string DisplayNameKey { get; set; } = string.Empty;
-
-    /// <summary>
-    /// 显示名（多语言）
+    /// 显示名（多语言）- 从 API 加载的 jsonb 数据
+    /// 前端使用 MultilingualTextDto，API 返回 Dictionary
     /// </summary>
     public MultilingualTextDto? DisplayName { get; set; }
-    
-    /// <summary>
-    /// 显示名（多语言，从API返回的Dictionary格式）
-    /// </summary>
-    public Dictionary<string, string>? DisplayNameDict { get; set; }
 
     public string DataType { get; set; } = "String";
     public int? Length { get; set; }

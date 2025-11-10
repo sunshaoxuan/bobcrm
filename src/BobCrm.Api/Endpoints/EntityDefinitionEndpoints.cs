@@ -131,8 +131,7 @@ public static class EntityDefinitionEndpoints
         // 获取单个实体定义详情
         group.MapGet("/{id:guid}", async (
             Guid id,
-            AppDbContext db,
-            BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
+            AppDbContext db) =>
         {
             var definition = await db.EntityDefinitions
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
@@ -142,43 +141,7 @@ public static class EntityDefinitionEndpoints
             if (definition == null)
                 return Results.NotFound(new { error = "实体定义不存在" });
 
-            // 加载实体的多语言数据
-            var displayName = !string.IsNullOrEmpty(definition.DisplayNameKey)
-                ? await metadataI18nService.GetMetadataI18nAsync(definition.DisplayNameKey)
-                : null;
-
-            var description = !string.IsNullOrEmpty(definition.DescriptionKey)
-                ? await metadataI18nService.GetMetadataI18nAsync(definition.DescriptionKey)
-                : null;
-
-            // 加载字段的多语言数据
-            var fieldsWithI18n = new List<object>();
-            foreach (var field in definition.Fields.OrderBy(f => f.SortOrder))
-            {
-                var fieldDisplayName = !string.IsNullOrEmpty(field.DisplayNameKey)
-                    ? await metadataI18nService.GetMetadataI18nAsync(field.DisplayNameKey)
-                    : null;
-
-                fieldsWithI18n.Add(new
-                {
-                    field.Id,
-                    field.PropertyName,
-                    field.DisplayNameKey,
-                    DisplayName = fieldDisplayName,
-                    field.DataType,
-                    field.Length,
-                    field.Precision,
-                    field.Scale,
-                    field.IsRequired,
-                    field.IsEntityRef,
-                    field.ReferencedEntityId,
-                    field.TableName,
-                    field.SortOrder,
-                    field.DefaultValue,
-                    field.ValidationRules
-                });
-            }
-
+            // 多语言数据已直接存储在 jsonb 字段中，无需额外加载
             return Results.Json(new
             {
                 definition.Id,
@@ -186,10 +149,8 @@ public static class EntityDefinitionEndpoints
                 definition.EntityName,
                 definition.FullTypeName,
                 definition.EntityRoute,
-                definition.DisplayNameKey,
-                DisplayName = displayName,
-                definition.DescriptionKey,
-                Description = description,
+                definition.DisplayName,      // Dictionary<string, string>? from jsonb
+                definition.Description,      // Dictionary<string, string>? from jsonb
                 definition.ApiEndpoint,
                 definition.StructureType,
                 definition.Status,
@@ -204,7 +165,23 @@ public static class EntityDefinitionEndpoints
                 definition.UpdatedAt,
                 definition.CreatedBy,
                 definition.UpdatedBy,
-                Fields = fieldsWithI18n,
+                Fields = definition.Fields.OrderBy(f => f.SortOrder).Select(f => new
+                {
+                    f.Id,
+                    f.PropertyName,
+                    f.DisplayName,           // Dictionary<string, string>? from jsonb
+                    f.DataType,
+                    f.Length,
+                    f.Precision,
+                    f.Scale,
+                    f.IsRequired,
+                    f.IsEntityRef,
+                    f.ReferencedEntityId,
+                    f.TableName,
+                    f.SortOrder,
+                    f.DefaultValue,
+                    f.ValidationRules
+                }),
                 Interfaces = definition.Interfaces.Select(i => new
                 {
                     i.Id,
@@ -266,7 +243,6 @@ public static class EntityDefinitionEndpoints
         group.MapPost("", async (
             CreateEntityDefinitionDto dto,
             AppDbContext db,
-            BobCrm.Api.Services.MetadataI18nService metadataI18nService,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -298,32 +274,15 @@ public static class EntityDefinitionEndpoints
                 return Results.Conflict(new { error = "实体已存在" });
             }
 
-            // 生成实体显示名和描述的多语言Key
-            var displayNameKey = metadataI18nService.GenerateEntityDisplayNameKey(dto.EntityName);
-            string? descriptionKey = null;
-
-            // 保存实体显示名多语言资源
-            await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
-                displayNameKey,
-                dto.DisplayName);
-
-            // 保存实体描述多语言资源（如果提供）
-            if (dto.Description != null && dto.Description.Any() &&
-                dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-            {
-                descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(dto.EntityName);
-                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
-                    descriptionKey,
-                    dto.Description);
-            }
-
-            // 创建实体定义
+            // 创建实体定义（直接保存 jsonb 多语言数据）
             var definition = new EntityDefinition
             {
                 Namespace = dto.Namespace,
                 EntityName = dto.EntityName,
-                DisplayNameKey = displayNameKey,
-                DescriptionKey = descriptionKey,
+                DisplayName = dto.DisplayName,  // 直接赋值 Dictionary，EF Core 自动转 jsonb
+                Description = dto.Description?.Any(kvp => !string.IsNullOrWhiteSpace(kvp.Value)) == true
+                    ? dto.Description
+                    : null,
                 StructureType = dto.StructureType ?? EntityStructureType.Single,
                 Status = EntityStatus.Draft,
                 CreatedBy = uid,
@@ -344,19 +303,10 @@ public static class EntityDefinitionEndpoints
                         });
                     }
 
-                    // 生成字段显示名Key
-                    var fieldDisplayNameKey = metadataI18nService.GenerateFieldDisplayNameKey(
-                        dto.EntityName, fieldDto.PropertyName);
-
-                    // 保存字段显示名多语言资源
-                    await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
-                        fieldDisplayNameKey,
-                        fieldDto.DisplayName);
-
                     definition.Fields.Add(new FieldMetadata
                     {
                         PropertyName = fieldDto.PropertyName,
-                        DisplayNameKey = fieldDisplayNameKey,
+                        DisplayName = fieldDto.DisplayName,  // 直接赋值 Dictionary，EF Core 自动转 jsonb
                         DataType = fieldDto.DataType,
                         Length = fieldDto.Length,
                         Precision = fieldDto.Precision,
@@ -392,7 +342,7 @@ public static class EntityDefinitionEndpoints
                             definition.Fields.Add(new FieldMetadata
                             {
                                 PropertyName = ifField.PropertyName,
-                                DisplayNameKey = $"FIELD_{ifField.PropertyName.ToUpper()}",
+                                DisplayName = null,  // 接口字段暂不提供默认多语言
                                 DataType = ifField.DataType,
                                 Length = ifField.Length,
                                 IsRequired = ifField.IsRequired,
@@ -423,8 +373,7 @@ public static class EntityDefinitionEndpoints
             UpdateEntityDefinitionDto dto,
             AppDbContext db,
             HttpContext http,
-            ILogger<Program> logger,
-            BobCrm.Api.Services.MetadataI18nService metadataI18nService) =>
+            ILogger<Program> logger) =>
         {
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
@@ -497,22 +446,18 @@ public static class EntityDefinitionEndpoints
             if (dto.EntityName != null) definition.EntityName = dto.EntityName;
             if (dto.StructureType != null) definition.StructureType = dto.StructureType;
 
-            // 更新多语言显示名
+            // 更新多语言显示名（直接更新 jsonb 字段）
             if (dto.DisplayName != null && dto.DisplayName.Any() &&
                 dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
             {
-                var displayNameKey = metadataI18nService.GenerateEntityDisplayNameKey(definition.EntityName);
-                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(displayNameKey, dto.DisplayName);
-                definition.DisplayNameKey = displayNameKey;
+                definition.DisplayName = dto.DisplayName;  // EF Core 自动更新 jsonb
             }
 
-            // 更新多语言描述
+            // 更新多语言描述（直接更新 jsonb 字段）
             if (dto.Description != null && dto.Description.Any() &&
                 dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
             {
-                var descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(definition.EntityName);
-                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(descriptionKey, dto.Description);
-                definition.DescriptionKey = descriptionKey;
+                definition.Description = dto.Description;  // EF Core 自动更新 jsonb
             }
 
             definition.UpdatedAt = DateTime.UtcNow;
