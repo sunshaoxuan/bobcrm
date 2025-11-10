@@ -17,11 +17,7 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        // 从 DisplayName 字典获取显示名（优先日语）
-        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
-                       ?? entity.DisplayName?.GetValueOrDefault("zh")
-                       ?? entity.DisplayName?.GetValueOrDefault("en")
-                       ?? entity.EntityName;
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"-- 创建表：{displayName} ({entity.EntityName})");
         sb.AppendLine($"CREATE TABLE IF NOT EXISTS \"{tableName}\" (");
 
@@ -68,10 +64,7 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
-                       ?? entity.DisplayName?.GetValueOrDefault("zh")
-                       ?? entity.DisplayName?.GetValueOrDefault("en")
-                       ?? entity.EntityName;
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"-- 修改表：{displayName} - 添加新字段");
 
         foreach (var field in newFields.OrderBy(f => f.SortOrder))
@@ -91,10 +84,7 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
-                       ?? entity.DisplayName?.GetValueOrDefault("zh")
-                       ?? entity.DisplayName?.GetValueOrDefault("en")
-                       ?? entity.EntityName;
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"-- 修改表：{displayName} - 修改字段长度");
 
         foreach (var (field, newLength) in fieldLengthChanges)
@@ -303,18 +293,12 @@ public class PostgreSQLDDLGenerator
         var sb = new StringBuilder();
 
         sb.AppendLine("-- 表注释");
-        var entityDisplayName = entity.DisplayName?.GetValueOrDefault("ja")
-                             ?? entity.DisplayName?.GetValueOrDefault("zh")
-                             ?? entity.DisplayName?.GetValueOrDefault("en")
-                             ?? entity.EntityName;
+        var entityDisplayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"COMMENT ON TABLE \"{tableName}\" IS '{entityDisplayName}';");
 
         foreach (var field in entity.Fields)
         {
-            var fieldDisplayName = field.DisplayName?.GetValueOrDefault("ja")
-                                ?? field.DisplayName?.GetValueOrDefault("zh")
-                                ?? field.DisplayName?.GetValueOrDefault("en")
-                                ?? field.PropertyName;
+            var fieldDisplayName = MultilingualTextHelper.Resolve(field.DisplayName, field.PropertyName);
             sb.AppendLine($"COMMENT ON COLUMN \"{tableName}\".\"{field.PropertyName}\" IS '{fieldDisplayName}';");
         }
 
@@ -329,10 +313,7 @@ public class PostgreSQLDDLGenerator
         var tableName = entity.DefaultTableName;
         var sb = new StringBuilder();
 
-        var displayName = entity.DisplayName?.GetValueOrDefault("ja")
-                       ?? entity.DisplayName?.GetValueOrDefault("zh")
-                       ?? entity.DisplayName?.GetValueOrDefault("en")
-                       ?? entity.EntityName;
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
         sb.AppendLine($"-- 删除表：{displayName} ({entity.EntityName})");
         sb.AppendLine($"DROP TABLE IF EXISTS \"{tableName}\" CASCADE;");
 
