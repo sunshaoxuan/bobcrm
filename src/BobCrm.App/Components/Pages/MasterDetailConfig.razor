@@ -8,22 +8,22 @@
 @using System.Net.Http.Json
 
 <AuthChecker>
-    <PageHeader Title="主子表配置" OnBack="GoBack">
+    <PageHeader Title="@I18n.T("LBL_MASTER_DETAIL_CONFIG")" OnBack="GoBack">
         <PageHeaderExtra>
             <Space>
                 <SpaceItem>
                     <Button OnClick="HandleSave" Type="@ButtonType.Primary" Loading="@_saving" Disabled="@(!_hasChanges)">
-                        <Icon Type="save" /> 保存配置
+                        <Icon Type="save" /> @I18n.T("BTN_SAVE_CONFIG")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="PreviewStructure" Loading="@_previewing">
-                        <Icon Type="eye" /> 预览结构
+                        <Icon Type="eye" /> @I18n.T("BTN_PREVIEW_STRUCTURE")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="GoBack">
-                        取消
+                        @I18n.T("BTN_CANCEL")
                     </Button>
                 </SpaceItem>
             </Space>
@@ -38,35 +38,35 @@
     }
     else if (_entity == null)
     {
-        <Result Status="404" Title="实体不存在" SubTitle="未找到指定的实体定义" />
+        <Result Status="404" Title="@I18n.T("MSG_ENTITY_NOT_FOUND")" SubTitle="@I18n.T("MSG_ENTITY_NOT_FOUND_DESC")" />
     }
     else
     {
         <!-- 实体基本信息 -->
-        <Card Title="实体信息" Style="margin-bottom: 16px;">
+        <Card Title="@I18n.T("LBL_ENTITY_INFO")" Style="margin-bottom: 16px;">
             <Descriptions Bordered Column="2">
-                <DescriptionsItem Title="实体名称">@_entity.EntityName</DescriptionsItem>
-                <DescriptionsItem Title="显示名">@_entity.DisplayNameKey</DescriptionsItem>
-                <DescriptionsItem Title="完整类型">@_entity.FullTypeName</DescriptionsItem>
-                <DescriptionsItem Title="当前结构">
+                <DescriptionsItem Title="@I18n.T("LBL_ENTITY_NAME")">@_entity.EntityName</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_DISPLAY_NAME")">@_entity.DisplayNameKey</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_FULL_TYPE")">@_entity.FullTypeName</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("LBL_CURRENT_STRUCTURE")">
                     <Tag Color="@GetStructureTypeColor(_entity.StructureType)">@GetStructureTypeText(_entity.StructureType)</Tag>
                 </DescriptionsItem>
             </Descriptions>
         </Card>
 
         <!-- 结构类型配置 -->
-        <Card Title="结构类型" Style="margin-bottom: 16px;">
+        <Card Title="@I18n.T("LBL_STRUCTURE_TYPE")" Style="margin-bottom: 16px;">
             <Form Model="@_config" LabelColSpan="4" WrapperColSpan="20">
-                <FormItem Label="结构类型">
+                <FormItem Label="@I18n.T("LBL_STRUCTURE_TYPE")">
                     <RadioGroup Value="@_config.StructureType" ValueChanged="@(EventCallback.Factory.Create<string>(this, HandleStructureTypeChanged))">
                         <Radio Value="@("Single")">
-                            <Icon Type="file" /> 单一实体
+                            <Icon Type="file" /> @I18n.T("LBL_SINGLE_ENTITY")
                         </Radio>
                         <Radio Value="@("MasterDetail")">
-                            <Icon Type="node-index" /> 主子结构（两层）
+                            <Icon Type="node-index" /> @I18n.T("LBL_MASTER_DETAIL_TWO_LEVEL")
                         </Radio>
                         <Radio Value="@("MasterDetailGrandchild")">
-                            <Icon Type="apartment" /> 主子孙结构（三层）
+                            <Icon Type="apartment" /> @I18n.T("LBL_MASTER_DETAIL_THREE_LEVEL")
                         </Radio>
                     </RadioGroup>
                     <div class="ant-form-text" style="margin-top: 8px;">
@@ -79,20 +79,20 @@
         <!-- 子实体配置（仅在主子结构时显示） -->
         @if (_config.StructureType != "Single")
         {
-            <Card Title="子实体配置" Style="margin-bottom: 16px;">
+            <Card Title="@I18n.T("LBL_CHILD_ENTITY_CONFIG")" Style="margin-bottom: 16px;">
                 <Extra>
                     <Button OnClick="ShowAddChildDialog" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
-                        <Icon Type="plus" /> 添加子实体
+                        <Icon Type="plus" /> @I18n.T("BTN_ADD_CHILD_ENTITY")
                     </Button>
                 </Extra>
                 <Body>
                 @if (_config.Children == null || !_config.Children.Any())
                 {
                     <div>
-                        <Empty Description="@("尚未配置子实体")" />
+                        <Empty Description="@I18n.T("MSG_NO_CHILD_ENTITY_CONFIGURED")" />
                         <div style="text-align: center; margin-top: 16px;">
                             <Button Type="@ButtonType.Primary" OnClick="ShowAddChildDialog">
-                                立即添加
+                                @I18n.T("BTN_ADD_NOW")
                             </Button>
                         </div>
                     </div>
@@ -100,31 +100,31 @@
                 else
                 {
                     <Table TItem="ChildEntityConfig" DataSource="@_config.Children" Bordered Size="@TableSize.Small">
-                        <PropertyColumn Property="c => c.ChildEntityName" Title="子实体名称" />
-                        <PropertyColumn Property="c => c.ForeignKeyField" Title="外键字段">
-                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="如: OrderId" Class="field-control" />
+                        <PropertyColumn Property="c => c.ChildEntityName" Title="@I18n.T("LBL_CHILD_ENTITY_NAME")" />
+                        <PropertyColumn Property="c => c.ForeignKeyField" Title="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
+                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
                         </PropertyColumn>
-                        <PropertyColumn Property="c => c.CollectionProperty" Title="集合属性名">
-                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="如: OrderLines" Class="field-control" />
+                        <PropertyColumn Property="c => c.CollectionProperty" Title="@I18n.T("LBL_COLLECTION_PROPERTY")">
+                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
                         </PropertyColumn>
-                        <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="级联删除">
+                        <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="@I18n.T("LBL_CASCADE_DELETE")">
                             <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Style="width: 120px;">
                                 <SelectOptions>
-                                    <SelectOption TItemValue="string" TItem="string" Value="@("NoAction")" Label="无操作" />
-                                    <SelectOption TItemValue="string" TItem="string" Value="@("Cascade")" Label="级联删除" />
-                                    <SelectOption TItemValue="string" TItem="string" Value="@("SetNull")" Label="设置NULL" />
-                                    <SelectOption TItemValue="string" TItem="string" Value="@("Restrict")" Label="限制" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("NoAction")" Label="@I18n.T("LBL_CASCADE_NO_ACTION")" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("Cascade")" Label="@I18n.T("LBL_CASCADE_DELETE")" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("SetNull")" Label="@I18n.T("LBL_CASCADE_SET_NULL")" />
+                                    <SelectOption TItemValue="string" TItem="string" Value="@("Restrict")" Label="@I18n.T("LBL_CASCADE_RESTRICT")" />
                                 </SelectOptions>
                             </Select>
                         </PropertyColumn>
-                        <PropertyColumn Property="c => c.AutoCascadeSave" Title="自动保存">
+                        <PropertyColumn Property="c => c.AutoCascadeSave" Title="@I18n.T("LBL_AUTO_SAVE")">
                             <Switch @bind-Value="@context.AutoCascadeSave" Size="small" />
                         </PropertyColumn>
-                        <ActionColumn Title="操作">
+                        <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
                             <Space>
                                 <SpaceItem>
                                     <Button Size="@ButtonSize.Small" Danger OnClick="() => RemoveChild(context)">
-                                        <Icon Type="delete" /> 移除
+                                        <Icon Type="delete" /> @I18n.T("BTN_REMOVE")
                                     </Button>
                                 </SpaceItem>
                             </Space>
@@ -136,40 +136,40 @@
         }
 
         <!-- 配置说明 -->
-        <Card Title="配置说明">
+        <Card Title="@I18n.T("LBL_CONFIG_DESCRIPTION")">
             <Descriptions Bordered Column="1">
-                <DescriptionsItem Title="外键字段">
-                    子实体中指向父实体的外键字段名，如 OrderId（必须是父实体的主键类型）
+                <DescriptionsItem Title="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
+                    @I18n.T("TXT_FOREIGN_KEY_FIELD_DESC")
                 </DescriptionsItem>
-                <DescriptionsItem Title="集合属性名">
-                    在父实体的 AggVO 中，子实体的集合属性名称，如 OrderLines
+                <DescriptionsItem Title="@I18n.T("LBL_COLLECTION_PROPERTY")">
+                    @I18n.T("TXT_COLLECTION_PROPERTY_DESC")
                 </DescriptionsItem>
-                <DescriptionsItem Title="级联删除行为">
+                <DescriptionsItem Title="@I18n.T("LBL_CASCADE_DELETE_BEHAVIOR")">
                     <ul style="margin: 0; padding-left: 20px;">
-                        <li><strong>无操作</strong>：删除父实体时不影响子实体（逻辑删除除外）</li>
-                        <li><strong>级联删除</strong>：删除父实体时自动逻辑删除所有子实体</li>
-                        <li><strong>设置NULL</strong>：删除父实体时将子实体的外键设置为NULL</li>
-                        <li><strong>限制</strong>：如果有子实体存在，则阻止删除父实体</li>
+                        <li><strong>@I18n.T("LBL_CASCADE_NO_ACTION")</strong>：@I18n.T("TXT_CASCADE_NO_ACTION_DESC")</li>
+                        <li><strong>@I18n.T("LBL_CASCADE_DELETE")</strong>：@I18n.T("TXT_CASCADE_DELETE_DESC")</li>
+                        <li><strong>@I18n.T("LBL_CASCADE_SET_NULL")</strong>：@I18n.T("TXT_CASCADE_SET_NULL_DESC")</li>
+                        <li><strong>@I18n.T("LBL_CASCADE_RESTRICT")</strong>：@I18n.T("TXT_CASCADE_RESTRICT_DESC")</li>
                     </ul>
                 </DescriptionsItem>
-                <DescriptionsItem Title="自动级联保存">
-                    启用后，保存父实体时会自动保存所有子实体的修改
+                <DescriptionsItem Title="@I18n.T("LBL_AUTO_CASCADE_SAVE")">
+                    @I18n.T("TXT_AUTO_CASCADE_SAVE_DESC")
                 </DescriptionsItem>
             </Descriptions>
         </Card>
     }
 
     <!-- 添加子实体对话框 -->
-    <Modal Title="添加子实体" WrapClassName="calm-modal"
+    <Modal Title="@I18n.T("LBL_ADD_CHILD_ENTITY")" WrapClassName="calm-modal"
            @bind-Visible="@_showAddChildDialog"
            OnOk="HandleAddChild"
            OnCancel="() => _showAddChildDialog = false"
-           OkText="@("添加")"
-           CancelText="@("取消")">
+           OkText="@I18n.T("BTN_ADD")"
+           CancelText="@I18n.T("BTN_CANCEL")">
         <Form Model="@_newChild" LabelColSpan="6" WrapperColSpan="18">
-            <FormItem Label="子实体">
+            <FormItem Label="@I18n.T("LBL_CHILD_ENTITY")">
                 <Select TItemValue="Guid" TItem="ChildEntityDto" @bind-Value="@_newChild.ChildEntityId"
-                        Placeholder="选择子实体"
+                        Placeholder="@I18n.T("TXT_SELECT_CHILD_ENTITY")"
                         AllowClear
                         ShowSearch
                         Loading="@_loadingCandidates">
@@ -187,31 +187,31 @@
                 </Select>
             </FormItem>
 
-            <FormItem Label="外键字段">
-                <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="如: OrderId" Class="field-control" />
+            <FormItem Label="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
+                <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
             </FormItem>
 
-            <FormItem Label="集合属性名">
-                <Input @bind-Value="@_newChild.CollectionProperty" Placeholder="如: OrderLines" Class="field-control" />
+            <FormItem Label="@I18n.T("LBL_COLLECTION_PROPERTY")">
+                <Input @bind-Value="@_newChild.CollectionProperty" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
             </FormItem>
 
-            <FormItem Label="级联删除">
+            <FormItem Label="@I18n.T("LBL_CASCADE_DELETE")">
                 <RadioGroup @bind-Value="@_newChild.CascadeDeleteBehavior">
-                    <Radio Value="@("NoAction")">无操作</Radio>
-                    <Radio Value="@("Cascade")">级联删除</Radio>
-                    <Radio Value="@("SetNull")">设置NULL</Radio>
-                    <Radio Value="@("Restrict")">限制</Radio>
+                    <Radio Value="@("NoAction")">@I18n.T("LBL_CASCADE_NO_ACTION")</Radio>
+                    <Radio Value="@("Cascade")">@I18n.T("LBL_CASCADE_DELETE")</Radio>
+                    <Radio Value="@("SetNull")">@I18n.T("LBL_CASCADE_SET_NULL")</Radio>
+                    <Radio Value="@("Restrict")">@I18n.T("LBL_CASCADE_RESTRICT")</Radio>
                 </RadioGroup>
             </FormItem>
 
-            <FormItem Label="自动保存">
-                <Switch @bind-Value="@_newChild.AutoCascadeSave" CheckedChildren="是" UnCheckedChildren="否" />
+            <FormItem Label="@I18n.T("LBL_AUTO_SAVE")">
+                <Switch @bind-Value="@_newChild.AutoCascadeSave" CheckedChildren="@I18n.T("TXT_YES")" UnCheckedChildren="@I18n.T("TXT_NO")" />
             </FormItem>
         </Form>
     </Modal>
 
     <!-- 结构预览对话框 -->
-    <Modal Title="实体结构预览" WrapClassName="calm-modal"
+    <Modal Title="@I18n.T("LBL_ENTITY_STRUCTURE_PREVIEW")" WrapClassName="calm-modal"
            @bind-Visible="@_showPreviewDialog"
            Width="800"
            Footer="null">
@@ -228,6 +228,9 @@
     [Parameter]
     public Guid EntityId { get; set; }
 
+    [CascadingParameter]
+    public int I18nRenderVersion { get; set; }
+
     private bool _loading = true;
     private bool _saving = false;
     private bool _previewing = false;
@@ -235,6 +238,7 @@
     private bool _loadingCandidates = false;
     private bool _showAddChildDialog = false;
     private bool _showPreviewDialog = false;
+    private int _lastI18nRenderVersion = -1;
 
     private EntityDefinitionDto? _entity;
     private MasterDetailConfigRequest _config = new();
@@ -246,6 +250,15 @@
     {
         await LoadEntity();
         await LoadChildCandidates();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_lastI18nRenderVersion != I18nRenderVersion)
+        {
+            _lastI18nRenderVersion = I18nRenderVersion;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadEntity()
@@ -285,7 +298,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"加载失败: {ex.Message}");
+            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -306,7 +319,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"加载候选实体失败: {ex.Message}");
+            await Message.Error($"{I18n.T("MSG_LOAD_CANDIDATES_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -338,26 +351,26 @@
     {
         if (_newChild.ChildEntityId == Guid.Empty)
         {
-            Message.Warning("请选择子实体");
+            Message.Warning(I18n.T("MSG_PLEASE_SELECT_CHILD_ENTITY"));
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_newChild.ForeignKeyField))
         {
-            Message.Warning("请输入外键字段名");
+            Message.Warning(I18n.T("MSG_PLEASE_INPUT_FOREIGN_KEY"));
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_newChild.CollectionProperty))
         {
-            Message.Warning("请输入集合属性名");
+            Message.Warning(I18n.T("MSG_PLEASE_INPUT_COLLECTION_PROPERTY"));
             return;
         }
 
         // 检查是否已添加
         if (_config.Children?.Any(c => c.ChildEntityId == _newChild.ChildEntityId) == true)
         {
-            Message.Warning("该子实体已添加");
+            Message.Warning(I18n.T("MSG_CHILD_ENTITY_ALREADY_ADDED"));
             return;
         }
 
@@ -388,18 +401,18 @@
             var response = await Http.PostAsJsonAsync($"/api/entity-advanced/{EntityId}/configure-master-detail", _config);
             if (response.IsSuccessStatusCode)
             {
-                await Message.Success("配置已保存");
+                await Message.Success(I18n.T("MSG_CONFIG_SAVED"));
                 _hasChanges = false;
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                await Message.Error($"保存失败: {error}");
+                await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {error}");
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"保存失败: {ex.Message}");
+            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -414,20 +427,20 @@
         {
             // 生成结构预览
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"实体：{_entity?.EntityName}");
-            sb.AppendLine($"结构类型：{GetStructureTypeText(_config.StructureType)}");
+            sb.AppendLine($"{I18n.T("LBL_ENTITY")}: {_entity?.EntityName}");
+            sb.AppendLine($"{I18n.T("LBL_STRUCTURE_TYPE")}: {GetStructureTypeText(_config.StructureType)}");
             sb.AppendLine();
 
             if (_config.Children?.Any() == true)
             {
-                sb.AppendLine("子实体：");
+                sb.AppendLine($"{I18n.T("LBL_CHILD_ENTITIES")}:");
                 foreach (var child in _config.Children)
                 {
                     sb.AppendLine($"  ├─ {child.ChildEntityName}");
-                    sb.AppendLine($"  │  外键：{child.ForeignKeyField}");
-                    sb.AppendLine($"  │  集合：{child.CollectionProperty}");
-                    sb.AppendLine($"  │  级联删除：{child.CascadeDeleteBehavior}");
-                    sb.AppendLine($"  │  自动保存：{(child.AutoCascadeSave ? "是" : "否")}");
+                    sb.AppendLine($"  │  {I18n.T("LBL_FOREIGN_KEY")}: {child.ForeignKeyField}");
+                    sb.AppendLine($"  │  {I18n.T("LBL_COLLECTION")}: {child.CollectionProperty}");
+                    sb.AppendLine($"  │  {I18n.T("LBL_CASCADE_DELETE")}: {child.CascadeDeleteBehavior}");
+                    sb.AppendLine($"  │  {I18n.T("LBL_AUTO_SAVE")}: {(child.AutoCascadeSave ? I18n.T("TXT_YES") : I18n.T("TXT_NO"))}");
                     sb.AppendLine();
                 }
             }
@@ -437,7 +450,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"预览失败: {ex.Message}");
+            await Message.Error($"{I18n.T("MSG_PREVIEW_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -452,9 +465,9 @@
 
     private string GetStructureTypeText(string type) => type switch
     {
-        "Single" => "单一实体",
-        "MasterDetail" => "主子结构",
-        "MasterDetailGrandchild" => "主子孙结构",
+        "Single" => I18n.T("LBL_SINGLE_ENTITY"),
+        "MasterDetail" => I18n.T("LBL_MASTER_DETAIL"),
+        "MasterDetailGrandchild" => I18n.T("LBL_MASTER_DETAIL_GRANDCHILD"),
         _ => type
     };
 
@@ -468,9 +481,9 @@
 
     private string GetStructureTypeDescription(string type) => type switch
     {
-        "Single" => "独立的实体表，无父子关系",
-        "MasterDetail" => "两层结构：主表 + 多个子表（如订单 + 订单行）",
-        "MasterDetailGrandchild" => "三层结构：主表 + 子表 + 孙表（如订单 + 订单行 + 订单行属性）",
+        "Single" => I18n.T("TXT_SINGLE_ENTITY_DESC"),
+        "MasterDetail" => I18n.T("TXT_MASTER_DETAIL_DESC"),
+        "MasterDetailGrandchild" => I18n.T("TXT_MASTER_DETAIL_GRANDCHILD_DESC"),
         _ => ""
     };
 
