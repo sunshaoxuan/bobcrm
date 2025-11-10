@@ -38,7 +38,17 @@ public class FieldMetadataDto
 {
     public Guid Id { get; set; }
     public string PropertyName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 显示名Key（自动生成，保留用于向后兼容）
+    /// </summary>
     public string DisplayNameKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualTextDto? DisplayName { get; set; }
+
     public string DataType { get; set; } = "String";
     public int? Length { get; set; }
     public int? Precision { get; set; }
@@ -69,8 +79,17 @@ public class CreateEntityDefinitionRequest
 {
     public string Namespace { get; set; } = "BobCrm.Domain.Custom";
     public string EntityName { get; set; } = string.Empty;
-    public string DisplayNameKey { get; set; } = string.Empty;
-    public string? DescriptionKey { get; set; }
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualTextDto DisplayName { get; set; } = new();
+
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public MultilingualTextDto? Description { get; set; }
+
     public string StructureType { get; set; } = "Single";
     public List<string> Interfaces { get; set; } = new();
     public List<FieldMetadataDto> Fields { get; set; } = new();
@@ -81,8 +100,16 @@ public class CreateEntityDefinitionRequest
 /// </summary>
 public class UpdateEntityDefinitionRequest
 {
-    public string DisplayNameKey { get; set; } = string.Empty;
-    public string? DescriptionKey { get; set; }
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualTextDto DisplayName { get; set; } = new();
+
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public MultilingualTextDto? Description { get; set; }
+
     public string? Icon { get; set; }
     public string? Category { get; set; }
     public bool IsEnabled { get; set; } = true;

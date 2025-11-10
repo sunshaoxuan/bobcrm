@@ -1,0 +1,95 @@
+@* 多语言输入组件 *@
+<div class="multilingual-input">
+    <Tabs>
+        <TabPane Key="ja" Tab="日本語">
+            <Input @bind-Value="@_jaValue"
+                   ValueChanged="@((string? v) => OnJaChanged(v))"
+                   Placeholder="@PlaceholderJA"
+                   Class="field-control" />
+        </TabPane>
+        <TabPane Key="zh" Tab="中文">
+            <Input @bind-Value="@_zhValue"
+                   ValueChanged="@((string? v) => OnZhChanged(v))"
+                   Placeholder="@PlaceholderZH"
+                   Class="field-control" />
+        </TabPane>
+        <TabPane Key="en" Tab="English">
+            <Input @bind-Value="@_enValue"
+                   ValueChanged="@((string? v) => OnEnChanged(v))"
+                   Placeholder="@PlaceholderEN"
+                   Class="field-control" />
+        </TabPane>
+    </Tabs>
+</div>
+
+<style>
+    .multilingual-input {
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        padding: 8px;
+    }
+    .multilingual-input .ant-tabs-nav {
+        margin-bottom: 8px;
+    }
+</style>
+
+@code {
+    [Parameter] public MultilingualTextDto? Value { get; set; }
+    [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
+    [Parameter] public string? PlaceholderJA { get; set; } = "日本語で入力してください";
+    [Parameter] public string? PlaceholderZH { get; set; } = "请输入中文";
+    [Parameter] public string? PlaceholderEN { get; set; } = "Enter in English";
+
+    private string? _jaValue;
+    private string? _zhValue;
+    private string? _enValue;
+
+    protected override void OnParametersSet()
+    {
+        if (Value != null)
+        {
+            _jaValue = Value.JA;
+            _zhValue = Value.ZH;
+            _enValue = Value.EN;
+        }
+        else
+        {
+            _jaValue = null;
+            _zhValue = null;
+            _enValue = null;
+        }
+    }
+
+    private async Task OnJaChanged(string? value)
+    {
+        _jaValue = value;
+        await NotifyValueChanged();
+    }
+
+    private async Task OnZhChanged(string? value)
+    {
+        _zhValue = value;
+        await NotifyValueChanged();
+    }
+
+    private async Task OnEnChanged(string? value)
+    {
+        _enValue = value;
+        await NotifyValueChanged();
+    }
+
+    private async Task NotifyValueChanged()
+    {
+        var newValue = new MultilingualTextDto
+        {
+            JA = _jaValue,
+            ZH = _zhValue,
+            EN = _enValue
+        };
+
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+        }
+    }
+}

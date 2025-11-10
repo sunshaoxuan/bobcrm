@@ -156,6 +156,9 @@ builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 // ILocalization as Singleton with IMemoryCache for cross-request caching
 builder.Services.AddSingleton<ILocalization, EfLocalization>();
 
+// Metadata I18n Service (元数据多语言服务)
+builder.Services.AddScoped<BobCrm.Api.Services.MetadataI18nService>();
+
 // Entity Publishing Services (实体自定义与发布)
 builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();

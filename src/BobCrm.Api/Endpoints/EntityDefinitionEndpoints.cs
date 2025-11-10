@@ -194,6 +194,7 @@ public static class EntityDefinitionEndpoints
         group.MapPost("", async (
             CreateEntityDefinitionDto dto,
             AppDbContext db,
+            BobCrm.Api.Services.MetadataI18nService metadataI18nService,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -207,8 +208,15 @@ public static class EntityDefinitionEndpoints
                 return Results.BadRequest(new { error = "命名空间不能为空" });
             if (string.IsNullOrWhiteSpace(dto.EntityName))
                 return Results.BadRequest(new { error = "实体名不能为空" });
-            if (string.IsNullOrWhiteSpace(dto.DisplayNameKey))
-                return Results.BadRequest(new { error = "显示名不能为空" });
+
+            // 验证多语言显示名
+            if (dto.DisplayName == null ||
+                (string.IsNullOrWhiteSpace(dto.DisplayName.ZH) &&
+                 string.IsNullOrWhiteSpace(dto.DisplayName.JA) &&
+                 string.IsNullOrWhiteSpace(dto.DisplayName.EN)))
+            {
+                return Results.BadRequest(new { error = "显示名至少需要提供一种语言的文本" });
+            }
 
             // 检查是否已存在同名实体
             var exists = await db.EntityDefinitions
@@ -220,13 +228,38 @@ public static class EntityDefinitionEndpoints
                 return Results.Conflict(new { error = "实体已存在" });
             }
 
+            // 生成实体显示名和描述的多语言Key
+            var displayNameKey = metadataI18nService.GenerateEntityDisplayNameKey(dto.EntityName);
+            string? descriptionKey = null;
+
+            // 保存实体显示名多语言资源
+            await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
+                displayNameKey,
+                dto.DisplayName.ZH,
+                dto.DisplayName.JA,
+                dto.DisplayName.EN);
+
+            // 保存实体描述多语言资源（如果提供）
+            if (dto.Description != null &&
+                (!string.IsNullOrWhiteSpace(dto.Description.ZH) ||
+                 !string.IsNullOrWhiteSpace(dto.Description.JA) ||
+                 !string.IsNullOrWhiteSpace(dto.Description.EN)))
+            {
+                descriptionKey = metadataI18nService.GenerateEntityDescriptionKey(dto.EntityName);
+                await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
+                    descriptionKey,
+                    dto.Description.ZH,
+                    dto.Description.JA,
+                    dto.Description.EN);
+            }
+
             // 创建实体定义
             var definition = new EntityDefinition
             {
                 Namespace = dto.Namespace,
                 EntityName = dto.EntityName,
-                DisplayNameKey = dto.DisplayNameKey,
-                DescriptionKey = dto.DescriptionKey,
+                DisplayNameKey = displayNameKey,
+                DescriptionKey = descriptionKey,
                 StructureType = dto.StructureType ?? EntityStructureType.Single,
                 Status = EntityStatus.Draft,
                 CreatedBy = uid,
@@ -238,10 +271,32 @@ public static class EntityDefinitionEndpoints
             {
                 foreach (var fieldDto in dto.Fields)
                 {
+                    // 验证字段显示名
+                    if (fieldDto.DisplayName == null ||
+                        (string.IsNullOrWhiteSpace(fieldDto.DisplayName.ZH) &&
+                         string.IsNullOrWhiteSpace(fieldDto.DisplayName.JA) &&
+                         string.IsNullOrWhiteSpace(fieldDto.DisplayName.EN)))
+                    {
+                        return Results.BadRequest(new {
+                            error = $"字段 {fieldDto.PropertyName} 的显示名至少需要提供一种语言的文本"
+                        });
+                    }
+
+                    // 生成字段显示名Key
+                    var fieldDisplayNameKey = metadataI18nService.GenerateFieldDisplayNameKey(
+                        dto.EntityName, fieldDto.PropertyName);
+
+                    // 保存字段显示名多语言资源
+                    await metadataI18nService.SaveOrUpdateMetadataI18nAsync(
+                        fieldDisplayNameKey,
+                        fieldDto.DisplayName.ZH,
+                        fieldDto.DisplayName.JA,
+                        fieldDto.DisplayName.EN);
+
                     definition.Fields.Add(new FieldMetadata
                     {
                         PropertyName = fieldDto.PropertyName,
-                        DisplayNameKey = fieldDto.DisplayNameKey,
+                        DisplayNameKey = fieldDisplayNameKey,
                         DataType = fieldDto.DataType,
                         Length = fieldDto.Length,
                         Precision = fieldDto.Precision,
@@ -842,12 +897,31 @@ public static class EntityDefinitionEndpoints
 /// <summary>
 /// 创建实体定义DTO
 /// </summary>
+/// <summary>
+/// 多语言文本记录
+/// </summary>
+public record MultilingualText
+{
+    public string? ZH { get; init; }
+    public string? JA { get; init; }
+    public string? EN { get; init; }
+}
+
 public record CreateEntityDefinitionDto
 {
     public string Namespace { get; init; } = "BobCrm.Domain.Custom";
     public string EntityName { get; init; } = string.Empty;
-    public string DisplayNameKey { get; init; } = string.Empty;
-    public string? DescriptionKey { get; init; }
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualText? DisplayName { get; init; }
+
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public MultilingualText? Description { get; init; }
+
     public string? StructureType { get; init; }
     public List<CreateFieldMetadataDto>? Fields { get; init; }
     public List<string>? Interfaces { get; init; }
@@ -859,7 +933,12 @@ public record CreateEntityDefinitionDto
 public record CreateFieldMetadataDto
 {
     public string PropertyName { get; init; } = string.Empty;
-    public string DisplayNameKey { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualText? DisplayName { get; init; }
+
     public string DataType { get; init; } = FieldDataType.String;
     public int? Length { get; init; }
     public int? Precision { get; init; }
@@ -879,8 +958,17 @@ public record UpdateEntityDefinitionDto
 {
     public string? Namespace { get; init; }
     public string? EntityName { get; init; }
-    public string? DisplayNameKey { get; init; }
-    public string? DescriptionKey { get; init; }
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualText? DisplayName { get; init; }
+
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public MultilingualText? Description { get; init; }
+
     public string? StructureType { get; init; }
     public List<UpdateFieldMetadataDto>? Fields { get; init; }
     public List<string>? Interfaces { get; init; }
@@ -893,7 +981,12 @@ public record UpdateFieldMetadataDto
 {
     public Guid? Id { get; init; }
     public string? PropertyName { get; init; }
-    public string? DisplayNameKey { get; init; }
+
+    /// <summary>
+    /// 显示名（多语言）
+    /// </summary>
+    public MultilingualText? DisplayName { get; init; }
+
     public string? DataType { get; init; }
     public int? Length { get; init; }
     public int? Precision { get; init; }
