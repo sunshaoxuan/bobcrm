@@ -162,6 +162,7 @@ builder.Services.AddSingleton<ILocalization, EfLocalization>();
 // Entity Publishing Services (实体自定义与发布)
 builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
+builder.Services.AddScoped<BobCrm.Api.Services.EntitySchemaAlignmentService>();
 builder.Services.AddScoped<BobCrm.Api.Services.IEntityPublishingService, BobCrm.Api.Services.EntityPublishingService>();
 
 // Dynamic Entity Services (代码生成与动态编译)
@@ -233,7 +234,9 @@ if (!skipDbInit)
 
     await DatabaseInitializer.InitializeAsync(db);
 
-
+    // ✅ 对齐所有已发布的动态实体的表结构
+    var schemaAlignmentService = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Services.EntitySchemaAlignmentService>();
+    await schemaAlignmentService.AlignAllPublishedEntitiesAsync();
 
     // Upgrade login i18n resources to latest copy (idempotent)
 
