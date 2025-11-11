@@ -542,48 +542,38 @@ public static class DatabaseInitializer
             // 从JSON文件加载所有i18n资源（单一数据源原则）
             var allResources = await I18nResourceLoader.LoadResourcesAsync();
 
-            // 使用异步Ensure方法批量处理资源
-            async Task EnsureAsync(LocalizationResource resource)
-            {
-                try
-                {
-                    var set = db.Set<LocalizationResource>();
-                    // 先检查 ChangeTracker（内存中的实体），避免重复查询
-                    var existing = set.Local.FirstOrDefault(x => x.Key == resource.Key);
-                    if (existing == null)
-                    {
-                        // ChangeTracker 中没有，异步从数据库查询
-                        existing = await set.FirstOrDefaultAsync(x => x.Key == resource.Key);
-                    }
+            // 批量查询已存在的键（优化：一次查询代替 N 次查询）
+            var existingKeysList = await db.Set<LocalizationResource>()
+                .Select(r => r.Key)
+                .ToListAsync();
+            var existingKeysSet = existingKeysList.ToHashSet();
 
-                    if (existing == null)
+            // 分离新增和更新的资源
+            var toAdd = allResources.Where(r => !existingKeysSet.Contains(r.Key)).ToList();
+            var toUpdate = allResources.Where(r => existingKeysSet.Contains(r.Key)).ToList();
+
+            // 批量添加新资源
+            if (toAdd.Any())
+            {
+                await db.Set<LocalizationResource>().AddRangeAsync(toAdd);
+            }
+
+            // 批量更新已存在的资源
+            if (toUpdate.Any())
+            {
+                var existingDict = await db.Set<LocalizationResource>()
+                    .Where(r => toUpdate.Select(u => u.Key).Contains(r.Key))
+                    .ToDictionaryAsync(r => r.Key);
+
+                foreach (var resource in toUpdate)
+                {
+                    if (existingDict.TryGetValue(resource.Key, out var existing))
                     {
-                        set.Add(new LocalizationResource
-                        {
-                            Key = resource.Key,
-                            ZH = resource.ZH,
-                            JA = resource.JA,
-                            EN = resource.EN
-                        });
-                    }
-                    else
-                    {
-                        // 更新已存在的记录
                         existing.ZH = resource.ZH;
                         existing.JA = resource.JA;
                         existing.EN = resource.EN;
                     }
                 }
-                catch (InvalidOperationException)
-                {
-                    // In rare cases of duplicate tracking (test startup concurrency), ignore and proceed
-                }
-            }
-
-            // 批量处理所有资源
-            foreach (var resource in allResources)
-            {
-                await EnsureAsync(resource);
             }
         }
 
