@@ -614,5 +614,15 @@
   "MSG_FIELD_DISPLAY_NAME_REQUIRED": { "zh": "字段显示名不能为空", "ja": "フィールド表示名は必須です", "en": "Field display name is required" },
   "MSG_LOAD_FAILED": { "zh": "加载失败", "ja": "読み込みに失敗しました", "en": "Load failed" },
   "TXT_YES": { "zh": "是", "ja": "はい", "en": "Yes" },
-  "TXT_NO": { "zh": "否", "ja": "いいえ", "en": "No" }
+  "TXT_NO": { "zh": "否", "ja": "いいえ", "en": "No" },
+  "INTERFACE_BASE": { "zh": "基础", "ja": "基本", "en": "Base" },
+  "INTERFACE_BASE_DESC": { "zh": "IEntity - Id", "ja": "IEntity - Id", "en": "IEntity - Id" },
+  "INTERFACE_ARCHIVE": { "zh": "档案", "ja": "アーカイブ", "en": "Archive" },
+  "INTERFACE_ARCHIVE_DESC": { "zh": "IArchive - Code, Name", "ja": "IArchive - Code, Name", "en": "IArchive - Code, Name" },
+  "INTERFACE_AUDIT": { "zh": "审计", "ja": "監査", "en": "Audit" },
+  "INTERFACE_AUDIT_DESC": { "zh": "IAuditable - CreatedAt, CreatedBy, UpdatedAt, UpdatedBy", "ja": "IAuditable - CreatedAt, CreatedBy, UpdatedAt, UpdatedBy", "en": "IAuditable - CreatedAt, CreatedBy, UpdatedAt, UpdatedBy" },
+  "INTERFACE_VERSION": { "zh": "版本", "ja": "バージョン", "en": "Version" },
+  "INTERFACE_VERSION_DESC": { "zh": "IVersioned - Version", "ja": "IVersioned - Version", "en": "IVersioned - Version" },
+  "INTERFACE_TIME_VERSION": { "zh": "时间版本", "ja": "タイムバージョン", "en": "TimeVersion" },
+  "INTERFACE_TIME_VERSION_DESC": { "zh": "ITimeVersioned - RowVersion", "ja": "ITimeVersioned - RowVersion", "en": "ITimeVersioned - RowVersion" }
 }
