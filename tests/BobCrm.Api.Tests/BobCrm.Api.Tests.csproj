@@ -30,4 +30,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="../../src/BobCrm.Api/Resources/i18n-resources.json">
+      <Link>Resources/i18n-resources.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
