@@ -146,7 +146,7 @@
             <MultilingualInput @bind-Value="@_editingField.DisplayName" />
         </FormItem>
         <FormItem Label="@I18n.T("LBL_DATA_TYPE")">
-            <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Style="width: 100%;">
+            <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Class="field-control">
                 <SelectOptions>
                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String" />
                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer" />

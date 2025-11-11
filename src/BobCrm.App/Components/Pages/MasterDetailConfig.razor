@@ -108,7 +108,7 @@
                             <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="@I18n.T("LBL_CASCADE_DELETE")">
-                            <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Style="width: 120px;">
+                            <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Class="field-control">
                                 <SelectOptions>
                                     <SelectOption TItemValue="string" TItem="string" Value="@("NoAction")" Label="@I18n.T("LBL_CASCADE_NO_ACTION")" />
                                     <SelectOption TItemValue="string" TItem="string" Value="@("Cascade")" Label="@I18n.T("LBL_CASCADE_DELETE")" />
