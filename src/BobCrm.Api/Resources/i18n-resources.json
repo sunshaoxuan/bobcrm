@@ -179,6 +179,7 @@
   "LBL_CURRENT_PASSWORD": { "zh": "当前密码", "ja": "現在のパスワード", "en": "Current Password" },
   "LBL_CURRENT_STRUCTURE": { "zh": "当前结构", "ja": "現在の構造", "en": "Current Structure" },
   "LBL_CURRENT_USER_TEMPLATE": { "zh": "当前用户模板", "ja": "現在のユーザーテンプレート", "en": "Current User Template" },
+  "LBL_CUSTOMER": { "zh": "客户", "ja": "顧客", "en": "Customer" },
   "LBL_CUSTOMER_CODE_HINT": { "zh": "唯一标识，例如: C001", "ja": "一意の識別子、例: C001", "en": "Unique identifier, e.g. C001" },
   "LBL_CUSTOMER_DETAIL": { "zh": "客户详情", "ja": "顧客詳細", "en": "Customer Detail" },
   "LBL_CUSTOMER_LAYOUT": { "zh": "客户详情页布局", "ja": "顧客詳細ページレイアウト", "en": "Customer Detail Layout" },
