@@ -1,6 +1,7 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
 @inject IMultilingualTextResolver MultilingualTextResolver
+@inject BobCrm.App.Services.I18nService I18n
 
 <div class="sub-entity-tabs-container">
     @if (SubEntities != null && SubEntities.Any())
@@ -8,7 +9,7 @@
         <Tabs @bind-ActiveKey="@_activeKey"
               Type="@TabType.EditableCard"
               HideAdd="true"
-              OnEdit="OnTabEdit">
+              OnEdit="@((key, action) => OnTabEdit(key, action))">
 
             @foreach (var subEntity in SubEntities)
             {
@@ -49,7 +50,7 @@
     }
     else
     {
-        <Empty Description="暂无子实体，请点击下方按钮添加">
+        <Empty Description="@I18n.T("LBL_NO_SUB_ENTITIES")">
             <ChildContent>
                 <Icon Type="@IconType.Outline.Inbox" Style="font-size: 48px; color: #d9d9d9;" />
             </ChildContent>
@@ -68,8 +69,8 @@
 
 <Modal Title="新建子实体"
        @bind-Visible="@_addModalVisible"
-       OnOk="@OnAddSubEntityConfirm"
-       OnCancel="@OnAddSubEntityCancel"
+       OnOk="@(() => OnAddSubEntityConfirm())"
+       OnCancel="@(() => OnAddSubEntityCancel())"
        Width="600">
     <Form Model="@_newSubEntity" @ref="_addForm" LabelCol="new ColLayoutParam { Span = 6 }" WrapperCol="new ColLayoutParam { Span = 18 }">
         <FormItem Label="子实体编码" Required>
@@ -90,7 +91,7 @@
         </FormItem>
 
         <FormItem Label="排序顺序">
-            <InputNumber @bind-Value="@_newSubEntity.SortOrder" Min="0" Style="width: 100%;" />
+            <AntDesign.InputNumber @bind-Value="@_newSubEntity.SortOrder" Min="0" Style="width: 100%;" />
         </FormItem>
 
         <FormItem Label="外键字段">
@@ -201,7 +202,7 @@
         _addModalVisible = false;
     }
 
-    private async Task OnTabEdit(string key, string action)
+    private async Task<bool> OnTabEdit(string key, string action)
     {
         if (action == "remove")
         {
@@ -221,7 +222,10 @@
                 }
 
                 StateHasChanged();
+                return true;
             }
         }
+
+        return false;
     }
 }

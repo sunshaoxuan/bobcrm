@@ -9,144 +9,148 @@
            Bordered
            Responsive>
 
-        <Column Title="字段编码" TData="string" Width="150px">
-            @if (context.IsEditing)
-            {
-                <Input @bind-Value="@context.PropertyName"
-                       Placeholder="例如: ProductCode"
-                       Status="@(string.IsNullOrWhiteSpace(context.PropertyName) ? "error" : "")" />
-            }
-            else
-            {
-                <Text>@context.PropertyName</Text>
-            }
-        </Column>
+        <ChildContent Context="field">
+            <Column Title="字段编码" TData="string" Width="150px">
+                @if (field.IsEditing)
+                {
+                    <Input @bind-Value="@field.PropertyName"
+                           Placeholder="例如: ProductCode"
+                           Status="@(string.IsNullOrWhiteSpace(field.PropertyName) ? "error" : "")" />
+                }
+                else
+                {
+                    <Text>@field.PropertyName</Text>
+                }
+            </Column>
 
-        <Column Title="显示名称" TData="string" Width="200px">
-            @if (context.IsEditing)
-            {
-                <MultilingualInput @bind-Value="@context.DisplayName" />
-            }
-            else
-            {
-                <Text>@MultilingualTextResolver.Resolve(context.DisplayName, "-")</Text>
-            }
-        </Column>
+            <Column Title="显示名称" TData="string" Width="200px">
+                @if (field.IsEditing)
+                {
+                    <MultilingualInput @bind-Value="@field.DisplayName" />
+                }
+                else
+                {
+                    <Text>@MultilingualTextResolver.Resolve(field.DisplayName, "-")</Text>
+                }
+            </Column>
 
-        <Column Title="数据类型" TData="string" Width="120px">
-            @if (context.IsEditing)
-            {
-                <Select @bind-Value="@context.DataType"
-                        Style="width: 100%"
-                        OnSelectedItemChanged="@(() => OnDataTypeChanged(context))">
-                    <SelectOption Value="String">String</SelectOption>
-                    <SelectOption Value="Int32">Int32</SelectOption>
-                    <SelectOption Value="Int64">Int64</SelectOption>
-                    <SelectOption Value="Decimal">Decimal</SelectOption>
-                    <SelectOption Value="DateTime">DateTime</SelectOption>
-                    <SelectOption Value="Date">Date</SelectOption>
-                    <SelectOption Value="Boolean">Boolean</SelectOption>
-                    <SelectOption Value="Guid">Guid</SelectOption>
-                </Select>
-            }
-            else
-            {
-                <Text>@context.DataType</Text>
-            }
-        </Column>
+            <Column Title="数据类型" TData="string" Width="120px">
+                @if (field.IsEditing)
+                {
+                    <Select TItem="string"
+                            TItemValue="string"
+                            Value="@field.DataType"
+                            Style="width: 100%"
+                            ValueChanged="@(value => { field.DataType = value; OnDataTypeChanged(field); })">
+                        <SelectOption Value="@("String")">String</SelectOption>
+                        <SelectOption Value="@("Int32")">Int32</SelectOption>
+                        <SelectOption Value="@("Int64")">Int64</SelectOption>
+                        <SelectOption Value="@("Decimal")">Decimal</SelectOption>
+                        <SelectOption Value="@("DateTime")">DateTime</SelectOption>
+                        <SelectOption Value="@("Date")">Date</SelectOption>
+                        <SelectOption Value="@("Boolean")">Boolean</SelectOption>
+                        <SelectOption Value="@("Guid")">Guid</SelectOption>
+                    </Select>
+                }
+                else
+                {
+                    <Text>@field.DataType</Text>
+                }
+            </Column>
 
-        <Column Title="长度" TData="int?" Width="100px">
-            @if (context.IsEditing && context.DataType == "String")
-            {
-                <InputNumber @bind-Value="@context.Length"
-                             Min="1"
-                             Max="5000"
-                             Placeholder="可选" />
-            }
-            else if (!context.IsEditing)
-            {
-                <Text>@(context.Length?.ToString() ?? "-")</Text>
-            }
-        </Column>
+            <Column Title="长度" TData="int?" Width="100px">
+                @if (field.IsEditing && field.DataType == "String")
+                {
+                    <AntDesign.InputNumber @bind-Value="@field.Length"
+                                 Min="1"
+                                 Max="5000"
+                                 Placeholder="可选" />
+                }
+                else if (!field.IsEditing)
+                {
+                    <Text>@(field.Length?.ToString() ?? "-")</Text>
+                }
+            </Column>
 
-        <Column Title="必填" TData="bool" Width="80px" Align="ColumnAlign.Center">
-            @if (context.IsEditing)
-            {
-                <Checkbox @bind-Checked="@context.IsRequired" />
-            }
-            else
-            {
-                <Checkbox Checked="@context.IsRequired" Disabled />
-            }
-        </Column>
+            <Column Title="必填" TData="bool" Width="80px" Align="ColumnAlign.Center">
+                @if (field.IsEditing)
+                {
+                    <Checkbox @bind-Checked="@field.IsRequired" />
+                }
+                else
+                {
+                    <Checkbox Checked="@field.IsRequired" Disabled />
+                }
+            </Column>
 
-        <Column Title="默认值" TData="string" Width="120px">
-            @if (context.IsEditing)
-            {
-                <Input @bind-Value="@context.DefaultValue"
-                       Placeholder="可选" />
-            }
-            else
-            {
-                <Text>@(context.DefaultValue ?? "-")</Text>
-            }
-        </Column>
+            <Column Title="默认值" TData="string" Width="120px">
+                @if (field.IsEditing)
+                {
+                    <Input @bind-Value="@field.DefaultValue"
+                           Placeholder="可选" />
+                }
+                else
+                {
+                    <Text>@(field.DefaultValue ?? "-")</Text>
+                }
+            </Column>
 
-        <Column Title="操作" Width="180px" Fixed="right">
-            @if (context.IsEditing)
-            {
-                <Space Size="@("small")">
-                    <SpaceItem>
-                        <Button Size="@ButtonSize.Small"
-                                Type="@ButtonType.Primary"
-                                Icon="@IconType.Outline.Check"
-                                OnClick="@(() => SaveField(context))">
-                            保存
-                        </Button>
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Button Size="@ButtonSize.Small"
-                                Icon="@IconType.Outline.Close"
-                                OnClick="@(() => CancelEdit(context))">
-                            取消
-                        </Button>
-                    </SpaceItem>
-                </Space>
-            }
-            else
-            {
-                <Space Size="@("small")">
-                    <SpaceItem>
-                        <Button Size="@ButtonSize.Small"
-                                Icon="@IconType.Outline.Edit"
-                                OnClick="@(() => EditField(context))"
-                                Title="编辑" />
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Button Size="@ButtonSize.Small"
-                                Icon="@IconType.Outline.Copy"
-                                OnClick="@(() => CopyField(context))"
-                                Title="复制" />
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Popconfirm Title="确认删除此字段？"
-                                    OnConfirm="@(() => DeleteField(context))">
+            <Column Title="操作" TData="string" Width="180px" Fixed="right">
+                @if (field.IsEditing)
+                {
+                    <Space Size="@("small")">
+                        <SpaceItem>
                             <Button Size="@ButtonSize.Small"
-                                    Icon="@IconType.Outline.Delete"
-                                    Danger
-                                    Title="删除" />
-                        </Popconfirm>
-                    </SpaceItem>
-                </Space>
-            }
-        </Column>
+                                    Type="@ButtonType.Primary"
+                                    Icon="@IconType.Outline.Check"
+                                    OnClick="@(() => SaveField(field))">
+                                保存
+                            </Button>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Button Size="@ButtonSize.Small"
+                                    Icon="@IconType.Outline.Close"
+                                    OnClick="@(() => CancelEdit(field))">
+                                取消
+                            </Button>
+                        </SpaceItem>
+                    </Space>
+                }
+                else
+                {
+                    <Space Size="@("small")">
+                        <SpaceItem>
+                            <Button Size="@ButtonSize.Small"
+                                    Icon="@IconType.Outline.Edit"
+                                    OnClick="@(() => EditField(field))"
+                                    Title="编辑" />
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Button Size="@ButtonSize.Small"
+                                    Icon="@IconType.Outline.Copy"
+                                    OnClick="@(() => CopyField(field))"
+                                    Title="复制" />
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Popconfirm Title="确认删除此字段？"
+                                        OnConfirm="@(() => DeleteField(field))">
+                                <Button Size="@ButtonSize.Small"
+                                        Icon="@IconType.Outline.Delete"
+                                        Danger
+                                        Title="删除" />
+                            </Popconfirm>
+                        </SpaceItem>
+                    </Space>
+                }
+            </Column>
+        </ChildContent>
     </Table>
 
-    @if (context.ValidationError != null)
+    @foreach (var field in Fields.Where(f => f.ValidationError != null))
     {
         <Alert Type="@AlertType.Error"
-               Message="@context.ValidationError"
-               ShowIcon
+               Message="@field.ValidationError"
+               ShowIcon="true"
                Closable />
     }
 
