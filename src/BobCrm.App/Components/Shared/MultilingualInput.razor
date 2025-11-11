@@ -46,13 +46,13 @@
                    ReadOnly="true"
                    Placeholder="@GetDefaultPlaceholder()"
                    Class="field-control multilingual-field-collapsed"
-                   Suffix="@suffixTemplate" />
+                   Suffix="@GetSuffixTemplate()" />
         </div>
     }
 </div>
 
 @code {
-    private RenderFragment suffixTemplate = @<text>
+    private RenderFragment GetSuffixTemplate() => @<text>
         <span style="display: flex; align-items: center; gap: 4px; height: 100%;">
             <Icon Type="global" Style="color: #1890ff;" />
             <Icon Type="@(_isExpanded ? "up" : "down")" Style="font-size: 10px;" />

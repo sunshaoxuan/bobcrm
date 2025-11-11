@@ -10,7 +10,7 @@ namespace BobCrm.Api.Infrastructure;
 public static class I18nResourceLoader
 {
     private static List<LocalizationResource>? _cachedResources;
-    private static readonly object _lock = new();
+    private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
     /// <summary>
     /// 从JSON文件加载所有i18n资源
@@ -23,45 +23,48 @@ public static class I18nResourceLoader
             return _cachedResources.ToList(); // 返回副本避免并发修改
         }
 
-        lock (_lock)
+        await _semaphore.WaitAsync();
+        try
         {
+            // 双重检查锁定模式
             if (_cachedResources != null)
             {
                 return _cachedResources.ToList();
             }
 
-            try
+            var jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "i18n-resources.json");
+
+            if (!File.Exists(jsonPath))
             {
-                var jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "i18n-resources.json");
-
-                if (!File.Exists(jsonPath))
-                {
-                    throw new FileNotFoundException($"I18n resource file not found: {jsonPath}");
-                }
-
-                var json = File.ReadAllText(jsonPath);
-                var dict = JsonSerializer.Deserialize<Dictionary<string, I18nResourceDto>>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (dict == null || !dict.Any())
-                {
-                    throw new InvalidOperationException("I18n resource file is empty or invalid");
-                }
-
-                _cachedResources = dict.Select(kvp => new LocalizationResource
-                {
-                    Key = kvp.Key,
-                    ZH = kvp.Value.Zh ?? string.Empty,
-                    JA = kvp.Value.Ja ?? string.Empty,
-                    EN = kvp.Value.En ?? string.Empty
-                }).ToList();
-
-                return _cachedResources.ToList();
+                throw new FileNotFoundException($"I18n resource file not found: {jsonPath}");
             }
-            catch (Exception ex)
+
+            var json = await File.ReadAllTextAsync(jsonPath);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, I18nResourceDto>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (dict == null || !dict.Any())
             {
-                throw new InvalidOperationException($"Failed to load i18n resources: {ex.Message}", ex);
+                throw new InvalidOperationException("I18n resource file is empty or invalid");
             }
+
+            _cachedResources = dict.Select(kvp => new LocalizationResource
+            {
+                Key = kvp.Key,
+                ZH = kvp.Value.Zh ?? string.Empty,
+                JA = kvp.Value.Ja ?? string.Empty,
+                EN = kvp.Value.En ?? string.Empty
+            }).ToList();
+
+            return _cachedResources.ToList();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to load i18n resources: {ex.Message}", ex);
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
@@ -76,11 +79,16 @@ public static class I18nResourceLoader
     /// <summary>
     /// 清除缓存 - 用于测试或热重载场景
     /// </summary>
-    public static void ClearCache()
+    public static async Task ClearCacheAsync()
     {
-        lock (_lock)
+        await _semaphore.WaitAsync();
+        try
         {
             _cachedResources = null;
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
