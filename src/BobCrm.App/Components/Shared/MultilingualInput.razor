@@ -2,7 +2,7 @@
 @namespace BobCrm.App.Components.Shared
 
 @* 重构后的多语言输入组件 - 使用 Ant Design Dropdown *@
-<Dropdown @bind-Visible="_isExpanded"
+<Dropdown Visible="@_isExpanded"
           Trigger="@(new[] { Trigger.Click })"
           OnVisibleChange="HandleVisibleChange"
           OverlayClassName="multilingual-dropdown-overlay">

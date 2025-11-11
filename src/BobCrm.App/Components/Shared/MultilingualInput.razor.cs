@@ -92,7 +92,7 @@ public partial class MultilingualInput : IAsyncDisposable
 
     private async Task HandleVisibleChange(bool visible)
     {
-        // Note: @bind-Visible already updates _isExpanded, but we still track it for suffix icon
+        // Update state when Ant Dropdown visibility changes
         _isExpanded = visible;
 
         if (!visible)
