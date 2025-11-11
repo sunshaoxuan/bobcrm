@@ -170,3 +170,6 @@ nul
 tmp_*.txt
 debug_*.txt
 
+# Generated code files
+generated/
+
