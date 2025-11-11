@@ -31,5 +31,11 @@
     <PackageReference Include="AWSSDK.S3" Version="3.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\i18n-resources.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
 

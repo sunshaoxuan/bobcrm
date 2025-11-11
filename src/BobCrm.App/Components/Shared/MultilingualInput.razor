@@ -45,7 +45,7 @@
             <Input Value="@GetDefaultValue()"
                    ReadOnly="true"
                    Placeholder="@GetDefaultPlaceholder()"
-                   Class="multilingual-field-collapsed"
+                   Class="field-control multilingual-field-collapsed"
                    Suffix="@suffixTemplate" />
         </div>
     }
@@ -53,8 +53,10 @@
 
 @code {
     private RenderFragment suffixTemplate = @<text>
-        <Icon Type="global" Style="color: #1890ff;" />
-        <Icon Type="down" Style="margin-left: 4px; font-size: 10px;" />
+        <span style="display: flex; align-items: center; gap: 4px; height: 100%;">
+            <Icon Type="global" Style="color: #1890ff;" />
+            <Icon Type="@(_isExpanded ? "up" : "down")" Style="font-size: 10px;" />
+        </span>
     </text>;
 }
 
@@ -66,6 +68,11 @@
     }
 
     .multilingual-input-expanded {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 1050;
         border: 1px solid #1890ff;
         border-radius: 4px;
         padding: 12px;
