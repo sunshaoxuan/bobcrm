@@ -1,0 +1,227 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services.Multilingual
+@inject IMultilingualTextResolver MultilingualTextResolver
+
+<div class="sub-entity-tabs-container">
+    @if (SubEntities != null && SubEntities.Any())
+    {
+        <Tabs @bind-ActiveKey="@_activeKey"
+              Type="@TabType.EditableCard"
+              HideAdd="true"
+              OnEdit="OnTabEdit">
+
+            @foreach (var subEntity in SubEntities)
+            {
+                <TabPane Key="@subEntity.TempId.ToString()"
+                         Closable="true">
+                    <TabTemplate>
+                        <span class="@GetTabClass(subEntity)">
+                            @GetDisplayName(subEntity.DisplayName)
+                            @if (subEntity.HasValidationErrors)
+                            {
+                                <Badge Count="@subEntity.ValidationErrorCount"
+                                       Style="margin-left: 8px;"
+                                       Title="@string.Join("; ", subEntity.ValidationErrors)" />
+                            }
+                        </span>
+                    </TabTemplate>
+                    <ChildContent>
+                        <div class="sub-entity-panel">
+                            <div class="sub-entity-header">
+                                <Descriptions Title="子实体信息" Size="@DescriptionsSize.Small" Bordered Column="2">
+                                    <DescriptionsItem Title="编码">@subEntity.Code</DescriptionsItem>
+                                    <DescriptionsItem Title="显示名称">@GetDisplayName(subEntity.DisplayName)</DescriptionsItem>
+                                    <DescriptionsItem Title="排序" Span="2">@subEntity.SortOrder</DescriptionsItem>
+                                </Descriptions>
+                            </div>
+
+                            <Divider />
+
+                            <FieldGrid Fields="@subEntity.Fields"
+                                      OnFieldChanged="@(field => OnFieldChanged.InvokeAsync((subEntity.TempId, field)))"
+                                      OnFieldAdded="@(field => OnFieldAdded.InvokeAsync((subEntity.TempId, field)))"
+                                      OnFieldRemoved="@(fieldId => OnFieldRemoved.InvokeAsync((subEntity.TempId, fieldId)))" />
+                        </div>
+                    </ChildContent>
+                </TabPane>
+            }
+        </Tabs>
+    }
+    else
+    {
+        <Empty Description="暂无子实体，请点击下方按钮添加">
+            <ChildContent>
+                <Icon Type="@IconType.Outline.Inbox" Style="font-size: 48px; color: #d9d9d9;" />
+            </ChildContent>
+        </Empty>
+    }
+
+    <div class="add-sub-entity-button">
+        <Button Type="@ButtonType.Dashed"
+                Icon="@IconType.Outline.Plus"
+                Block
+                OnClick="@ShowAddSubEntityModal">
+            添加子实体
+        </Button>
+    </div>
+</div>
+
+<Modal Title="新建子实体"
+       @bind-Visible="@_addModalVisible"
+       OnOk="@OnAddSubEntityConfirm"
+       OnCancel="@OnAddSubEntityCancel"
+       Width="600">
+    <Form Model="@_newSubEntity" @ref="_addForm" LabelCol="new ColLayoutParam { Span = 6 }" WrapperCol="new ColLayoutParam { Span = 18 }">
+        <FormItem Label="子实体编码" Required>
+            <Input @bind-Value="@_newSubEntity.Code"
+                   Placeholder="例如: Lines, Items"
+                   MaxLength="100" />
+            <p style="font-size: 12px; color: #8c8c8c; margin-top: 4px;">
+                必须以大写字母开头，只能包含字母和数字
+            </p>
+        </FormItem>
+
+        <FormItem Label="显示名称" Required>
+            <MultilingualInput @bind-Value="@_newSubEntity.DisplayName" />
+        </FormItem>
+
+        <FormItem Label="描述">
+            <MultilingualInput @bind-Value="@_newSubEntity.Description" />
+        </FormItem>
+
+        <FormItem Label="排序顺序">
+            <InputNumber @bind-Value="@_newSubEntity.SortOrder" Min="0" Style="width: 100%;" />
+        </FormItem>
+
+        <FormItem Label="外键字段">
+            <Input @bind-Value="@_newSubEntity.ForeignKeyField"
+                   Placeholder="留空则自动生成（如 OrderId）" />
+        </FormItem>
+
+        <FormItem Label="集合属性名">
+            <Input @bind-Value="@_newSubEntity.CollectionPropertyName"
+                   Placeholder="留空则使用编码" />
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    [Parameter] public List<SubEntityViewModel> SubEntities { get; set; } = new();
+    [Parameter] public EventCallback<SubEntityViewModel> OnSubEntityAdded { get; set; }
+    [Parameter] public EventCallback<Guid> OnSubEntityRemoved { get; set; }
+    [Parameter] public EventCallback<(Guid SubEntityId, FieldViewModel Field)> OnFieldChanged { get; set; }
+    [Parameter] public EventCallback<(Guid SubEntityId, FieldViewModel Field)> OnFieldAdded { get; set; }
+    [Parameter] public EventCallback<(Guid SubEntityId, Guid FieldId)> OnFieldRemoved { get; set; }
+
+    private string _activeKey = string.Empty;
+    private bool _addModalVisible = false;
+    private SubEntityViewModel _newSubEntity = new();
+    private Form<SubEntityViewModel>? _addForm;
+
+    protected override void OnParametersSet()
+    {
+        if (SubEntities != null && SubEntities.Any() && string.IsNullOrEmpty(_activeKey))
+        {
+            _activeKey = SubEntities.First().TempId.ToString();
+        }
+    }
+
+    private string GetTabClass(SubEntityViewModel subEntity)
+    {
+        return subEntity.HasValidationErrors ? "tab-with-errors" : "";
+    }
+
+    private string GetDisplayName(MultilingualTextDto? displayName)
+    {
+        return MultilingualTextResolver.Resolve(displayName, "未命名");
+    }
+
+    private void ShowAddSubEntityModal()
+    {
+        _newSubEntity = new SubEntityViewModel
+        {
+            TempId = Guid.NewGuid(),
+            SortOrder = SubEntities?.Count ?? 0
+        };
+        _addModalVisible = true;
+    }
+
+    private async Task OnAddSubEntityConfirm()
+    {
+        // 验证子实体编码
+        if (string.IsNullOrWhiteSpace(_newSubEntity.Code))
+        {
+            // TODO: 显示错误消息
+            return;
+        }
+
+        if (!char.IsUpper(_newSubEntity.Code[0]))
+        {
+            // TODO: 显示错误消息：必须以大写字母开头
+            return;
+        }
+
+        if (!_newSubEntity.Code.All(c => char.IsLetterOrDigit(c)))
+        {
+            // TODO: 显示错误消息：只能包含字母和数字
+            return;
+        }
+
+        // 检查编码唯一性
+        if (SubEntities != null && SubEntities.Any(s => s.Code.Equals(_newSubEntity.Code, StringComparison.OrdinalIgnoreCase)))
+        {
+            // TODO: 显示错误消息：编码已存在
+            return;
+        }
+
+        // 验证显示名称
+        if (_newSubEntity.DisplayName == null || !_newSubEntity.DisplayName.Any())
+        {
+            // TODO: 显示错误消息：显示名称不能为空
+            return;
+        }
+
+        // 添加到列表
+        if (SubEntities == null)
+        {
+            SubEntities = new List<SubEntityViewModel>();
+        }
+
+        SubEntities.Add(_newSubEntity);
+        _activeKey = _newSubEntity.TempId.ToString();
+
+        await OnSubEntityAdded.InvokeAsync(_newSubEntity);
+
+        _addModalVisible = false;
+        StateHasChanged();
+    }
+
+    private void OnAddSubEntityCancel()
+    {
+        _addModalVisible = false;
+    }
+
+    private async Task OnTabEdit(string key, string action)
+    {
+        if (action == "remove")
+        {
+            var subEntityId = Guid.Parse(key);
+            var subEntity = SubEntities?.FirstOrDefault(s => s.TempId == subEntityId);
+
+            if (subEntity != null && SubEntities != null)
+            {
+                // 确认删除
+                SubEntities.Remove(subEntity);
+                await OnSubEntityRemoved.InvokeAsync(subEntityId);
+
+                // 更新活动Tab
+                if (_activeKey == key && SubEntities.Any())
+                {
+                    _activeKey = SubEntities.First().TempId.ToString();
+                }
+
+                StateHasChanged();
+            }
+        }
+    }
+}

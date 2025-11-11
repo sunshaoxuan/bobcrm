@@ -1,0 +1,32 @@
+.sub-entity-tabs-container {
+    padding: 16px 0;
+}
+
+.add-sub-entity-button {
+    margin-top: 16px;
+}
+
+.tab-with-errors {
+    color: #ff4d4f;
+}
+
+.sub-entity-panel {
+    padding: 16px;
+}
+
+.sub-entity-header {
+    margin-bottom: 16px;
+}
+
+::deep .ant-tabs-content {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+::deep .ant-tabs-nav {
+    margin-bottom: 0;
+}
+
+::deep .ant-empty {
+    margin: 32px 0;
+}

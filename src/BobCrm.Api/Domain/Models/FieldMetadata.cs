@@ -25,6 +25,12 @@ public class FieldMetadata
     public Guid? ParentFieldId { get; set; }
 
     /// <summary>
+    /// 所属子实体ID（可选）
+    /// 如果为空，表示是主实体字段；否则表示是子实体字段
+    /// </summary>
+    public Guid? SubEntityDefinitionId { get; set; }
+
+    /// <summary>
     /// 属性名（代码中的名称，如 Email）
     /// </summary>
     [Required, MaxLength(100)]
@@ -138,6 +144,11 @@ public class FieldMetadata
     /// 引用的实体定义（导航属性）
     /// </summary>
     public EntityDefinition? ReferencedEntity { get; set; }
+
+    /// <summary>
+    /// 所属子实体（导航属性）
+    /// </summary>
+    public SubEntityDefinition? SubEntityDefinition { get; set; }
 }
 
 /// <summary>
