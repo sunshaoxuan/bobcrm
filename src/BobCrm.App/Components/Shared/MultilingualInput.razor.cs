@@ -197,26 +197,6 @@ public partial class MultilingualInput : IAsyncDisposable
         };
     }
 
-    private RenderFragment GetSuffixTemplate() => builder =>
-    {
-        builder.OpenElement(0, "span");
-        builder.AddAttribute(1, "style", "display: flex; align-items: center; gap: 4px; height: 100%;");
-
-        // Global icon
-        builder.OpenComponent<Icon>(2);
-        builder.AddAttribute(3, "Type", "global");
-        builder.AddAttribute(4, "Style", "color: #1890ff;");
-        builder.CloseComponent();
-
-        // Up/Down arrow icon
-        builder.OpenComponent<Icon>(5);
-        builder.AddAttribute(6, "Type", _isExpanded ? "up" : "down");
-        builder.AddAttribute(7, "Style", "font-size: 10px;");
-        builder.CloseComponent();
-
-        builder.CloseElement();
-    };
-
     private RenderFragment RenderOverlay() => builder =>
     {
         builder.OpenElement(0, "div");
