@@ -1283,7 +1283,7 @@ public static class DatabaseInitializer
             Ensure("LBL_NAV_DISPLAY_MODE", "导航显示模式", "ナビゲーション表示モード", "Nav Display Mode");
             Ensure("MSG_SETTINGS_SAVED", "设置已保存", "設定が保存されました", "Settings saved");
             Ensure("MSG_SETTINGS_FAILED", "设置保存失败", "設定の保存に失敗しました", "Failed to save settings");
-            Ensure("MENU_PROFILE", "个人资料", "プロフィール", "Profile");
+            // MENU_PROFILE 已在第804行定义，此处删除重复
             Ensure("MENU_TEMPLATES", "模板", "テンプレート", "Templates");
             Ensure("MENU_FILES", "文件", "ファイル", "Files");
             Ensure("LBL_USER_INFORMATION", "用户信息", "ユーザー情報", "User Information");
