@@ -244,7 +244,7 @@ public class EntityDefinitionAggregateServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateAggregate_ValidAggregate_ReturnsValid()
+    public void ValidateAggregate_ValidAggregate_ReturnsValid()
     {
         // Arrange
         var root = CreateTestEntity();
@@ -259,7 +259,7 @@ public class EntityDefinitionAggregateServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateAggregate_InvalidAggregate_ReturnsErrors()
+    public void ValidateAggregate_InvalidAggregate_ReturnsErrors()
     {
         // Arrange
         var root = CreateTestEntity();
@@ -327,16 +327,12 @@ public class EntityDefinitionAggregateServiceTests : IDisposable
         var reloadedAggregate = await _service.LoadAggregateAsync(root.Id);
 
         // Act - 尝试添加另一个同名子实体（应该在验证时失败）
-        try
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DomainException>(async () =>
         {
             reloadedAggregate!.AddSubEntity("Lines", new Dictionary<string, string?> { ["zh"] = "又一个明细" });
             await _service.SaveAggregateAsync(reloadedAggregate);
-            Assert.True(false, "应该抛出异常");
-        }
-        catch (DomainException)
-        {
-            // 预期的异常
-        }
+        });
 
         // Assert - 验证数据库中只有原始的两个子实体（一个来自首次保存，一个是手动添加的重复）
         var subEntitiesInDb = await _dbContext.SubEntityDefinitions

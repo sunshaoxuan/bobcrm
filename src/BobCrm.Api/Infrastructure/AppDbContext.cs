@@ -92,7 +92,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<SubEntityDefinition>()
             .Property(s => s.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<SubEntityDefinition>()
             .Property(s => s.Description)
