@@ -126,7 +126,8 @@ public class EntitySchemaAlignmentService
                 tableName, mismatchedColumns.Count, string.Join(", ", mismatchedColumns.Select(c => c.ColumnName)));
         }
 
-        return AlignmentResult.Aligned;
+        // 如果添加了缺失的列，返回 Aligned；否则返回 AlreadyAligned
+        return missingColumns.Count > 0 ? AlignmentResult.Aligned : AlignmentResult.AlreadyAligned;
     }
 
     /// <summary>
