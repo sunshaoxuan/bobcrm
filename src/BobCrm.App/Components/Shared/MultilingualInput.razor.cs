@@ -17,7 +17,6 @@ public partial class MultilingualInput : IAsyncDisposable
     [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
     [Parameter] public string? DefaultLanguage { get; set; }
 
-    private readonly Trigger[] _trigger = [Trigger.Click];
     private List<LanguageInfo>? _languages;
     private Dictionary<string, string?> _values = new();
     private bool _isExpanded = false;
@@ -93,13 +92,19 @@ public partial class MultilingualInput : IAsyncDisposable
 
     private async Task HandleVisibleChange(bool visible)
     {
+        // Note: @bind-Visible already updates _isExpanded, but we still track it for suffix icon
         _isExpanded = visible;
 
-        if (visible)
+        if (!visible)
         {
-            // When dropdown opens, set the overlay width to match the trigger
-            await SetOverlayWidthAsync();
+            // Ensure re-render when closing
+            await InvokeAsync(StateHasChanged);
+            return;
         }
+
+        // When dropdown opens, set the overlay width to match the trigger
+        await SetOverlayWidthAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SetOverlayWidthAsync()

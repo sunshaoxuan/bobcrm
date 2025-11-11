@@ -4,10 +4,11 @@
    - Primary color is controlled by CSS variable --primary
 */
 
-/* 全局样式：防止 html/body 产生滚动条 */
+/* 全局样式：允许垂直滚动，防止水平滚动 */
 html, body {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: 0;
   padding: 0;
 }
@@ -45,8 +46,8 @@ html, body {
   --shadow: 0 6px 24px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.25);
 }
 
-/* App shell - 固定高度，防止页面滚动 */
-.app-shell { height: 100vh; overflow: hidden; display: flex; background: var(--bg); color: var(--text); }
+/* App shell - 允许内容超出视口时滚动 */
+.app-shell { min-height: 100vh; overflow-x: hidden; overflow-y: auto; display: flex; background: var(--bg); color: var(--text); }
 .app-sider { width: 240px; background: var(--sider-bg); color: #fff; padding: 12px 12px; }
 .app-sider a { color: #fff; opacity: .92; }
 
@@ -71,7 +72,7 @@ html, body {
 }
 
 /* App Main and Header */
-.app-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.app-main { flex: 1; display: flex; flex-direction: column; overflow: visible; }
 .app-header {
   background: var(--header-bg);
   border-bottom: 1px solid var(--border);
