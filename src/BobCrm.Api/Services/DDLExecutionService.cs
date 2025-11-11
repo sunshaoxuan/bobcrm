@@ -29,7 +29,7 @@ public class DDLExecutionService
     /// <param name="sqlScript">SQL脚本内容</param>
     /// <param name="createdBy">创建人</param>
     /// <returns>DDL脚本记录</returns>
-    public async Task<DDLScript> ExecuteDDLAsync(
+    public virtual async Task<DDLScript> ExecuteDDLAsync(
         Guid entityDefinitionId,
         string scriptType,
         string sqlScript,
@@ -76,7 +76,7 @@ public class DDLExecutionService
     /// <summary>
     /// 批量执行DDL脚本（事务）
     /// </summary>
-    public async Task<List<DDLScript>> ExecuteDDLBatchAsync(
+    public virtual async Task<List<DDLScript>> ExecuteDDLBatchAsync(
         Guid entityDefinitionId,
         List<(string ScriptType, string SqlScript)> scripts,
         string? createdBy = null)
@@ -172,7 +172,7 @@ public class DDLExecutionService
     /// <summary>
     /// 检查表是否存在
     /// </summary>
-    public async Task<bool> TableExistsAsync(string tableName)
+    public virtual async Task<bool> TableExistsAsync(string tableName)
     {
         var sql = @"
             SELECT EXISTS (
@@ -191,7 +191,7 @@ public class DDLExecutionService
     /// <summary>
     /// 获取表的列信息
     /// </summary>
-    public async Task<List<TableColumnInfo>> GetTableColumnsAsync(string tableName)
+    public virtual async Task<List<TableColumnInfo>> GetTableColumnsAsync(string tableName)
     {
         var sql = @"
             SELECT
