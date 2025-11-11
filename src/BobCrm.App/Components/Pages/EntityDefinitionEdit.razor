@@ -504,13 +504,19 @@
     // 子实体事件处理
     private void HandleSubEntityAdded(SubEntityViewModel subEntity)
     {
-        // 子实体已添加到集合，无需额外处理
+        // 将子实体添加到集合
+        _subEntities.Add(subEntity);
         StateHasChanged();
     }
 
     private void HandleSubEntityRemoved(Guid subEntityId)
     {
-        // 子实体已从集合移除，无需额外处理
+        // 从集合中移除子实体
+        var subEntity = _subEntities.FirstOrDefault(s => s.TempId == subEntityId);
+        if (subEntity != null)
+        {
+            _subEntities.Remove(subEntity);
+        }
         StateHasChanged();
     }
 
