@@ -9,7 +9,7 @@
 
 /* Overlay container (global class for dropdown portal) */
 ::deep .multilingual-dropdown-overlay .ant-dropdown-menu {
-    padding: 12px 16px;
+    padding: 0;
     margin-left: 0;
     margin-right: 0;
     box-sizing: border-box;
@@ -20,20 +20,30 @@
 /* Overlay content */
 .multilingual-overlay {
     box-sizing: border-box;
-    padding: 12px 16px;
+    padding: 8px;
     margin-left: 0;
     margin-right: 0;
     /* Width is set dynamically via JavaScript to match the trigger */
     min-width: 300px; /* Fallback minimum width */
 }
 
-/* Row layout */
+/* Row layout - flexbox for better width control */
 .multilingual-input-row {
-    display: grid;
-    grid-template-columns: 100px 1fr;
+    display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+/* Focus effect on container, not individual inputs */
+.multilingual-input-row:focus-within {
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    background: #fff;
 }
 
 .multilingual-input-row:last-child {
@@ -43,19 +53,15 @@
 /* Default language highlight */
 .multilingual-input-row.default-language {
     background: #f0f5ff;
-    padding: 8px 8px;
-    margin-left: -8px;
-    margin-right: -8px;
-    margin-bottom: 12px;
-    border-radius: 4px;
-    grid-template-columns: 100px 1fr;
+    border-color: rgba(24, 144, 255, 0.15);
 }
 
-.multilingual-input-row.default-language:last-child {
-    margin-bottom: 0;
+.multilingual-input-row.default-language:focus-within {
+    background: #fff;
+    border-color: #1890ff;
 }
 
-/* Language label */
+/* Language label - fixed width */
 .language-label {
     width: 100px;
     font-weight: 500;
@@ -68,9 +74,22 @@
     white-space: nowrap;
 }
 
-/* Input field */
+/* Input field - fills remaining space */
 .multilingual-field {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Remove focus borders from inner inputs - focus is on container */
+.multilingual-field.ant-input,
+.multilingual-field.ant-input:hover,
+.multilingual-field.ant-input:focus {
+    border: 1px solid #d9d9d9 !important;
+    box-shadow: none !important;
+}
+
+.multilingual-field.ant-input:focus {
+    border-color: #d9d9d9 !important;
 }
 
 /* Loading state */
