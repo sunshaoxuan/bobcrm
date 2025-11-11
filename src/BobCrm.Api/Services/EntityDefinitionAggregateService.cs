@@ -152,9 +152,10 @@ public class EntityDefinitionAggregateService
         if (subEntitiesToDelete.Any())
         {
             _logger.LogDebug("Deleting {Count} removed sub-entities", subEntitiesToDelete.Count);
-            await _dbContext.SubEntityDefinitions
+            var entitiesToRemove = await _dbContext.SubEntityDefinitions
                 .Where(s => subEntitiesToDelete.Contains(s.Id))
-                .ExecuteDeleteAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+            _dbContext.SubEntityDefinitions.RemoveRange(entitiesToRemove);
         }
 
         // 保存或更新子实体
