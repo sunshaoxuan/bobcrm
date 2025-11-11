@@ -27,20 +27,36 @@ public class SubEntityCodeGenerator : ISubEntityCodeGenerator
         _logger.LogInformation("Generating code for {Count} sub-entities of {EntityName}",
             aggregate.SubEntities.Count, aggregate.Root.EntityName);
 
+        // 确定生成代码的基础目录
+        var baseDirectory = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "..", "..",
+            "generated",
+            "Entities",
+            aggregate.Root.Namespace.Replace("BobCrm.Domain.", ""),
+            aggregate.Root.EntityName);
+
+        // 确保目录存在
+        Directory.CreateDirectory(baseDirectory);
+
+        // 生成子实体类
         foreach (var subEntity in aggregate.SubEntities)
         {
             var code = GenerateSubEntityClass(aggregate.Root, subEntity);
-            _logger.LogDebug("Generated code for sub-entity {Code}:\n{Code}", subEntity.Code, code);
+            var filePath = Path.Combine(baseDirectory, $"{subEntity.Code}.cs");
 
-            // TODO: 将代码保存到文件系统或数据库
-            // 路径示例: /generated/Entities/{Namespace}/{EntityName}/{SubEntityCode}.cs
+            await File.WriteAllTextAsync(filePath, code, cancellationToken);
+            _logger.LogInformation("Generated sub-entity class: {FilePath}", filePath);
         }
 
-        // 生成AggVO
+        // 生成AggVO类
         var aggVoCode = GenerateAggregateVoClass(aggregate.Root, aggregate.SubEntities.ToList());
-        _logger.LogDebug("Generated AggVO code:\n{Code}", aggVoCode);
+        var aggVoFilePath = Path.Combine(baseDirectory, $"{aggregate.Root.EntityName}AggVo.cs");
 
-        await Task.CompletedTask;
+        await File.WriteAllTextAsync(aggVoFilePath, aggVoCode, cancellationToken);
+        _logger.LogInformation("Generated AggVo class: {FilePath}", aggVoFilePath);
+
+        _logger.LogInformation("Code generation completed. Files saved to: {Directory}", baseDirectory);
     }
 
     /// <summary>
