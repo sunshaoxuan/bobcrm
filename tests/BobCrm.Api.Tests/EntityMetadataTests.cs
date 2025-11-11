@@ -37,7 +37,8 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         var firstEntity = entityArray[0];
         Assert.True(firstEntity.TryGetProperty("entityType", out _), "应该包含entityType");
         Assert.True(firstEntity.TryGetProperty("entityName", out _), "应该包含entityName");
-        Assert.True(firstEntity.TryGetProperty("displayNameKey", out _), "应该包含displayNameKey");
+        Assert.True(firstEntity.TryGetProperty("displayName", out var displayName), "应该包含displayName");
+        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // displayName 应该是 Dictionary 序列化的 JSON 对象
         Assert.True(firstEntity.TryGetProperty("apiEndpoint", out _), "应该包含apiEndpoint");
     }
 
@@ -157,9 +158,10 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         
         Assert.True(customerEntity.TryGetProperty("entityName", out var entityName), "应该包含entityName字段");
         Assert.Equal("Customer", entityName.GetString());
-        
-        Assert.True(customerEntity.TryGetProperty("displayNameKey", out var displayKey));
-        Assert.Equal("ENTITY_CUSTOMER", displayKey.GetString());
+
+        // 验证 displayName 是多语言字典
+        Assert.True(customerEntity.TryGetProperty("displayName", out var displayName), "应该包含displayName字段");
+        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // displayName 应该是 Dictionary 序列化的 JSON 对象
     }
 }
 
