@@ -40,6 +40,9 @@ public partial class MultilingualInput : IAsyncDisposable
     {
         _defaultLanguage = DefaultLanguage?.ToLowerInvariant() ?? I18n.CurrentLang.ToLowerInvariant();
 
+        // Subscribe to language changes
+        I18n.OnChanged += HandleLanguageChanged;
+
         try
         {
             // 从API获取可用语言列表
@@ -75,6 +78,30 @@ public partial class MultilingualInput : IAsyncDisposable
             foreach (var lang in _languages)
             {
                 _values[lang.Code] = Value?.GetValue(lang.Code);
+            }
+        }
+    }
+
+    private void HandleLanguageChanged()
+    {
+        // Update default language when system language changes
+        if (DefaultLanguage == null) // Only update if not explicitly set
+        {
+            var newDefaultLang = I18n.CurrentLang.ToLowerInvariant();
+            if (newDefaultLang != _defaultLanguage)
+            {
+                _defaultLanguage = newDefaultLang;
+
+                // Re-order languages to put new default first
+                if (_languages != null && _languages.Any())
+                {
+                    _languages = _languages
+                        .OrderBy(l => l.Code != _defaultLanguage)
+                        .ThenBy(l => l.Name)
+                        .ToList();
+                }
+
+                InvokeAsync(StateHasChanged);
             }
         }
     }
@@ -127,6 +154,9 @@ public partial class MultilingualInput : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Unsubscribe from language changes
+        I18n.OnChanged -= HandleLanguageChanged;
+
         if (_jsModule != null)
         {
             try
