@@ -21,8 +21,8 @@ public partial class MultilingualInput : IAsyncDisposable
     private Dictionary<string, string?> _values = new();
     private bool _isExpanded = false;
     private string _defaultLanguage = "ja";
-    private ElementReference _triggerElement;
     private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<MultilingualInput>? _dotNetRef;
 
     private class LanguageInfo
     {
@@ -117,45 +117,84 @@ public partial class MultilingualInput : IAsyncDisposable
         }
     }
 
-    private async Task HandleVisibleChange(bool visible)
+    private async Task TogglePopover()
     {
-        // Update state when Ant Dropdown visibility changes
-        _isExpanded = visible;
+        _isExpanded = !_isExpanded;
 
-        if (!visible)
+        if (_isExpanded)
         {
-            // Ensure re-render when closing
-            await InvokeAsync(StateHasChanged);
-            return;
+            await SetupScrollListener();
+        }
+        else
+        {
+            await RemoveScrollListener();
         }
 
-        // When dropdown opens, set the overlay width to match the trigger
-        await SetOverlayWidthAsync();
-        await InvokeAsync(StateHasChanged);
+        StateHasChanged();
     }
 
-    private async Task SetOverlayWidthAsync()
+    private async Task ClosePopover()
+    {
+        if (_isExpanded)
+        {
+            _isExpanded = false;
+            await RemoveScrollListener();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SetupScrollListener()
     {
         try
         {
             if (_jsModule == null)
             {
                 _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                    "import", "./_content/BobCrm.App/Components/Shared/MultilingualInput.razor.js");
+                    "import", "./js/multilingual-input.js");
             }
 
-            await _jsModule.InvokeVoidAsync("setOverlayWidth", _triggerElement);
+            // Small delay to ensure Popover has rendered and positioned correctly
+            await Task.Delay(100);
+
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await _jsModule.InvokeVoidAsync("setupScrollListener", _dotNetRef);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MultilingualInput] Failed to set overlay width: {ex.Message}");
+            Console.WriteLine($"[MultilingualInput] Failed to setup scroll listener: {ex.Message}");
         }
+    }
+
+    private async Task RemoveScrollListener()
+    {
+        try
+        {
+            if (_jsModule != null)
+            {
+                await _jsModule.InvokeVoidAsync("removeScrollListener");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MultilingualInput] Failed to remove scroll listener: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public void CloseOnScroll()
+    {
+        _isExpanded = false;
+        InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
     {
         // Unsubscribe from language changes
         I18n.OnChanged -= HandleLanguageChanged;
+
+        await RemoveScrollListener();
+
+        _dotNetRef?.Dispose();
 
         if (_jsModule != null)
         {

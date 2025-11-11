@@ -1,5 +1,6 @@
-/* Trigger container - no extra styling to avoid double-boxing */
+/* Trigger container */
 .multilingual-trigger {
+    position: relative;
     display: block;
     width: 100%;
     box-sizing: border-box;
@@ -7,12 +8,13 @@
     border: 0;
 }
 
-/* Trigger wrapper - custom layout for input + icons without affix-wrapper */
+/* Trigger wrapper - custom layout for input + icons */
 .trigger-wrapper {
     position: relative;
     display: flex;
     align-items: center;
     width: 100%;
+    cursor: pointer;
 }
 
 .trigger-input {
@@ -38,16 +40,29 @@
     line-height: 30px;
 }
 
-/* Overlay container (global class for dropdown portal) */
-::deep .multilingual-dropdown-overlay .ant-dropdown-menu {
+/* Overlay backdrop - full screen clickable layer */
+.multilingual-overlay-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    background: transparent;
+}
+
+/* Overlay container - positioned relative to trigger */
+.multilingual-overlay-container {
+    position: absolute;
+    z-index: 1050;
+    margin-top: 8px;
     background: #f7f8fb;
     border-radius: 10px;
     border: 1px solid #e5e7eb;
     box-shadow: 0 6px 24px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.03);
     padding: 12px 16px;
-    margin-left: 0;
-    margin-right: 0;
-    box-sizing: border-box;
+    min-width: 400px;
+    max-width: 600px;
     max-height: 400px;
     overflow-y: auto;
 }
@@ -55,11 +70,6 @@
 /* Overlay content */
 .multilingual-overlay {
     box-sizing: border-box;
-    padding: 8px;
-    margin-left: 0;
-    margin-right: 0;
-    /* Width is set dynamically via JavaScript to match the trigger */
-    min-width: 300px; /* Fallback minimum width */
 }
 
 /* Row layout - flexbox for better width control */
