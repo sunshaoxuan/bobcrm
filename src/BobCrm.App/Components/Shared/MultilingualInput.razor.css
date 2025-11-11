@@ -40,7 +40,11 @@
 
 /* Overlay container (global class for dropdown portal) */
 ::deep .multilingual-dropdown-overlay .ant-dropdown-menu {
-    padding: 0;
+    background: #f7f8fb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 6px 24px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.03);
+    padding: 12px 16px;
     margin-left: 0;
     margin-right: 0;
     box-sizing: border-box;
@@ -103,6 +107,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Default language label - bold */
+.multilingual-input-row.default-language .language-label {
+    font-weight: 700;
+    color: #1f2937;
 }
 
 /* Input field - fills remaining space */
