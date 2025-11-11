@@ -3,8 +3,8 @@
 
 @* 重构后的多语言输入组件 - 使用 Ant Design Dropdown *@
 <Dropdown Visible="@_isExpanded"
+          VisibleChange="HandleVisibleChange"
           Trigger="@(new[] { Trigger.Click })"
-          OnVisibleChange="HandleVisibleChange"
           OverlayClassName="multilingual-dropdown-overlay">
     <ChildContent>
         <div class="multilingual-trigger" @ref="_triggerElement">
