@@ -50,7 +50,11 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     if (dbProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
     {
-        opt.UseNpgsql(conn, npg => npg.MigrationsHistoryTable("__EFMigrationsHistory", "public"));
+        opt.UseNpgsql(conn, npg =>
+        {
+            npg.MigrationsHistoryTable("__EFMigrationsHistory", "public");
+            npg.EnableDynamicJson();  // 启用动态 JSON 序列化以支持 Dictionary<string, string> 到 jsonb 的映射
+        });
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
     else
