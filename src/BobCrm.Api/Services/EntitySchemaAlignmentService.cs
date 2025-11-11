@@ -154,13 +154,33 @@ public class EntitySchemaAlignmentService
 
         foreach (var field in missingFields)
         {
-            var alterSql = $"ALTER TABLE \"{tableName}\" ADD COLUMN \"{field.PropertyName}\" {MapDataTypeToSQL(field)};";
+            // 1. 添加列（先设为可空，避免非空约束导致失败）
+            var dataType = MapDataTypeToSQL(field).Replace(" NOT NULL", ""); // 暂时移除 NOT NULL
+            var alterSql = $"ALTER TABLE \"{tableName}\" ADD COLUMN \"{field.PropertyName}\" {dataType};";
             scripts.Add((DDLScriptType.Alter, alterSql));
+
+            // 2. ✅ 业务数据对齐：填充默认值到现有记录
+            var defaultValue = GetDefaultValueForDataType(field);
+            if (defaultValue != null)
+            {
+                var updateSql = $"UPDATE \"{tableName}\" SET \"{field.PropertyName}\" = {defaultValue} WHERE \"{field.PropertyName}\" IS NULL;";
+                scripts.Add((DDLScriptType.Alter, updateSql));
+
+                _logger.LogInformation("[SchemaAlign] Filling default value for {FieldName}: {DefaultValue}",
+                    field.PropertyName, defaultValue);
+            }
+
+            // 3. 如果字段是必填，添加 NOT NULL 约束
+            if (field.IsRequired && defaultValue != null)
+            {
+                var constraintSql = $"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{field.PropertyName}\" SET NOT NULL;";
+                scripts.Add((DDLScriptType.Alter, constraintSql));
+            }
         }
 
         await _ddlService.ExecuteDDLBatchAsync(entityId, scripts, "System");
 
-        _logger.LogInformation("[SchemaAlign] ✓ Added {Count} columns to {TableName}",
+        _logger.LogInformation("[SchemaAlign] ✓ Added {Count} columns to {TableName} with data alignment",
             missingFields.Count, tableName);
     }
 
@@ -314,6 +334,136 @@ CREATE TABLE ""{tableName}"" (
 
         return false;
     }
+
+    /// <summary>
+    /// ✅ 获取字段类型的默认值（用于业务数据对齐）
+    /// </summary>
+    private string? GetDefaultValueForDataType(FieldMetadata field)
+    {
+        // 优先使用字段定义中的默认值
+        if (!string.IsNullOrEmpty(field.DefaultValue))
+        {
+            return field.DataType switch
+            {
+                "String" => $"'{field.DefaultValue}'",
+                "Int32" or "Int64" or "Decimal" => field.DefaultValue,
+                "Boolean" => field.DefaultValue.ToLower() == "true" ? "TRUE" : "FALSE",
+                "DateTime" => $"'{field.DefaultValue}'",
+                "Guid" => $"'{field.DefaultValue}'",
+                _ => $"'{field.DefaultValue}'"
+            };
+        }
+
+        // 使用类型的默认值
+        return field.DataType switch
+        {
+            "String" => "''", // 空字符串
+            "Int32" or "Int64" => "0",
+            "Decimal" => "0.0",
+            "Boolean" => "FALSE",
+            "DateTime" => "NOW()",
+            "Guid" => "gen_random_uuid()",
+            "Json" => "'{}'::jsonb",
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// ✅ 删除字段（物理删除或逻辑删除）
+    /// </summary>
+    /// <param name="entityId">实体定义ID</param>
+    /// <param name="fieldId">字段ID</param>
+    /// <param name="physicalDelete">true=物理删除列，false=仅删除元数据（逻辑删除）</param>
+    /// <param name="performedBy">操作人</param>
+    public async Task<DeleteFieldResult> DeleteFieldAsync(
+        Guid entityId,
+        Guid fieldId,
+        bool physicalDelete = false,
+        string? performedBy = null)
+    {
+        var result = new DeleteFieldResult { FieldId = fieldId };
+
+        try
+        {
+            // 1. 加载实体定义
+            var entity = await _db.EntityDefinitions
+                .Include(e => e.Fields)
+                .FirstOrDefaultAsync(e => e.Id == entityId);
+
+            if (entity == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Entity definition {entityId} not found";
+                return result;
+            }
+
+            var field = entity.Fields.FirstOrDefault(f => f.Id == fieldId);
+            if (field == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Field {fieldId} not found";
+                return result;
+            }
+
+            var tableName = entity.DefaultTableName;
+            var columnName = field.PropertyName;
+
+            _logger.LogInformation("[SchemaAlign] Deleting field {FieldName} from {EntityName} (Physical={Physical})",
+                columnName, entity.EntityName, physicalDelete);
+
+            // 2. 从元数据中删除字段
+            _db.FieldMetadatas.Remove(field);
+            await _db.SaveChangesAsync();
+
+            result.LogicalDeleteCompleted = true;
+
+            // 3. 如果是物理删除，删除数据库列
+            if (physicalDelete)
+            {
+                var tableExists = await _ddlService.TableExistsAsync(tableName);
+                if (tableExists)
+                {
+                    var dropColumnSql = $"ALTER TABLE \"{tableName}\" DROP COLUMN IF EXISTS \"{columnName}\";";
+
+                    var scriptRecord = await _ddlService.ExecuteDDLAsync(
+                        entityId,
+                        DDLScriptType.Alter,
+                        dropColumnSql,
+                        performedBy ?? "System"
+                    );
+
+                    if (scriptRecord.Status == DDLScriptStatus.Success)
+                    {
+                        result.PhysicalDeleteCompleted = true;
+                        _logger.LogInformation("[SchemaAlign] ✓ Column {ColumnName} physically deleted from {TableName}",
+                            columnName, tableName);
+                    }
+                    else
+                    {
+                        result.PhysicalDeleteCompleted = false;
+                        result.ErrorMessage = scriptRecord.ErrorMessage;
+                        _logger.LogWarning("[SchemaAlign] Failed to physically delete column {ColumnName}: {Error}",
+                            columnName, scriptRecord.ErrorMessage);
+                    }
+                }
+                else
+                {
+                    result.PhysicalDeleteCompleted = false;
+                    result.ErrorMessage = $"Table {tableName} does not exist";
+                }
+            }
+
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            _logger.LogError(ex, "[SchemaAlign] Failed to delete field: {Error}", ex.Message);
+        }
+
+        return result;
+    }
 }
 
 /// <summary>
@@ -327,4 +477,16 @@ public enum AlignmentResult
     AlreadyAligned,
     /// <summary>对齐失败</summary>
     Failed
+}
+
+/// <summary>
+/// 字段删除结果
+/// </summary>
+public class DeleteFieldResult
+{
+    public Guid FieldId { get; set; }
+    public bool Success { get; set; }
+    public bool LogicalDeleteCompleted { get; set; }
+    public bool PhysicalDeleteCompleted { get; set; }
+    public string? ErrorMessage { get; set; }
 }
