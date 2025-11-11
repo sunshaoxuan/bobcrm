@@ -7,6 +7,37 @@
     border: 0;
 }
 
+/* Trigger wrapper - custom layout for input + icons without affix-wrapper */
+.trigger-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.trigger-input {
+    flex: 1;
+    padding-right: 56px !important; /* Space for icons */
+}
+
+.trigger-icons {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* Unified height for trigger input */
+.trigger-input.ant-input {
+    height: 32px;
+    line-height: 30px;
+}
+
 /* Overlay container (global class for dropdown portal) */
 ::deep .multilingual-dropdown-overlay .ant-dropdown-menu {
     padding: 0;
@@ -90,6 +121,12 @@
 
 .multilingual-field.ant-input:focus {
     border-color: #d9d9d9 !important;
+}
+
+/* Unified height for overlay inputs - match trigger height */
+.multilingual-field.ant-input {
+    height: 32px;
+    line-height: 30px;
 }
 
 /* Adjust height if affix-wrapper is present (though AllowClear is now removed) */

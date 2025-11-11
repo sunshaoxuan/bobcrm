@@ -8,11 +8,16 @@
           OverlayClassName="multilingual-dropdown-overlay">
     <ChildContent>
         <div class="multilingual-trigger" @ref="_triggerElement">
-            <Input Value="@GetDefaultValue()"
-                   ReadOnly="true"
-                   Placeholder="@GetDefaultPlaceholder()"
-                   Class="field-control"
-                   Suffix="@GetSuffixTemplate()" />
+            <div class="trigger-wrapper">
+                <Input Value="@GetDefaultValue()"
+                       ReadOnly="true"
+                       Placeholder="@GetDefaultPlaceholder()"
+                       Class="field-control trigger-input" />
+                <span class="trigger-icons">
+                    <Icon Type="global" Style="color: #1890ff;" />
+                    <Icon Type="@(_isExpanded ? "up" : "down")" Style="font-size: 10px;" />
+                </span>
+            </div>
         </div>
     </ChildContent>
     <Overlay>
