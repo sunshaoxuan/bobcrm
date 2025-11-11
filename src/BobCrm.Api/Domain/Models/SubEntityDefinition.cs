@@ -78,7 +78,7 @@ public class SubEntityDefinition
     /// 级联删除行为：NoAction、Cascade、SetNull、Restrict
     /// </summary>
     [MaxLength(20)]
-    public string CascadeDeleteBehavior { get; set; } = CascadeDeleteBehavior.Cascade;
+    public string CascadeDeleteBehavior { get; set; } = "Cascade";
 
     /// <summary>
     /// 创建时间

@@ -93,7 +93,7 @@ public class EntityDefinitionAggregateService
     /// <summary>
     /// 验证聚合（不保存）
     /// </summary>
-    public ValidationResult ValidateAggregate(EntityDefinitionAggregate aggregate)
+    public Domain.Aggregates.ValidationResult ValidateAggregate(EntityDefinitionAggregate aggregate)
     {
         return aggregate.Validate();
     }
