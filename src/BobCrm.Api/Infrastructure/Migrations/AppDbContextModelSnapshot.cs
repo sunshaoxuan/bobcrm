@@ -255,14 +255,9 @@ namespace BobCrm.Api.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("EN")
-                        .HasColumnType("text");
-
-                    b.Property<string>("JA")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ZH")
-                        .HasColumnType("text");
+                    b.Property<string>("Translations")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
 
                     b.HasKey("Key");
 
