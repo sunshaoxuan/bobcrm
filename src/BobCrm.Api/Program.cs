@@ -53,7 +53,6 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
         opt.UseNpgsql(conn, npg =>
         {
             npg.MigrationsHistoryTable("__EFMigrationsHistory", "public");
-            npg.EnableDynamicJson();  // 启用动态 JSON 序列化以支持 Dictionary<string, string> 到 jsonb 的映射
         });
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
@@ -220,46 +219,86 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors();
 
-// Auto-initialize database on startup (dev-friendly, idempotent)
-var skipDbInit = builder.Configuration.GetValue<bool>("Db:SkipInit");
-if (!skipDbInit)
-{
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DatabaseInitializer.InitializeAsync(db);
-
-    // Upgrade login i18n resources to latest copy (idempotent)
-    try
-    {
-        void Upsert(string key, string zh, string ja, string en)
-        {
-            var set = db.Set<LocalizationResource>();
-            var r = set.FirstOrDefault(x => x.Key == key);
-            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
-            else { r.ZH = zh; r.JA = ja; r.EN = en; }
-        }
-
-        // Short hero copy to avoid wrapping in JA/EN
-        Upsert("TXT_AUTH_HERO_TITLE", "智能连接 · 体验合一", "インテリジェントにつながり、体験をひとつに", "Smart links, unified experience");
-        Upsert("TXT_AUTH_HERO_SUBTITLE", "在一个平台洞察、协作、成长，让客户关系更高效。", "ひとつのプラットフォームで洞察・協働・成長を実現し、顧客関係をしなやかに。", "One platform for insight, collaboration, and growth.");
-        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
-        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
-        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
-        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
-        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
-        Upsert("LBL_SECURE", "智能 · 稳定 · 开放", "スマート・堅牢・オープン", "Smart · Resilient · Open");
-        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
-        await db.SaveChangesAsync();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
-    }
-
-    // Sync system entities (IBizEntity implementations) to EntityDefinition table
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
-    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
-    await synchronizer.SyncSystemEntitiesAsync();
+// Auto-initialize database on startup (dev-friendly, idempotent)
+
+var skipDbInit = builder.Configuration.GetValue<bool>("Db:SkipInit");
+
+if (!skipDbInit)
+
+{
+
+    using var scope = app.Services.CreateScope();
+
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await DatabaseInitializer.InitializeAsync(db);
+
+
+
+    // Upgrade login i18n resources to latest copy (idempotent)
+
+    try
+
+    {
+
+        void Upsert(string key, string zh, string ja, string en)
+
+        {
+
+            var set = db.Set<LocalizationResource>();
+
+            var r = set.FirstOrDefault(x => x.Key == key);
+
+            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+
+            else { r.ZH = zh; r.JA = ja; r.EN = en; }
+
+        }
+
+
+
+        // Short hero copy to avoid wrapping in JA/EN
+
+        Upsert("TXT_AUTH_HERO_TITLE", "智能连接 · 体验合一", "インテリジェントにつながり、体験をひとつに", "Smart links, unified experience");
+
+        Upsert("TXT_AUTH_HERO_SUBTITLE", "在一个平台洞察、协作、成长，让客户关系更高效。", "ひとつのプラットフォームで洞察・協働・成長を実現し、顧客関係をしなやかに。", "One platform for insight, collaboration, and growth.");
+
+        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
+
+        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
+
+        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
+
+        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
+
+        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
+
+        Upsert("LBL_SECURE", "智能 · 稳定 · 开放", "スマート・堅牢・オープン", "Smart · Resilient · Open");
+
+        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
+
+        await db.SaveChangesAsync();
+
+    }
+
+    catch (Exception ex)
+
+    {
+
+        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
+
+    }
+
+
+
+    // Sync system entities (IBizEntity implementations) to EntityDefinition table
+
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
+
+    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
+
+    await synchronizer.SyncSystemEntitiesAsync();
+
 
     // Sync internationalization resources (add missing i18n keys to database)
     try
@@ -272,17 +311,24 @@ if (!skipDbInit)
     {
         app.Logger.LogWarning(ex, "[Init] Failed to sync i18n resources");
     }
-
-    // Seed test data (development only)
+
+
+    // Seed test data (development only)
+
         try
         {
             await TestDataSeeder.SeedTestDataAsync(db);
         }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "[Init] Failed to seed test data");
-    }
-}
+    catch (Exception ex)
+
+    {
+
+        app.Logger.LogError(ex, "[Init] Failed to seed test data");
+
+    }
+
+}
+
 // ========================================
 // 端点注册 - 使用模块化扩展方法
 // ========================================

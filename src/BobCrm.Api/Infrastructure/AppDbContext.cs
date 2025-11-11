@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using System.Text.Json;
 using BobCrm.Api.Domain;
 using BobCrm.Api.Domain.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BobCrm.Api.Infrastructure;
 
@@ -60,17 +62,26 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
         // PostgreSQL jsonb 映射配置 - 多语言字段
+        // 使用值转换器将 Dictionary<string, string?> 序列化为 JSON 字符串
+        var jsonOptions = new JsonSerializerOptions();
+        var jsonConverter = new ValueConverter<Dictionary<string, string?>?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, jsonOptions),
+            v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<Dictionary<string, string?>>(v, jsonOptions));
+
         b.Entity<EntityDefinition>()
             .Property(e => e.DisplayName)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
 
         b.Entity<EntityDefinition>()
             .Property(e => e.Description)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
 
         b.Entity<FieldMetadata>()
             .Property(f => f.DisplayName)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
 
         // 全局过滤器已移除：访问控制由业务层（CustomerQueries）统一处理
         // 原因：
