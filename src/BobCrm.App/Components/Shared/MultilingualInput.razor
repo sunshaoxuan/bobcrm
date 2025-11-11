@@ -30,7 +30,7 @@
                         <Input Value="@_values[lang.Code]"
                                ValueChanged="@((string? v) => OnValueChanged(lang.Code, v))"
                                Placeholder="@GetPlaceholder(lang.Code)"
-                               Class="multilingual-field"
+                               Class="field-control multilingual-field"
                                @onfocus="@(() => _focusedInputCode = lang.Code)"
                                AllowClear="true" />
                     </div>
@@ -73,13 +73,18 @@
         left: 0;
         right: 0;
         z-index: 1050;
-        border: 1px solid #1890ff;
+        border: 1px solid #d9d9d9;
         border-radius: 4px;
         padding: 12px;
         background: #fff;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         max-height: 400px;
         overflow-y: auto;
+    }
+
+    .multilingual-input-wrapper:focus-within .multilingual-input-expanded {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .multilingual-input-row {
