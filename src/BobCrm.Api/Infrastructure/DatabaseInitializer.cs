@@ -36,25 +36,49 @@ public static class DatabaseInitializer
                 new CustomerLocalization { CustomerId = customer2.Id, Language = "en", Name = "Sample Customer B" }
             );
         }
-        if (!await db.Set<SystemSettings>().AnyAsync())
+
+        // ✅ SystemSettings - 每次启动都同步（Upsert 模式）
         {
-            await db.Set<SystemSettings>().AddAsync(new SystemSettings
+            var existing = await db.Set<SystemSettings>().FirstOrDefaultAsync();
+            if (existing == null)
             {
-                CompanyName = "OneCRM",
-                DefaultTheme = "calm-light",
-                DefaultPrimaryColor = "#739FD6",
-                DefaultLanguage = "ja",
-                DefaultHomeRoute = "/",
-                DefaultNavMode = NavDisplayModes.IconText,
-                TimeZoneId = "Asia/Tokyo",
-                AllowSelfRegistration = false,
-                UpdatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
+                // 不存在则创建
+                await db.Set<SystemSettings>().AddAsync(new SystemSettings
+                {
+                    CompanyName = "OneCRM",
+                    DefaultTheme = "calm-light",
+                    DefaultPrimaryColor = "#739FD6",
+                    DefaultLanguage = "ja",
+                    DefaultHomeRoute = "/",
+                    DefaultNavMode = NavDisplayModes.IconText,
+                    TimeZoneId = "Asia/Tokyo",
+                    AllowSelfRegistration = false,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                // 存在则更新默认值（仅更新未自定义的字段）
+                // 注意：这里只更新 null 或空值，保留用户的自定义设置
+                if (string.IsNullOrEmpty(existing.CompanyName))
+                    existing.CompanyName = "OneCRM";
+                if (string.IsNullOrEmpty(existing.DefaultTheme))
+                    existing.DefaultTheme = "calm-light";
+                if (string.IsNullOrEmpty(existing.DefaultPrimaryColor))
+                    existing.DefaultPrimaryColor = "#739FD6";
+                if (string.IsNullOrEmpty(existing.DefaultLanguage))
+                    existing.DefaultLanguage = "ja";
+                if (string.IsNullOrEmpty(existing.DefaultHomeRoute))
+                    existing.DefaultHomeRoute = "/";
+                if (string.IsNullOrEmpty(existing.TimeZoneId))
+                    existing.TimeZoneId = "Asia/Tokyo";
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
         }
-        if (!await db.Set<FieldDefinition>().IgnoreQueryFilters().AnyAsync())
+        // ✅ FieldDefinition - 每次启动都同步（按 Key 新增或更新）
         {
-            await db.Set<FieldDefinition>().AddRangeAsync(
+            var presetFields = new[]
+            {
                 new FieldDefinition
                 {
                     Key = "email",
@@ -106,15 +130,60 @@ public static class DatabaseInitializer
                     Tags = "[\"扩展\"]",
                     Actions = "[]"
                 }
-            );
+            };
+
+            var existingFields = await db.Set<FieldDefinition>()
+                .IgnoreQueryFilters()
+                .Where(f => presetFields.Select(p => p.Key).Contains(f.Key))
+                .ToDictionaryAsync(f => f.Key);
+
+            foreach (var preset in presetFields)
+            {
+                if (!existingFields.TryGetValue(preset.Key, out var existing))
+                {
+                    // 新增
+                    await db.Set<FieldDefinition>().AddAsync(preset);
+                }
+                else
+                {
+                    // 更新（覆盖预置字段的定义）
+                    existing.DisplayName = preset.DisplayName;
+                    existing.DataType = preset.DataType;
+                    existing.Required = preset.Required;
+                    existing.Validation = preset.Validation;
+                    existing.DefaultValue = preset.DefaultValue;
+                    existing.Tags = preset.Tags;
+                    existing.Actions = preset.Actions;
+                }
+            }
         }
-        if (!await db.Set<LocalizationLanguage>().IgnoreQueryFilters().AnyAsync())
+        // ✅ LocalizationLanguage - 每次启动都同步（按 Code 新增或更新）
         {
-            await db.Set<LocalizationLanguage>().AddRangeAsync(
+            var presetLanguages = new[]
+            {
                 new LocalizationLanguage { Code = "ja", NativeName = "日本語" },
                 new LocalizationLanguage { Code = "zh", NativeName = "中文" },
                 new LocalizationLanguage { Code = "en", NativeName = "English" }
-            );
+            };
+
+            var existingLanguages = await db.Set<LocalizationLanguage>()
+                .IgnoreQueryFilters()
+                .Where(l => presetLanguages.Select(p => p.Code).Contains(l.Code))
+                .ToDictionaryAsync(l => l.Code);
+
+            foreach (var preset in presetLanguages)
+            {
+                if (!existingLanguages.TryGetValue(preset.Code, out var existing))
+                {
+                    // 新增语言
+                    await db.Set<LocalizationLanguage>().AddAsync(preset);
+                }
+                else
+                {
+                    // 更新本地化名称
+                    existing.NativeName = preset.NativeName;
+                }
+            }
         }
         // EntityDefinition 自动同步已在 Program.cs 中由 EntityDefinitionSynchronizer 处理
         // ✅ 统一从 JSON 文件加载 i18n 资源（单一数据源原则，动态语言支持）
