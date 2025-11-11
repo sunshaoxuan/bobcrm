@@ -67,13 +67,23 @@
                 </FormItem>
 
                 <FormItem Label="@I18n.T("LBL_INTERFACES")">
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_BASE") (@I18n.T("INTERFACE_BASE_DESC"))</Checkbox>
-                        <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_ARCHIVE") (@I18n.T("INTERFACE_ARCHIVE_DESC"))</Checkbox>
-                        <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_AUDIT") (@I18n.T("INTERFACE_AUDIT_DESC"))</Checkbox>
-                        <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_VERSION") (@I18n.T("INTERFACE_VERSION_DESC"))</Checkbox>
-                        <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_TIME_VERSION") (@I18n.T("INTERFACE_TIME_VERSION_DESC"))</Checkbox>
-                    </div>
+                    <Space Direction="DirectionVHType.Vertical" Size="@("8")">
+                        <SpaceItem>
+                            <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_BASE") (@I18n.T("INTERFACE_BASE_DESC"))</Checkbox>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_ARCHIVE") (@I18n.T("INTERFACE_ARCHIVE_DESC"))</Checkbox>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_AUDIT") (@I18n.T("INTERFACE_AUDIT_DESC"))</Checkbox>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_VERSION") (@I18n.T("INTERFACE_VERSION_DESC"))</Checkbox>
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_TIME_VERSION") (@I18n.T("INTERFACE_TIME_VERSION_DESC"))</Checkbox>
+                        </SpaceItem>
+                    </Space>
                 </FormItem>
 
                 <FormItem Label="@I18n.T("LBL_ICON")">
