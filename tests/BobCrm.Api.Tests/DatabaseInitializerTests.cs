@@ -152,9 +152,9 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
                 .FirstOrDefaultAsync(r => r.Key == existingKey);
 
             Assert.NotNull(added);
-            Assert.Equal("个人中心", added.ZH);
-            Assert.Equal("プロフィール", added.JA);
-            Assert.Equal("Profile", added.EN);
+            Assert.Equal("个人中心", added.Translations["zh"]);
+            Assert.Equal("プロフィール", added.Translations["ja"]);
+            Assert.Equal("Profile", added.Translations["en"]);
         }
     }
 }
