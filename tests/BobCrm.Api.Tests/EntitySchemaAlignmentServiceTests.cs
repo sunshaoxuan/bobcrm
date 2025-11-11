@@ -273,10 +273,17 @@ public class EntitySchemaAlignmentServiceTests : IDisposable
 
         // Assert
         result.Should().Be(AlignmentResult.Aligned);
+
+        // 验证调用了 ExecuteDDLBatchAsync
+        // 注意：每个字段可能生成多个SQL (ADD COLUMN + UPDATE + SET NOT NULL)，所以不检查具体数量
         _mockDDLService.Verify(
             x => x.ExecuteDDLBatchAsync(
                 entity.Id,
-                It.Is<List<(string, string)>>(scripts => scripts.Count == 2), // Price 和 Stock
+                It.Is<List<(string, string)>>(scripts =>
+                    scripts.Count >= 2 && // 至少2个语句（每个字段至少1个ADD COLUMN）
+                    scripts.Any(s => s.Item2.Contains("ADD COLUMN \"Price\"")) &&
+                    scripts.Any(s => s.Item2.Contains("ADD COLUMN \"Stock\""))
+                ),
                 "System"),
             Times.Once
         );
