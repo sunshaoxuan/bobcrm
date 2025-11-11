@@ -68,6 +68,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             v => v == null ? null : JsonSerializer.Serialize(v, jsonOptions),
             v => string.IsNullOrEmpty(v) ? null : JsonSerializer.Deserialize<Dictionary<string, string?>>(v, jsonOptions));
 
+        // LocalizationResource.Translations 值转换器（Dictionary<string, string> → JSON string）
+        var translationsConverter = new ValueConverter<Dictionary<string, string>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, jsonOptions) ?? new Dictionary<string, string>());
+
         b.Entity<EntityDefinition>()
             .Property(e => e.DisplayName)
             .HasColumnType("jsonb")
@@ -86,7 +91,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // LocalizationResource 的 Translations 使用 jsonb 存储
         b.Entity<LocalizationResource>()
             .Property(lr => lr.Translations)
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(translationsConverter);
 
         // 全局过滤器已移除：访问控制由业务层（CustomerQueries）统一处理
         // 原因：
