@@ -263,7 +263,6 @@ public partial class MultilingualInput : IAsyncDisposable
                 builder.AddAttribute(18, "ValueChanged", EventCallback.Factory.Create<string?>(this, v => OnValueChanged(lang.Code, v)));
                 builder.AddAttribute(19, "Placeholder", GetPlaceholder(lang.Code));
                 builder.AddAttribute(20, "Class", "field-control multilingual-field");
-                builder.AddAttribute(21, "AllowClear", true);
                 builder.CloseComponent();
 
                 builder.CloseElement(); // div.multilingual-input-row

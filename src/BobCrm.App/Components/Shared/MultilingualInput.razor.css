@@ -92,6 +92,17 @@
     border-color: #d9d9d9 !important;
 }
 
+/* Adjust height if affix-wrapper is present (though AllowClear is now removed) */
+.multilingual-field.ant-input-affix-wrapper {
+    height: 32px;
+    padding: 0 11px;
+}
+
+.multilingual-field.ant-input-affix-wrapper .ant-input {
+    height: 30px;
+    line-height: 30px;
+}
+
 /* Loading state */
 .multilingual-loading {
     text-align: center;
