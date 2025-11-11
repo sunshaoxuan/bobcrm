@@ -2,14 +2,16 @@ using AntDesign;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
 namespace BobCrm.App.Components.Shared;
 
-public partial class MultilingualInput
+public partial class MultilingualInput : IAsyncDisposable
 {
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private I18nService I18n { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     [Parameter] public MultilingualTextDto? Value { get; set; }
     [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
@@ -20,6 +22,8 @@ public partial class MultilingualInput
     private Dictionary<string, string?> _values = new();
     private bool _isExpanded = false;
     private string _defaultLanguage = "ja";
+    private ElementReference _triggerElement;
+    private IJSObjectReference? _jsModule;
 
     private class LanguageInfo
     {
@@ -87,9 +91,48 @@ public partial class MultilingualInput
         }
     }
 
-    private void HandleVisibleChange(bool visible)
+    private async Task HandleVisibleChange(bool visible)
     {
         _isExpanded = visible;
+
+        if (visible)
+        {
+            // When dropdown opens, set the overlay width to match the trigger
+            await SetOverlayWidthAsync();
+        }
+    }
+
+    private async Task SetOverlayWidthAsync()
+    {
+        try
+        {
+            if (_jsModule == null)
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/BobCrm.App/Components/Shared/MultilingualInput.razor.js");
+            }
+
+            await _jsModule.InvokeVoidAsync("setOverlayWidth", _triggerElement);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MultilingualInput] Failed to set overlay width: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
     }
 
     private async Task OnValueChanged(string lang, string? value)

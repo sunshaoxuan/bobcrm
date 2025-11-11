@@ -7,7 +7,7 @@
           OnVisibleChange="HandleVisibleChange"
           OverlayClassName="multilingual-dropdown-overlay">
     <ChildContent>
-        <div class="multilingual-trigger">
+        <div class="multilingual-trigger" @ref="_triggerElement">
             <Input Value="@GetDefaultValue()"
                    ReadOnly="true"
                    Placeholder="@GetDefaultPlaceholder()"

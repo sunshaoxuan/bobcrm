@@ -23,7 +23,8 @@
     padding: 12px 16px;
     margin-left: 0;
     margin-right: 0;
-    min-width: 400px;
+    /* Width is set dynamically via JavaScript to match the trigger */
+    min-width: 300px; /* Fallback minimum width */
 }
 
 /* Row layout */
