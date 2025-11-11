@@ -11,8 +11,8 @@ public static class DatabaseInitializer
 {
     public static async Task InitializeAsync(DbContext db)
     {
-        Console.WriteLine("[DatabaseInitializer] Ensuring database is created using EnsureCreatedAsync");
-        await db.Database.EnsureCreatedAsync();
+        Console.WriteLine("[DatabaseInitializer] Applying pending migrations using MigrateAsync");
+        await db.Database.MigrateAsync();
         if (db is AppDbContext appDbContext)
         {
             var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance);
