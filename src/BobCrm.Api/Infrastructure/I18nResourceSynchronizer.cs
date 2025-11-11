@@ -228,6 +228,13 @@ public class I18nResourceSynchronizer
             new LocalizationResource { Key = "MSG_LOAD_DATA_FAILED", ZH = "加载数据失败", JA = "データの読み込みに失敗しました", EN = "Failed to load data" },
         });
 
+        // MultilingualInput 组件相关资源
+        resources.AddRange(new[]
+        {
+            new LocalizationResource { Key = "LBL_DEFAULT_LANGUAGE", ZH = "默认语言", JA = "デフォルト言語", EN = "Default Language" },
+            new LocalizationResource { Key = "LBL_CLICK_TO_EDIT_MULTILINGUAL", ZH = "点击编辑多语言", JA = "クリックして多言語を編集", EN = "Click to edit multilingual" },
+        });
+
         return resources;
     }
 }
