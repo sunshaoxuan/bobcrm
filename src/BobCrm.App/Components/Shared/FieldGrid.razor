@@ -1,0 +1,330 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services.Multilingual
+@inject IMultilingualTextResolver MultilingualTextResolver
+
+<div class="field-grid-container">
+    <Table TItem="FieldViewModel"
+           DataSource="@Fields"
+           Size="@TableSize.Small"
+           Bordered
+           Responsive>
+
+        <Column Title="字段编码" TData="string" Width="150px">
+            @if (context.IsEditing)
+            {
+                <Input @bind-Value="@context.PropertyName"
+                       Placeholder="例如: ProductCode"
+                       Status="@(string.IsNullOrWhiteSpace(context.PropertyName) ? "error" : "")" />
+            }
+            else
+            {
+                <Text>@context.PropertyName</Text>
+            }
+        </Column>
+
+        <Column Title="显示名称" TData="string" Width="200px">
+            @if (context.IsEditing)
+            {
+                <MultilingualInput @bind-Value="@context.DisplayName" />
+            }
+            else
+            {
+                <Text>@MultilingualTextResolver.Resolve(context.DisplayName, "-")</Text>
+            }
+        </Column>
+
+        <Column Title="数据类型" TData="string" Width="120px">
+            @if (context.IsEditing)
+            {
+                <Select @bind-Value="@context.DataType"
+                        Style="width: 100%"
+                        OnSelectedItemChanged="@(() => OnDataTypeChanged(context))">
+                    <SelectOption Value="String">String</SelectOption>
+                    <SelectOption Value="Int32">Int32</SelectOption>
+                    <SelectOption Value="Int64">Int64</SelectOption>
+                    <SelectOption Value="Decimal">Decimal</SelectOption>
+                    <SelectOption Value="DateTime">DateTime</SelectOption>
+                    <SelectOption Value="Date">Date</SelectOption>
+                    <SelectOption Value="Boolean">Boolean</SelectOption>
+                    <SelectOption Value="Guid">Guid</SelectOption>
+                </Select>
+            }
+            else
+            {
+                <Text>@context.DataType</Text>
+            }
+        </Column>
+
+        <Column Title="长度" TData="int?" Width="100px">
+            @if (context.IsEditing && context.DataType == "String")
+            {
+                <InputNumber @bind-Value="@context.Length"
+                             Min="1"
+                             Max="5000"
+                             Placeholder="可选" />
+            }
+            else if (!context.IsEditing)
+            {
+                <Text>@(context.Length?.ToString() ?? "-")</Text>
+            }
+        </Column>
+
+        <Column Title="必填" TData="bool" Width="80px" Align="ColumnAlign.Center">
+            @if (context.IsEditing)
+            {
+                <Checkbox @bind-Checked="@context.IsRequired" />
+            }
+            else
+            {
+                <Checkbox Checked="@context.IsRequired" Disabled />
+            }
+        </Column>
+
+        <Column Title="默认值" TData="string" Width="120px">
+            @if (context.IsEditing)
+            {
+                <Input @bind-Value="@context.DefaultValue"
+                       Placeholder="可选" />
+            }
+            else
+            {
+                <Text>@(context.DefaultValue ?? "-")</Text>
+            }
+        </Column>
+
+        <Column Title="操作" Width="180px" Fixed="right">
+            @if (context.IsEditing)
+            {
+                <Space Size="@("small")">
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Type="@ButtonType.Primary"
+                                Icon="@IconType.Outline.Check"
+                                OnClick="@(() => SaveField(context))">
+                            保存
+                        </Button>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Icon="@IconType.Outline.Close"
+                                OnClick="@(() => CancelEdit(context))">
+                            取消
+                        </Button>
+                    </SpaceItem>
+                </Space>
+            }
+            else
+            {
+                <Space Size="@("small")">
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Icon="@IconType.Outline.Edit"
+                                OnClick="@(() => EditField(context))"
+                                Title="编辑" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Icon="@IconType.Outline.Copy"
+                                OnClick="@(() => CopyField(context))"
+                                Title="复制" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm Title="确认删除此字段？"
+                                    OnConfirm="@(() => DeleteField(context))">
+                            <Button Size="@ButtonSize.Small"
+                                    Icon="@IconType.Outline.Delete"
+                                    Danger
+                                    Title="删除" />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            }
+        </Column>
+    </Table>
+
+    @if (context.ValidationError != null)
+    {
+        <Alert Type="@AlertType.Error"
+               Message="@context.ValidationError"
+               ShowIcon
+               Closable />
+    }
+
+    <div class="field-grid-actions">
+        <Button Type="@ButtonType.Dashed"
+                Icon="@IconType.Outline.Plus"
+                Block
+                OnClick="@AddField">
+            添加字段
+        </Button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<FieldViewModel> Fields { get; set; } = new();
+    [Parameter] public EventCallback<FieldViewModel> OnFieldChanged { get; set; }
+    [Parameter] public EventCallback<FieldViewModel> OnFieldAdded { get; set; }
+    [Parameter] public EventCallback<Guid> OnFieldRemoved { get; set; }
+
+    private Dictionary<Guid, FieldViewModel> _backupFields = new();
+
+    private void AddField()
+    {
+        // 取消其他正在编辑的字段
+        CancelAllEditing();
+
+        var newField = new FieldViewModel
+        {
+            TempId = Guid.NewGuid(),
+            Id = Guid.Empty,
+            IsEditing = true,
+            SortOrder = Fields.Count,
+            DataType = "String"
+        };
+
+        Fields.Add(newField);
+        StateHasChanged();
+    }
+
+    private void EditField(FieldViewModel field)
+    {
+        // 取消其他正在编辑的字段
+        CancelAllEditing();
+
+        // 备份当前字段
+        _backupFields[field.TempId] = field.Clone();
+        field.IsEditing = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveField(FieldViewModel field)
+    {
+        // 验证字段
+        if (!field.Validate())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        // 检查字段名唯一性
+        var duplicateField = Fields.FirstOrDefault(f =>
+            f.TempId != field.TempId &&
+            f.PropertyName.Equals(field.PropertyName, StringComparison.OrdinalIgnoreCase));
+
+        if (duplicateField != null)
+        {
+            field.ValidationError = $"字段名 '{field.PropertyName}' 已存在";
+            StateHasChanged();
+            return;
+        }
+
+        field.IsEditing = false;
+        field.ValidationError = null;
+        _backupFields.Remove(field.TempId);
+
+        if (field.IsNew)
+        {
+            await OnFieldAdded.InvokeAsync(field);
+        }
+        else
+        {
+            await OnFieldChanged.InvokeAsync(field);
+        }
+
+        StateHasChanged();
+    }
+
+    private void CancelEdit(FieldViewModel field)
+    {
+        if (_backupFields.TryGetValue(field.TempId, out var backup))
+        {
+            // 恢复原值
+            var index = Fields.IndexOf(field);
+            if (index >= 0)
+            {
+                Fields[index] = backup;
+            }
+            _backupFields.Remove(field.TempId);
+        }
+        else if (field.IsNew)
+        {
+            // 新增字段取消，直接删除
+            Fields.Remove(field);
+        }
+
+        StateHasChanged();
+    }
+
+    private void CopyField(FieldViewModel field)
+    {
+        // 取消其他正在编辑的字段
+        CancelAllEditing();
+
+        var newField = field.Clone();
+        newField.TempId = Guid.NewGuid();
+        newField.Id = Guid.Empty;
+        newField.PropertyName = GenerateUniqueName(field.PropertyName);
+        newField.IsEditing = true;
+        newField.SortOrder = Fields.Count;
+
+        Fields.Add(newField);
+        StateHasChanged();
+    }
+
+    private async Task DeleteField(FieldViewModel field)
+    {
+        Fields.Remove(field);
+        await OnFieldRemoved.InvokeAsync(field.TempId);
+        StateHasChanged();
+    }
+
+    private void OnDataTypeChanged(FieldViewModel field)
+    {
+        // 根据数据类型清除不相关的字段
+        if (field.DataType != "String")
+        {
+            field.Length = null;
+        }
+        if (field.DataType != "Decimal")
+        {
+            field.Precision = null;
+            field.Scale = null;
+        }
+        StateHasChanged();
+    }
+
+    private void CancelAllEditing()
+    {
+        foreach (var field in Fields.Where(f => f.IsEditing).ToList())
+        {
+            if (field.IsNew)
+            {
+                Fields.Remove(field);
+            }
+            else if (_backupFields.TryGetValue(field.TempId, out var backup))
+            {
+                var index = Fields.IndexOf(field);
+                if (index >= 0)
+                {
+                    Fields[index] = backup;
+                }
+                _backupFields.Remove(field.TempId);
+            }
+        }
+    }
+
+    private string GenerateUniqueName(string baseName)
+    {
+        var existingNames = Fields.Select(f => f.PropertyName.ToLower()).ToHashSet();
+        var newName = baseName;
+        var counter = 1;
+
+        while (existingNames.Contains(newName.ToLower()))
+        {
+            newName = $"{baseName}{counter}";
+            counter++;
+        }
+
+        return newName;
+    }
+}

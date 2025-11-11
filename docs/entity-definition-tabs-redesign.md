@@ -1,0 +1,2077 @@
+# 实体定义页签式子实体管理 - 技术设计文档
+
+## 1. 概述
+
+### 1.1 设计目标
+
+将现有的实体定义编辑功能从"按钮+弹窗"模式重构为"页签式子实体管理"模式，支持在单个页面中同时管理主实体及其多个子实体（1:N关系），并提供：
+
+- **页签式布局**：每个子实体对应一个Tab，清晰展示层级关系
+- **行内编辑**：使用表格行内编辑模式管理字段，无需弹窗
+- **实时校验**：字段级和子实体级的多层验证
+- **自动化流程**：保存后自动生成子实体类型、发布元数据、构建聚合VO
+
+### 1.2 设计约束
+
+1. **数据模型**：主实体（EntityDefinition）+ N个子实体（SubEntityDefinition），关系为1:N
+2. **字段唯一性**：每个子实体内部字段名（PropertyName）必须唯一
+3. **必填校验**：所有子实体的必填字段必须在保存前通过验证
+4. **引用一致性**：主实体与子实体之间的引用关系必须一致
+5. **现有规范**：遵循BobCRM现有的Clean Architecture、命名规范和UI风格
+
+### 1.3 技术栈
+
+- **后端**: .NET 8, EF Core 8, PostgreSQL (jsonb)
+- **前端**: Blazor Server, Ant Design Blazor
+- **验证**: FluentValidation
+- **代码生成**: Roslyn (Microsoft.CodeAnalysis)
+- **多语言**: PostgreSQL jsonb + MultilingualTextDto
+
+---
+
+## 2. 领域模型设计（Domain Layer）
+
+### 2.1 聚合根：EntityDefinitionAggregate
+
+#### 2.1.1 设计原则
+
+- **聚合根**：EntityDefinition作为聚合根，统一管理子实体和字段的生命周期
+- **一致性边界**：所有对子实体和字段的修改必须通过聚合根进行
+- **不变量保护**：聚合根负责维护业务规则（字段唯一性、引用一致性等）
+
+#### 2.1.2 类结构
+
+**文件路径**: `/src/BobCrm.Api/Domain/Aggregates/EntityDefinitionAggregate.cs`
+
+```csharp
+namespace BobCrm.Api.Domain.Aggregates;
+
+/// <summary>
+/// 实体定义聚合根
+/// 管理主实体及其子实体的完整生命周期
+/// </summary>
+public class EntityDefinitionAggregate
+{
+    private readonly EntityDefinition _root;
+    private readonly List<SubEntityDefinition> _subEntities;
+
+    /// <summary>
+    /// 聚合根实体
+    /// </summary>
+    public EntityDefinition Root => _root;
+
+    /// <summary>
+    /// 子实体集合（只读）
+    /// </summary>
+    public IReadOnlyList<SubEntityDefinition> SubEntities => _subEntities.AsReadOnly();
+
+    /// <summary>
+    /// 构造函数（用于新建）
+    /// </summary>
+    public EntityDefinitionAggregate(EntityDefinition root)
+    {
+        _root = root ?? throw new ArgumentNullException(nameof(root));
+        _subEntities = new List<SubEntityDefinition>();
+    }
+
+    /// <summary>
+    /// 构造函数（用于加载）
+    /// </summary>
+    public EntityDefinitionAggregate(EntityDefinition root, List<SubEntityDefinition> subEntities)
+    {
+        _root = root ?? throw new ArgumentNullException(nameof(root));
+        _subEntities = subEntities ?? new List<SubEntityDefinition>();
+    }
+
+    /// <summary>
+    /// 添加子实体
+    /// </summary>
+    public SubEntityDefinition AddSubEntity(
+        string code,
+        Dictionary<string, string?> displayName,
+        Dictionary<string, string?>? description = null,
+        int sortOrder = 0)
+    {
+        // 验证子实体编码唯一性
+        if (_subEntities.Any(s => s.Code == code))
+        {
+            throw new DomainException($"子实体编码 '{code}' 已存在");
+        }
+
+        var subEntity = new SubEntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = _root.Id,
+            Code = code,
+            DisplayName = displayName,
+            Description = description,
+            SortOrder = sortOrder,
+            Fields = new List<FieldMetadata>()
+        };
+
+        _subEntities.Add(subEntity);
+        return subEntity;
+    }
+
+    /// <summary>
+    /// 移除子实体
+    /// </summary>
+    public void RemoveSubEntity(Guid subEntityId)
+    {
+        var subEntity = _subEntities.FirstOrDefault(s => s.Id == subEntityId);
+        if (subEntity != null)
+        {
+            _subEntities.Remove(subEntity);
+        }
+    }
+
+    /// <summary>
+    /// 为子实体添加字段
+    /// </summary>
+    public FieldMetadata AddFieldToSubEntity(
+        Guid subEntityId,
+        string propertyName,
+        Dictionary<string, string?> displayName,
+        string dataType,
+        bool isRequired = false,
+        int? length = null,
+        int sortOrder = 0)
+    {
+        var subEntity = _subEntities.FirstOrDefault(s => s.Id == subEntityId);
+        if (subEntity == null)
+        {
+            throw new DomainException($"子实体 ID {subEntityId} 不存在");
+        }
+
+        // 验证字段名唯一性（同一子实体内）
+        if (subEntity.Fields.Any(f => f.PropertyName == propertyName))
+        {
+            throw new DomainException($"子实体 '{subEntity.Code}' 中字段 '{propertyName}' 已存在");
+        }
+
+        var field = new FieldMetadata
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = _root.Id,
+            SubEntityDefinitionId = subEntityId,
+            PropertyName = propertyName,
+            DisplayName = displayName,
+            DataType = dataType,
+            IsRequired = isRequired,
+            Length = length,
+            SortOrder = sortOrder
+        };
+
+        subEntity.Fields.Add(field);
+        return field;
+    }
+
+    /// <summary>
+    /// 验证聚合完整性
+    /// </summary>
+    public ValidationResult Validate()
+    {
+        var errors = new List<ValidationError>();
+
+        // 验证主实体
+        ValidateRootEntity(errors);
+
+        // 验证子实体
+        foreach (var subEntity in _subEntities)
+        {
+            ValidateSubEntity(subEntity, errors);
+        }
+
+        // 验证引用一致性
+        ValidateReferenceConsistency(errors);
+
+        return new ValidationResult(errors);
+    }
+
+    private void ValidateRootEntity(List<ValidationError> errors)
+    {
+        if (string.IsNullOrWhiteSpace(_root.EntityName))
+        {
+            errors.Add(new ValidationError("Root.EntityName", "实体名称不能为空"));
+        }
+
+        if (_root.DisplayName == null || !_root.DisplayName.Any())
+        {
+            errors.Add(new ValidationError("Root.DisplayName", "显示名称不能为空"));
+        }
+    }
+
+    private void ValidateSubEntity(SubEntityDefinition subEntity, List<ValidationError> errors)
+    {
+        var context = $"SubEntity[{subEntity.Code}]";
+
+        if (string.IsNullOrWhiteSpace(subEntity.Code))
+        {
+            errors.Add(new ValidationError($"{context}.Code", "子实体编码不能为空"));
+        }
+
+        if (subEntity.DisplayName == null || !subEntity.DisplayName.Any())
+        {
+            errors.Add(new ValidationError($"{context}.DisplayName", "子实体显示名称不能为空"));
+        }
+
+        // 验证字段唯一性
+        var duplicateFields = subEntity.Fields
+            .GroupBy(f => f.PropertyName)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateFields.Any())
+        {
+            errors.Add(new ValidationError(
+                $"{context}.Fields",
+                $"字段名重复: {string.Join(", ", duplicateFields)}"));
+        }
+
+        // 验证必填字段
+        foreach (var field in subEntity.Fields.Where(f => f.IsRequired))
+        {
+            if (string.IsNullOrWhiteSpace(field.DataType))
+            {
+                errors.Add(new ValidationError(
+                    $"{context}.Field[{field.PropertyName}].DataType",
+                    "必填字段的数据类型不能为空"));
+            }
+        }
+    }
+
+    private void ValidateReferenceConsistency(List<ValidationError> errors)
+    {
+        // 验证所有字段的EntityDefinitionId与聚合根ID一致
+        foreach (var subEntity in _subEntities)
+        {
+            if (subEntity.EntityDefinitionId != _root.Id)
+            {
+                errors.Add(new ValidationError(
+                    $"SubEntity[{subEntity.Code}].EntityDefinitionId",
+                    "子实体的EntityDefinitionId与聚合根不一致"));
+            }
+
+            foreach (var field in subEntity.Fields)
+            {
+                if (field.EntityDefinitionId != _root.Id)
+                {
+                    errors.Add(new ValidationError(
+                        $"SubEntity[{subEntity.Code}].Field[{field.PropertyName}].EntityDefinitionId",
+                        "字段的EntityDefinitionId与聚合根不一致"));
+                }
+            }
+        }
+    }
+}
+
+/// <summary>
+/// 验证结果
+/// </summary>
+public class ValidationResult
+{
+    public List<ValidationError> Errors { get; }
+    public bool IsValid => !Errors.Any();
+
+    public ValidationResult(List<ValidationError> errors)
+    {
+        Errors = errors ?? new List<ValidationError>();
+    }
+}
+
+/// <summary>
+/// 验证错误
+/// </summary>
+public class ValidationError
+{
+    public string PropertyPath { get; }
+    public string Message { get; }
+
+    public ValidationError(string propertyPath, string message)
+    {
+        PropertyPath = propertyPath;
+        Message = message;
+    }
+}
+
+/// <summary>
+/// 领域异常
+/// </summary>
+public class DomainException : Exception
+{
+    public DomainException(string message) : base(message) { }
+}
+```
+
+### 2.2 子实体定义：SubEntityDefinition
+
+**文件路径**: `/src/BobCrm.Api/Domain/Models/SubEntityDefinition.cs`
+
+```csharp
+namespace BobCrm.Api.Domain.Models;
+
+/// <summary>
+/// 子实体定义
+/// 表示实体的1:N子表结构
+/// </summary>
+public class SubEntityDefinition
+{
+    /// <summary>
+    /// 子实体ID（主键）
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 所属主实体ID（外键）
+    /// </summary>
+    public Guid EntityDefinitionId { get; set; }
+
+    /// <summary>
+    /// 子实体编码（如 "Lines", "Items"）
+    /// 用于生成C#类名和表名
+    /// </summary>
+    [MaxLength(100)]
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 显示名称（多语言）
+    /// </summary>
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string?> DisplayName { get; set; } = new();
+
+    /// <summary>
+    /// 描述（多语言，可选）
+    /// </summary>
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string?>? Description { get; set; }
+
+    /// <summary>
+    /// 排序顺序
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// 默认排序字段
+    /// </summary>
+    [MaxLength(100)]
+    public string? DefaultSortField { get; set; }
+
+    /// <summary>
+    /// 是否降序排序
+    /// </summary>
+    public bool IsDescending { get; set; }
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// 更新时间
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// 字段集合
+    /// </summary>
+    public List<FieldMetadata> Fields { get; set; } = new();
+
+    /// <summary>
+    /// 导航属性：主实体
+    /// </summary>
+    public EntityDefinition? EntityDefinition { get; set; }
+}
+```
+
+### 2.3 字段元数据扩展：FieldMetadata
+
+**文件路径**: `/src/BobCrm.Api/Domain/Models/FieldMetadata.cs` (扩展现有类)
+
+```csharp
+// 在现有 FieldMetadata 类中添加以下属性：
+
+/// <summary>
+/// 所属子实体ID（可选）
+/// 如果为空，表示是主实体字段；否则表示是子实体字段
+/// </summary>
+public Guid? SubEntityDefinitionId { get; set; }
+
+/// <summary>
+/// 导航属性：所属子实体
+/// </summary>
+public SubEntityDefinition? SubEntityDefinition { get; set; }
+```
+
+### 2.4 EF Core 配置
+
+**文件路径**: `/src/BobCrm.Api/Infrastructure/Configurations/SubEntityDefinitionConfiguration.cs`
+
+```csharp
+namespace BobCrm.Api.Infrastructure.Configurations;
+
+public class SubEntityDefinitionConfiguration : IEntityTypeConfiguration<SubEntityDefinition>
+{
+    public void Configure(EntityTypeBuilder<SubEntityDefinition> builder)
+    {
+        builder.ToTable("SubEntityDefinitions");
+
+        builder.HasKey(e => e.Id);
+
+        builder.Property(e => e.Code)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(e => e.DisplayName)
+            .IsRequired()
+            .HasColumnType("jsonb");
+
+        builder.Property(e => e.Description)
+            .HasColumnType("jsonb");
+
+        // 与主实体的关系
+        builder.HasOne(e => e.EntityDefinition)
+            .WithMany()
+            .HasForeignKey(e => e.EntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 与字段的关系
+        builder.HasMany(e => e.Fields)
+            .WithOne(f => f.SubEntityDefinition)
+            .HasForeignKey(f => f.SubEntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 索引
+        builder.HasIndex(e => new { e.EntityDefinitionId, e.Code })
+            .IsUnique();
+    }
+}
+```
+
+---
+
+## 3. 前端UI组件设计（Blazor Layer）
+
+### 3.1 组件层次结构
+
+```
+EntityDefinitionEdit.razor
+├── MainEntityForm.razor (现有，保留)
+├── SubEntityTabs.razor (新增)
+│   ├── TabPane[0]: SubEntityTabPanel.razor
+│   │   ├── SubEntityHeader.razor
+│   │   └── FieldGrid.razor
+│   ├── TabPane[1]: SubEntityTabPanel.razor
+│   │   └── ...
+│   └── AddSubEntityButton
+└── ActionBar.razor (保存/取消按钮)
+```
+
+### 3.2 SubEntityTabs 组件
+
+**文件路径**: `/src/BobCrm.App/Components/Shared/SubEntityTabs.razor`
+
+```razor
+@using BobCrm.App.Models
+@inject IMultilingualTextResolver MultilingualTextResolver
+
+<div class="sub-entity-tabs-container">
+    <Tabs @bind-ActiveKey="@_activeKey"
+          Type="@TabType.EditableCard"
+          HideAdd="true"
+          OnEdit="OnTabEdit">
+
+        @foreach (var subEntity in SubEntities)
+        {
+            <TabPane Key="@subEntity.TempId.ToString()"
+                     Closable="true">
+                <TabTemplate>
+                    <span class="@GetTabClass(subEntity)">
+                        @GetDisplayName(subEntity.DisplayName)
+                        @if (subEntity.HasValidationErrors)
+                        {
+                            <Badge Count="@subEntity.ValidationErrorCount"
+                                   Style="margin-left: 8px;" />
+                        }
+                    </span>
+                </TabTemplate>
+                <ChildContent>
+                    <SubEntityTabPanel SubEntity="@subEntity"
+                                     OnFieldChanged="@OnFieldChanged"
+                                     OnFieldAdded="@OnFieldAdded"
+                                     OnFieldRemoved="@OnFieldRemoved" />
+                </ChildContent>
+            </TabPane>
+        }
+    </Tabs>
+
+    <div class="add-sub-entity-button">
+        <Button Type="@ButtonType.Dashed"
+                Icon="@IconType.Outline.Plus"
+                Block
+                OnClick="@ShowAddSubEntityModal">
+            添加子实体
+        </Button>
+    </div>
+</div>
+
+<Modal Title="新建子实体"
+       @bind-Visible="@_addModalVisible"
+       OnOk="@OnAddSubEntityConfirm"
+       OnCancel="@OnAddSubEntityCancel">
+    <Form Model="@_newSubEntity" @ref="_addForm">
+        <FormItem Label="子实体编码" Required>
+            <Input @bind-Value="@_newSubEntity.Code" />
+        </FormItem>
+
+        <FormItem Label="显示名称" Required>
+            <MultilingualInput @bind-Value="@_newSubEntity.DisplayName" />
+        </FormItem>
+
+        <FormItem Label="描述">
+            <MultilingualInput @bind-Value="@_newSubEntity.Description" />
+        </FormItem>
+
+        <FormItem Label="排序">
+            <InputNumber @bind-Value="@_newSubEntity.SortOrder" />
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    [Parameter] public List<SubEntityViewModel> SubEntities { get; set; } = new();
+    [Parameter] public EventCallback<SubEntityViewModel> OnSubEntityAdded { get; set; }
+    [Parameter] public EventCallback<Guid> OnSubEntityRemoved { get; set; }
+    [Parameter] public EventCallback<FieldViewModel> OnFieldChanged { get; set; }
+    [Parameter] public EventCallback<(Guid SubEntityId, FieldViewModel Field)> OnFieldAdded { get; set; }
+    [Parameter] public EventCallback<(Guid SubEntityId, Guid FieldId)> OnFieldRemoved { get; set; }
+
+    private string _activeKey = string.Empty;
+    private bool _addModalVisible = false;
+    private SubEntityViewModel _newSubEntity = new();
+    private Form<SubEntityViewModel>? _addForm;
+
+    protected override void OnParametersSet()
+    {
+        if (SubEntities.Any() && string.IsNullOrEmpty(_activeKey))
+        {
+            _activeKey = SubEntities.First().TempId.ToString();
+        }
+    }
+
+    private string GetTabClass(SubEntityViewModel subEntity)
+    {
+        return subEntity.HasValidationErrors ? "tab-with-errors" : "";
+    }
+
+    private string GetDisplayName(MultilingualTextDto? displayName)
+    {
+        return MultilingualTextResolver.Resolve(displayName, "未命名子实体");
+    }
+
+    private void ShowAddSubEntityModal()
+    {
+        _newSubEntity = new SubEntityViewModel
+        {
+            TempId = Guid.NewGuid(),
+            SortOrder = SubEntities.Count
+        };
+        _addModalVisible = true;
+    }
+
+    private async Task OnAddSubEntityConfirm()
+    {
+        if (_addForm != null && await _addForm.ValidateAsync())
+        {
+            SubEntities.Add(_newSubEntity);
+            _activeKey = _newSubEntity.TempId.ToString();
+            await OnSubEntityAdded.InvokeAsync(_newSubEntity);
+            _addModalVisible = false;
+        }
+    }
+
+    private void OnAddSubEntityCancel()
+    {
+        _addModalVisible = false;
+    }
+
+    private async Task OnTabEdit(string key, string action)
+    {
+        if (action == "remove")
+        {
+            var subEntityId = Guid.Parse(key);
+            var subEntity = SubEntities.FirstOrDefault(s => s.TempId == subEntityId);
+            if (subEntity != null)
+            {
+                SubEntities.Remove(subEntity);
+                await OnSubEntityRemoved.InvokeAsync(subEntityId);
+
+                if (_activeKey == key && SubEntities.Any())
+                {
+                    _activeKey = SubEntities.First().TempId.ToString();
+                }
+            }
+        }
+    }
+}
+```
+
+**样式文件**: `/src/BobCrm.App/Components/Shared/SubEntityTabs.razor.css`
+
+```css
+.sub-entity-tabs-container {
+    padding: 16px 0;
+}
+
+.add-sub-entity-button {
+    margin-top: 16px;
+}
+
+.tab-with-errors {
+    color: #ff4d4f;
+}
+
+::deep .ant-tabs-content {
+    max-height: 600px;
+    overflow-y: auto;
+}
+```
+
+### 3.3 SubEntityTabPanel 组件
+
+**文件路径**: `/src/BobCrm.App/Components/Shared/SubEntityTabPanel.razor`
+
+```razor
+@using BobCrm.App.Models
+
+<div class="sub-entity-panel">
+    <SubEntityHeader SubEntity="@SubEntity" />
+
+    <FieldGrid Fields="@SubEntity.Fields"
+               OnFieldChanged="@OnFieldChanged"
+               OnFieldAdded="@HandleFieldAdded"
+               OnFieldRemoved="@HandleFieldRemoved" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SubEntityViewModel SubEntity { get; set; } = null!;
+    [Parameter] public EventCallback<FieldViewModel> OnFieldChanged { get; set; }
+    [Parameter] public EventCallback<FieldViewModel> OnFieldAdded { get; set; }
+    [Parameter] public EventCallback<Guid> OnFieldRemoved { get; set; }
+
+    private async Task HandleFieldAdded(FieldViewModel field)
+    {
+        SubEntity.Fields.Add(field);
+        await OnFieldAdded.InvokeAsync(field);
+    }
+
+    private async Task HandleFieldRemoved(Guid fieldId)
+    {
+        var field = SubEntity.Fields.FirstOrDefault(f => f.TempId == fieldId);
+        if (field != null)
+        {
+            SubEntity.Fields.Remove(field);
+            await OnFieldRemoved.InvokeAsync(fieldId);
+        }
+    }
+}
+```
+
+### 3.4 FieldGrid 组件（表格行内编辑）
+
+**文件路径**: `/src/BobCrm.App/Components/Shared/FieldGrid.razor`
+
+```razor
+@using BobCrm.App.Models
+@inject IMultilingualTextResolver MultilingualTextResolver
+
+<div class="field-grid-container">
+    <Table TItem="FieldViewModel"
+           DataSource="@Fields"
+           Size="@TableSize.Small"
+           Bordered>
+
+        <Column Title="字段编码" TData="string">
+            @if (context.IsEditing)
+            {
+                <Input @bind-Value="@context.PropertyName"
+                       Placeholder="例如: Name" />
+            }
+            else
+            {
+                @context.PropertyName
+            }
+        </Column>
+
+        <Column Title="显示名称" TData="string">
+            @if (context.IsEditing)
+            {
+                <MultilingualInput @bind-Value="@context.DisplayName" />
+            }
+            else
+            {
+                @MultilingualTextResolver.Resolve(context.DisplayName, "-")
+            }
+        </Column>
+
+        <Column Title="类型" TData="string">
+            @if (context.IsEditing)
+            {
+                <Select @bind-Value="@context.DataType"
+                        Style="width: 100%">
+                    <SelectOption Value="String">String</SelectOption>
+                    <SelectOption Value="Int32">Int32</SelectOption>
+                    <SelectOption Value="Decimal">Decimal</SelectOption>
+                    <SelectOption Value="DateTime">DateTime</SelectOption>
+                    <SelectOption Value="Boolean">Boolean</SelectOption>
+                    <SelectOption Value="Guid">Guid</SelectOption>
+                </Select>
+            }
+            else
+            {
+                @context.DataType
+            }
+        </Column>
+
+        <Column Title="长度" TData="int?">
+            @if (context.IsEditing)
+            {
+                <InputNumber @bind-Value="@context.Length"
+                             Min="0"
+                             Placeholder="可选" />
+            }
+            else
+            {
+                @(context.Length?.ToString() ?? "-")
+            }
+        </Column>
+
+        <Column Title="必填" TData="bool">
+            @if (context.IsEditing)
+            {
+                <Checkbox @bind-Checked="@context.IsRequired" />
+            }
+            else
+            {
+                <Checkbox Checked="@context.IsRequired" Disabled />
+            }
+        </Column>
+
+        <Column Title="默认值" TData="string">
+            @if (context.IsEditing)
+            {
+                <Input @bind-Value="@context.DefaultValue"
+                       Placeholder="可选" />
+            }
+            else
+            {
+                @(context.DefaultValue ?? "-")
+            }
+        </Column>
+
+        <Column Title="操作" Width="120px">
+            @if (context.IsEditing)
+            {
+                <Space>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Type="@ButtonType.Primary"
+                                OnClick="@(() => SaveField(context))">
+                            保存
+                        </Button>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                OnClick="@(() => CancelEdit(context))">
+                            取消
+                        </Button>
+                    </SpaceItem>
+                </Space>
+            }
+            else
+            {
+                <Space>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Icon="@IconType.Outline.Edit"
+                                OnClick="@(() => EditField(context))" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button Size="@ButtonSize.Small"
+                                Icon="@IconType.Outline.Copy"
+                                OnClick="@(() => CopyField(context))" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm Title="确认删除此字段？"
+                                    OnConfirm="@(() => DeleteField(context))">
+                            <Button Size="@ButtonSize.Small"
+                                    Icon="@IconType.Outline.Delete"
+                                    Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            }
+        </Column>
+    </Table>
+
+    <div class="field-grid-actions">
+        <Button Type="@ButtonType.Dashed"
+                Icon="@IconType.Outline.Plus"
+                Block
+                OnClick="@AddField">
+            添加字段
+        </Button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<FieldViewModel> Fields { get; set; } = new();
+    [Parameter] public EventCallback<FieldViewModel> OnFieldChanged { get; set; }
+    [Parameter] public EventCallback<FieldViewModel> OnFieldAdded { get; set; }
+    [Parameter] public EventCallback<Guid> OnFieldRemoved { get; set; }
+
+    private Dictionary<Guid, FieldViewModel> _backupFields = new();
+
+    private void AddField()
+    {
+        var newField = new FieldViewModel
+        {
+            TempId = Guid.NewGuid(),
+            IsEditing = true,
+            SortOrder = Fields.Count
+        };
+
+        Fields.Add(newField);
+    }
+
+    private void EditField(FieldViewModel field)
+    {
+        _backupFields[field.TempId] = field.Clone();
+        field.IsEditing = true;
+    }
+
+    private async Task SaveField(FieldViewModel field)
+    {
+        // 验证字段
+        if (string.IsNullOrWhiteSpace(field.PropertyName))
+        {
+            // TODO: 显示验证错误
+            return;
+        }
+
+        field.IsEditing = false;
+        _backupFields.Remove(field.TempId);
+
+        if (field.Id == Guid.Empty)
+        {
+            await OnFieldAdded.InvokeAsync(field);
+        }
+        else
+        {
+            await OnFieldChanged.InvokeAsync(field);
+        }
+    }
+
+    private void CancelEdit(FieldViewModel field)
+    {
+        if (_backupFields.TryGetValue(field.TempId, out var backup))
+        {
+            // 恢复原值
+            var index = Fields.IndexOf(field);
+            Fields[index] = backup;
+            _backupFields.Remove(field.TempId);
+        }
+        else
+        {
+            // 新增字段取消，直接删除
+            Fields.Remove(field);
+        }
+    }
+
+    private void CopyField(FieldViewModel field)
+    {
+        var newField = field.Clone();
+        newField.TempId = Guid.NewGuid();
+        newField.Id = Guid.Empty;
+        newField.PropertyName += "_Copy";
+        newField.IsEditing = true;
+
+        Fields.Add(newField);
+    }
+
+    private async Task DeleteField(FieldViewModel field)
+    {
+        Fields.Remove(field);
+        await OnFieldRemoved.InvokeAsync(field.TempId);
+    }
+}
+```
+
+**样式文件**: `/src/BobCrm.App/Components/Shared/FieldGrid.razor.css`
+
+```css
+.field-grid-container {
+    padding: 16px;
+}
+
+.field-grid-actions {
+    margin-top: 16px;
+}
+
+::deep .ant-table-cell {
+    padding: 8px !important;
+}
+```
+
+### 3.5 ViewModel 定义
+
+**文件路径**: `/src/BobCrm.App/Models/SubEntityViewModel.cs`
+
+```csharp
+namespace BobCrm.App.Models;
+
+/// <summary>
+/// 子实体视图模型
+/// </summary>
+public class SubEntityViewModel
+{
+    /// <summary>
+    /// 临时ID（用于前端标识，保存后替换为实际ID）
+    /// </summary>
+    public Guid TempId { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// 实际ID（保存后的数据库ID）
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 所属主实体ID
+    /// </summary>
+    public Guid EntityDefinitionId { get; set; }
+
+    /// <summary>
+    /// 子实体编码
+    /// </summary>
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 显示名称（多语言）
+    /// </summary>
+    public MultilingualTextDto DisplayName { get; set; } = new();
+
+    /// <summary>
+    /// 描述（多语言）
+    /// </summary>
+    public MultilingualTextDto? Description { get; set; }
+
+    /// <summary>
+    /// 排序顺序
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// 字段集合
+    /// </summary>
+    public List<FieldViewModel> Fields { get; set; } = new();
+
+    /// <summary>
+    /// 是否有验证错误
+    /// </summary>
+    public bool HasValidationErrors { get; set; }
+
+    /// <summary>
+    /// 验证错误数量
+    /// </summary>
+    public int ValidationErrorCount { get; set; }
+
+    /// <summary>
+    /// 验证错误消息
+    /// </summary>
+    public List<string> ValidationErrors { get; set; } = new();
+}
+```
+
+**文件路径**: `/src/BobCrm.App/Models/FieldViewModel.cs`
+
+```csharp
+namespace BobCrm.App.Models;
+
+/// <summary>
+/// 字段视图模型
+/// </summary>
+public class FieldViewModel
+{
+    /// <summary>
+    /// 临时ID（用于前端标识）
+    /// </summary>
+    public Guid TempId { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// 实际ID（保存后的数据库ID）
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 字段编码
+    /// </summary>
+    public string PropertyName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 显示名称（多语言）
+    /// </summary>
+    public MultilingualTextDto DisplayName { get; set; } = new();
+
+    /// <summary>
+    /// 数据类型
+    /// </summary>
+    public string DataType { get; set; } = "String";
+
+    /// <summary>
+    /// 长度（可选）
+    /// </summary>
+    public int? Length { get; set; }
+
+    /// <summary>
+    /// 是否必填
+    /// </summary>
+    public bool IsRequired { get; set; }
+
+    /// <summary>
+    /// 默认值
+    /// </summary>
+    public string? DefaultValue { get; set; }
+
+    /// <summary>
+    /// 描述
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// 排序顺序
+    /// </summary>
+    public int SortOrder { get; set; }
+
+    /// <summary>
+    /// 是否处于编辑状态
+    /// </summary>
+    public bool IsEditing { get; set; }
+
+    /// <summary>
+    /// 克隆字段（用于取消编辑时恢复）
+    /// </summary>
+    public FieldViewModel Clone()
+    {
+        return new FieldViewModel
+        {
+            TempId = this.TempId,
+            Id = this.Id,
+            PropertyName = this.PropertyName,
+            DisplayName = new MultilingualTextDto(this.DisplayName),
+            DataType = this.DataType,
+            Length = this.Length,
+            IsRequired = this.IsRequired,
+            DefaultValue = this.DefaultValue,
+            Description = this.Description,
+            SortOrder = this.SortOrder,
+            IsEditing = this.IsEditing
+        };
+    }
+}
+```
+
+---
+
+## 4. 服务层设计（Service Layer）
+
+### 4.1 EntityDefinitionAggregateService
+
+**文件路径**: `/src/BobCrm.Api/Services/EntityDefinitionAggregateService.cs`
+
+```csharp
+namespace BobCrm.Api.Services;
+
+/// <summary>
+/// 实体定义聚合服务
+/// 负责聚合的保存、验证、代码生成和元数据发布
+/// </summary>
+public class EntityDefinitionAggregateService
+{
+    private readonly AppDbContext _dbContext;
+    private readonly ICodeGenerationService _codeGenerationService;
+    private readonly IMetadataPublisher _metadataPublisher;
+    private readonly ILogger<EntityDefinitionAggregateService> _logger;
+
+    public EntityDefinitionAggregateService(
+        AppDbContext dbContext,
+        ICodeGenerationService codeGenerationService,
+        IMetadataPublisher metadataPublisher,
+        ILogger<EntityDefinitionAggregateService> logger)
+    {
+        _dbContext = dbContext;
+        _codeGenerationService = codeGenerationService;
+        _metadataPublisher = metadataPublisher;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// 保存聚合（事务）
+    /// </summary>
+    public async Task<EntityDefinitionAggregateDto> SaveAggregateAsync(
+        SaveEntityDefinitionAggregateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. 构建聚合
+        var aggregate = await BuildAggregateAsync(request, cancellationToken);
+
+        // 2. 验证聚合
+        var validationResult = aggregate.Validate();
+        if (!validationResult.IsValid)
+        {
+            throw new ValidationException(validationResult.Errors);
+        }
+
+        // 3. 保存到数据库（事务）
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await SaveAggregateToDbAsync(aggregate, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+
+        // 4. 生成代码
+        await _codeGenerationService.GenerateSubEntitiesAsync(aggregate, cancellationToken);
+
+        // 5. 发布元数据
+        await _metadataPublisher.PublishAsync(aggregate, cancellationToken);
+
+        // 6. 返回DTO
+        return BuildAggregateDto(aggregate);
+    }
+
+    /// <summary>
+    /// 加载聚合
+    /// </summary>
+    public async Task<EntityDefinitionAggregate?> LoadAggregateAsync(
+        Guid entityDefinitionId,
+        CancellationToken cancellationToken = default)
+    {
+        var root = await _dbContext.EntityDefinitions
+            .Include(e => e.Fields)
+            .Include(e => e.Interfaces)
+            .FirstOrDefaultAsync(e => e.Id == entityDefinitionId, cancellationToken);
+
+        if (root == null)
+        {
+            return null;
+        }
+
+        var subEntities = await _dbContext.Set<SubEntityDefinition>()
+            .Include(s => s.Fields)
+            .Where(s => s.EntityDefinitionId == entityDefinitionId)
+            .OrderBy(s => s.SortOrder)
+            .ToListAsync(cancellationToken);
+
+        return new EntityDefinitionAggregate(root, subEntities);
+    }
+
+    private async Task<EntityDefinitionAggregate> BuildAggregateAsync(
+        SaveEntityDefinitionAggregateRequest request,
+        CancellationToken cancellationToken)
+    {
+        EntityDefinition root;
+
+        if (request.Id == Guid.Empty)
+        {
+            // 新建
+            root = new EntityDefinition
+            {
+                Id = Guid.NewGuid(),
+                Namespace = request.Namespace,
+                EntityName = request.EntityName,
+                DisplayName = request.DisplayName,
+                Description = request.Description,
+                Status = EntityStatus.Draft,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+        else
+        {
+            // 更新
+            root = await _dbContext.EntityDefinitions
+                .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken)
+                ?? throw new NotFoundException($"实体定义 {request.Id} 不存在");
+
+            root.DisplayName = request.DisplayName;
+            root.Description = request.Description;
+            root.UpdatedAt = DateTime.UtcNow;
+        }
+
+        var aggregate = new EntityDefinitionAggregate(root);
+
+        // 添加子实体
+        foreach (var subEntityDto in request.SubEntities)
+        {
+            var subEntity = aggregate.AddSubEntity(
+                subEntityDto.Code,
+                subEntityDto.DisplayName,
+                subEntityDto.Description,
+                subEntityDto.SortOrder);
+
+            // 添加字段
+            foreach (var fieldDto in subEntityDto.Fields)
+            {
+                aggregate.AddFieldToSubEntity(
+                    subEntity.Id,
+                    fieldDto.PropertyName,
+                    fieldDto.DisplayName,
+                    fieldDto.DataType,
+                    fieldDto.IsRequired,
+                    fieldDto.Length,
+                    fieldDto.SortOrder);
+            }
+        }
+
+        return aggregate;
+    }
+
+    private async Task SaveAggregateToDbAsync(
+        EntityDefinitionAggregate aggregate,
+        CancellationToken cancellationToken)
+    {
+        // 保存主实体
+        if (aggregate.Root.Id == Guid.Empty || !await _dbContext.EntityDefinitions.AnyAsync(e => e.Id == aggregate.Root.Id, cancellationToken))
+        {
+            _dbContext.EntityDefinitions.Add(aggregate.Root);
+        }
+        else
+        {
+            _dbContext.EntityDefinitions.Update(aggregate.Root);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // 删除旧的子实体
+        var existingSubEntityIds = await _dbContext.Set<SubEntityDefinition>()
+            .Where(s => s.EntityDefinitionId == aggregate.Root.Id)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken);
+
+        var newSubEntityIds = aggregate.SubEntities.Select(s => s.Id).ToList();
+        var subEntitiesToDelete = existingSubEntityIds.Except(newSubEntityIds).ToList();
+
+        if (subEntitiesToDelete.Any())
+        {
+            await _dbContext.Set<SubEntityDefinition>()
+                .Where(s => subEntitiesToDelete.Contains(s.Id))
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        // 保存子实体
+        foreach (var subEntity in aggregate.SubEntities)
+        {
+            if (existingSubEntityIds.Contains(subEntity.Id))
+            {
+                _dbContext.Set<SubEntityDefinition>().Update(subEntity);
+            }
+            else
+            {
+                _dbContext.Set<SubEntityDefinition>().Add(subEntity);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private EntityDefinitionAggregateDto BuildAggregateDto(EntityDefinitionAggregate aggregate)
+    {
+        return new EntityDefinitionAggregateDto
+        {
+            Master = MapToEntityDefinitionDto(aggregate.Root),
+            SubEntities = aggregate.SubEntities.Select(MapToSubEntityDto).ToList()
+        };
+    }
+
+    private EntityDefinitionDto MapToEntityDefinitionDto(EntityDefinition entity)
+    {
+        return new EntityDefinitionDto
+        {
+            Id = entity.Id,
+            Namespace = entity.Namespace,
+            EntityName = entity.EntityName,
+            DisplayName = entity.DisplayName,
+            Description = entity.Description,
+            Status = entity.Status
+        };
+    }
+
+    private SubEntityDto MapToSubEntityDto(SubEntityDefinition subEntity)
+    {
+        return new SubEntityDto
+        {
+            Id = subEntity.Id,
+            Code = subEntity.Code,
+            DisplayName = subEntity.DisplayName,
+            Description = subEntity.Description,
+            SortOrder = subEntity.SortOrder,
+            Fields = subEntity.Fields.Select(MapToFieldDto).ToList()
+        };
+    }
+
+    private FieldDto MapToFieldDto(FieldMetadata field)
+    {
+        return new FieldDto
+        {
+            Id = field.Id,
+            PropertyName = field.PropertyName,
+            DisplayName = field.DisplayName,
+            DataType = field.DataType,
+            Length = field.Length,
+            IsRequired = field.IsRequired,
+            DefaultValue = field.DefaultValue,
+            SortOrder = field.SortOrder
+        };
+    }
+}
+```
+
+### 4.2 代码生成服务接口
+
+**文件路径**: `/src/BobCrm.Api/Services/ICodeGenerationService.cs`
+
+```csharp
+namespace BobCrm.Api.Services;
+
+/// <summary>
+/// 代码生成服务接口
+/// </summary>
+public interface ICodeGenerationService
+{
+    /// <summary>
+    /// 为聚合中的所有子实体生成C#类
+    /// </summary>
+    Task GenerateSubEntitiesAsync(
+        EntityDefinitionAggregate aggregate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 生成单个子实体的C#类
+    /// </summary>
+    Task<string> GenerateSubEntityClassAsync(
+        SubEntityDefinition subEntity,
+        CancellationToken cancellationToken = default);
+}
+```
+
+### 4.3 元数据发布服务接口
+
+**文件路径**: `/src/BobCrm.Api/Services/IMetadataPublisher.cs`
+
+```csharp
+namespace BobCrm.Api.Services;
+
+/// <summary>
+/// 元数据发布服务接口
+/// </summary>
+public interface IMetadataPublisher
+{
+    /// <summary>
+    /// 发布聚合的元数据
+    /// </summary>
+    Task PublishAsync(
+        EntityDefinitionAggregate aggregate,
+        CancellationToken cancellationToken = default);
+}
+```
+
+---
+
+## 5. API 端点设计（Endpoints Layer）
+
+**文件路径**: `/src/BobCrm.Api/Endpoints/EntityDefinitionAggregateEndpoints.cs`
+
+```csharp
+namespace BobCrm.Api.Endpoints;
+
+public static class EntityDefinitionAggregateEndpoints
+{
+    public static RouteGroupBuilder MapEntityDefinitionAggregateEndpoints(this RouteGroupBuilder group)
+    {
+        // 保存聚合（新建或更新）
+        group.MapPost("/", SaveAggregate)
+            .WithName("SaveEntityDefinitionAggregate")
+            .WithTags("EntityDefinitionAggregate")
+            .RequireAuthorization();
+
+        // 获取聚合
+        group.MapGet("/{id:guid}", GetAggregate)
+            .WithName("GetEntityDefinitionAggregate")
+            .WithTags("EntityDefinitionAggregate")
+            .RequireAuthorization();
+
+        // 验证聚合（不保存）
+        group.MapPost("/validate", ValidateAggregate)
+            .WithName("ValidateEntityDefinitionAggregate")
+            .WithTags("EntityDefinitionAggregate")
+            .RequireAuthorization();
+
+        return group;
+    }
+
+    private static async Task<IResult> SaveAggregate(
+        [FromBody] SaveEntityDefinitionAggregateRequest request,
+        [FromServices] EntityDefinitionAggregateService service,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await service.SaveAggregateAsync(request, cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            return Results.BadRequest(new
+            {
+                Message = "验证失败",
+                Errors = ex.Errors
+            });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> GetAggregate(
+        Guid id,
+        [FromServices] EntityDefinitionAggregateService service,
+        CancellationToken cancellationToken)
+    {
+        var aggregate = await service.LoadAggregateAsync(id, cancellationToken);
+        if (aggregate == null)
+        {
+            return Results.NotFound();
+        }
+
+        // TODO: Map to DTO
+        return Results.Ok(aggregate);
+    }
+
+    private static async Task<IResult> ValidateAggregate(
+        [FromBody] SaveEntityDefinitionAggregateRequest request,
+        [FromServices] EntityDefinitionAggregateService service,
+        CancellationToken cancellationToken)
+    {
+        // TODO: Implement validation only
+        return Results.Ok();
+    }
+}
+```
+
+---
+
+## 6. DTO 定义（Data Transfer Objects）
+
+**文件路径**: `/src/BobCrm.App/Models/EntityDefinitionAggregateDto.cs`
+
+```csharp
+namespace BobCrm.App.Models;
+
+/// <summary>
+/// 实体定义聚合DTO
+/// </summary>
+public class EntityDefinitionAggregateDto
+{
+    /// <summary>
+    /// 主实体
+    /// </summary>
+    public EntityDefinitionDto Master { get; set; } = null!;
+
+    /// <summary>
+    /// 子实体列表
+    /// </summary>
+    public List<SubEntityDto> SubEntities { get; set; } = new();
+}
+
+/// <summary>
+/// 子实体DTO
+/// </summary>
+public class SubEntityDto
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public Dictionary<string, string?> DisplayName { get; set; } = new();
+    public Dictionary<string, string?>? Description { get; set; }
+    public int SortOrder { get; set; }
+    public List<FieldDto> Fields { get; set; } = new();
+}
+
+/// <summary>
+/// 字段DTO
+/// </summary>
+public class FieldDto
+{
+    public Guid Id { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
+    public Dictionary<string, string?> DisplayName { get; set; } = new();
+    public string DataType { get; set; } = string.Empty;
+    public int? Length { get; set; }
+    public bool IsRequired { get; set; }
+    public string? DefaultValue { get; set; }
+    public int SortOrder { get; set; }
+}
+
+/// <summary>
+/// 保存聚合请求
+/// </summary>
+public class SaveEntityDefinitionAggregateRequest
+{
+    public Guid Id { get; set; }
+    public string Namespace { get; set; } = string.Empty;
+    public string EntityName { get; set; } = string.Empty;
+    public Dictionary<string, string?> DisplayName { get; set; } = new();
+    public Dictionary<string, string?>? Description { get; set; }
+    public List<SubEntityDto> SubEntities { get; set; } = new();
+}
+```
+
+---
+
+## 7. 验证策略（Validation Strategy）
+
+### 7.1 FluentValidation 验证器
+
+**文件路径**: `/src/BobCrm.Api/Validators/SubEntityDefinitionValidator.cs`
+
+```csharp
+namespace BobCrm.Api.Validators;
+
+public class SubEntityDefinitionValidator : AbstractValidator<SubEntityDefinition>
+{
+    public SubEntityDefinitionValidator()
+    {
+        RuleFor(x => x.Code)
+            .NotEmpty().WithMessage("子实体编码不能为空")
+            .MaximumLength(100).WithMessage("子实体编码长度不能超过100")
+            .Matches(@"^[A-Z][a-zA-Z0-9]*$").WithMessage("子实体编码必须以大写字母开头，只能包含字母和数字");
+
+        RuleFor(x => x.DisplayName)
+            .NotNull().WithMessage("显示名称不能为空")
+            .Must(x => x != null && x.Any()).WithMessage("显示名称至少包含一种语言");
+
+        RuleFor(x => x.Fields)
+            .Must(HaveUniquePropertyNames).WithMessage("字段名称必须唯一");
+    }
+
+    private bool HaveUniquePropertyNames(List<FieldMetadata> fields)
+    {
+        var propertyNames = fields.Select(f => f.PropertyName).ToList();
+        return propertyNames.Count == propertyNames.Distinct().Count();
+    }
+}
+```
+
+---
+
+## 8. 数据流与时序图
+
+### 8.1 保存流程
+
+```
+用户操作 → SubEntityTabs → EntityDefinitionEdit → EntityDefinitionService (前端)
+                                                              ↓
+                                                         HTTP POST
+                                                              ↓
+                                    EntityDefinitionAggregateEndpoints (API)
+                                                              ↓
+                                    EntityDefinitionAggregateService
+                                                              ↓
+                        ┌──────────────┬──────────────────────┼──────────────────┐
+                        ↓              ↓                      ↓                  ↓
+                 BuildAggregate   Validate            SaveToDatabase    CodeGeneration
+                                                              ↓                  ↓
+                                                        Transaction       PublishMetadata
+                                                              ↓
+                                                         Return AggVO
+```
+
+### 8.2 验证流程
+
+```
+1. 前端实时验证（OnBlur）
+   ├─ 字段名非空
+   ├─ 字段名格式
+   └─ 显示名称多语言
+
+2. 保存前验证（OnSave）
+   ├─ 子实体编码唯一
+   ├─ 字段名唯一（子实体内）
+   ├─ 必填字段完整
+   └─ 引用一致性
+
+3. 服务端验证（API）
+   ├─ FluentValidation
+   ├─ 聚合根Validate()
+   └─ 业务规则检查
+```
+
+---
+
+## 9. 代码生成与元数据发布
+
+### 9.1 代码生成模板
+
+**生成路径**: `/generated/Entities/{Namespace}/{EntityName}/{SubEntityCode}.cs`
+
+**示例输出**:
+
+```csharp
+// 自动生成，请勿手动修改
+// Generated at: 2025-01-15 10:30:00
+
+namespace BobCrm.Generated.Entities.Sales.Order;
+
+/// <summary>
+/// 订单明细行（子实体）
+/// </summary>
+public class OrderLine
+{
+    /// <summary>
+    /// 主键ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// 所属订单ID（外键）
+    /// </summary>
+    public Guid OrderId { get; set; }
+
+    /// <summary>
+    /// 产品编码
+    /// </summary>
+    [MaxLength(100)]
+    public string ProductCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 数量
+    /// </summary>
+    public int Quantity { get; set; }
+
+    /// <summary>
+    /// 单价
+    /// </summary>
+    public decimal UnitPrice { get; set; }
+
+    /// <summary>
+    /// 导航属性：所属订单
+    /// </summary>
+    public Order? Order { get; set; }
+}
+```
+
+### 9.2 元数据JSON结构
+
+```json
+{
+  "entityDefinitionId": "00000000-0000-0000-0000-000000000001",
+  "namespace": "Sales",
+  "entityName": "Order",
+  "displayName": {
+    "ja": "注文",
+    "zh": "订单",
+    "en": "Order"
+  },
+  "structureType": "MasterDetail",
+  "master": {
+    "fields": [
+      { "propertyName": "OrderNo", "dataType": "String", "isRequired": true }
+    ]
+  },
+  "details": [
+    {
+      "code": "Lines",
+      "displayName": { "ja": "明細", "zh": "明细", "en": "Lines" },
+      "fields": [
+        { "propertyName": "ProductCode", "dataType": "String", "isRequired": true },
+        { "propertyName": "Quantity", "dataType": "Int32", "isRequired": true }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## 10. 测试计划
+
+### 10.1 前端单元测试
+
+**文件路径**: `/tests/BobCrm.App.Tests/Components/SubEntityTabsTests.cs`
+
+```csharp
+public class SubEntityTabsTests : TestContext
+{
+    [Fact]
+    public void Should_AddNewTab_When_ClickAddButton()
+    {
+        // Arrange
+        var component = RenderComponent<SubEntityTabs>();
+
+        // Act
+        component.Find("button.add-sub-entity-button").Click();
+
+        // Assert
+        Assert.True(component.Instance.AddModalVisible);
+    }
+
+    [Fact]
+    public void Should_ShowValidationBadge_When_SubEntityHasErrors()
+    {
+        // Arrange
+        var subEntities = new List<SubEntityViewModel>
+        {
+            new() { Code = "Lines", HasValidationErrors = true, ValidationErrorCount = 3 }
+        };
+
+        // Act
+        var component = RenderComponent<SubEntityTabs>(parameters =>
+            parameters.Add(p => p.SubEntities, subEntities));
+
+        // Assert
+        Assert.Contains("3", component.Find(".ant-badge-count").TextContent);
+    }
+}
+```
+
+### 10.2 领域模型测试
+
+**文件路径**: `/tests/BobCrm.Api.Tests/Domain/EntityDefinitionAggregateTests.cs`
+
+```csharp
+public class EntityDefinitionAggregateTests
+{
+    [Fact]
+    public void Should_ThrowException_When_DuplicateSubEntityCode()
+    {
+        // Arrange
+        var root = new EntityDefinition { Id = Guid.NewGuid(), EntityName = "Order" };
+        var aggregate = new EntityDefinitionAggregate(root);
+
+        // Act
+        aggregate.AddSubEntity("Lines", new Dictionary<string, string?> { ["ja"] = "明細" });
+
+        // Assert
+        Assert.Throws<DomainException>(() =>
+            aggregate.AddSubEntity("Lines", new Dictionary<string, string?> { ["ja"] = "明細2" }));
+    }
+
+    [Fact]
+    public void Should_ReturnValidationErrors_When_FieldNameDuplicated()
+    {
+        // Arrange
+        var root = new EntityDefinition { Id = Guid.NewGuid(), EntityName = "Order" };
+        var aggregate = new EntityDefinitionAggregate(root);
+        var subEntityId = aggregate.AddSubEntity("Lines", new Dictionary<string, string?> { ["ja"] = "明細" }).Id;
+
+        aggregate.AddFieldToSubEntity(subEntityId, "ProductCode", new Dictionary<string, string?> { ["ja"] = "商品" }, "String");
+        aggregate.AddFieldToSubEntity(subEntityId, "ProductCode", new Dictionary<string, string?> { ["ja"] = "商品2" }, "String");
+
+        // Act
+        var result = aggregate.Validate();
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Message.Contains("ProductCode"));
+    }
+}
+```
+
+### 10.3 集成测试
+
+**文件路径**: `/tests/BobCrm.Api.Tests/Integration/EntityDefinitionAggregateEndpointsTests.cs`
+
+```csharp
+public class EntityDefinitionAggregateEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly HttpClient _client;
+
+    public EntityDefinitionAggregateEndpointsTests(WebApplicationFactory<Program> factory)
+    {
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Should_SaveAggregate_Successfully()
+    {
+        // Arrange
+        var request = new SaveEntityDefinitionAggregateRequest
+        {
+            Namespace = "Sales",
+            EntityName = "Order",
+            DisplayName = new Dictionary<string, string?> { ["ja"] = "注文" },
+            SubEntities = new List<SubEntityDto>
+            {
+                new()
+                {
+                    Code = "Lines",
+                    DisplayName = new Dictionary<string, string?> { ["ja"] = "明細" },
+                    Fields = new List<FieldDto>
+                    {
+                        new() { PropertyName = "ProductCode", DataType = "String", IsRequired = true }
+                    }
+                }
+            }
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/entity-definition-aggregates", request);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<EntityDefinitionAggregateDto>();
+        Assert.NotNull(result);
+        Assert.Single(result.SubEntities);
+    }
+}
+```
+
+---
+
+## 11. 迁移与数据库更新
+
+### 11.1 创建迁移
+
+```bash
+cd src/BobCrm.Api
+dotnet ef migrations add AddSubEntityDefinition
+```
+
+### 11.2 迁移内容
+
+```csharp
+public partial class AddSubEntityDefinition : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        // 创建子实体表
+        migrationBuilder.CreateTable(
+            name: "SubEntityDefinitions",
+            columns: table => new
+            {
+                Id = table.Column<Guid>(nullable: false),
+                EntityDefinitionId = table.Column<Guid>(nullable: false),
+                Code = table.Column<string>(maxLength: 100, nullable: false),
+                DisplayName = table.Column<string>(type: "jsonb", nullable: false),
+                Description = table.Column<string>(type: "jsonb", nullable: true),
+                SortOrder = table.Column<int>(nullable: false),
+                DefaultSortField = table.Column<string>(maxLength: 100, nullable: true),
+                IsDescending = table.Column<bool>(nullable: false),
+                CreatedAt = table.Column<DateTime>(nullable: false),
+                UpdatedAt = table.Column<DateTime>(nullable: true)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_SubEntityDefinitions", x => x.Id);
+                table.ForeignKey(
+                    name: "FK_SubEntityDefinitions_EntityDefinitions_EntityDefinitionId",
+                    column: x => x.EntityDefinitionId,
+                    principalTable: "EntityDefinitions",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            });
+
+        // 添加索引
+        migrationBuilder.CreateIndex(
+            name: "IX_SubEntityDefinitions_EntityDefinitionId_Code",
+            table: "SubEntityDefinitions",
+            columns: new[] { "EntityDefinitionId", "Code" },
+            unique: true);
+
+        // 扩展FieldMetadata表
+        migrationBuilder.AddColumn<Guid>(
+            name: "SubEntityDefinitionId",
+            table: "FieldMetadatas",
+            nullable: true);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_FieldMetadatas_SubEntityDefinitionId",
+            table: "FieldMetadatas",
+            column: "SubEntityDefinitionId");
+
+        migrationBuilder.AddForeignKey(
+            name: "FK_FieldMetadatas_SubEntityDefinitions_SubEntityDefinitionId",
+            table: "FieldMetadatas",
+            column: "SubEntityDefinitionId",
+            principalTable: "SubEntityDefinitions",
+            principalColumn: "Id",
+            onDelete: ReferentialAction.Cascade);
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropForeignKey(
+            name: "FK_FieldMetadatas_SubEntityDefinitions_SubEntityDefinitionId",
+            table: "FieldMetadatas");
+
+        migrationBuilder.DropTable(name: "SubEntityDefinitions");
+
+        migrationBuilder.DropColumn(
+            name: "SubEntityDefinitionId",
+            table: "FieldMetadatas");
+    }
+}
+```
+
+---
+
+## 12. 实施步骤
+
+### 阶段1：领域模型（1-2天）
+1. ✅ 创建 SubEntityDefinition 实体
+2. ✅ 扩展 FieldMetadata 实体
+3. ✅ 实现 EntityDefinitionAggregate 聚合根
+4. ✅ 配置 EF Core 映射
+5. ✅ 创建并执行迁移
+
+### 阶段2：前端UI（2-3天）
+1. ✅ 创建 SubEntityViewModel 和 FieldViewModel
+2. ✅ 实现 FieldGrid 组件（表格行内编辑）
+3. ✅ 实现 SubEntityTabPanel 组件
+4. ✅ 实现 SubEntityTabs 组件
+5. ✅ 集成到 EntityDefinitionEdit 页面
+
+### 阶段3：服务层（2-3天）
+1. ✅ 实现 EntityDefinitionAggregateService
+2. ✅ 实现 ICodeGenerationService
+3. ✅ 实现 IMetadataPublisher
+4. ✅ 创建 FluentValidation 验证器
+
+### 阶段4：API层（1天）
+1. ✅ 创建 EntityDefinitionAggregateEndpoints
+2. ✅ 定义 DTO
+3. ✅ 注册服务和端点
+
+### 阶段5：测试（2-3天）
+1. ✅ 编写前端单元测试
+2. ✅ 编写领域模型测试
+3. ✅ 编写服务层测试
+4. ✅ 编写集成测试
+
+### 阶段6：代码生成与元数据（2-3天）
+1. ✅ 实现子实体代码生成模板
+2. ✅ 实现元数据JSON生成
+3. ✅ 集成到保存流程
+
+### 阶段7：验证与优化（1-2天）
+1. ✅ 端到端测试
+2. ✅ 性能优化（SQL查询、前端渲染）
+3. ✅ UI/UX 改进
+
+**总计：11-17天**
+
+---
+
+## 13. 风险与挑战
+
+### 技术风险
+1. **复杂度增加**：聚合根模式增加了代码复杂度
+   - *缓解*：充分的文档和测试
+2. **性能问题**：加载大量子实体和字段可能影响性能
+   - *缓解*：分页加载、懒加载、索引优化
+3. **代码生成错误**：动态生成的代码可能有语法错误
+   - *缓解*：Roslyn编译验证、单元测试
+
+### 业务风险
+1. **用户学习成本**：新的Tab界面可能需要用户适应
+   - *缓解*：提供用户手册、工具提示
+2. **数据迁移**：现有数据需要迁移到新结构
+   - *缓解*：编写迁移脚本、数据备份
+
+---
+
+## 14. 附录
+
+### A. 命名规范
+
+- **类名**：Pascal Case（EntityDefinitionAggregate）
+- **属性**：Pascal Case（DisplayName）
+- **方法**：Pascal Case（AddSubEntity）
+- **私有字段**：_camelCase（_dbContext）
+- **参数**：camelCase（entityDefinitionId）
+- **文件名**：与类名一致（EntityDefinitionAggregate.cs）
+- **组件**：Pascal Case（SubEntityTabs.razor）
+
+### B. 文件组织
+
+```
+/src
+├── BobCrm.Api
+│   ├── Domain
+│   │   ├── Models/
+│   │   │   ├── EntityDefinition.cs
+│   │   │   ├── SubEntityDefinition.cs
+│   │   │   └── FieldMetadata.cs
+│   │   └── Aggregates/
+│   │       └── EntityDefinitionAggregate.cs
+│   ├── Services/
+│   │   ├── EntityDefinitionAggregateService.cs
+│   │   ├── ICodeGenerationService.cs
+│   │   └── IMetadataPublisher.cs
+│   ├── Endpoints/
+│   │   └── EntityDefinitionAggregateEndpoints.cs
+│   ├── Infrastructure/
+│   │   └── Configurations/
+│   │       └── SubEntityDefinitionConfiguration.cs
+│   └── Validators/
+│       └── SubEntityDefinitionValidator.cs
+└── BobCrm.App
+    ├── Components
+    │   ├── Pages/
+    │   │   └── EntityDefinitionEdit.razor
+    │   └── Shared/
+    │       ├── SubEntityTabs.razor
+    │       ├── SubEntityTabPanel.razor
+    │       ├── FieldGrid.razor
+    │       └── SubEntityHeader.razor
+    ├── Models/
+    │   ├── SubEntityViewModel.cs
+    │   ├── FieldViewModel.cs
+    │   └── EntityDefinitionAggregateDto.cs
+    └── Services/
+        └── EntityDefinitionAggregateService.cs (前端)
+```
+
+### C. 依赖注入配置
+
+**文件路径**: `/src/BobCrm.Api/Program.cs`
+
+```csharp
+// 注册服务
+builder.Services.AddScoped<EntityDefinitionAggregateService>();
+builder.Services.AddScoped<ICodeGenerationService, RoslynCodeGenerationService>();
+builder.Services.AddScoped<IMetadataPublisher, JsonMetadataPublisher>();
+
+// 注册端点
+app.MapGroup("/api/entity-definition-aggregates")
+    .MapEntityDefinitionAggregateEndpoints()
+    .RequireAuthorization();
+```
+
+---
+
+## 结论
+
+本设计文档提供了完整的"实体定义页签式子实体管理"功能的技术方案，遵循以下原则：
+
+1. **OOP设计**：使用聚合根模式封装业务逻辑
+2. **Clean Architecture**：清晰的分层（Domain → Service → API → UI）
+3. **现有规范**：遵循BobCRM的命名、文件组织和编码风格
+4. **可测试性**：每层都有明确的测试策略
+5. **可维护性**：组件化、单一职责、依赖注入
+
+下一步请按照"实施步骤"开始开发，建议先完成领域模型和数据库迁移，再进行前端UI和服务层开发。

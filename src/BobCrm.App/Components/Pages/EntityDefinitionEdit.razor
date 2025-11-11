@@ -143,6 +143,21 @@
                 </Table>
             </Body>
         </Card>
+
+        @* 子实体管理（仅MasterDetail和MasterDetailGrandchild结构） *@
+        @if (_model.StructureType == "MasterDetail" || _model.StructureType == "MasterDetailGrandchild")
+        {
+            <Card Title="@I18n.T("LBL_SUB_ENTITY_MANAGEMENT")" Style="margin-top: 16px;">
+                <Body>
+                    <SubEntityTabs SubEntities="@_subEntities"
+                                  OnSubEntityAdded="@HandleSubEntityAdded"
+                                  OnSubEntityRemoved="@HandleSubEntityRemoved"
+                                  OnFieldChanged="@HandleFieldChanged"
+                                  OnFieldAdded="@HandleFieldAdded"
+                                  OnFieldRemoved="@HandleFieldRemoved" />
+                </Body>
+            </Card>
+        }
     }
 </AuthChecker>
 
@@ -205,6 +220,7 @@
     private EditModel _model = new();
     private FieldMetadataDto _editingField = new();
     private string[] _selectedInterfaces = Array.Empty<string>();
+    private List<SubEntityViewModel> _subEntities = new();
 
     // Checkbox 绑定属性
     private bool IsBaseSelected
@@ -483,6 +499,37 @@
     private void RemoveField(FieldMetadataDto field)
     {
         _model.Fields.Remove(field);
+    }
+
+    // 子实体事件处理
+    private void HandleSubEntityAdded(SubEntityViewModel subEntity)
+    {
+        // 子实体已添加到集合，无需额外处理
+        StateHasChanged();
+    }
+
+    private void HandleSubEntityRemoved(Guid subEntityId)
+    {
+        // 子实体已从集合移除，无需额外处理
+        StateHasChanged();
+    }
+
+    private void HandleFieldChanged((Guid SubEntityId, FieldViewModel Field) args)
+    {
+        // 子实体字段已更新，无需额外处理
+        StateHasChanged();
+    }
+
+    private void HandleFieldAdded((Guid SubEntityId, FieldViewModel Field) args)
+    {
+        // 子实体字段已添加，无需额外处理
+        StateHasChanged();
+    }
+
+    private void HandleFieldRemoved((Guid SubEntityId, Guid FieldId) args)
+    {
+        // 子实体字段已移除，无需额外处理
+        StateHasChanged();
     }
 
     private void GoBack()

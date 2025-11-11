@@ -1,0 +1,20 @@
+.field-grid-container {
+    padding: 16px 0;
+}
+
+.field-grid-actions {
+    margin-top: 16px;
+}
+
+::deep .ant-table-small .ant-table-cell {
+    padding: 8px !important;
+}
+
+::deep .ant-table-cell input,
+::deep .ant-table-cell .ant-select {
+    font-size: 13px;
+}
+
+::deep .ant-table-cell .ant-input-number {
+    width: 100%;
+}

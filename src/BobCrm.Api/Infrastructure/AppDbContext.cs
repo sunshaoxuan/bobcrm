@@ -47,6 +47,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
     // 实体自定义与发布（统一的实体定义系统）
     public DbSet<EntityDefinition> EntityDefinitions => Set<EntityDefinition>();
+    public DbSet<SubEntityDefinition> SubEntityDefinitions => Set<SubEntityDefinition>();
     public DbSet<FieldMetadata> FieldMetadatas => Set<FieldMetadata>();
     public DbSet<EntityInterface> EntityInterfaces => Set<EntityInterface>();
     public DbSet<DDLScript> DDLScripts => Set<DDLScript>();
@@ -85,6 +86,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<FieldMetadata>()
             .Property(f => f.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<SubEntityDefinition>()
+            .Property(s => s.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<SubEntityDefinition>()
+            .Property(s => s.Description)
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 
@@ -185,8 +196,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasIndex(fm => fm.ParentFieldId);
 
         b.Entity<FieldMetadata>()
-            .HasIndex(fm => new { fm.EntityDefinitionId, fm.PropertyName })
-            .IsUnique();
+            .HasIndex(fm => fm.SubEntityDefinitionId);
+
+        b.Entity<FieldMetadata>()
+            .HasIndex(fm => new { fm.EntityDefinitionId, fm.PropertyName });
 
         // 配置关系
         b.Entity<FieldMetadata>()
@@ -206,6 +219,12 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .WithMany()
             .HasForeignKey(fm => fm.ReferencedEntityId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        b.Entity<FieldMetadata>()
+            .HasOne(fm => fm.SubEntityDefinition)
+            .WithMany(se => se.Fields)
+            .HasForeignKey(fm => fm.SubEntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // EntityInterface 配置
         b.Entity<EntityInterface>()

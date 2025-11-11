@@ -177,6 +177,11 @@ builder.Services.AddScoped<BobCrm.Api.Services.Aggregates.IAggVOService, BobCrm.
 builder.Services.AddScoped<BobCrm.Api.Services.DataMigration.IDataMigrationEvaluator, BobCrm.Api.Services.DataMigration.DataMigrationEvaluator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IEntityLockService, BobCrm.Api.Services.EntityLockService>();
 
+// Entity Aggregate Services (实体聚合：主子实体管理)
+builder.Services.AddScoped<BobCrm.Api.Services.EntityDefinitionAggregateService>();
+builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.Api.Services.SubEntityCodeGenerator>();
+builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
+
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddHttpContextAccessor();
@@ -350,6 +355,7 @@ app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
 app.MapEntityDefinitionEndpoints();
+app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
 app.MapFileEndpoints();
