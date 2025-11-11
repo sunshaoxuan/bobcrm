@@ -178,7 +178,7 @@ public partial class MultilingualInput
         {
             builder.OpenElement(2, "div");
             builder.AddAttribute(3, "class", "multilingual-loading");
-            builder.OpenComponent<AntDesign.Spin>(4);
+            builder.OpenComponent<Spin>(4);
             builder.AddAttribute(5, "Size", "small");
             builder.CloseComponent();
             builder.CloseElement();
@@ -200,7 +200,7 @@ public partial class MultilingualInput
 
                 if (isDefault)
                 {
-                    builder.OpenComponent<AntDesign.Icon>(12);
+                    builder.OpenComponent<Icon>(12);
                     builder.AddAttribute(13, "Type", "star");
                     builder.AddAttribute(14, "Theme", "filled");
                     builder.AddAttribute(15, "Style", "font-size: 10px; color: #faad14; margin-left: 4px;");
@@ -210,7 +210,7 @@ public partial class MultilingualInput
                 builder.CloseElement(); // span
 
                 // Input field
-                builder.OpenComponent<AntDesign.Input>(16);
+                builder.OpenComponent<Input<string>>(16);
                 builder.AddAttribute(17, "Value", _values[lang.Code]);
                 builder.AddAttribute(18, "ValueChanged", EventCallback.Factory.Create<string?>(this, v => OnValueChanged(lang.Code, v)));
                 builder.AddAttribute(19, "Placeholder", GetPlaceholder(lang.Code));
