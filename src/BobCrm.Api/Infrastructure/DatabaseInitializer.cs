@@ -117,7 +117,8 @@ public static class DatabaseInitializer
             );
         }
         // EntityDefinition 自动同步已在 Program.cs 中由 EntityDefinitionSynchronizer 处理
-        if (!await db.Set<LocalizationResource>().IgnoreQueryFilters().AnyAsync())
+        // ✅ 统一从 JSON 文件加载 i18n 资源（单一数据源原则，动态语言支持）
+        if (false) // 废弃旧的硬编码初始化数据，统一使用 JSON 文件
         {
             await db.Set<LocalizationResource>().AddRangeAsync(
                 new LocalizationResource { Key = "LBL_CUSTOMER", ZH = "客户", JA = "顧客", EN = "Customer" },
@@ -569,9 +570,8 @@ public static class DatabaseInitializer
                 {
                     if (existingDict.TryGetValue(resource.Key, out var existing))
                     {
-                        existing.ZH = resource.ZH;
-                        existing.JA = resource.JA;
-                        existing.EN = resource.EN;
+                        // ✅ 动态更新翻译字典，不硬编码语种
+                        existing.Translations = new Dictionary<string, string>(resource.Translations);
                     }
                 }
             }

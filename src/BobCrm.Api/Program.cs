@@ -53,6 +53,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
         opt.UseNpgsql(conn, npg =>
         {
             npg.MigrationsHistoryTable("__EFMigrationsHistory", "public");
+            npg.EnableDynamicJson();  // 启用动态 JSON 序列化以支持 Dictionary<string, string> 到 jsonb 的映射
         });
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
@@ -249,9 +250,15 @@ if (!skipDbInit)
 
             var r = set.FirstOrDefault(x => x.Key == key);
 
-            if (r is null) set.Add(new LocalizationResource { Key = key, ZH = zh, JA = ja, EN = en });
+            var translations = new Dictionary<string, string>
+            {
+                ["zh"] = zh,
+                ["ja"] = ja,
+                ["en"] = en
+            };
+            if (r is null) set.Add(new LocalizationResource { Key = key, Translations = translations });
 
-            else { r.ZH = zh; r.JA = ja; r.EN = en; }
+            else { r.Translations = translations; }
 
         }
 

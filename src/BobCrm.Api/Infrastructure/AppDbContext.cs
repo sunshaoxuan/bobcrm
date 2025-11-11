@@ -83,6 +83,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 
+        // LocalizationResource 的 Translations 使用 jsonb 存储
+        b.Entity<LocalizationResource>()
+            .Property(lr => lr.Translations)
+            .HasColumnType("jsonb");
+
         // 全局过滤器已移除：访问控制由业务层（CustomerQueries）统一处理
         // 原因：
         // 1. 全局过滤器 + required 导航会导致 EF 警告和意外的空结果
