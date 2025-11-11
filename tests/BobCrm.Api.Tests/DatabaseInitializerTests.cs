@@ -27,12 +27,12 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         resp.EnsureSuccessStatusCode();
 
         var json = await resp.Content.ReadAsStringAsync();
-        
+
         // 验证Customer实体已注册
-        Assert.Contains("BobCrm.Api.Domain.Customer", json);
-        Assert.Contains("ENTITY_CUSTOMER", json);
+        Assert.Contains("BobCrm.Api.Domain.Customer", json); // entityType (FullTypeName)
         Assert.Contains("customer", json); // entityRoute
         Assert.Contains("Customer", json); // entityName
+        Assert.Contains("displayName", json); // 多语言显示名字段
     }
 
     // TODO: 此测试依赖于旧的EntityMetadata系统，需要重构为使用新的EntityDefinition
@@ -109,36 +109,53 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
     public async Task Initialize_Ensure_Method_Adds_Missing_Keys()
     {
         // 这个测试验证：Ensure方法添加缺失键值的逻辑
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
-        // 删除一个Ensure会添加的资源（如果存在）
         var existingKey = "MENU_PROFILE";
-        var existing = await db.Set<Domain.LocalizationResource>()
-            .FirstOrDefaultAsync(r => r.Key == existingKey);
-        
-        if (existing != null)
+
+        // 第一步：删除测试资源（使用独立的 scope）
+        using (var scope = _factory.Services.CreateScope())
         {
-            db.Set<Domain.LocalizationResource>().Remove(existing);
-            await db.SaveChangesAsync();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var existing = await db.Set<Domain.LocalizationResource>()
+                .FirstOrDefaultAsync(r => r.Key == existingKey);
+
+            if (existing != null)
+            {
+                db.Set<Domain.LocalizationResource>().Remove(existing);
+                await db.SaveChangesAsync();
+            }
         }
-        
-        // 验证资源不存在
-        var deleted = await db.Set<Domain.LocalizationResource>()
-            .FirstOrDefaultAsync(r => r.Key == existingKey);
-        Assert.Null(deleted);
-        
-        // 再次初始化（应该通过Ensure添加缺失的键）
-        await DatabaseInitializer.InitializeAsync(db);
-        
-        // 验证资源已被添加
-        var added = await db.Set<Domain.LocalizationResource>()
-            .FirstOrDefaultAsync(r => r.Key == existingKey);
-        
-        Assert.NotNull(added);
-        Assert.Equal("个人中心", added.ZH);
-        Assert.Equal("プロフィール", added.JA);
-        Assert.Equal("Profile", added.EN);
+
+        // 第二步：验证资源不存在（使用新的 scope）
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var deleted = await db.Set<Domain.LocalizationResource>()
+                .FirstOrDefaultAsync(r => r.Key == existingKey);
+            Assert.Null(deleted);
+        }
+
+        // 第三步：重新初始化（使用新的 scope，应该通过Ensure添加缺失的键）
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await DatabaseInitializer.InitializeAsync(db);
+        }
+
+        // 第四步：验证资源已被添加（使用新的 scope）
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var added = await db.Set<Domain.LocalizationResource>()
+                .FirstOrDefaultAsync(r => r.Key == existingKey);
+
+            Assert.NotNull(added);
+            Assert.Equal("个人中心", added.ZH);
+            Assert.Equal("プロフィール", added.JA);
+            Assert.Equal("Profile", added.EN);
+        }
     }
 }
 
