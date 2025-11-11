@@ -76,10 +76,11 @@
     }
 
     .multilingual-input-row {
-        display: flex;
+        display: grid;
+        grid-template-columns: 100px 1fr;
         align-items: center;
-        margin-bottom: 12px;
         gap: 12px;
+        margin-bottom: 12px;
     }
 
     .multilingual-input-row:last-child {
@@ -88,23 +89,32 @@
 
     .multilingual-input-row.default-language {
         background: #f0f5ff;
-        padding: 8px;
+        padding: 8px 8px;
         margin-left: -8px;
         margin-right: -8px;
+        margin-bottom: 12px;
         border-radius: 4px;
+        grid-template-columns: 100px 1fr;
+    }
+
+    .multilingual-input-row.default-language:last-child {
+        margin-bottom: 0;
     }
 
     .language-label {
-        min-width: 80px;
+        width: 100px;
         font-weight: 500;
         color: #262626;
         display: flex;
         align-items: center;
         flex-shrink: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .multilingual-field {
-        flex: 1;
+        width: 100%;
     }
 
     .multilingual-input-collapsed {
