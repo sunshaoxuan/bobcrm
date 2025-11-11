@@ -325,7 +325,7 @@ public class EntitySchemaAlignmentServiceTests : IDisposable
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("extra columns")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("extra columns")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once
