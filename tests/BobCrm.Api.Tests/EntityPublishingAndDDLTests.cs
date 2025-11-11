@@ -327,6 +327,205 @@ public class EntityPublishingAndDDLTests : IDisposable
         script.Status.Should().Be(DDLScriptStatus.Pending);
     }
 
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldSucceed_WithValidDraftEntity()
+    {
+        // Arrange
+        var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
+        var service = new EntityPublishingService(
+            _db,
+            _ddlGenerator,
+            mockDDLExecutor.Object,
+            _mockLockService.Object,
+            _mockPublishLogger.Object);
+
+        var entityId = Guid.NewGuid();
+        var entity = new EntityDefinition
+        {
+            Id = entityId,
+            Namespace = "Test",
+            EntityName = "Product",
+            EntityRoute = "product",
+            ApiEndpoint = "/api/products",
+            Status = EntityStatus.Draft,
+            Source = EntitySource.Custom,
+            Fields = new List<FieldMetadata>
+            {
+                new FieldMetadata
+                {
+                    PropertyName = "Name",
+                    DataType = "String",
+                    Length = 100,
+                    IsRequired = true,
+                    SortOrder = 1
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Mock DDL 执行成功
+        mockDDLExecutor.Setup(x => x.TableExistsAsync(It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        mockDDLExecutor.Setup(x => x.ExecuteDDLAsync(
+                It.IsAny<Guid>(),
+                DDLScriptType.Create,
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(new DDLScript
+            {
+                Id = Guid.NewGuid(),
+                Status = DDLScriptStatus.Success,
+                EntityDefinitionId = entityId
+            });
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entityId, "test-user");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.EntityDefinitionId.Should().Be(entityId);
+        result.DDLScript.Should().NotBeNullOrEmpty();
+        result.ScriptId.Should().NotBe(Guid.Empty);
+
+        // 验证实体状态已更新
+        var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
+        updatedEntity!.Status.Should().Be(EntityStatus.Published);
+        updatedEntity.UpdatedBy.Should().Be("test-user");
+
+        // 验证调用了锁定服务
+        _mockLockService.Verify(
+            x => x.LockEntityAsync(entityId, It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishEntityChangesAsync_ShouldSucceed_WithValidModifiedEntity()
+    {
+        // Arrange
+        var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
+        var service = new EntityPublishingService(
+            _db,
+            _ddlGenerator,
+            mockDDLExecutor.Object,
+            _mockLockService.Object,
+            _mockPublishLogger.Object);
+
+        var entityId = Guid.NewGuid();
+        var entity = new EntityDefinition
+        {
+            Id = entityId,
+            Namespace = "Test",
+            EntityName = "Product",
+            EntityRoute = "product",
+            ApiEndpoint = "/api/products",
+            Status = EntityStatus.Modified, // 已修改状态
+            Source = EntitySource.Custom,
+            IsLocked = false,
+            Fields = new List<FieldMetadata>
+            {
+                new FieldMetadata
+                {
+                    PropertyName = "Name",
+                    DataType = "String",
+                    SortOrder = 1
+                },
+                new FieldMetadata
+                {
+                    PropertyName = "NewField", // 新增字段
+                    DataType = "Int32",
+                    SortOrder = 2
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Mock 表已存在
+        mockDDLExecutor.Setup(x => x.TableExistsAsync("Products"))
+            .ReturnsAsync(true);
+
+        // Mock 表列信息（只有 Name，缺少 NewField）
+        mockDDLExecutor.Setup(x => x.GetTableColumnsAsync("Products"))
+            .ReturnsAsync(new List<TableColumnInfo>
+            {
+                new TableColumnInfo { ColumnName = "Id", DataType = "uuid" },
+                new TableColumnInfo { ColumnName = "Name", DataType = "text" }
+            });
+
+        // Mock DDL 执行成功
+        mockDDLExecutor.Setup(x => x.ExecuteDDLAsync(
+                It.IsAny<Guid>(),
+                DDLScriptType.Alter,
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(new DDLScript
+            {
+                Id = Guid.NewGuid(),
+                Status = DDLScriptStatus.Success,
+                EntityDefinitionId = entityId
+            });
+
+        // Act
+        var result = await service.PublishEntityChangesAsync(entityId, "test-user");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.EntityDefinitionId.Should().Be(entityId);
+        result.DDLScript.Should().NotBeNullOrEmpty();
+        result.DDLScript.Should().Contain("ALTER TABLE");
+
+        // 验证实体状态已更新
+        var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
+        updatedEntity!.Status.Should().Be(EntityStatus.Published);
+        updatedEntity.UpdatedBy.Should().Be("test-user");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenTableAlreadyExists()
+    {
+        // Arrange
+        var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
+        var service = new EntityPublishingService(
+            _db,
+            _ddlGenerator,
+            mockDDLExecutor.Object,
+            _mockLockService.Object,
+            _mockPublishLogger.Object);
+
+        var entityId = Guid.NewGuid();
+        var entity = new EntityDefinition
+        {
+            Id = entityId,
+            Namespace = "Test",
+            EntityName = "Product",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Mock 表已存在
+        mockDDLExecutor.Setup(x => x.TableExistsAsync("Products"))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entityId);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("already exists");
+    }
+
     public void Dispose()
     {
         _db?.Dispose();
