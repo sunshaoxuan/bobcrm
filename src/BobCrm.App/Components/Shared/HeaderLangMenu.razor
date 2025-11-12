@@ -2,7 +2,7 @@
 @inject I18nService I18n
 @inject IHttpClientFactory HttpFactory
 
-<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown" Visible="@_visible" OnVisibleChange="HandleVisibleChange">
+<Dropdown Trigger="@_trigger" OverlayClassName="calm-dropdown" @bind-Visible="_visible">
     <ChildContent>
         <button class="nav-icon" title="@CurrentLangLabel">
             <span>@CurrentLangCode.ToUpper()</span>
@@ -97,7 +97,6 @@
         StateHasChanged();
     }
 
-    private void HandleVisibleChange(bool visible) => _visible = visible;
     private Task ReloadAsync() => LoadLanguagesAsync();
 
     private string LocalizeOrFallback(string key, string fallback)
@@ -110,3 +109,4 @@
 
     private record LanguageDto(string Code, string Name);
 }
+

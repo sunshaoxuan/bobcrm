@@ -2,6 +2,7 @@ using AntDesign;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
@@ -21,6 +22,9 @@ public partial class MultilingualInput : IAsyncDisposable
     private Dictionary<string, string?> _values = new();
     private bool _isExpanded = false;
     private string _defaultLanguage = "ja";
+    private string _overlayId = $"multilingual-overlay-{Guid.NewGuid():N}";
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<MultilingualInput>? _dotNetRef;
 
     private class LanguageInfo
     {
@@ -80,6 +84,15 @@ public partial class MultilingualInput : IAsyncDisposable
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/multilingual-input.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+        }
+    }
+
     private void HandleLanguageChanged()
     {
         // Update default language when system language changes
@@ -115,11 +128,17 @@ public partial class MultilingualInput : IAsyncDisposable
         }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         // Unsubscribe from language changes
         I18n.OnChanged -= HandleLanguageChanged;
-        return ValueTask.CompletedTask;
+        if (_jsModule != null)
+        {
+            await RemoveScrollListenerAsync();
+            await _jsModule.DisposeAsync();
+        }
+
+        _dotNetRef?.Dispose();
     }
 
     private async Task OnValueChanged(string lang, string? value)
@@ -183,6 +202,7 @@ public partial class MultilingualInput : IAsyncDisposable
     {
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "multilingual-overlay");
+        builder.AddAttribute(2, "id", _overlayId);
 
         if (_languages == null || !_languages.Any())
         {
@@ -212,7 +232,7 @@ public partial class MultilingualInput : IAsyncDisposable
                 {
                     builder.OpenComponent<Icon>(12);
                     builder.AddAttribute(13, "Type", "star");
-                    builder.AddAttribute(14, "Theme", "filled");
+                    builder.AddAttribute(14, "Theme", IconThemeType.Fill);
                     builder.AddAttribute(15, "Style", "font-size: 10px; color: #faad14; margin-left: 4px;");
                     builder.CloseComponent();
                 }
@@ -233,4 +253,80 @@ public partial class MultilingualInput : IAsyncDisposable
 
         builder.CloseElement(); // div.multilingual-overlay
     };
+
+    private async Task SetupScrollListenerAsync()
+    {
+        if (_jsModule == null || _dotNetRef == null)
+        {
+            return;
+        }
+
+        await _jsModule.InvokeVoidAsync("setupScrollListener", _dotNetRef);
+    }
+
+    private async Task RemoveScrollListenerAsync()
+    {
+        if (_jsModule == null)
+        {
+            return;
+        }
+
+        await _jsModule.InvokeVoidAsync("removeScrollListener");
+    }
+
+    private async Task<bool> IsFocusWithinOverlayAsync()
+    {
+        if (_jsModule == null)
+        {
+            return false;
+        }
+
+        return await _jsModule.InvokeAsync<bool>("isFocusWithinOverlay", _overlayId);
+    }
+
+    [JSInvokable]
+    public Task CloseOnScroll()
+    {
+        if (_isExpanded)
+        {
+            _isExpanded = false;
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleTriggerFocusIn(FocusEventArgs _)
+    {
+        _isExpanded = true;
+        await SetupScrollListenerAsync();
+        StateHasChanged();
+    }
+
+    private async Task HandleTriggerFocusOut(FocusEventArgs _)
+    {
+        await Task.Delay(120);
+        if (!await IsFocusWithinOverlayAsync())
+        {
+            await ClosePopoverAsync();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            await ClosePopoverAsync();
+        }
+    }
+
+    private async Task ClosePopoverAsync()
+    {
+        if (_isExpanded)
+        {
+            _isExpanded = false;
+            await RemoveScrollListenerAsync();
+            StateHasChanged();
+        }
+    }
 }

@@ -97,7 +97,7 @@
             var resp = await http.GetAsync(url);
             if (resp.IsSuccessStatusCode)
             {
-                await Message.Success(I18n.T("MSG_ACTIVATE_SUCCESS"));
+                Message.Success(I18n.T("MSG_ACTIVATE_SUCCESS"));
                 Nav.NavigateTo("/login");
             }
             else
@@ -111,3 +111,5 @@
         }
     }
 }
+
+

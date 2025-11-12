@@ -33,12 +33,12 @@
     @if (_loading)
     {
         <div style="text-align: center; padding: 50px;">
-            <Spin Size="large" />
+            <Spin Size="@SpinSize.Large" />
         </div>
     }
     else if (_entity == null)
     {
-        <Result Status="404" Title="@I18n.T("MSG_ENTITY_NOT_FOUND")" SubTitle="@I18n.T("MSG_ENTITY_NOT_FOUND_DESC")" />
+        <Result Status="@ResultStatus.Error" Title="@I18n.T("MSG_ENTITY_NOT_FOUND")" SubTitle="@I18n.T("MSG_ENTITY_NOT_FOUND_DESC")" />
     }
     else
     {
@@ -57,6 +57,7 @@
         <!-- 结构类型配置 -->
         <Card Title="@I18n.T("LBL_STRUCTURE_TYPE")" Style="margin-bottom: 16px;">
             <Form Model="@_config" LabelColSpan="4" WrapperColSpan="20">
+                <ChildContent Context="structureFormContext">
                 <FormItem Label="@I18n.T("LBL_STRUCTURE_TYPE")">
                     <RadioGroup Value="@_config.StructureType" ValueChanged="@(EventCallback.Factory.Create<string>(this, HandleStructureTypeChanged))">
                         <Radio Value="@("Single")">
@@ -73,6 +74,7 @@
                         @GetStructureTypeDescription(_config.StructureType)
                     </div>
                 </FormItem>
+                </ChildContent>
             </Form>
         </Card>
 
@@ -102,13 +104,13 @@
                     <Table TItem="ChildEntityConfig" DataSource="@_config.Children" Bordered Size="@TableSize.Small">
                         <PropertyColumn Property="c => c.ChildEntityName" Title="@I18n.T("LBL_CHILD_ENTITY_NAME")" />
                         <PropertyColumn Property="c => c.ForeignKeyField" Title="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
-                            <Input @bind-Value="@context.ForeignKeyField" Size="small" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
+                            <Input @bind-Value="@context.ForeignKeyField" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CollectionProperty" Title="@I18n.T("LBL_COLLECTION_PROPERTY")">
-                            <Input @bind-Value="@context.CollectionProperty" Size="small" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
+                            <Input @bind-Value="@context.CollectionProperty" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.CascadeDeleteBehavior" Title="@I18n.T("LBL_CASCADE_DELETE")">
-                            <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Size="small" Class="field-control">
+                            <Select TItemValue="string" TItem="string" @bind-Value="@context.CascadeDeleteBehavior" Class="field-control">
                                 <SelectOptions>
                                     <SelectOption TItemValue="string" TItem="string" Value="@("NoAction")" Label="@I18n.T("LBL_CASCADE_NO_ACTION")" />
                                     <SelectOption TItemValue="string" TItem="string" Value="@("Cascade")" Label="@I18n.T("LBL_CASCADE_DELETE")" />
@@ -118,7 +120,7 @@
                             </Select>
                         </PropertyColumn>
                         <PropertyColumn Property="c => c.AutoCascadeSave" Title="@I18n.T("LBL_AUTO_SAVE")">
-                            <Switch @bind-Value="@context.AutoCascadeSave" Size="small" />
+                            <Switch @bind-Value="@context.AutoCascadeSave" />
                         </PropertyColumn>
                         <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
                             <Space>
@@ -167,6 +169,7 @@
            OkText="@I18n.T("BTN_ADD")"
            CancelText="@I18n.T("BTN_CANCEL")">
         <Form Model="@_newChild" LabelColSpan="6" WrapperColSpan="18">
+            <ChildContent Context="childFormContext">
             <FormItem Label="@I18n.T("LBL_CHILD_ENTITY")">
                 <Select TItemValue="Guid" TItem="ChildEntityDto" @bind-Value="@_newChild.ChildEntityId"
                         Placeholder="@I18n.T("TXT_SELECT_CHILD_ENTITY")"
@@ -185,11 +188,11 @@
                         }
                     </SelectOptions>
                 </Select>
-            </FormItem>
+                </FormItem>
 
-            <FormItem Label="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
-                <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
-            </FormItem>
+                <FormItem Label="@I18n.T("LBL_FOREIGN_KEY_FIELD")">
+                    <Input @bind-Value="@_newChild.ForeignKeyField" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_ID")" Class="field-control" />
+                </FormItem>
 
             <FormItem Label="@I18n.T("LBL_COLLECTION_PROPERTY")">
                 <Input @bind-Value="@_newChild.CollectionProperty" Placeholder="@I18n.T("TXT_PLACEHOLDER_ORDER_LINES")" Class="field-control" />
@@ -207,6 +210,7 @@
             <FormItem Label="@I18n.T("LBL_AUTO_SAVE")">
                 <Switch @bind-Value="@_newChild.AutoCascadeSave" CheckedChildren="@I18n.T("TXT_YES")" UnCheckedChildren="@I18n.T("TXT_NO")" />
             </FormItem>
+        </ChildContent>
         </Form>
     </Modal>
 
@@ -298,7 +302,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -319,7 +323,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_LOAD_CANDIDATES_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_LOAD_CANDIDATES_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -401,18 +405,18 @@
             var response = await Http.PostAsJsonAsync($"/api/entity-advanced/{EntityId}/configure-master-detail", _config);
             if (response.IsSuccessStatusCode)
             {
-                await Message.Success(I18n.T("MSG_CONFIG_SAVED"));
+                Message.Success(I18n.T("MSG_CONFIG_SAVED"));
                 _hasChanges = false;
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {error}");
+                Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {error}");
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -420,7 +424,7 @@
         }
     }
 
-    private async Task PreviewStructure()
+    private Task PreviewStructure()
     {
         _previewing = true;
         try
@@ -450,12 +454,14 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_PREVIEW_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_PREVIEW_FAILED")}: {ex.Message}");
         }
         finally
         {
             _previewing = false;
         }
+
+        return Task.CompletedTask;
     }
 
     private void GoBack()
@@ -545,3 +551,5 @@
         public int FieldCount { get; set; }
     }
 }
+
+

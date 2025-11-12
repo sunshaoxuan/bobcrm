@@ -45,7 +45,7 @@ else
                     <p class="designer-eyebrow">@I18n.T("MODE_DESIGN")</p>
                     <h2>@templateName</h2>
                 </div>
-                <Tag Color="blue">@entityType</Tag>
+                <Tag Color="@TagColor.Blue">@entityType</Tag>
             </div>
             <div class="designer-header-actions">
                 <Button Ghost OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
@@ -261,8 +261,8 @@ else
                                         }
                                     </IconRenderer>
                                     <MetadataRenderer>
-                                        <Tag Color="blue">@context.EntityName</Tag>
-                                        <Tag Color="default">@context.ApiEndpoint</Tag>
+                                        <Tag Color="@TagColor.Blue">@context.EntityName</Tag>
+                                        <Tag Color="@TagColor.Default">@context.ApiEndpoint</Tag>
                                     </MetadataRenderer>
                                 </EntitySelector>
                                 <div class="designer-hint">
@@ -1256,3 +1256,4 @@ else
         return WidgetNavigationHelper.GetAllWidgets(layoutWidgets);
     }
 }
+

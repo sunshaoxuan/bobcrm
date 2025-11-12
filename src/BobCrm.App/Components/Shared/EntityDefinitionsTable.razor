@@ -1,9 +1,10 @@
+@using AntDesign
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
 @inject IMultilingualTextResolver MultilingualResolver
 
 <Table TItem="EntityDefinitionDto" DataSource="@Entities" Loading="@false" PageSize="20">
-    <PropertyColumn Property="e => e.EntityName" Title="实体名称" Sortable>
+    <PropertyColumn Property="e => e.EntityName" Title="实体名" Sortable>
         <a @onclick="() => OnEdit.InvokeAsync(context.Id)" style="cursor: pointer;">
             @context.EntityName
         </a>
@@ -13,32 +14,23 @@
     </Column>
     <PropertyColumn Property="e => e.Namespace" Title="命名空间" />
     <PropertyColumn Property="e => e.Source" Title="来源">
-        <Tag Color="@(context.Source == EntitySource.System ? "blue" : "green")">
+        <Tag Color="@GetSourceTagColor(context.Source)">
             @context.Source
         </Tag>
     </PropertyColumn>
     <PropertyColumn Property="e => e.Status" Title="状态">
-        @if (context.Status == EntityStatus.Draft)
-        {
-            <Tag Color="orange">草稿</Tag>
-        }
-        else if (context.Status == EntityStatus.Published)
-        {
-            <Tag Color="green">已发布</Tag>
-        }
-        else if (context.Status == EntityStatus.Modified)
-        {
-            <Tag Color="blue">已修改</Tag>
-        }
+        <Tag Color="@GetStatusTagColor(context.Status)">
+            @GetStatusText(context.Status)
+        </Tag>
     </PropertyColumn>
     <PropertyColumn Property="e => e.IsLocked" Title="锁定">
         @if (context.IsLocked)
         {
-            <Icon Type="lock" Theme="outline" />
+            <Icon Type="lock" Theme="@IconThemeType.Outline" />
         }
         else
         {
-            <Icon Type="unlock" Theme="outline" />
+            <Icon Type="unlock" Theme="@IconThemeType.Outline" />
         }
     </PropertyColumn>
     <PropertyColumn Property="e => e.Fields.Count" Title="字段数" />
@@ -61,7 +53,7 @@
             @if (context.Source == EntitySource.Custom && context.Status == EntityStatus.Draft)
             {
                 <SpaceItem>
-                    <Popconfirm Title="确定要删除吗？" OnConfirm="() => OnDelete.InvokeAsync(context.Id)">
+                    <Popconfirm Title="确认发布?" OnConfirm="() => OnDelete.InvokeAsync(context.Id)">
                         <Button Danger Size="@ButtonSize.Small">
                             删除
                         </Button>
@@ -78,4 +70,26 @@
     [Parameter] public EventCallback<Guid> OnPublish { get; set; }
     [Parameter] public EventCallback<Guid> OnDelete { get; set; }
     [Parameter] public EventCallback OnReload { get; set; }
+
+    private TagColor GetSourceTagColor(string? source)
+        => string.Equals(source, EntitySource.System, StringComparison.OrdinalIgnoreCase)
+            ? TagColor.Default
+            : TagColor.Success;
+
+    private TagColor GetStatusTagColor(string? status) => (status ?? string.Empty) switch
+    {
+        EntityStatus.Draft => TagColor.Warning,
+        EntityStatus.Published => TagColor.Success,
+        EntityStatus.Modified => TagColor.Processing,
+        _ => TagColor.Default
+    };
+
+    private string GetStatusText(string? status) => (status ?? string.Empty) switch
+    {
+        EntityStatus.Draft => "草稿",
+        EntityStatus.Published => "已发布",
+        EntityStatus.Modified => "已修改",
+        _ => status ?? string.Empty
+    };
 }
+

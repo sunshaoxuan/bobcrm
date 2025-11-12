@@ -159,27 +159,27 @@
         // 验证子实体编码
         if (string.IsNullOrWhiteSpace(_newSubEntity.Code))
         {
-            await MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_REQUIRED"));
+            MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_REQUIRED"));
             return;
         }
 
         if (!char.IsUpper(_newSubEntity.Code[0]) || !_newSubEntity.Code.All(c => char.IsLetterOrDigit(c)))
         {
-            await MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_FORMAT"));
+            MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_FORMAT"));
             return;
         }
 
         // 检查编码唯一性
         if (SubEntities != null && SubEntities.Any(s => s.Code.Equals(_newSubEntity.Code, StringComparison.OrdinalIgnoreCase)))
         {
-            await MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_EXISTS"));
+            MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_EXISTS"));
             return;
         }
 
         // 验证显示名称
         if (_newSubEntity.DisplayName == null || !_newSubEntity.DisplayName.Any())
         {
-            await MessageService.Error(I18n.T("MSG_SUB_ENTITY_DISPLAY_NAME_REQUIRED"));
+            MessageService.Error(I18n.T("MSG_SUB_ENTITY_DISPLAY_NAME_REQUIRED"));
             return;
         }
 
@@ -226,3 +226,5 @@
         return false;
     }
 }
+
+

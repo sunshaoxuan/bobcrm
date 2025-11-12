@@ -1,3 +1,4 @@
+@using AntDesign
 @using BobCrm.App.Models
 @using BobCrm.App.Services
 @using System.Text.Json
@@ -64,12 +65,12 @@ else
                         </div>
 
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px">
-                            <Tag Color="@GetDataTypeColor(field.DataType)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
+                        <Tag Color="@GetDataTypeTagColor(field.DataType)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
                                 @field.DataType
                             </Tag>
                             @if (field.IsRequired)
                             {
-                                <Tag Color="red" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
+                                <Tag Color="@TagColor.Error" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
                                     *
                                 </Tag>
                             }
@@ -256,17 +257,17 @@ else
         };
     }
 
-    private string GetDataTypeColor(string dataType)
+    private TagColor GetDataTypeTagColor(string dataType)
     {
         return dataType switch
         {
-            "String" => "blue",
-            "Integer" or "Long" or "Decimal" => "green",
-            "Boolean" => "orange",
-            "DateTime" or "Date" or "Time" => "purple",
-            "Text" => "cyan",
-            "Guid" => "geekblue",
-            _ => "default"
+            "String" => TagColor.Blue,
+            "Integer" or "Long" or "Decimal" => TagColor.Green,
+            "Boolean" => TagColor.Orange,
+            "DateTime" or "Date" or "Time" => TagColor.Purple,
+            "Text" => TagColor.Cyan,
+            "Guid" => TagColor.GeekBlue,
+            _ => TagColor.Default
         };
     }
 
@@ -369,3 +370,4 @@ else
         transform: scale(0.98);
     }
 </style>
+

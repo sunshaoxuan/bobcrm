@@ -187,7 +187,7 @@
     private string role = "";
     private string? avatarUrl = null;
     private string message = "";
-    private string messageType = "info";
+    private AlertType messageType = AlertType.Info;
     
     private PasswordChangeForm passwordForm = new();
 
@@ -303,9 +303,17 @@
     private void ShowMessage(string msg, string type)
     {
         message = msg;
-        messageType = type;
+        messageType = ParseAlertType(type);
         StateHasChanged();
     }
+
+    private AlertType ParseAlertType(string type) => type?.ToLowerInvariant() switch
+    {
+        "success" => AlertType.Success,
+        "error" => AlertType.Error,
+        "warning" => AlertType.Warning,
+        _ => AlertType.Info
+    };
 
     public void Dispose()
     {
@@ -326,4 +334,5 @@
         public string ConfirmPassword { get; set; } = "";
     }
 }
+
 

@@ -260,7 +260,7 @@
             {
                 var errorMsg = string.Format(I18n.T("ERR_INVALID_API_BASE"), apiBase);
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
-                await Message.Error(errorMsg);
+                Message.Error(errorMsg);
                 StateHasChanged();
                 return;
             }
@@ -268,7 +268,7 @@
             {
                 var errorMsg = I18n.T("ERR_ADMIN_USERNAME_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
-                await Message.Error(errorMsg);
+                Message.Error(errorMsg);
                 StateHasChanged();
                 return;
             }
@@ -276,7 +276,7 @@
             {
                 var errorMsg = I18n.T("ERR_ADMIN_EMAIL_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
-                await Message.Error(errorMsg);
+                Message.Error(errorMsg);
                 StateHasChanged();
                 return;
             }
@@ -284,7 +284,7 @@
             {
                 var errorMsg = I18n.T("ERR_ADMIN_PASSWORD_EMPTY");
                 System.Diagnostics.Debug.WriteLine($"[Setup] Validation failed: {errorMsg}");
-                await Message.Error(errorMsg);
+                Message.Error(errorMsg);
                 StateHasChanged();
                 return;
             }
@@ -369,7 +369,7 @@
                 
                 try
                 {
-                    await Message.Error(fullErrorMsg);
+                    Message.Error(fullErrorMsg);
                 }
                 catch (Exception msgEx)
                 {
@@ -391,7 +391,7 @@
             try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
             try
             {
-                await Message.Success(I18n.T("MSG_SETTINGS_SAVED_REDIRECTING"));
+                Message.Success(I18n.T("MSG_SETTINGS_SAVED_REDIRECTING"));
             }
             catch (Exception msgEx)
             {
@@ -407,7 +407,7 @@
             var errorMsg = string.Format(I18n.T("ERR_OCCURRED"), ex.Message);
             try
             {
-                await Message.Error(errorMsg);
+                Message.Error(errorMsg);
             }
             catch
             {
@@ -449,7 +449,7 @@
             {
                 var result = await resp.Content.ReadFromJsonAsync<Dictionary<string, object>>();
                 var message = result?.GetValueOrDefault("message")?.ToString() ?? I18n.T("MSG_RESET_SETUP_SUCCESS") ?? "重置成功";
-                await Message.Success(message);
+                Message.Success(message);
                 
                 // 清空表单
                 adminUser = string.Empty;
@@ -461,13 +461,13 @@
             {
                 var error = await resp.Content.ReadAsStringAsync();
                 var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
-                await Message.Error($"{errorMsg}: {error}");
+                Message.Error($"{errorMsg}: {error}");
             }
         }
         catch (Exception ex)
         {
             var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
-            await Message.Error($"{errorMsg}: {ex.Message}");
+            Message.Error($"{errorMsg}: {ex.Message}");
         }
         finally
         {
@@ -512,4 +512,6 @@
         StateHasChanged();
     }
 }
+
+
 

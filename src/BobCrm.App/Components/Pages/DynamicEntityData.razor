@@ -27,7 +27,7 @@
     @if (_loading)
     {
         <div style="text-align: center; padding: 50px;">
-            <Spin Size="large" />
+            <Spin Size="@SpinSize.Large" />
         </div>
     }
     else
@@ -130,7 +130,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_LOAD_DATA_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_LOAD_DATA_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -183,12 +183,12 @@
             {
                 var id = Convert.ToInt32(entity["Id"]);
                 await DynamicEntitySvc.DeleteAsync(FullTypeName, id);
-                await MessageService.Success(I18n.T("MSG_DELETE_SUCCESS"));
+                MessageService.Success(I18n.T("MSG_DELETE_SUCCESS"));
                 await LoadData();
             }
             catch (Exception ex)
             {
-                await MessageService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
+                MessageService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
             }
         }
     }
@@ -198,3 +198,5 @@
         Nav.NavigateTo("/entity-definitions");
     }
 }
+
+

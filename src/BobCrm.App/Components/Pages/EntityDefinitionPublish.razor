@@ -3,6 +3,7 @@
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
+@using AntDesign
 @using BobCrm.App.Models
 
 <AuthChecker>
@@ -33,9 +34,9 @@
 
     @if (_loading)
     {
-        <div style="text-align: center; padding: 50px;">
-            <Spin Size="large" />
-        </div>
+            <div style="text-align: center; padding: 50px;">
+                <Spin Size="@SpinSize.Large" />
+            </div>
     }
     else if (_entity != null)
     {
@@ -45,21 +46,12 @@
                 <DescriptionsItem Title="@I18n.T("LBL_NAMESPACE")">@_entity.Namespace</DescriptionsItem>
                 <DescriptionsItem Title="@I18n.T("LBL_FULL_TYPE_NAME")">@_entity.FullTypeName</DescriptionsItem>
                 <DescriptionsItem Title="@I18n.T("LBL_STATUS")">
-                    @if (_entity.Status == EntityStatus.Draft)
-                    {
-                        <Tag Color="orange">@I18n.T("LBL_DRAFT")</Tag>
-                    }
-                    else if (_entity.Status == EntityStatus.Published)
-                    {
-                        <Tag Color="green">@I18n.T("LBL_PUBLISHED")</Tag>
-                    }
-                    else if (_entity.Status == EntityStatus.Modified)
-                    {
-                        <Tag Color="blue">@I18n.T("LBL_MODIFIED")</Tag>
-                    }
+                    <Tag Color="@GetStatusTagColor(_entity.Status)">
+                        @GetStatusText(_entity.Status)
+                    </Tag>
                 </DescriptionsItem>
                 <DescriptionsItem Title="@I18n.T("LBL_SOURCE")">
-                    <Tag Color="@(_entity.Source == EntitySource.System ? "blue" : "green")">
+                    <Tag Color="@GetSourceTagColor(_entity.Source)">
                         @_entity.Source
                     </Tag>
                 </DescriptionsItem>
@@ -101,18 +93,9 @@
                             <Tag>@context.ScriptType</Tag>
                         </PropertyColumn>
                         <PropertyColumn Property="h => h.Status" Title="@I18n.T("LBL_STATUS")">
-                            @if (context.Status == "Success")
-                            {
-                                <Tag Color="green">@I18n.T("LBL_SUCCESS")</Tag>
-                            }
-                            else if (context.Status == "Failed")
-                            {
-                                <Tag Color="red">@I18n.T("LBL_FAILED")</Tag>
-                            }
-                            else
-                            {
-                                <Tag Color="orange">@context.Status</Tag>
-                            }
+                            <Tag Color="@GetHistoryStatusColor(context.Status)">
+                                @GetHistoryStatusText(context.Status)
+                            </Tag>
                         </PropertyColumn>
                         <PropertyColumn Property="h => h.CreatedAt" Title="@I18n.T("LBL_CREATED_TIME")" Format="yyyy-MM-dd HH:mm:ss" />
                         <PropertyColumn Property="h => h.ExecutedAt" Title="@I18n.T("LBL_EXECUTED_TIME")" Format="yyyy-MM-dd HH:mm:ss" />
@@ -141,7 +124,7 @@
                 <Card>
                     @if (_compilationResult != null)
                     {
-                        <Result Status="@(_compilationResult.Success ? "success" : "error")"
+                        <Result Status="@(_compilationResult.Success ? ResultStatus.Success : ResultStatus.Error)"
                                 Title="@(_compilationResult.Success ? I18n.T("MSG_COMPILATION_SUCCESS") : I18n.T("MSG_COMPILATION_FAILED"))"
                                 SubTitle="@_compilationResult.Message">
                             <Extra>
@@ -229,7 +212,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -247,7 +230,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_LOAD_DDL_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_LOAD_DDL_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -264,7 +247,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_LOAD_HISTORY_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_LOAD_HISTORY_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -289,18 +272,18 @@
 
             if (result?.Success == true)
             {
-                await MessageService.Success(I18n.T("MSG_PUBLISH_SUCCESS"));
+                MessageService.Success(I18n.T("MSG_PUBLISH_SUCCESS"));
                 await LoadEntity();
                 await LoadDDLHistory();
             }
             else
             {
-                await MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {result?.ErrorMessage}");
+                MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {result?.ErrorMessage}");
             }
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_PUBLISH_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -315,11 +298,11 @@
         {
             var result = await EntityDefService.GenerateCodeAsync(Id);
             _generatedCode = result?.Code ?? string.Empty;
-            await MessageService.Success(I18n.T("MSG_CODE_GENERATION_SUCCESS"));
+            MessageService.Success(I18n.T("MSG_CODE_GENERATION_SUCCESS"));
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_CODE_GENERATION_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_CODE_GENERATION_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -335,16 +318,16 @@
             _compilationResult = await EntityDefService.CompileAsync(Id);
             if (_compilationResult?.Success == true)
             {
-                await MessageService.Success(I18n.T("MSG_COMPILATION_SUCCESS"));
+                MessageService.Success(I18n.T("MSG_COMPILATION_SUCCESS"));
             }
             else
             {
-                await MessageService.Error(I18n.T("MSG_COMPILATION_FAILED_DETAIL"));
+                MessageService.Error(I18n.T("MSG_COMPILATION_FAILED_DETAIL"));
             }
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_COMPILATION_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_COMPILATION_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -356,4 +339,41 @@
     {
         Nav.NavigateTo("/entity-definitions");
     }
+
+    private TagColor GetSourceTagColor(string? source)
+        => string.Equals(source, EntitySource.System, StringComparison.OrdinalIgnoreCase)
+            ? TagColor.Default
+            : TagColor.Success;
+
+    private TagColor GetStatusTagColor(string? status) => (status ?? string.Empty) switch
+    {
+        EntityStatus.Draft => TagColor.Warning,
+        EntityStatus.Published => TagColor.Success,
+        EntityStatus.Modified => TagColor.Processing,
+        _ => TagColor.Default
+    };
+
+    private string GetStatusText(string? status) => (status ?? string.Empty) switch
+    {
+        EntityStatus.Draft => I18n.T("LBL_DRAFT"),
+        EntityStatus.Published => I18n.T("LBL_PUBLISHED"),
+        EntityStatus.Modified => I18n.T("LBL_MODIFIED"),
+        _ => status ?? string.Empty
+    };
+
+    private TagColor GetHistoryStatusColor(string? status) => (status ?? string.Empty) switch
+    {
+        "Success" => TagColor.Green,
+        "Failed" => TagColor.Error,
+        _ => TagColor.Default
+    };
+
+    private string GetHistoryStatusText(string? status) => (status ?? string.Empty) switch
+    {
+        "Success" => I18n.T("LBL_SUCCESS"),
+        "Failed" => I18n.T("LBL_FAILED"),
+        _ => status ?? string.Empty
+    };
 }
+
+

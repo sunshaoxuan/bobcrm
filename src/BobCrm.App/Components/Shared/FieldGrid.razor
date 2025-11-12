@@ -75,7 +75,8 @@
             <Column Title="必填" TData="bool" Width="80px" Align="ColumnAlign.Center">
                 @if (field.IsEditing)
                 {
-                    <Checkbox @bind-Checked="@field.IsRequired" />
+                    <Checkbox Checked="@field.IsRequired"
+                              CheckedChanged="@((bool value) => { field.IsRequired = value; StateHasChanged(); })" />
                 }
                 else
                 {
@@ -95,7 +96,7 @@
                 }
             </Column>
 
-            <Column Title="操作" TData="string" Width="180px" Fixed="right">
+            <Column Title="操作" TData="string" Width="180px">
                 @if (field.IsEditing)
                 {
                     <Space Size="@("small")">
@@ -332,3 +333,4 @@
         return newName;
     }
 }
+

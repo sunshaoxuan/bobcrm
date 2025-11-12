@@ -28,7 +28,8 @@
       "Bash(git pull:*)",
       "Bash(dotnet test:*)",
       "Bash(git restore:*)",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(dotnet add:*)"
     ],
     "deny": [],
     "ask": []

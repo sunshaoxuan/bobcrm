@@ -209,6 +209,8 @@ public class I18nService
         ["LBL_DASH_NEXT_STEPS"] = new() { ["zh"] = "下一步行动", ["ja"] = "次のアクション", ["en"] = "Next Actions" },
         ["BTN_RECORD_NEXT_TOUCH"] = new() { ["zh"] = "记录下一次跟进", ["ja"] = "次のフォローを記録", ["en"] = "Log next touch" },
         ["BTN_NOTIFY_ACCOUNT"] = new() { ["zh"] = "提醒账户经理", ["ja"] = "アカウント担当に通知", ["en"] = "Notify account manager" },
-        ["BTN_IMPORT_CONTACTS"] = new() { ["zh"] = "导入外部联系人", ["ja"] = "外部連絡先をインポート", ["en"] = "Import external contacts" }
+        ["BTN_IMPORT_CONTACTS"] = new() { ["zh"] = "导入外部联系人", ["ja"] = "外部連絡先をインポート", ["en"] = "Import external contacts" },
+        ["LBL_CLICK_TO_EDIT_MULTILINGUAL"] = new() { ["zh"] = "点击编辑多语言文本", ["ja"] = "クリックして多言語テキストを編集", ["en"] = "Click to edit multilingual text" },
+        ["TXT_MULTILINGUAL_DISPLAY_NAME_HINT"] = new() { ["zh"] = "请为每种语言提供显示名称（至少一条）", ["ja"] = "各言語の表示名を入力してください（少なくとも1件）", ["en"] = "Provide display names for each language (at least one)" }
     };
 }

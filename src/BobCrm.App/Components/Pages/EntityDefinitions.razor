@@ -41,11 +41,11 @@
         }
 
         @if (_loading)
-    {
-        <div style="text-align: center; padding: 50px;">
-            <Spin Size="large" />
-        </div>
-    }
+        {
+            <div style="text-align: center; padding: 50px;">
+                <Spin Size="@SpinSize.Large" />
+            </div>
+        }
     else
     {
         <Card>
@@ -89,7 +89,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"加载失败: {ex.Message}");
+            MessageService.Error($"加载失败: {ex.Message}");
         }
         finally
         {
@@ -148,7 +148,7 @@
             ClassName = "calm-modal",
             OkText = "删除",
             CancelText = "取消",
-            OkType = "danger"
+            OkType = ButtonType.Primary
         });
 
         if (confirmed)
@@ -156,12 +156,12 @@
             try
             {
                 await EntityDefService.DeleteAsync(id);
-                await MessageService.Success("删除成功");
+                MessageService.Success("删除成功");
                 await LoadData();
             }
             catch (Exception ex)
             {
-                await MessageService.Error($"删除失败: {ex.Message}");
+                MessageService.Error($"删除失败: {ex.Message}");
             }
         }
     }
@@ -169,3 +169,5 @@
     [Inject] private IMessageService MessageService { get; set; } = default!;
     [Inject] private ModalService ModalService { get; set; } = default!;
 }
+
+

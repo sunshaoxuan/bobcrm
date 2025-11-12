@@ -93,7 +93,7 @@
                 return;
             }
 
-            await Message.Success(I18n.T("MSG_REGISTER_SUCCESS"));
+            Message.Success(I18n.T("MSG_REGISTER_SUCCESS"));
             Nav.NavigateTo("/activate");
         }
         catch (Exception ex)
@@ -113,3 +113,5 @@
         public string Password { get; set; } = string.Empty;
     }
 }
+
+

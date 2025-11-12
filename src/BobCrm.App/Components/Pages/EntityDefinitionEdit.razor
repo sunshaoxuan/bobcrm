@@ -29,7 +29,7 @@
     @if (_loading)
     {
         <div style="text-align: center; padding: 50px;">
-            <Spin Size="large" />
+            <Spin Size="@SpinSize.Large" />
         </div>
     }
     else
@@ -67,7 +67,7 @@
                 </FormItem>
 
                 <FormItem Label="@I18n.T("LBL_INTERFACES")">
-                    <Space Direction="DirectionVHType.Vertical" Size="@("8")">
+                    <Space Direction="@SpaceDirection.Vertical" Size="@SpaceSize.Large">
                         <SpaceItem>
                             <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_BASE") (@I18n.T("INTERFACE_BASE_DESC"))</Checkbox>
                         </SpaceItem>
@@ -173,15 +173,33 @@
         <FormItem Label="@I18n.T("LBL_DATA_TYPE")">
             <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Class="field-control">
                 <SelectOptions>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text" />
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid" />
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String">
+                        <ChildContent Context="optionContent">String</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer">
+                        <ChildContent Context="optionContent">Integer</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long">
+                        <ChildContent Context="optionContent">Long</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal">
+                        <ChildContent Context="optionContent">Decimal</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean">
+                        <ChildContent Context="optionContent">Boolean</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime">
+                        <ChildContent Context="optionContent">DateTime</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date">
+                        <ChildContent Context="optionContent">Date</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text">
+                        <ChildContent Context="optionContent">Text</ChildContent>
+                    </SelectOption>
+                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid">
+                        <ChildContent Context="optionContent">Guid</ChildContent>
+                    </SelectOption>
                 </SelectOptions>
             </Select>
         </FormItem>
@@ -336,7 +354,7 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -352,7 +370,7 @@
             // 验证多语言显示名
             if (_model.DisplayName == null || !_model.DisplayName.HasValue())
             {
-                await MessageService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
+                MessageService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
                 _saving = false;
                 return;
             }
@@ -371,7 +389,7 @@
                 };
 
                 await EntityDefService.CreateAsync(request);
-                await MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
+                MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
             }
             else
             {
@@ -388,14 +406,14 @@
                 };
 
                 await EntityDefService.UpdateAsync(Id!.Value, request);
-                await MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
+                MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
             }
 
             GoBack();
         }
         catch (Exception ex)
         {
-            await MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -553,3 +571,5 @@
         public List<FieldMetadataDto> Fields { get; set; } = new();
     }
 }
+
+

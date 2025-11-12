@@ -24,13 +24,13 @@
     @if (loading)
     {
         <div class="entity-selector-feedback">
-            <Spin Size="@("large")" />
+            <Spin Size="@SpinSize.Large" />
             <div>@I18n.T("LBL_LOADING")</div>
         </div>
     }
     else if (string.IsNullOrWhiteSpace(errorMessage) == false)
     {
-        <Result Status="error" 
+        <Result Status="@ResultStatus.Error"
                 Title="@I18n.T("LBL_LOAD_FAILED")" 
                 SubTitle="@errorMessage">
             <Extra>
@@ -232,4 +232,5 @@
         return value ?? "";
     }
 }
+
 
