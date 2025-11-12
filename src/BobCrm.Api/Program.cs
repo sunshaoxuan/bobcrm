@@ -18,6 +18,7 @@ using BobCrm.Api.Domain;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Endpoints;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Services;
 using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Middleware;
 using Serilog;
@@ -182,6 +183,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.EntityDefinitionAggregateService>
 builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.Api.Services.SubEntityCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
+builder.Services.AddScoped<AccessService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
@@ -327,6 +329,15 @@ if (!skipDbInit)
         app.Logger.LogWarning(ex, "[Init] Failed to sync i18n resources");
     }
 
+    try
+    {
+        var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
+        await accessService.SeedSystemAdministratorAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "[Init] Failed to seed access control defaults");
+    }
 
     // Seed test data (development only)
 
@@ -360,6 +371,7 @@ app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
 app.MapOrganizationEndpoints();
+app.MapAccessEndpoints();
 app.MapFileEndpoints();
 
 app.MapControllers();

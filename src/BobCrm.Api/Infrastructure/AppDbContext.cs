@@ -52,6 +52,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<EntityInterface> EntityInterfaces => Set<EntityInterface>();
     public DbSet<DDLScript> DDLScripts => Set<DDLScript>();
     public DbSet<OrganizationNode> OrganizationNodes => Set<OrganizationNode>();
+    public DbSet<RoleProfile> RoleProfiles => Set<RoleProfile>();
+    public DbSet<FunctionNode> FunctionNodes => Set<FunctionNode>();
+    public DbSet<RoleFunctionPermission> RoleFunctionPermissions => Set<RoleFunctionPermission>();
+    public DbSet<RoleDataScope> RoleDataScopes => Set<RoleDataScope>();
+    public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
 
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
