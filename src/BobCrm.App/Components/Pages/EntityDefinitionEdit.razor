@@ -43,14 +43,26 @@
             @if (_entityInfoExpanded)
             {
                 <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
-                        <FormItem Label="@I18n.T("LBL_NAMESPACE")">
-                            <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" Class="field-control" />
-                        </FormItem>
-
                         <FormItem Label="@I18n.T("LBL_ENTITY_NAME")">
-                            <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" Class="field-control" />
+                            <Input Value="@EntityNameInput"
+                                   ValueExpression="() => EntityNameInput"
+                                   OnInput="HandleEntityNameInput"
+                                   Disabled="@(!_isNew)"
+                                   Placeholder="@I18n.T("TXT_ENTITY_NAME_PLACEHOLDER")"
+                                   Class="field-control" />
                             <div class="ant-form-text">
                                 @I18n.T("TXT_ENTITY_NAME_HINT")
+                            </div>
+                        </FormItem>
+
+                        <FormItem Label="@I18n.T("LBL_NAMESPACE")">
+                            <Input Value="@_model.Namespace"
+                                   ValueExpression="() => _model.Namespace"
+                                   ReadOnly="true"
+                                   Placeholder="@I18n.T("TXT_NAMESPACE_PLACEHOLDER")"
+                                   Class="field-control" />
+                            <div class="ant-form-text">
+                                @I18n.T("TXT_NAMESPACE_AUTO_HINT")
                             </div>
                         </FormItem>
 
@@ -145,54 +157,120 @@
 
         <Card Title="@I18n.T("LBL_FIELD_DEFINITION")" Class="entity-section-card" Style="margin-top: 16px;">
             <Extra>
-                <Button OnClick="AddField" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
+                <Button OnClick="AddFieldRow" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
                     <Icon Type="plus" /> @I18n.T("BTN_ADD_FIELD")
                 </Button>
             </Extra>
             <Body>
-                <Table TItem="FieldMetadataDto" DataSource="@_model.Fields" Loading="@false" Size="@TableSize.Small">
-                    <PropertyColumn Property="f => f.PropertyName" Title="@I18n.T("LBL_PROPERTY_NAME")" />
-                    <Column TData="string" Title="@I18n.T("LBL_DISPLAY_NAME")">
-                        @MultilingualResolver.Resolve(context.DisplayName, context.PropertyName)
-                    </Column>
-                    <PropertyColumn Property="f => f.DataType" Title="@I18n.T("LBL_DATA_TYPE")">
-                        <Tag>@context.DataType</Tag>
-                    </PropertyColumn>
-                    <PropertyColumn Property="f => f.Length" Title="@I18n.T("LBL_LENGTH")" />
-                    <PropertyColumn Property="f => f.IsRequired" Title="@I18n.T("LBL_REQUIRED")">
-                        @(context.IsRequired ? I18n.T("TXT_YES") : I18n.T("TXT_NO"))
-                    </PropertyColumn>
-                    <PropertyColumn Property="f => f.SortOrder" Title="@I18n.T("LBL_SORT_ORDER")" />
-                    <Column TData="string" Title="@I18n.T("LBL_SOURCE")">
-                        @{
-                            var interfaceLabel = GetInterfaceFieldLabel(context.PropertyName);
-                        }
-                        @if (!string.IsNullOrEmpty(interfaceLabel))
-                        {
-                            <Tag>@interfaceLabel</Tag>
-                        }
-                        else
-                        {
-                            <Tag>@I18n.T("LBL_SOURCE_CUSTOM")</Tag>
-                        }
-                    </Column>
-                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
-                        <Space>
-                            <SpaceItem>
-                                <Button Size="@ButtonSize.Small" Disabled="@IsInterfaceField(context.PropertyName)" OnClick="() => EditField(context)">
-                                    @I18n.T("BTN_EDIT")
-                                </Button>
-                            </SpaceItem>
-                            <SpaceItem>
-                                <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => RemoveField(context)" Disabled="@IsInterfaceField(context.PropertyName)">
-                                    <Button Danger Size="@ButtonSize.Small" Disabled="@IsInterfaceField(context.PropertyName)">
-                                        @I18n.T("BTN_DELETE")
-                                    </Button>
-                                </Popconfirm>
-                            </SpaceItem>
-                        </Space>
-                    </ActionColumn>
-                </Table>
+                <div class="field-editor-table">
+                    <table class="ant-table">
+                        <thead>
+                            <tr>
+                                <th>@I18n.T("LBL_PROPERTY_NAME")</th>
+                                <th>@I18n.T("LBL_DISPLAY_NAME")</th>
+                                <th>@I18n.T("LBL_DATA_TYPE")</th>
+                                <th>@I18n.T("LBL_LENGTH")</th>
+                                <th>@I18n.T("LBL_PRECISION")</th>
+                                <th>@I18n.T("LBL_SCALE")</th>
+                                <th>@I18n.T("LBL_REQUIRED")</th>
+                                <th>@I18n.T("LBL_DEFAULT_VALUE")</th>
+                                <th>@I18n.T("LBL_SORT_ORDER")</th>
+                                <th>@I18n.T("LBL_SOURCE")</th>
+                                <th>@I18n.T("LBL_ACTIONS")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_model.Fields != null)
+                            {
+                                foreach (var field in _model.Fields)
+                                {
+                                    var isInterface = IsInterfaceField(field.PropertyName);
+                                    var interfaceLabel = GetInterfaceFieldLabel(field.PropertyName);
+                                    <tr>
+                                        <td>
+                                            <Input @bind-Value="field.PropertyName"
+                                                   Disabled="@isInterface"
+                                                   Placeholder="Code"
+                                                   Class="field-control" />
+                                        </td>
+                                        <td class="field-display-name">
+                                            <MultilingualInput Value="field.DisplayName"
+                                                               ValueChanged="value => OnFieldDisplayNameChanged(field, value)"
+                                                               DefaultLanguage="@I18n.CurrentLang" />
+                                        </td>
+                                        <td>
+                                            <Select TItemValue="string" TItem="string"
+                                                    @bind-Value="field.DataType"
+                                                    Disabled="@isInterface"
+                                                    Style="width: 140px;">
+                                                <SelectOptions>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String"><ChildContent Context="opt">String</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer"><ChildContent Context="opt">Integer</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long"><ChildContent Context="opt">Long</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal"><ChildContent Context="opt">Decimal</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean"><ChildContent Context="opt">Boolean</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime"><ChildContent Context="opt">DateTime</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date"><ChildContent Context="opt">Date</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text"><ChildContent Context="opt">Text</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid"><ChildContent Context="opt">Guid</ChildContent></SelectOption>
+                                                </SelectOptions>
+                                            </Select>
+                                        </td>
+                                        <td>
+                                            <AntDesign.InputNumber TValue="int?" @bind-Value="field.Length"
+                                                                    Disabled="@isInterface"
+                                                                    Placeholder="-" Style="width: 100px;" />
+                                        </td>
+                                        <td>
+                                            <AntDesign.InputNumber TValue="int?" @bind-Value="field.Precision"
+                                                                    Disabled="@isInterface"
+                                                                    Placeholder="-" Style="width: 100px;" />
+                                        </td>
+                                        <td>
+                                            <AntDesign.InputNumber TValue="int?" @bind-Value="field.Scale"
+                                                                    Disabled="@isInterface"
+                                                                    Placeholder="-" Style="width: 100px;" />
+                                        </td>
+                                        <td class="field-required">
+                                            <Switch @bind-Value="field.IsRequired"
+                                                    Disabled="@isInterface" />
+                                        </td>
+                                        <td>
+                                            <Input @bind-Value="field.DefaultValue"
+                                                   Disabled="@isInterface"
+                                                   Placeholder="@I18n.T("TXT_DEFAULT_VALUE_HINT")"
+                                                   Class="field-control" />
+                                        </td>
+                                        <td>
+                                            <AntDesign.InputNumber TValue="int" @bind-Value="field.SortOrder"
+                                                                    Disabled="@isInterface"
+                                                                    Min="0" Style="width: 100px;" />
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(interfaceLabel))
+                                            {
+                                                <Tag>@interfaceLabel</Tag>
+                                            }
+                                            else
+                                            {
+                                                <Tag>@I18n.T("LBL_SOURCE_CUSTOM")</Tag>
+                                            }
+                                        </td>
+                                        <td>
+                                            <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")"
+                                                        OnConfirm="() => RemoveField(field)"
+                                                        Disabled="@isInterface">
+                                                <Button Danger Size="@ButtonSize.Small" Disabled="@isInterface">
+                                                    @I18n.T("BTN_DELETE")
+                                                </Button>
+                                            </Popconfirm>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </Body>
         </Card>
 
@@ -213,69 +291,6 @@
     }
 </AuthChecker>
 
-<!-- 字段编辑模态框 -->
-<Modal Title="@(_editingField.Id == Guid.Empty ? I18n.T("LBL_CREATE_FIELD") : I18n.T("LBL_EDIT_FIELD"))" WrapClassName="calm-modal" @bind-Visible="@_fieldModalVisible" OnOk="SaveField" OnCancel="CancelFieldEdit">
-    <Form Model="@_editingField" LabelColSpan="6" WrapperColSpan="18">
-        <FormItem Label="@I18n.T("LBL_PROPERTY_NAME")">
-            <Input @bind-Value="@_editingField.PropertyName" Placeholder="Price" Class="field-control" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
-            <MultilingualInput @bind-Value="@_editingField.DisplayName" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_DATA_TYPE")">
-            <Select TItemValue="string" TItem="string" @bind-Value="@_editingField.DataType" Class="field-control">
-                <SelectOptions>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String">
-                        <ChildContent Context="optionContent">String</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer">
-                        <ChildContent Context="optionContent">Integer</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long">
-                        <ChildContent Context="optionContent">Long</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal">
-                        <ChildContent Context="optionContent">Decimal</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean">
-                        <ChildContent Context="optionContent">Boolean</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime">
-                        <ChildContent Context="optionContent">DateTime</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date">
-                        <ChildContent Context="optionContent">Date</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text">
-                        <ChildContent Context="optionContent">Text</ChildContent>
-                    </SelectOption>
-                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid">
-                        <ChildContent Context="optionContent">Guid</ChildContent>
-                    </SelectOption>
-                </SelectOptions>
-            </Select>
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_LENGTH")">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Length" Min="0" Placeholder="@I18n.T("TXT_FOR_STRING_TYPE")" ValueChanged="@((int? val) => _editingField.Length = val)" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_PRECISION")">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Precision" Min="0" Placeholder="@I18n.T("TXT_FOR_DECIMAL_TYPE")" ValueChanged="@((int? val) => _editingField.Precision = val)" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_SCALE")">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.Scale" Min="0" Placeholder="@I18n.T("TXT_FOR_DECIMAL_TYPE")" ValueChanged="@((int? val) => _editingField.Scale = val)" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_REQUIRED")">
-            <Switch @bind-Value="@_editingField.IsRequired" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_DEFAULT_VALUE")">
-            <Input @bind-Value="@_editingField.DefaultValue" Placeholder="@I18n.T("TXT_DEFAULT_VALUE_HINT")" Class="field-control" />
-        </FormItem>
-        <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
-            <AntDesign.InputNumber TValue="int?" Value="@_editingField.SortOrder" Min="0" ValueChanged="@((int? val) => _editingField.SortOrder = val ?? 0)" />
-        </FormItem>
-    </Form>
-</Modal>
-
 @code {
     [Parameter] public Guid? Id { get; set; }
     [CascadingParameter] public int I18nRenderVersion { get; set; }
@@ -284,9 +299,9 @@
     private bool _isNew => !Id.HasValue;
     private bool _loading = false;
     private bool _saving = false;
-    private bool _fieldModalVisible = false;
     private int _lastI18nRenderVersion = -1;
     private const string DefaultIconType = "appstore";
+    private const string NamespacePrefix = "BobCrm.Domain.";
     private bool _entityInfoExpanded = true;
     private readonly Dictionary<string, string> _interfaceFieldOwnership = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, List<InterfaceFieldTemplate>> InterfaceFieldTemplates = new(StringComparer.OrdinalIgnoreCase)
@@ -323,7 +338,6 @@
     };
 
     private EditModel _model = new();
-    private FieldMetadataDto _editingField = new();
     private string[] _selectedInterfaces = Array.Empty<string>();
     private List<SubEntityViewModel> _subEntities = new();
 
@@ -385,6 +399,7 @@
             // 默认选中Base接口
             _selectedInterfaces = new[] { "Base" };
             SyncInterfaceFields();
+            UpdateNamespaceFromEntityName();
         }
     }
 
@@ -424,7 +439,7 @@
                     {
                         Id = f.Id,
                         PropertyName = f.PropertyName,
-                        DisplayName = f.DisplayName,
+                        DisplayName = f.DisplayName != null ? new MultilingualTextDto(f.DisplayName) : new MultilingualTextDto(),
                         DataType = f.DataType,
                         Length = f.Length,
                         Precision = f.Precision,
@@ -512,97 +527,28 @@
         }
     }
 
-    private void AddField()
+    private void AddFieldRow()
     {
-        _editingField = new FieldMetadataDto
+        if (_model.Fields == null)
         {
-            Id = Guid.Empty,
-            SortOrder = (_model.Fields != null && _model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100),
+            _model.Fields = new List<FieldMetadataDto>();
+        }
+
+        var sortOrder = _model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100;
+        _model.Fields.Add(new FieldMetadataDto
+        {
+            Id = Guid.NewGuid(),
+            DisplayName = new MultilingualTextDto(),
             DataType = FieldDataType.String,
-            DisplayName = new MultilingualTextDto()
-        };
-        _fieldModalVisible = true;
+            IsRequired = false,
+            SortOrder = sortOrder
+        });
     }
 
-    private void EditField(FieldMetadataDto field)
+    private Task OnFieldDisplayNameChanged(FieldMetadataDto field, MultilingualTextDto? value)
     {
-        _editingField = new FieldMetadataDto
-        {
-            Id = field.Id,
-            PropertyName = field.PropertyName,
-            DisplayName = field.DisplayName ?? new MultilingualTextDto(),
-            DataType = field.DataType,
-            Length = field.Length,
-            Precision = field.Precision,
-            Scale = field.Scale,
-            IsRequired = field.IsRequired,
-            DefaultValue = field.DefaultValue,
-            SortOrder = field.SortOrder
-        };
-        _fieldModalVisible = true;
-    }
-
-    private Task SaveField()
-    {
-        // 验证字段显示名
-        if (_editingField.DisplayName == null || !_editingField.DisplayName.HasValue())
-        {
-            MessageService.Error(I18n.T("MSG_FIELD_DISPLAY_NAME_REQUIRED"));
-            return Task.CompletedTask;
-        }
-
-        if (_editingField.Id == Guid.Empty)
-        {
-            _editingField.Id = Guid.NewGuid();
-            if (_model.Fields == null)
-            {
-                _model.Fields = new List<FieldMetadataDto>();
-            }
-            _model.Fields.Add(new FieldMetadataDto
-            {
-                Id = _editingField.Id,
-                PropertyName = _editingField.PropertyName,
-                DisplayName = _editingField.DisplayName,
-                DataType = _editingField.DataType,
-                Length = _editingField.Length,
-                Precision = _editingField.Precision,
-                Scale = _editingField.Scale,
-                IsRequired = _editingField.IsRequired,
-                DefaultValue = _editingField.DefaultValue,
-                SortOrder = _editingField.SortOrder
-            });
-        }
-        else
-        {
-            if (_model.Fields != null)
-            {
-                var index = _model.Fields.FindIndex(f => f.Id == _editingField.Id);
-                if (index >= 0)
-                {
-                    _model.Fields[index] = new FieldMetadataDto
-                    {
-                        Id = _editingField.Id,
-                        PropertyName = _editingField.PropertyName,
-                        DisplayName = _editingField.DisplayName,
-                        DataType = _editingField.DataType,
-                        Length = _editingField.Length,
-                        Precision = _editingField.Precision,
-                        Scale = _editingField.Scale,
-                        IsRequired = _editingField.IsRequired,
-                        DefaultValue = _editingField.DefaultValue,
-                        SortOrder = _editingField.SortOrder
-                    };
-                }
-            }
-        }
-
-        _fieldModalVisible = false;
+        field.DisplayName = value ?? new MultilingualTextDto();
         return Task.CompletedTask;
-    }
-
-    private void CancelFieldEdit()
-    {
-        _fieldModalVisible = false;
     }
 
     private void RemoveField(FieldMetadataDto field)
@@ -656,6 +602,43 @@
     private void ToggleEntityInfoPanel()
     {
         _entityInfoExpanded = !_entityInfoExpanded;
+    }
+
+    private string EntityNameInput
+    {
+        get => _model.EntityName;
+        set
+        {
+            _model.EntityName = value ?? string.Empty;
+            UpdateNamespaceFromEntityName();
+        }
+    }
+
+    private Task HandleEntityNameInput(ChangeEventArgs args)
+    {
+        EntityNameInput = args?.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private void UpdateNamespaceFromEntityName()
+    {
+        if (!_isNew)
+        {
+            return;
+        }
+
+        _model.Namespace = BuildNamespace(_model.EntityName);
+    }
+
+    private static string BuildNamespace(string? entityName)
+    {
+        var name = (entityName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        return $"{NamespacePrefix}{name}";
     }
 
     private bool IsInterfaceField(string? propertyName)
@@ -871,7 +854,7 @@
 
     private class EditModel
     {
-        public string Namespace { get; set; } = "BobCrm.Domain.Custom";
+        public string Namespace { get; set; } = string.Empty;
         public string EntityName { get; set; } = string.Empty;
         public MultilingualTextDto DisplayName { get; set; } = new();
         public MultilingualTextDto? Description { get; set; }

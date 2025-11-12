@@ -344,6 +344,44 @@ body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop
     font-size: 12px;
     color: #6b7280;
 }
+
+.field-editor-table {
+    overflow-x: auto;
+}
+
+.field-editor-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.field-editor-table th {
+    text-align: left;
+    background: #f8fafc;
+    font-weight: 600;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #1f2937;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.field-editor-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+
+.field-editor-table tr:hover {
+    background: #f8fbff;
+}
+
+.field-editor-table .field-display-name {
+    min-width: 240px;
+}
+
+.field-editor-table .field-required {
+    text-align: center;
+}
 .entity-section-toggle {
     display: flex;
     align-items: center;
