@@ -565,6 +565,7 @@
         _model.Fields.Add(new FieldMetadataDto
         {
             Id = Guid.NewGuid(),
+            PropertyName = GenerateDefaultFieldName(),
             DisplayName = new MultilingualTextDto(),
             DataType = FieldDataType.String,
             IsRequired = false,
@@ -685,6 +686,37 @@
         }
 
         return domain.Trim();
+    }
+
+    private string GenerateDefaultFieldName()
+    {
+        const string prefix = "Field";
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_model?.Fields != null)
+        {
+            foreach (var name in _model.Fields.Select(f => f.PropertyName).Where(n => !string.IsNullOrWhiteSpace(n)))
+            {
+                taken.Add(name!.Trim());
+            }
+        }
+
+        foreach (var key in _interfaceFieldOwnership.Keys)
+        {
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                taken.Add(key.Trim());
+            }
+        }
+
+        var index = 1;
+        string candidate;
+        do
+        {
+            candidate = $"{prefix}{index}";
+            index++;
+        } while (taken.Contains(candidate));
+
+        return candidate;
     }
 
     private bool IsInterfaceField(string? propertyName)

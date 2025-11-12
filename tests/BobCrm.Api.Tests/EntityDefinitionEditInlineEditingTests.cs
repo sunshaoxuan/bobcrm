@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using BobCrm.App.Components.Pages;
@@ -67,9 +68,29 @@ public class EntityDefinitionEditInlineEditingTests
         var fields = GetFields(model);
         fields.Should().HaveCount(2);
         var newest = fields[^1];
+        newest.PropertyName.Should().Be("Field1");
         newest.SortOrder.Should().Be(110);
         newest.DataType.Should().Be(FieldDataType.String);
         newest.DisplayName.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddFieldRow_GeneratesSequentialNames()
+    {
+        var component = new EntityDefinitionEdit();
+        var model = CreateEditModel(component);
+        var list = new List<FieldMetadataDto>
+        {
+            new() { Id = Guid.NewGuid(), PropertyName = "Field1", SortOrder = 100 },
+            new() { Id = Guid.NewGuid(), PropertyName = "field2", SortOrder = 110 }
+        };
+        SetPrivateField(component, "_model", model);
+        SetModelFields(model, list);
+
+        InvokeMethod(component, "AddFieldRow");
+
+        var newest = GetFields(model).Last();
+        newest.PropertyName.Should().Be("Field3");
     }
 
     [Fact]
