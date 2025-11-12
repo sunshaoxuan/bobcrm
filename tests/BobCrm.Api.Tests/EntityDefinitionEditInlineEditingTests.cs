@@ -17,10 +17,24 @@ public class EntityDefinitionEditInlineEditingTests
         var component = new EntityDefinitionEdit();
         var model = CreateEditModel(component);
         SetPrivateField(component, "_model", model);
+        SetModelCategory(model, "CRM");
 
         SetPrivateProperty(component, "EntityNameInput", "OrderHeader");
 
-        GetNamespace(model).Should().Be("BobCrm.Domain.OrderHeader");
+        GetNamespace(model).Should().Be("BobCrm.CRM.OrderHeader");
+    }
+
+    [Fact]
+    public void EntityNameInput_UsesSelectedDomain()
+    {
+        var component = new EntityDefinitionEdit();
+        var model = CreateEditModel(component);
+        SetPrivateField(component, "_model", model);
+        SetModelCategory(model, "SCM");
+
+        SetPrivateProperty(component, "EntityNameInput", "Warehouse");
+
+        GetNamespace(model).Should().Be("BobCrm.SCM.Warehouse");
     }
 
     [Fact]
@@ -76,6 +90,8 @@ public class EntityDefinitionEditInlineEditingTests
         var instance = Activator.CreateInstance(modelType)!;
         var displayProp = modelType.GetProperty("DisplayName")!;
         displayProp.SetValue(instance, new MultilingualTextDto());
+        var categoryProp = modelType.GetProperty("Category")!;
+        categoryProp.SetValue(instance, "Custom");
         return instance;
     }
 
@@ -92,6 +108,11 @@ public class EntityDefinitionEditInlineEditingTests
     private static string GetNamespace(object editModel)
     {
         return (string)editModel.GetType().GetProperty("Namespace")!.GetValue(editModel)!;
+    }
+
+    private static void SetModelCategory(object editModel, string value)
+    {
+        editModel.GetType().GetProperty("Category")!.SetValue(editModel, value);
     }
 
     private static void SetPrivateField(object target, string fieldName, object? value)

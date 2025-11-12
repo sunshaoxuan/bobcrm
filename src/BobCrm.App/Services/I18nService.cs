@@ -215,6 +215,8 @@ public class I18nService
         ["TXT_ENTITY_NAME_PLACEHOLDER"] = new() { ["zh"] = "示例：Product、Order（首字母大写的 PascalCase）", ["ja"] = "例: Product / Order（頭文字大文字のPascalCase）", ["en"] = "Ex: Product / Order (PascalCase starting with uppercase)" },
         ["TXT_NAMESPACE_PLACEHOLDER"] = new() { ["zh"] = "BobCrm.Domain.<实体名>", ["ja"] = "BobCrm.Domain.<エンティティ名>", ["en"] = "BobCrm.Domain.<EntityName>" },
         ["TXT_NAMESPACE_AUTO_HINT"] = new() { ["zh"] = "命名空间由系统根据实体名自动生成，保存后不可修改。", ["ja"] = "名前空間はエンティティ名から自動生成され、保存後は変更できません。", ["en"] = "Namespace is generated from the entity name automatically and cannot be edited after save." },
+        ["LBL_DOMAIN"] = new() { ["zh"] = "所属领域", ["ja"] = "ビジネス領域", ["en"] = "Business Domain" },
+        ["TXT_DOMAIN_HINT"] = new() { ["zh"] = "请选择该实体所在的业务域，用于生成命名空间。", ["ja"] = "エンティティが属する業務領域を選択してください。", ["en"] = "Select the business domain used to build the namespace." },
         ["TXT_ICON_FIELD_PLACEHOLDER"] = new() { ["zh"] = "输入 AntD 图标名或图片 URL", ["ja"] = "AntD アイコン名または画像 URL を入力", ["en"] = "Enter AntD icon name or image URL" },
         ["TXT_ICON_FIELD_HINT"] = new() { ["zh"] = "示例：icon:appstore 或 https://static.example.com/icon.svg", ["ja"] = "例: icon:appstore または https://static.example.com/icon.svg", ["en"] = "Ex: icon:appstore or https://static.example.com/icon.svg" },
         ["TXT_CATEGORY_PLACEHOLDER"] = new() { ["zh"] = "输入分组或菜单名称", ["ja"] = "グループ/カテゴリ名を入力", ["en"] = "Enter grouping or menu name" },

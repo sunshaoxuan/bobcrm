@@ -43,6 +43,24 @@
             @if (_entityInfoExpanded)
             {
                 <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
+                        <FormItem Label="@I18n.T("LBL_DOMAIN")">
+                            <Select TItemValue="string" TItem="string"
+                                    Value="_model.Category"
+                                    ValueChanged="OnDomainChanged"
+                                    ValueExpression="() => _model.Category"
+                                    Style="width: 220px;">
+                                @foreach (var option in _domainOptions)
+                                {
+                                    <SelectOption TItemValue="string" TItem="string" Value="@option.Code" Label="@option.Label">
+                                        <ChildContent Context="optionContent">@option.Label</ChildContent>
+                                    </SelectOption>
+                                }
+                            </Select>
+                            <div class="ant-form-text">
+                                @I18n.T("TXT_DOMAIN_HINT")
+                            </div>
+                        </FormItem>
+
                         <FormItem Label="@I18n.T("LBL_ENTITY_NAME")">
                             <Input Value="@EntityNameInput"
                                    ValueExpression="() => EntityNameInput"
@@ -301,9 +319,18 @@
     private bool _saving = false;
     private int _lastI18nRenderVersion = -1;
     private const string DefaultIconType = "appstore";
-    private const string NamespacePrefix = "BobCrm.Domain.";
+    private const string NamespaceRoot = "BobCrm.";
     private bool _entityInfoExpanded = true;
     private readonly Dictionary<string, string> _interfaceFieldOwnership = new(StringComparer.OrdinalIgnoreCase);
+    private readonly (string Code, string Label)[] _domainOptions = new[]
+    {
+        ("CRM", "CRM - 客户关系管理"),
+        ("SCM", "SCM - 供应链管理"),
+        ("FA", "FA - 财务会计"),
+        ("HR", "HR - 人力资源"),
+        ("MFM", "MFM - 生产制造"),
+        ("Custom", "Custom")
+    };
     private static readonly Dictionary<string, List<InterfaceFieldTemplate>> InterfaceFieldTemplates = new(StringComparer.OrdinalIgnoreCase)
     {
         [EntityInterfaceType.Base] = new()
@@ -620,6 +647,13 @@
         return Task.CompletedTask;
     }
 
+    private Task OnDomainChanged(string value)
+    {
+        _model.Category = value;
+        UpdateNamespaceFromEntityName();
+        return Task.CompletedTask;
+    }
+
     private void UpdateNamespaceFromEntityName()
     {
         if (!_isNew)
@@ -630,7 +664,7 @@
         _model.Namespace = BuildNamespace(_model.EntityName);
     }
 
-    private static string BuildNamespace(string? entityName)
+    private string BuildNamespace(string? entityName)
     {
         var name = (entityName ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(name))
@@ -638,7 +672,19 @@
             return string.Empty;
         }
 
-        return $"{NamespacePrefix}{name}";
+        var domain = ResolveDomainCode();
+        return $"{NamespaceRoot}{domain}.{name}";
+    }
+
+    private string ResolveDomainCode()
+    {
+        var domain = _model?.Category;
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            return "Custom";
+        }
+
+        return domain.Trim();
     }
 
     private bool IsInterfaceField(string? propertyName)
@@ -860,7 +906,7 @@
         public MultilingualTextDto? Description { get; set; }
         public string StructureType { get; set; } = "Single";
         public string? Icon { get; set; }
-        public string? Category { get; set; }
+        public string? Category { get; set; } = "Custom";
         public int Order { get; set; }
         public bool IsEnabled { get; set; } = true;
         public List<FieldMetadataDto> Fields { get; set; } = new();
