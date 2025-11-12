@@ -2,7 +2,8 @@
 @namespace BobCrm.App.Components.Shared
 
 @* 多语言输入组件 - 使用 Ant Design Popover *@
-<Popover @bind-Visible="_isExpanded"
+<Popover Visible="_isExpanded"
+         VisibleChange="@(new Action<bool>(visible => _isExpanded = visible))"
          Trigger="@(new[] { AntDesign.Trigger.Click })"
          Placement="@Placement.BottomLeft"
          OverlayClassName="multilingual-popover">
