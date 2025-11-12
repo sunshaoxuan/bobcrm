@@ -51,6 +51,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<FieldMetadata> FieldMetadatas => Set<FieldMetadata>();
     public DbSet<EntityInterface> EntityInterfaces => Set<EntityInterface>();
     public DbSet<DDLScript> DDLScripts => Set<DDLScript>();
+    public DbSet<OrganizationNode> OrganizationNodes => Set<OrganizationNode>();
 
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;

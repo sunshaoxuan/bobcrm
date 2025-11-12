@@ -220,6 +220,24 @@ public class I18nService
         ["TXT_ICON_FIELD_PLACEHOLDER"] = new() { ["zh"] = "输入 AntD 图标名或图片 URL", ["ja"] = "AntD アイコン名または画像 URL を入力", ["en"] = "Enter AntD icon name or image URL" },
         ["TXT_ICON_FIELD_HINT"] = new() { ["zh"] = "示例：icon:appstore 或 https://static.example.com/icon.svg", ["ja"] = "例: icon:appstore または https://static.example.com/icon.svg", ["en"] = "Ex: icon:appstore or https://static.example.com/icon.svg" },
         ["TXT_CATEGORY_PLACEHOLDER"] = new() { ["zh"] = "输入分组或菜单名称", ["ja"] = "グループ/カテゴリ名を入力", ["en"] = "Enter grouping or menu name" },
-        ["TXT_INTERFACE_AUTO_FIELDS_TIP"] = new() { ["zh"] = "勾选接口后会自动注入标准字段，字段不可单独删除，如需移除请取消勾选接口。", ["ja"] = "インターフェースを選択すると標準フィールドが自動追加されます。削除するにはチェックを外してください。", ["en"] = "Selecting an interface injects its standard fields automatically. To remove them, uncheck the interface rather than deleting fields." }
+        ["TXT_INTERFACE_AUTO_FIELDS_TIP"] = new() { ["zh"] = "勾选接口后会自动注入标准字段，字段不可单独删除，如需移除请取消勾选接口。", ["ja"] = "インターフェースを選択すると標準フィールドが自動追加されます。削除するにはチェックを外してください。", ["en"] = "Selecting an interface injects its standard fields automatically. To remove them, uncheck the interface rather than deleting fields." },
+        ["MENU_ORG"] = new() { ["zh"] = "组织关系", ["ja"] = "組織管理", ["en"] = "Organizations" },
+        ["LBL_ORG_TREE"] = new() { ["zh"] = "组织树", ["ja"] = "組織ツリー", ["en"] = "Organization Tree" },
+        ["BTN_ADD_ORG"] = new() { ["zh"] = "新增节点", ["ja"] = "ノード追加", ["en"] = "Add Node" },
+        ["TXT_ORG_EMPTY"] = new() { ["zh"] = "暂无组织，请先创建根节点。", ["ja"] = "組織がありません。まずはルートを作成してください。", ["en"] = "No organization nodes yet. Create the root first." },
+        ["LBL_ORG_ROOT"] = new() { ["zh"] = "根组织", ["ja"] = "ルート組織", ["en"] = "Root Organization" },
+        ["LBL_ORG_CODE"] = new() { ["zh"] = "组织编码", ["ja"] = "組織コード", ["en"] = "Code" },
+        ["LBL_ORG_NAME"] = new() { ["zh"] = "组织名称", ["ja"] = "組織名", ["en"] = "Name" },
+        ["LBL_ORG_PATH"] = new() { ["zh"] = "层级编码", ["ja"] = "階層コード", ["en"] = "Path" },
+        ["TXT_ORG_NO_CHILD"] = new() { ["zh"] = "暂无子节点。", ["ja"] = "子ノードがありません。", ["en"] = "No child nodes yet." },
+        ["MSG_ORG_DELETE_CONFIRM"] = new() { ["zh"] = "确定要删除该组织节点吗？", ["ja"] = "この組織ノードを削除しますか？", ["en"] = "Delete this organization node?" },
+        ["MSG_ORG_ROOT_EXISTS"] = new() { ["zh"] = "已存在根组织，无法重复创建。", ["ja"] = "ルート組織はすでに存在します。", ["en"] = "A root organization already exists." },
+        ["MSG_ORG_CODE_REQUIRED"] = new() { ["zh"] = "请填写组织编码。", ["ja"] = "組織コードを入力してください。", ["en"] = "Organization code is required." },
+        ["MSG_ORG_NAME_REQUIRED"] = new() { ["zh"] = "请填写组织名称。", ["ja"] = "組織名を入力してください。", ["en"] = "Organization name is required." },
+        ["MSG_ORG_SELECT_PARENT"] = new() { ["zh"] = "请选择一个父级组织后再新增子节点。", ["ja"] = "子ノードを追加する前に親組織を選択してください。", ["en"] = "Select a parent organization before adding a child." },
+        ["MSG_ORG_SAVE_PARENT_FIRST"] = new() { ["zh"] = "请先保存当前节点，再创建子节点。", ["ja"] = "子ノードを追加する前に親ノードを保存してください。", ["en"] = "Save the current node before adding child nodes." },
+        ["LBL_ORG_DETAIL"] = new() { ["zh"] = "节点信息", ["ja"] = "ノード情報", ["en"] = "Node Details" },
+        ["TXT_ORG_DETAIL_HINT"] = new() { ["zh"] = "编辑当前选中节点的编码与名称，保存后同步至组织树。", ["ja"] = "選択中ノードのコードと名称を編集し、保存するとツリーに反映されます。", ["en"] = "Edit the selected node's code and name. Save to update the tree." },
+        ["LBL_ORG_CHILDREN"] = new() { ["zh"] = "子节点列表", ["ja"] = "子ノード一覧", ["en"] = "Children" }
     };
 }

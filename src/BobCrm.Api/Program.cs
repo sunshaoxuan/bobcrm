@@ -181,6 +181,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.IEntityLockService, BobCrm.Api.Se
 builder.Services.AddScoped<BobCrm.Api.Services.EntityDefinitionAggregateService>();
 builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.Api.Services.SubEntityCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
+builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
@@ -358,6 +359,7 @@ app.MapEntityDefinitionEndpoints();
 app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
+app.MapOrganizationEndpoints();
 app.MapFileEndpoints();
 
 app.MapControllers();

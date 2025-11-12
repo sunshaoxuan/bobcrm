@@ -1,0 +1,416 @@
+@page "/organizations"
+@using BobCrm.App.Models
+@inject BobCrm.App.Services.OrganizationService OrgService
+@inject BobCrm.App.Services.I18nService I18n
+@inject AntDesign.IMessageService MessageService
+
+<PageTitle>@I18n.T("MENU_ORG") · OneCRM</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_ORG")" />
+
+    @if (_loading)
+    {
+        <div style="text-align:center;padding:32px;">
+            <Spin Size="@SpinSize.Large" />
+        </div>
+    }
+    else
+    {
+        <div class="org-layout">
+            <div class="org-tree-panel org-card">
+                <div class="org-panel-header">
+                    <strong>@I18n.T("LBL_ORG_TREE")</strong>
+                    <Tooltip Title="@I18n.T("BTN_ADD_ORG")">
+                        <Button Size="@ButtonSize.Small" OnClick="AddRoot" Disabled="@HasRoot">
+                            <Icon Type="plus" /> @I18n.T("BTN_ADD_ORG")
+                        </Button>
+                    </Tooltip>
+                </div>
+                @if (_tree.Count == 0)
+                {
+                    <p class="muted-text">@I18n.T("TXT_ORG_EMPTY")</p>
+                }
+                else
+                {
+                    <ul class="org-tree">
+                        @foreach (var node in _tree)
+                        {
+                            @RenderTreeNode(node)
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="org-detail-panel">
+                @if (_tree.Count == 0 && _selectedNode is null)
+                {
+                    <div class="org-empty-state">
+                        <p>@I18n.T("TXT_ORG_EMPTY")</p>
+                        <Button Type="@ButtonType.Primary" OnClick="AddRoot">
+                            <Icon Type="plus" /> @I18n.T("BTN_ADD_ORG")
+                        </Button>
+                    </div>
+                }
+                else
+                {
+                    @if (_selectedNode != null)
+                    {
+                        <div class="org-card">
+                            <div class="org-card-header">
+                                <strong>@I18n.T("LBL_ORG_DETAIL")</strong>
+                                <span>@I18n.T("TXT_ORG_DETAIL_HINT")</span>
+                            </div>
+                            <div class="org-node-form">
+                                <div class="form-field">
+                                    <label>@I18n.T("LBL_ORG_CODE")</label>
+                                    <Input @bind-Value="_selectedNode.Code"
+                                           Placeholder="FA"
+                                           Class="field-control" />
+                                </div>
+                                <div class="form-field">
+                                    <label>@I18n.T("LBL_ORG_NAME")</label>
+                                    <Input @bind-Value="_selectedNode.Name"
+                                           Placeholder="@I18n.T("LBL_ORG_NAME")"
+                                           Class="field-control" />
+                                </div>
+                                <div class="form-field">
+                                    <label>@I18n.T("LBL_ORG_PATH")</label>
+                                    <Input Value="@(_selectedNode.PathCode ?? "--")" Disabled />
+                                </div>
+                                <div class="form-actions">
+                                    <Button Type="@ButtonType.Primary" OnClick="SaveSelectedNode">
+                                        @I18n.T("BTN_SAVE")
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="org-card">
+                        <div class="org-panel-header">
+                            <strong>@I18n.T("LBL_ORG_CHILDREN")</strong>
+                            <Tooltip Title="@GetAddChildTooltip()">
+                                <Button Size="@ButtonSize.Small"
+                                        Type="@ButtonType.Primary"
+                                        OnClick="AddChild"
+                                        Disabled="@(_selectedNode == null || _selectedNode.Id == Guid.Empty)">
+                                    <Icon Type="plus" /> @I18n.T("BTN_ADD_ORG")
+                                </Button>
+                            </Tooltip>
+                        </div>
+                        <div class="field-editor-table org-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>@I18n.T("LBL_ORG_CODE")</th>
+                                        <th>@I18n.T("LBL_ORG_NAME")</th>
+                                        <th>@I18n.T("LBL_ORG_PATH")</th>
+                                        <th style="width:160px;">@I18n.T("LBL_ACTIONS")</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (CurrentChildren.Count == 0)
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="muted-text">@I18n.T("TXT_ORG_NO_CHILD")</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var child in CurrentChildren)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <Input @bind-Value="child.Code"
+                                                           Placeholder="HR"
+                                                           Class="field-control" />
+                                                </td>
+                                                <td>
+                                                    <Input @bind-Value="child.Name"
+                                                           Placeholder="@I18n.T("LBL_ORG_NAME")"
+                                                           Class="field-control" />
+                                                </td>
+                                                <td>
+                                                    <span>@(string.IsNullOrWhiteSpace(child.PathCode) ? "--" : child.PathCode)</span>
+                                                </td>
+                                                <td>
+                                                    <Space>
+                                                        <SpaceItem>
+                                                            <Button Size="@ButtonSize.Small"
+                                                                    Type="@ButtonType.Primary"
+                                                                    OnClick="() => SaveNode(child)">
+                                                                @I18n.T("BTN_SAVE")
+                                                            </Button>
+                                                        </SpaceItem>
+                                                        <SpaceItem>
+                                                            <Popconfirm Title="@I18n.T("MSG_ORG_DELETE_CONFIRM")"
+                                                                        OnConfirm="() => DeleteNode(child)">
+                                                                <Button Size="@ButtonSize.Small" Danger>
+                                                                    @I18n.T("BTN_DELETE")
+                                                                </Button>
+                                                            </Popconfirm>
+                                                        </SpaceItem>
+                                                    </Space>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</AuthChecker>
+
+@code {
+    private readonly List<OrganizationNodeDto> _tree = new();
+    private OrganizationNodeDto? _selectedNode;
+    private bool _loading = true;
+    private bool HasRoot => _tree.Count > 0;
+
+    private List<OrganizationNodeDto> CurrentChildren =>
+        _selectedNode?.Children ?? _tree;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTree();
+    }
+
+    private async Task LoadTree(Guid? selectedId = null)
+    {
+        _loading = true;
+        try
+        {
+            var data = await OrgService.GetTreeAsync();
+            _tree.Clear();
+            _tree.AddRange(data);
+            SortNodes(_tree);
+            _selectedNode = selectedId.HasValue ? FindNodeById(selectedId.Value) : _tree.FirstOrDefault();
+            if (_selectedNode == null && _tree.Count > 0)
+            {
+                _selectedNode = _tree[0];
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private RenderFragment RenderTreeNode(OrganizationNodeDto node) => builder =>
+    {
+        var index = 0;
+        builder.OpenElement(index++, "li");
+        builder.OpenElement(index++, "button");
+        var active = _selectedNode?.Id == node.Id ? " active" : string.Empty;
+        builder.AddAttribute(index++, "class", $"org-tree-node{active}");
+        builder.AddAttribute(index++, "type", "button");
+        builder.AddAttribute(index++, "onclick", EventCallback.Factory.Create(this, () => SelectNode(node)));
+        builder.AddContent(index++, $"{node.Code} - {node.Name}");
+        builder.CloseElement();
+        if (node.Children.Any())
+        {
+            builder.OpenElement(index++, "ul");
+            foreach (var child in node.Children)
+            {
+                builder.AddContent(index++, RenderTreeNode(child));
+            }
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+    };
+
+    private void SelectNode(OrganizationNodeDto node)
+    {
+        _selectedNode = node;
+    }
+
+    private OrganizationNodeDto? FindNodeById(Guid id)
+    {
+        var stack = new Stack<OrganizationNodeDto>(_tree);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (current.Id == id)
+            {
+                return current;
+            }
+
+            foreach (var child in current.Children)
+            {
+                stack.Push(child);
+            }
+        }
+
+        return null;
+    }
+
+    private void AddRoot()
+    {
+        if (_tree.Any())
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_ROOT_EXISTS"));
+            return;
+        }
+
+        var root = new OrganizationNodeDto
+        {
+            Id = Guid.Empty,
+            Code = string.Empty,
+            Name = string.Empty,
+            PathCode = string.Empty,
+            SortOrder = 0,
+            Children = new List<OrganizationNodeDto>()
+        };
+        _tree.Add(root);
+        _selectedNode = root;
+    }
+
+    private void AddChild()
+    {
+        if (_selectedNode == null)
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_SELECT_PARENT"));
+            return;
+        }
+
+        if (_selectedNode.Id == Guid.Empty)
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_SAVE_PARENT_FIRST"));
+            return;
+        }
+
+        var target = CurrentChildren;
+        var sortOrder = target.Count == 0 ? 0 : target.Min(x => x.SortOrder) - 10;
+        target.Insert(0, new OrganizationNodeDto
+        {
+            Id = Guid.Empty,
+            ParentId = _selectedNode?.Id,
+            Code = string.Empty,
+            Name = string.Empty,
+            PathCode = string.Empty,
+            SortOrder = sortOrder,
+            Children = new List<OrganizationNodeDto>()
+        });
+    }
+
+    private async Task SaveNode(OrganizationNodeDto node)
+    {
+        if (string.IsNullOrWhiteSpace(node.Code))
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_CODE_REQUIRED"));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(node.Name))
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_NAME_REQUIRED"));
+            return;
+        }
+
+        try
+        {
+            Guid? nextSelectionId;
+            if (node.Id == Guid.Empty)
+            {
+                var created = await OrgService.CreateAsync(new CreateOrganizationRequest
+                {
+                    ParentId = node.ParentId,
+                    Code = node.Code,
+                    Name = node.Name
+                });
+                nextSelectionId = created.Id;
+            }
+            else
+            {
+                await OrgService.UpdateAsync(node.Id, new UpdateOrganizationRequest
+                {
+                    Code = node.Code,
+                    Name = node.Name
+                });
+                nextSelectionId = node.Id;
+            }
+
+            await LoadTree(nextSelectionId);
+            MessageService.Success(I18n.T("MSG_SAVE_SUCCESS"));
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private Task SaveSelectedNode()
+    {
+        if (_selectedNode == null)
+        {
+            MessageService.Warning(I18n.T("MSG_ORG_SELECT_PARENT"));
+            return Task.CompletedTask;
+        }
+
+        return SaveNode(_selectedNode);
+    }
+
+    private async Task DeleteNode(OrganizationNodeDto node)
+    {
+        if (node.Id == Guid.Empty)
+        {
+            CurrentChildren.Remove(node);
+            return;
+        }
+
+        try
+        {
+            var selectedId = _selectedNode?.Id;
+            await OrgService.DeleteAsync(node.Id);
+            await LoadTree(selectedId);
+            MessageService.Success(I18n.T("MSG_DELETE_SUCCESS"));
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private string GetAddChildTooltip()
+    {
+        if (_selectedNode == null)
+        {
+            return I18n.T("MSG_ORG_SELECT_PARENT");
+        }
+
+        return _selectedNode.Id == Guid.Empty
+            ? I18n.T("MSG_ORG_SAVE_PARENT_FIRST")
+            : I18n.T("BTN_ADD_ORG");
+    }
+
+    private static void SortNodes(List<OrganizationNodeDto> nodes)
+    {
+        nodes.Sort((a, b) =>
+        {
+            var order = a.SortOrder.CompareTo(b.SortOrder);
+            if (order != 0)
+            {
+                return order;
+            }
+
+            return string.Compare(a.Code, b.Code, StringComparison.OrdinalIgnoreCase);
+        });
+
+        foreach (var node in nodes)
+        {
+            if (node.Children.Count > 0)
+            {
+                SortNodes(node.Children);
+            }
+        }
+    }
+}

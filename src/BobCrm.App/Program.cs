@@ -17,6 +17,7 @@ builder.Services.AddTransient<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
+builder.Services.AddScoped<BobCrm.App.Services.OrganizationService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
