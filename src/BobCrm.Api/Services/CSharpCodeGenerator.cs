@@ -300,9 +300,6 @@ namespace BobCrm.Api.Domain
     public interface IOrganizational
     {
         Guid OrganizationId { get; set; }
-        string OrganizationCode { get; set; }
-        string? OrganizationName { get; set; }
-        string OrganizationPathCode { get; set; }
     }
 }";
     }

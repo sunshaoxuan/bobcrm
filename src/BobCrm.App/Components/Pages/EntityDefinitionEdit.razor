@@ -370,10 +370,7 @@
         },
         [EntityInterfaceType.Organization] = new()
         {
-            Template("OrganizationId", FieldDataType.Guid, isRequired: true, label: CreateLabel("组织ID", "組織ID", "Organization Id"), isEntityRef: true, referenceTable: "OrganizationNodes"),
-            Template("OrganizationCode", FieldDataType.String, isRequired: true, length: 64, label: CreateLabel("组织编码", "組織コード", "Organization Code")),
-            Template("OrganizationName", FieldDataType.String, length: 200, label: CreateLabel("组织名称", "組織名", "Organization Name")),
-            Template("OrganizationPathCode", FieldDataType.String, isRequired: true, length: 128, label: CreateLabel("组织路径编码", "組織Pathコード", "Organization Path Code"))
+            Template("OrganizationId", FieldDataType.Guid, isRequired: true, label: CreateLabel("组织ID", "組織ID", "Organization Id"), isEntityRef: true, referenceTable: "OrganizationNodes")
         }
     };
 

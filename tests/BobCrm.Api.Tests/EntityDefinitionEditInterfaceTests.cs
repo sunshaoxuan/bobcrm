@@ -57,10 +57,7 @@ public class EntityDefinitionEditInterfaceTests
             .Should()
             .Contain(new[]
             {
-                "OrganizationId",
-                "OrganizationCode",
-                "OrganizationName",
-                "OrganizationPathCode"
+                "OrganizationId"
             });
 
         var orgId = fields.First(f => f.PropertyName == "OrganizationId");

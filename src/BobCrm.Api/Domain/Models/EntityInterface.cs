@@ -141,27 +141,6 @@ public static class InterfaceFieldMapping
                     IsRequired = true,
                     IsEntityRef = true,
                     ReferenceTable = "OrganizationNodes"
-                },
-                new()
-                {
-                    PropertyName = "OrganizationCode",
-                    DataType = FieldDataType.String,
-                    Length = 64,
-                    IsRequired = true
-                },
-                new()
-                {
-                    PropertyName = "OrganizationName",
-                    DataType = FieldDataType.String,
-                    Length = 200,
-                    IsRequired = false
-                },
-                new()
-                {
-                    PropertyName = "OrganizationPathCode",
-                    DataType = FieldDataType.String,
-                    Length = 128,
-                    IsRequired = true
                 }
             },
             _ => new List<InterfaceFieldDefinition>()

@@ -217,12 +217,6 @@ public class PostgreSQLDDLGenerator
                 case EntityInterfaceType.Organization:
                     if (addedColumns.Add("OrganizationId"))
                         columns.Add("\"OrganizationId\" UUID NOT NULL");
-                    if (addedColumns.Add("OrganizationCode"))
-                        columns.Add("\"OrganizationCode\" VARCHAR(64) NOT NULL");
-                    if (addedColumns.Add("OrganizationName"))
-                        columns.Add("\"OrganizationName\" VARCHAR(200) NULL");
-                    if (addedColumns.Add("OrganizationPathCode"))
-                        columns.Add("\"OrganizationPathCode\" VARCHAR(128) NOT NULL");
                     break;
             }
         }
@@ -273,13 +267,6 @@ public class PostgreSQLDDLGenerator
             {
                 var indexName = $"IX_{tableName}_OrganizationId";
                 sb.AppendLine($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"OrganizationId\");");
-            }
-
-            var orgPathField = entity.Fields.FirstOrDefault(f => f.PropertyName == "OrganizationPathCode");
-            if (orgPathField != null)
-            {
-                var indexName = $"IX_{tableName}_OrganizationPathCode";
-                sb.AppendLine($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"OrganizationPathCode\");");
             }
         }
 
@@ -555,48 +542,6 @@ public class PostgreSQLDDLGenerator
                     SortOrder = 300,
                     IsEntityRef = true,
                     TableName = "OrganizationNodes"
-                });
-                fields.Add(new FieldMetadata
-                {
-                    PropertyName = "OrganizationCode",
-                    DisplayName = new Dictionary<string, string?>
-                    {
-                        { "ja", "組織コード" },
-                        { "zh", "组织编码" },
-                        { "en", "Organization Code" }
-                    },
-                    DataType = FieldDataType.String,
-                    Length = 64,
-                    IsRequired = true,
-                    SortOrder = 301
-                });
-                fields.Add(new FieldMetadata
-                {
-                    PropertyName = "OrganizationName",
-                    DisplayName = new Dictionary<string, string?>
-                    {
-                        { "ja", "組織名" },
-                        { "zh", "组织名称" },
-                        { "en", "Organization Name" }
-                    },
-                    DataType = FieldDataType.String,
-                    Length = 200,
-                    IsRequired = false,
-                    SortOrder = 302
-                });
-                fields.Add(new FieldMetadata
-                {
-                    PropertyName = "OrganizationPathCode",
-                    DisplayName = new Dictionary<string, string?>
-                    {
-                        { "ja", "組織Pathコード" },
-                        { "zh", "组织路径编码" },
-                        { "en", "Organization Path Code" }
-                    },
-                    DataType = FieldDataType.String,
-                    Length = 128,
-                    IsRequired = true,
-                    SortOrder = 303
                 });
                 break;
         }
