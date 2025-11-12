@@ -17,7 +17,18 @@
       "Bash(dotnet tool install:*)",
       "Bash(node .dev/start.js:*)",
       "Bash(dotnet run)",
-      "Bash(timeout /t 10 /nobreak)"
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(if exist \"c:\\workspace\\bobcrm\\src\\BobCrm.App\\Components\\Shared\\MultilingualInput.razor.js\" del \"c:\\workspace\\bobcrm\\src\\BobCrm.App\\Components\\Shared\\MultilingualInput.razor.js\")",
+      "Bash(nul)",
+      "Bash(find:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(git pull:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git restore:*)",
+      "Bash(timeout /t 3 /nobreak)"
     ],
     "deny": [],
     "ask": []

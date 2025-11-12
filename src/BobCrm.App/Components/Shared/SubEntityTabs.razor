@@ -4,11 +4,26 @@
 @inject BobCrm.App.Services.I18nService I18n
 
 <div class="sub-entity-tabs-container">
+    <div class="sub-entity-toolbar">
+        <Space>
+            <SpaceItem>
+                <Text Strong>@I18n.T("LBL_SUB_ENTITY_MANAGEMENT")</Text>
+            </SpaceItem>
+            <SpaceItem>
+                <Button Type="@ButtonType.Primary"
+                        Icon="@IconType.Outline.Plus"
+                        Size="@ButtonSize.Small"
+                        OnClick="@ShowAddSubEntityModal">
+                    @I18n.T("LBL_ADD_SUB_ENTITY")
+                </Button>
+            </SpaceItem>
+        </Space>
+    </div>
+
     @if (SubEntities != null && SubEntities.Any())
     {
         <Tabs @bind-ActiveKey="@_activeKey"
-              Type="@TabType.EditableCard"
-              HideAdd="true"
+              Type="@TabType.Card"
               OnEdit="@((key, action) => OnTabEdit(key, action))">
 
             @foreach (var subEntity in SubEntities)
@@ -29,10 +44,10 @@
                     <ChildContent>
                         <div class="sub-entity-panel">
                             <div class="sub-entity-header">
-                                <Descriptions Title="子实体信息" Size="@DescriptionsSize.Small" Bordered Column="2">
-                                    <DescriptionsItem Title="编码">@subEntity.Code</DescriptionsItem>
-                                    <DescriptionsItem Title="显示名称">@GetDisplayName(subEntity.DisplayName)</DescriptionsItem>
-                                    <DescriptionsItem Title="排序" Span="2">@subEntity.SortOrder</DescriptionsItem>
+                                <Descriptions Title="@I18n.T("LBL_SUB_ENTITY_INFO")" Size="@DescriptionsSize.Small" Bordered Column="2">
+                                    <DescriptionsItem Title="@I18n.T("LBL_SUB_ENTITY_CODE")">@subEntity.Code</DescriptionsItem>
+                                    <DescriptionsItem Title="@I18n.T("LBL_DISPLAY_NAME")">@GetDisplayName(subEntity.DisplayName)</DescriptionsItem>
+                                    <DescriptionsItem Title="@I18n.T("LBL_SORT_ORDER")" Span="2">@subEntity.SortOrder</DescriptionsItem>
                                 </Descriptions>
                             </div>
 
@@ -56,15 +71,6 @@
             </ChildContent>
         </Empty>
     }
-
-    <div class="add-sub-entity-button">
-        <Button Type="@ButtonType.Dashed"
-                Icon="@IconType.Outline.Plus"
-                Block
-                OnClick="@ShowAddSubEntityModal">
-            @I18n.T("LBL_ADD_SUB_ENTITY")
-        </Button>
-    </div>
 </div>
 
 <Modal Title="@I18n.T("LBL_ADD_SUB_ENTITY")"
@@ -186,11 +192,7 @@
         // 通知父组件添加子实体
         await OnSubEntityAdded.InvokeAsync(_newSubEntity);
 
-        // 设置活动Tab
-        _activeKey = _newSubEntity.TempId.ToString();
-
         _addModalVisible = false;
-        StateHasChanged();
     }
 
     private void OnAddSubEntityCancel()

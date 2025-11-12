@@ -21,8 +21,6 @@ public partial class MultilingualInput : IAsyncDisposable
     private Dictionary<string, string?> _values = new();
     private bool _isExpanded = false;
     private string _defaultLanguage = "ja";
-    private IJSObjectReference? _jsModule;
-    private DotNetObjectReference<MultilingualInput>? _dotNetRef;
 
     private class LanguageInfo
     {
@@ -117,96 +115,11 @@ public partial class MultilingualInput : IAsyncDisposable
         }
     }
 
-    private async Task TogglePopover()
-    {
-        _isExpanded = !_isExpanded;
-
-        if (_isExpanded)
-        {
-            await SetupScrollListener();
-        }
-        else
-        {
-            await RemoveScrollListener();
-        }
-
-        StateHasChanged();
-    }
-
-    private async Task ClosePopover()
-    {
-        if (_isExpanded)
-        {
-            _isExpanded = false;
-            await RemoveScrollListener();
-            StateHasChanged();
-        }
-    }
-
-    private async Task SetupScrollListener()
-    {
-        try
-        {
-            if (_jsModule == null)
-            {
-                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                    "import", "./js/multilingual-input.js");
-            }
-
-            // Small delay to ensure Popover has rendered and positioned correctly
-            await Task.Delay(100);
-
-            _dotNetRef = DotNetObjectReference.Create(this);
-            await _jsModule.InvokeVoidAsync("setupScrollListener", _dotNetRef);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MultilingualInput] Failed to setup scroll listener: {ex.Message}");
-        }
-    }
-
-    private async Task RemoveScrollListener()
-    {
-        try
-        {
-            if (_jsModule != null)
-            {
-                await _jsModule.InvokeVoidAsync("removeScrollListener");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MultilingualInput] Failed to remove scroll listener: {ex.Message}");
-        }
-    }
-
-    [JSInvokable]
-    public void CloseOnScroll()
-    {
-        _isExpanded = false;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         // Unsubscribe from language changes
         I18n.OnChanged -= HandleLanguageChanged;
-
-        await RemoveScrollListener();
-
-        _dotNetRef?.Dispose();
-
-        if (_jsModule != null)
-        {
-            try
-            {
-                await _jsModule.DisposeAsync();
-            }
-            catch
-            {
-                // Ignore disposal errors
-            }
-        }
+        return ValueTask.CompletedTask;
     }
 
     private async Task OnValueChanged(string lang, string? value)

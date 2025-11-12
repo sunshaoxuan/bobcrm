@@ -640,5 +640,6 @@
   "MSG_SUB_ENTITY_DISPLAY_NAME_REQUIRED": { "zh": "子实体显示名称不能为空", "ja": "サブエンティティ表示名は必須です", "en": "Sub-entity display name is required" },
   "LBL_DEFAULT_SORT_FIELD": { "zh": "默认排序字段", "ja": "既定ソートフィールド", "en": "Default Sort Field" },
   "LBL_IS_DESCENDING": { "zh": "降序排列", "ja": "降順", "en": "Descending Order" },
-  "LBL_CASCADE_DELETE": { "zh": "级联删除", "ja": "カスケード削除", "en": "Cascade Delete" }
+  "LBL_CASCADE_DELETE": { "zh": "级联删除", "ja": "カスケード削除", "en": "Cascade Delete" },
+  "LBL_SUB_ENTITY_INFO": { "zh": "子实体信息", "ja": "サブエンティティ情報", "en": "Sub-Entity Information" }
 }

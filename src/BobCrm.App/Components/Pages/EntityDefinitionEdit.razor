@@ -502,22 +502,18 @@
     }
 
     // 子实体事件处理
-    private void HandleSubEntityAdded(SubEntityViewModel subEntity)
+    private Task HandleSubEntityAdded(SubEntityViewModel subEntity)
     {
-        // 将子实体添加到集合
-        _subEntities.Add(subEntity);
-        StateHasChanged();
+        // 创建新列表引用以触发子组件参数变更检测
+        _subEntities = _subEntities.Concat(new[] { subEntity }).ToList();
+        return InvokeAsync(StateHasChanged);
     }
 
-    private void HandleSubEntityRemoved(Guid subEntityId)
+    private Task HandleSubEntityRemoved(Guid subEntityId)
     {
-        // 从集合中移除子实体
-        var subEntity = _subEntities.FirstOrDefault(s => s.TempId == subEntityId);
-        if (subEntity != null)
-        {
-            _subEntities.Remove(subEntity);
-        }
-        StateHasChanged();
+        // 创建新列表引用以触发子组件参数变更检测
+        _subEntities = _subEntities.Where(s => s.TempId != subEntityId).ToList();
+        return InvokeAsync(StateHasChanged);
     }
 
     private void HandleFieldChanged((Guid SubEntityId, FieldViewModel Field) args)

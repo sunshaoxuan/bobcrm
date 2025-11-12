@@ -2,23 +2,25 @@
 @namespace BobCrm.App.Components.Shared
 
 @* 多语言输入组件 - 使用 Ant Design Popover *@
-<div class="multilingual-trigger" @onclick="TogglePopover" @onclick:stopPropagation="true">
-    <div class="trigger-wrapper">
-        <Input Value="@GetDefaultValue()"
-               ReadOnly="true"
-               Placeholder="@GetDefaultPlaceholder()"
-               Class="field-control trigger-input" />
-        <span class="trigger-icons">
-            <Icon Type="global" Style="color: #1890ff;" />
-            <Icon Type="@(_isExpanded ? "up" : "down")" Style="font-size: 10px;" />
-        </span>
-    </div>
-</div>
-
-@if (_isExpanded)
-{
-    <div class="multilingual-overlay-backdrop" @onclick="ClosePopover"></div>
-    <div class="multilingual-overlay-container">
+<Popover @bind-Visible="_isExpanded"
+         Trigger="@(new[] { AntDesign.Trigger.Click })"
+         Placement="@Placement.BottomLeft"
+         OverlayClassName="multilingual-popover">
+    <ChildContent>
+        <div class="multilingual-trigger">
+            <div class="trigger-wrapper">
+                <Input Value="@GetDefaultValue()"
+                       ReadOnly="true"
+                       Placeholder="@GetDefaultPlaceholder()"
+                       Class="field-control trigger-input" />
+                <span class="trigger-icons">
+                    <Icon Type="global" Style="color: #1890ff;" />
+                    <Icon Type="@(_isExpanded ? "up" : "down")" Style="font-size: 10px;" />
+                </span>
+            </div>
+        </div>
+    </ChildContent>
+    <ContentTemplate>
         @RenderOverlay()
-    </div>
-}
+    </ContentTemplate>
+</Popover>
