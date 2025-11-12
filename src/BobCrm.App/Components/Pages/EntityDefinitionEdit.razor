@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
+@using AntDesign
 @inject IMultilingualTextResolver MultilingualResolver
 
 <AuthChecker>
@@ -34,77 +35,115 @@
     }
     else
     {
-        <Card>
-            <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
-                <FormItem Label="@I18n.T("LBL_NAMESPACE")">
-                    <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" Class="field-control" />
-                </FormItem>
+        <Card Class="entity-section-card">
+            <div class="entity-section-toggle" role="button" tabindex="0" @onclick="ToggleEntityInfoPanel">
+                <span>@I18n.T("LBL_ENTITY_INFO")</span>
+                <Icon Type="@(_entityInfoExpanded ? "up" : "down")" />
+            </div>
+            @if (_entityInfoExpanded)
+            {
+                <Form Model="@_model" LabelColSpan="4" WrapperColSpan="20">
+                        <FormItem Label="@I18n.T("LBL_NAMESPACE")">
+                            <Input @bind-Value="@_model.Namespace" Disabled="@(!_isNew)" Placeholder="BobCrm.Domain.Custom" Class="field-control" />
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_ENTITY_NAME")">
-                    <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" Class="field-control" />
-                    <div class="ant-form-text">
-                        @I18n.T("TXT_ENTITY_NAME_HINT")
-                    </div>
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_ENTITY_NAME")">
+                            <Input @bind-Value="@_model.EntityName" Disabled="@(!_isNew)" Placeholder="Product" Class="field-control" />
+                            <div class="ant-form-text">
+                                @I18n.T("TXT_ENTITY_NAME_HINT")
+                            </div>
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
-                    <MultilingualInput @bind-Value="@_model.DisplayName" />
-                    <div class="ant-form-text">
-                        @I18n.T("TXT_MULTILINGUAL_DISPLAY_NAME_HINT")
-                    </div>
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
+                            <MultilingualInput @bind-Value="@_model.DisplayName" />
+                            <div class="ant-form-text">
+                                @I18n.T("TXT_MULTILINGUAL_DISPLAY_NAME_HINT")
+                            </div>
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
-                    <MultilingualInput @bind-Value="@_model.Description" />
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
+                            <MultilingualInput @bind-Value="@_model.Description" />
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_STRUCTURE_TYPE")">
-                    <RadioGroup @bind-Value="@_model.StructureType" Disabled="@(!_isNew)">
-                        <Radio Value="@("Single")">@I18n.T("LBL_SINGLE_ENTITY")</Radio>
-                        <Radio Value="@("MasterDetail")">@I18n.T("LBL_MASTER_DETAIL_ENTITY")</Radio>
-                        <Radio Value="@("MasterDetailGrandchild")">@I18n.T("LBL_MASTER_DETAIL_GRANDCHILD_ENTITY")</Radio>
-                    </RadioGroup>
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_STRUCTURE_TYPE")">
+                            <RadioGroup @bind-Value="@_model.StructureType" Disabled="@(!_isNew)">
+                                <Radio Value="@("Single")">@I18n.T("LBL_SINGLE_ENTITY")</Radio>
+                                <Radio Value="@("MasterDetail")">@I18n.T("LBL_MASTER_DETAIL_ENTITY")</Radio>
+                                <Radio Value="@("MasterDetailGrandchild")">@I18n.T("LBL_MASTER_DETAIL_GRANDCHILD_ENTITY")</Radio>
+                            </RadioGroup>
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_INTERFACES")">
-                    <Space Direction="@SpaceDirection.Vertical" Size="@SpaceSize.Large">
-                        <SpaceItem>
-                            <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_BASE") (@I18n.T("INTERFACE_BASE_DESC"))</Checkbox>
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_ARCHIVE") (@I18n.T("INTERFACE_ARCHIVE_DESC"))</Checkbox>
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_AUDIT") (@I18n.T("INTERFACE_AUDIT_DESC"))</Checkbox>
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_VERSION") (@I18n.T("INTERFACE_VERSION_DESC"))</Checkbox>
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">@I18n.T("INTERFACE_TIME_VERSION") (@I18n.T("INTERFACE_TIME_VERSION_DESC"))</Checkbox>
-                        </SpaceItem>
-                    </Space>
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_INTERFACES")">
+                            <Space Direction="@SpaceDirection.Vertical" Size="@SpaceSize.Middle">
+                                <SpaceItem>
+                                    <Checkbox @bind-Value="@IsBaseSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_BASE")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_BASE_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Checkbox @bind-Value="@IsArchiveSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_ARCHIVE")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_ARCHIVE_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Checkbox @bind-Value="@IsAuditSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_AUDIT")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_AUDIT_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_VERSION")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_VERSION_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Checkbox @bind-Value="@IsTimeVersionSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_TIME_VERSION")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_TIME_VERSION_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <div class="interface-tip">@I18n.T("TXT_INTERFACE_AUTO_FIELDS_TIP")</div>
+                            </Space>
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_ICON")">
-                    <Input @bind-Value="@_model.Icon" Placeholder="database" Class="field-control" />
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_ICON")">
+                            <div class="icon-input-wrapper">
+                                <Input @bind-Value="@_model.Icon"
+                                       Placeholder="@I18n.T("TXT_ICON_FIELD_PLACEHOLDER")"
+                                       Class="field-control" />
+                                <div class="icon-preview-zone">
+                                    @if (IsIconUrl(_model.Icon))
+                                    {
+                                        <img src="@_model.Icon" alt="icon preview" class="icon-preview-img" />
+                                    }
+                                    else
+                                    {
+                                        <Icon Type="@GetIconName()" Style="font-size: 28px; color: #1890ff;" />
+                                    }
+                                    <div class="icon-hint">@I18n.T("TXT_ICON_FIELD_HINT")</div>
+                                </div>
+                            </div>
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_CATEGORY")">
-                    <Input @bind-Value="@_model.Category" Placeholder="@I18n.T("TXT_CATEGORY_PLACEHOLDER")" Class="field-control" />
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_CATEGORY")">
+                            <Input @bind-Value="@_model.Category" Placeholder="@I18n.T("TXT_CATEGORY_PLACEHOLDER")" Class="field-control" />
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
-                    <AntDesign.InputNumber TValue="int" @bind-Value="@_model.Order" Min="0" />
-                </FormItem>
+                        <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
+                            <AntDesign.InputNumber TValue="int" @bind-Value="@_model.Order" Min="0" />
+                        </FormItem>
 
-                <FormItem Label="@I18n.T("LBL_ENABLED")">
-                    <Switch @bind-Value="@_model.IsEnabled" />
-                </FormItem>
-            </Form>
+                        <FormItem Label="@I18n.T("LBL_ENABLED")">
+                            <Switch @bind-Value="@_model.IsEnabled" />
+                        </FormItem>
+                </Form>
+            }
         </Card>
 
-        <Card Title="@I18n.T("LBL_FIELD_DEFINITION")" Style="margin-top: 16px;">
+        <Card Title="@I18n.T("LBL_FIELD_DEFINITION")" Class="entity-section-card" Style="margin-top: 16px;">
             <Extra>
                 <Button OnClick="AddField" Type="@ButtonType.Dashed" Size="@ButtonSize.Small">
                     <Icon Type="plus" /> @I18n.T("BTN_ADD_FIELD")
@@ -124,16 +163,29 @@
                         @(context.IsRequired ? I18n.T("TXT_YES") : I18n.T("TXT_NO"))
                     </PropertyColumn>
                     <PropertyColumn Property="f => f.SortOrder" Title="@I18n.T("LBL_SORT_ORDER")" />
+                    <Column TData="string" Title="@I18n.T("LBL_SOURCE")">
+                        @{
+                            var interfaceLabel = GetInterfaceFieldLabel(context.PropertyName);
+                        }
+                        @if (!string.IsNullOrEmpty(interfaceLabel))
+                        {
+                            <Tag>@interfaceLabel</Tag>
+                        }
+                        else
+                        {
+                            <Tag>@I18n.T("LBL_SOURCE_CUSTOM")</Tag>
+                        }
+                    </Column>
                     <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
                         <Space>
                             <SpaceItem>
-                                <Button Size="@ButtonSize.Small" OnClick="() => EditField(context)">
+                                <Button Size="@ButtonSize.Small" Disabled="@IsInterfaceField(context.PropertyName)" OnClick="() => EditField(context)">
                                     @I18n.T("BTN_EDIT")
                                 </Button>
                             </SpaceItem>
                             <SpaceItem>
-                                <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => RemoveField(context)">
-                                    <Button Danger Size="@ButtonSize.Small">
+                                <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => RemoveField(context)" Disabled="@IsInterfaceField(context.PropertyName)">
+                                    <Button Danger Size="@ButtonSize.Small" Disabled="@IsInterfaceField(context.PropertyName)">
                                         @I18n.T("BTN_DELETE")
                                     </Button>
                                 </Popconfirm>
@@ -147,7 +199,7 @@
         @* 子实体管理（仅MasterDetail和MasterDetailGrandchild结构） *@
         @if (_model.StructureType == "MasterDetail" || _model.StructureType == "MasterDetailGrandchild")
         {
-            <Card Title="@I18n.T("LBL_SUB_ENTITY_MANAGEMENT")" Style="margin-top: 16px;">
+            <Card Title="@I18n.T("LBL_SUB_ENTITY_MANAGEMENT")" Class="entity-section-card" Style="margin-top: 16px;">
                 <Body>
                     <SubEntityTabs SubEntities="@_subEntities"
                                   OnSubEntityAdded="@HandleSubEntityAdded"
@@ -234,6 +286,41 @@
     private bool _saving = false;
     private bool _fieldModalVisible = false;
     private int _lastI18nRenderVersion = -1;
+    private const string DefaultIconType = "appstore";
+    private bool _entityInfoExpanded = true;
+    private readonly Dictionary<string, string> _interfaceFieldOwnership = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, List<InterfaceFieldTemplate>> InterfaceFieldTemplates = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [EntityInterfaceType.Base] = new()
+        {
+            Template("Id", FieldDataType.Guid, isRequired: true, label: CreateLabel("标识", "ID", "Id")),
+            Template("IsDeleted", FieldDataType.Boolean, label: CreateLabel("已删除", "削除フラグ", "Is Deleted")),
+            Template("DeletedAt", FieldDataType.DateTime, label: CreateLabel("删除时间", "削除日時", "Deleted At")),
+            Template("DeletedBy", FieldDataType.String, length: 64, label: CreateLabel("删除人", "削除者", "Deleted By"))
+        },
+        [EntityInterfaceType.Archive] = new()
+        {
+            Template("Code", FieldDataType.String, isRequired: true, length: 64, label: CreateLabel("编码", "コード", "Code")),
+            Template("Name", FieldDataType.String, isRequired: true, length: 200, label: CreateLabel("名称", "名称", "Name"))
+        },
+        [EntityInterfaceType.Audit] = new()
+        {
+            Template("CreatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabel("创建时间", "作成日時", "Created At")),
+            Template("CreatedBy", FieldDataType.String, length: 64, label: CreateLabel("创建人", "作成者", "Created By")),
+            Template("UpdatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabel("修改时间", "更新日時", "Updated At")),
+            Template("UpdatedBy", FieldDataType.String, length: 64, label: CreateLabel("修改人", "更新者", "Updated By"))
+        },
+        [EntityInterfaceType.Version] = new()
+        {
+            Template("Version", FieldDataType.Integer, isRequired: true, label: CreateLabel("版本号", "バージョン", "Version"))
+        },
+        [EntityInterfaceType.TimeVersion] = new()
+        {
+            Template("ValidFrom", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效开始", "有効開始", "Valid From")),
+            Template("ValidTo", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效结束", "有効終了", "Valid To")),
+            Template("VersionNo", FieldDataType.Integer, isRequired: true, label: CreateLabel("时间版本", "時系列バージョン", "Version No"))
+        }
+    };
 
     private EditModel _model = new();
     private FieldMetadataDto _editingField = new();
@@ -283,6 +370,8 @@
             list.Remove(interfaceType);
         }
         _selectedInterfaces = list.ToArray();
+        SyncInterfaceFields();
+        _ = InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnInitializedAsync()
@@ -295,6 +384,7 @@
         {
             // 默认选中Base接口
             _selectedInterfaces = new[] { "Base" };
+            SyncInterfaceFields();
         }
     }
 
@@ -350,6 +440,7 @@
                 };
 
                 _selectedInterfaces = entity.Interfaces.Where(i => i.IsEnabled).Select(i => i.InterfaceType).ToArray();
+                SyncInterfaceFields();
             }
         }
         catch (Exception ex)
@@ -516,6 +607,16 @@
 
     private void RemoveField(FieldMetadataDto field)
     {
+        if (field == null)
+        {
+            return;
+        }
+
+        if (IsInterfaceField(field.PropertyName))
+        {
+            return;
+        }
+
         _model.Fields.Remove(field);
     }
 
@@ -552,7 +653,218 @@
         StateHasChanged();
     }
 
-    private void GoBack()
+    private void ToggleEntityInfoPanel()
+    {
+        _entityInfoExpanded = !_entityInfoExpanded;
+    }
+
+    private bool IsInterfaceField(string? propertyName)
+    {
+        return !string.IsNullOrWhiteSpace(propertyName)
+            && _interfaceFieldOwnership.ContainsKey(propertyName);
+    }
+
+    private string? GetInterfaceFieldLabel(string? propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return null;
+        }
+
+        if (!_interfaceFieldOwnership.TryGetValue(propertyName, out var interfaceType))
+        {
+            return null;
+        }
+
+        var key = interfaceType switch
+        {
+            EntityInterfaceType.Base => "INTERFACE_BASE",
+            EntityInterfaceType.Archive => "INTERFACE_ARCHIVE",
+            EntityInterfaceType.Audit => "INTERFACE_AUDIT",
+            EntityInterfaceType.Version => "INTERFACE_VERSION",
+            EntityInterfaceType.TimeVersion => "INTERFACE_TIME_VERSION",
+            _ => null
+        };
+
+        return key == null ? null : I18n!.T(key);
+    }
+
+    private void SyncInterfaceFields()
+    {
+        if (_model == null)
+        {
+            _model = new EditModel();
+        }
+
+        if (_model.Fields == null)
+        {
+            _model.Fields = new List<FieldMetadataDto>();
+        }
+
+        var required = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var interfaceType in _selectedInterfaces)
+        {
+            if (!InterfaceFieldTemplates.TryGetValue(interfaceType, out var templates))
+            {
+                continue;
+            }
+
+            foreach (var template in templates)
+            {
+                var field = _model!.Fields.FirstOrDefault(f => string.Equals(f.PropertyName, template.PropertyName, StringComparison.OrdinalIgnoreCase));
+                if (field == null)
+                {
+                    field = CreateInterfaceField(template);
+                    _model.Fields.Add(field);
+                }
+                else
+                {
+                    ApplyTemplate(field, template);
+                }
+
+                required[field.PropertyName] = interfaceType;
+            }
+        }
+
+        if (_interfaceFieldOwnership.Count > 0)
+        {
+            _model!.Fields.RemoveAll(f =>
+                _interfaceFieldOwnership.ContainsKey(f.PropertyName) &&
+                !required.ContainsKey(f.PropertyName));
+        }
+
+        _interfaceFieldOwnership.Clear();
+        foreach (var kvp in required)
+        {
+            _interfaceFieldOwnership[kvp.Key] = kvp.Value;
+        }
+
+        _model!.Fields = _model.Fields.OrderBy(f => f.SortOrder).ToList();
+    }
+
+    private FieldMetadataDto CreateInterfaceField(InterfaceFieldTemplate template)
+    {
+        return new FieldMetadataDto
+        {
+            Id = Guid.NewGuid(),
+            PropertyName = template.PropertyName,
+            DisplayName = CloneLabel(template.Label),
+            DataType = template.DataType,
+            Length = template.Length,
+            Precision = template.Precision,
+            Scale = template.Scale,
+            IsRequired = template.IsRequired,
+            SortOrder = GetNextSortOrder()
+        };
+    }
+
+    private void ApplyTemplate(FieldMetadataDto field, InterfaceFieldTemplate template)
+    {
+        field.DataType = template.DataType;
+        field.Length = template.Length;
+        field.Precision = template.Precision;
+        field.Scale = template.Scale;
+        field.IsRequired = template.IsRequired;
+
+        if (field.DisplayName == null || !field.DisplayName.HasValue())
+        {
+            field.DisplayName = CloneLabel(template.Label);
+        }
+
+        if (field.SortOrder == 0)
+        {
+            field.SortOrder = GetNextSortOrder();
+        }
+    }
+
+    private static MultilingualTextDto CreateLabel(string zh, string ja, string en)
+    {
+        return new MultilingualTextDto
+        {
+            ["zh"] = zh,
+            ["ja"] = ja,
+            ["en"] = en
+        };
+    }
+
+    private static InterfaceFieldTemplate Template(
+        string propertyName,
+        string dataType,
+        bool isRequired = false,
+        int? length = null,
+        int? precision = null,
+        int? scale = null,
+        MultilingualTextDto? label = null)
+    {
+        return new InterfaceFieldTemplate
+        {
+            PropertyName = propertyName,
+            DataType = dataType,
+            IsRequired = isRequired,
+            Length = length,
+            Precision = precision,
+            Scale = scale,
+            Label = label ?? new MultilingualTextDto()
+        };
+    }
+
+    private MultilingualTextDto CloneLabel(MultilingualTextDto source)
+    {
+        return new MultilingualTextDto(source);
+    }
+
+    private int GetNextSortOrder()
+    {
+        if (_model?.Fields == null || _model.Fields.Count == 0)
+        {
+            return 100;
+        }
+
+        return _model.Fields.Max(f => f.SortOrder) + 10;
+    }
+    private bool IsIconUrl(string? iconValue)
+    {
+        if (string.IsNullOrWhiteSpace(iconValue))
+        {
+            return false;
+        }
+
+        var candidate = iconValue.Trim();
+        if (candidate.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private string GetIconName()
+    {
+        var raw = _model.Icon;
+        if (string.IsNullOrWhiteSpace(raw) || IsIconUrl(raw))
+        {
+            return DefaultIconType;
+        }
+
+        var icon = raw.Trim();
+        if (icon.Contains(':', StringComparison.Ordinal))
+        {
+            icon = icon.Split(':', 2)[1];
+        }
+
+        icon = icon.Replace("icon-", string.Empty, StringComparison.OrdinalIgnoreCase)
+                   .Replace('_', '-')
+                   .ToLowerInvariant();
+
+        return string.IsNullOrWhiteSpace(icon) ? DefaultIconType : icon;
+    }    private void GoBack()
     {
         Nav.NavigateTo("/entity-definitions");
     }
@@ -570,6 +882,19 @@
         public bool IsEnabled { get; set; } = true;
         public List<FieldMetadataDto> Fields { get; set; } = new();
     }
+
+    private sealed class InterfaceFieldTemplate
+    {
+        public string PropertyName { get; init; } = string.Empty;
+        public string DataType { get; init; } = FieldDataType.String;
+        public bool IsRequired { get; init; }
+        public int? Length { get; init; }
+        public int? Precision { get; init; }
+        public int? Scale { get; init; }
+        public MultilingualTextDto Label { get; init; } = new();
+    }
 }
+
+
 
 

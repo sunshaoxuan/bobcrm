@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\BobCrm.Api\BobCrm.Api.csproj" />
+    <ProjectReference Include="..\..\src\BobCrm.App\BobCrm.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>

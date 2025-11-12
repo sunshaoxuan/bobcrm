@@ -211,6 +211,10 @@ public class I18nService
         ["BTN_NOTIFY_ACCOUNT"] = new() { ["zh"] = "提醒账户经理", ["ja"] = "アカウント担当に通知", ["en"] = "Notify account manager" },
         ["BTN_IMPORT_CONTACTS"] = new() { ["zh"] = "导入外部联系人", ["ja"] = "外部連絡先をインポート", ["en"] = "Import external contacts" },
         ["LBL_CLICK_TO_EDIT_MULTILINGUAL"] = new() { ["zh"] = "点击编辑多语言文本", ["ja"] = "クリックして多言語テキストを編集", ["en"] = "Click to edit multilingual text" },
-        ["TXT_MULTILINGUAL_DISPLAY_NAME_HINT"] = new() { ["zh"] = "请为每种语言提供显示名称（至少一条）", ["ja"] = "各言語の表示名を入力してください（少なくとも1件）", ["en"] = "Provide display names for each language (at least one)" }
+        ["TXT_MULTILINGUAL_DISPLAY_NAME_HINT"] = new() { ["zh"] = "请为每种语言提供显示名称（至少一条）", ["ja"] = "各言語の表示名を入力してください（少なくとも1件）", ["en"] = "Provide display names for each language (at least one)" },
+        ["TXT_ICON_FIELD_PLACEHOLDER"] = new() { ["zh"] = "输入 AntD 图标名或图片 URL", ["ja"] = "AntD アイコン名または画像 URL を入力", ["en"] = "Enter AntD icon name or image URL" },
+        ["TXT_ICON_FIELD_HINT"] = new() { ["zh"] = "示例：icon:appstore 或 https://static.example.com/icon.svg", ["ja"] = "例: icon:appstore または https://static.example.com/icon.svg", ["en"] = "Ex: icon:appstore or https://static.example.com/icon.svg" },
+        ["TXT_CATEGORY_PLACEHOLDER"] = new() { ["zh"] = "输入分组或菜单名称", ["ja"] = "グループ/カテゴリ名を入力", ["en"] = "Enter grouping or menu name" },
+        ["TXT_INTERFACE_AUTO_FIELDS_TIP"] = new() { ["zh"] = "勾选接口后会自动注入标准字段，字段不可单独删除，如需移除请取消勾选接口。", ["ja"] = "インターフェースを選択すると標準フィールドが自動追加されます。削除するにはチェックを外してください。", ["en"] = "Selecting an interface injects its standard fields automatically. To remove them, uncheck the interface rather than deleting fields." }
     };
 }

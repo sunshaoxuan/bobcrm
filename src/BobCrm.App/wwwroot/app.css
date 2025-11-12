@@ -251,3 +251,120 @@ body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop
     -moz-user-select: none;
     -ms-user-select: none;
 }
+/* =============================
+   Entity Definition editor styles
+   ============================= */
+.entity-section-card {
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+    margin-bottom: 16px;
+}
+
+.entity-section-card .ant-card-head {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    background: #f8fafc;
+}
+
+.entity-section-card .ant-card-head-title {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.entity-section-card .ant-card-body {
+    background: #fff;
+    padding: 20px 24px;
+}
+
+.entity-section-card .ant-collapse {
+    background: transparent;
+}
+
+.entity-section-card .ant-collapse > .ant-collapse-item {
+    border: none;
+}
+
+.entity-section-card .ant-collapse-content {
+    border-top: 1px solid #eef2ff;
+    background: transparent;
+}
+
+.interface-hint {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.interface-tip {
+    font-size: 12px;
+    margin-top: 4px;
+    padding: 8px 12px;
+    border-left: 3px solid #93c5fd;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.icon-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+
+.icon-input-wrapper .ant-input {
+    flex: 1;
+    min-width: 240px;
+}
+
+.icon-preview-zone {
+    width: 160px;
+    min-height: 80px;
+    border: 1px dashed #d5dae5;
+    border-radius: 10px;
+    background: #f9fafb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    text-align: center;
+}
+
+.icon-preview-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
+.icon-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}
+.entity-section-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.entity-section-toggle span {
+    font-weight: 600;
+    color: #111827;
+}
+
+.entity-section-toggle .anticon {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.entity-section-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+    border-radius: 10px 10px 0 0;
+}
