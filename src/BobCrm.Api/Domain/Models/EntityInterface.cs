@@ -19,7 +19,7 @@ public class EntityInterface
     public Guid EntityDefinitionId { get; set; }
 
     /// <summary>
-    /// 接口类型（Base、Archive、Audit、Version、TimeVersion）
+    /// 接口类型（Base、Archive、Audit、Version、TimeVersion、Organization）
     /// </summary>
     [Required, MaxLength(50)]
     public string InterfaceType { get; set; } = string.Empty;
@@ -74,6 +74,11 @@ public static class InterfaceType
     /// 时间版本接口 - 提供 ValidFrom、ValidTo、VersionNo 字段
     /// </summary>
     public const string TimeVersion = "TimeVersion";
+
+    /// <summary>
+    /// 组织维度接口 - 提供 OrganizationId/Code/Path 等字段
+    /// </summary>
+    public const string Organization = "Organization";
 }
 
 /// <summary>
@@ -86,6 +91,7 @@ public static class EntityInterfaceType
     public const string Audit = InterfaceType.Audit;
     public const string Version = InterfaceType.Version;
     public const string TimeVersion = InterfaceType.TimeVersion;
+    public const string Organization = InterfaceType.Organization;
 }
 
 /// <summary>
@@ -126,6 +132,38 @@ public static class InterfaceFieldMapping
                 new() { PropertyName = "ValidTo", DataType = FieldDataType.DateTime, IsRequired = true },
                 new() { PropertyName = "VersionNo", DataType = FieldDataType.Int32, IsRequired = true, DefaultValue = "1" }
             },
+            InterfaceType.Organization => new List<InterfaceFieldDefinition>
+            {
+                new()
+                {
+                    PropertyName = "OrganizationId",
+                    DataType = FieldDataType.Guid,
+                    IsRequired = true,
+                    IsEntityRef = true,
+                    ReferenceTable = "OrganizationNodes"
+                },
+                new()
+                {
+                    PropertyName = "OrganizationCode",
+                    DataType = FieldDataType.String,
+                    Length = 64,
+                    IsRequired = true
+                },
+                new()
+                {
+                    PropertyName = "OrganizationName",
+                    DataType = FieldDataType.String,
+                    Length = 200,
+                    IsRequired = false
+                },
+                new()
+                {
+                    PropertyName = "OrganizationPathCode",
+                    DataType = FieldDataType.String,
+                    Length = 128,
+                    IsRequired = true
+                }
+            },
             _ => new List<InterfaceFieldDefinition>()
         };
     }
@@ -142,4 +180,6 @@ public class InterfaceFieldDefinition
     public bool IsRequired { get; set; }
     public string? DefaultValue { get; set; }
     public bool IsPrimaryKey { get; set; }
+    public bool IsEntityRef { get; set; }
+    public string? ReferenceTable { get; set; }
 }

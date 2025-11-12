@@ -346,6 +346,8 @@ public static class EntityDefinitionEndpoints
                                 DataType = ifField.DataType,
                                 Length = ifField.Length,
                                 IsRequired = ifField.IsRequired,
+                                IsEntityRef = ifField.IsEntityRef,
+                                TableName = ifField.ReferenceTable,
                                 DefaultValue = ifField.DefaultValue,
                                 SortOrder = 0 // 接口字段排在前面
                             });

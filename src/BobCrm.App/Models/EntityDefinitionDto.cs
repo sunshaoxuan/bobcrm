@@ -255,6 +255,7 @@ public static class EntityInterfaceType
     public const string Audit = "Audit";
     public const string Version = "Version";
     public const string TimeVersion = "TimeVersion";
+    public const string Organization = "Organization";
 }
 
 /// <summary>

@@ -175,6 +175,37 @@ public class PostgreSQLDDLGeneratorTests
     }
 
     [Fact]
+    public void GenerateCreateTableScript_ShouldIncludeOrganizationColumnsAndIndexes()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "TestEntity",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_TEST" } },
+            Fields = new List<FieldMetadata>
+            {
+                new FieldMetadata { PropertyName = "OrganizationId", DataType = FieldDataType.Guid, IsRequired = true, TableName = "OrganizationNodes", IsEntityRef = true, SortOrder = 1 },
+                new FieldMetadata { PropertyName = "OrganizationCode", DataType = FieldDataType.String, Length = 64, IsRequired = true, SortOrder = 2 },
+                new FieldMetadata { PropertyName = "OrganizationName", DataType = FieldDataType.String, Length = 200, SortOrder = 3 },
+                new FieldMetadata { PropertyName = "OrganizationPathCode", DataType = FieldDataType.String, Length = 128, IsRequired = true, SortOrder = 4 }
+            },
+            Interfaces = new List<EntityInterface>
+            {
+                new EntityInterface { InterfaceType = EntityInterfaceType.Organization, IsEnabled = true }
+            }
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("\"OrganizationId\" UUID NOT NULL");
+        ddl.Should().Contain("\"OrganizationCode\" VARCHAR(64) NOT NULL");
+        ddl.Should().Contain("\"OrganizationPathCode\" VARCHAR(128) NOT NULL");
+        ddl.Should().Contain("IX_TestEntitys_OrganizationId");
+        ddl.Should().Contain("IX_TestEntitys_OrganizationPathCode");
+    }
+
+    [Fact]
     public void GenerateAlterTableAddColumns_ShouldGenerateValidDDL()
     {
         // Arrange

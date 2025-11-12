@@ -195,6 +195,30 @@ public class CSharpCodeGeneratorTests
     }
 
     [Fact]
+    public void GenerateEntityClass_ShouldEmitOrganizationalInterface()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "OrgBound",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_ORG" } },
+            Fields = new List<FieldMetadata>
+            {
+                new FieldMetadata { PropertyName = "OrganizationId", DataType = FieldDataType.Guid, IsRequired = true, SortOrder = 1 }
+            },
+            Interfaces = new List<EntityInterface>
+            {
+                new EntityInterface { InterfaceType = EntityInterfaceType.Organization, IsEnabled = true }
+            }
+        };
+
+        var code = _generator.GenerateEntityClass(entity);
+
+        code.Should().Contain("IOrganizational");
+    }
+
+    [Fact]
     public void GenerateEntityClass_ShouldGenerateSpecialDefaultValues()
     {
         // Arrange

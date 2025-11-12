@@ -213,6 +213,17 @@ public class PostgreSQLDDLGenerator
                     if (addedColumns.Add("VersionNo"))
                         columns.Add("\"VersionNo\" INTEGER NOT NULL DEFAULT 1");
                     break;
+
+                case EntityInterfaceType.Organization:
+                    if (addedColumns.Add("OrganizationId"))
+                        columns.Add("\"OrganizationId\" UUID NOT NULL");
+                    if (addedColumns.Add("OrganizationCode"))
+                        columns.Add("\"OrganizationCode\" VARCHAR(64) NOT NULL");
+                    if (addedColumns.Add("OrganizationName"))
+                        columns.Add("\"OrganizationName\" VARCHAR(200) NULL");
+                    if (addedColumns.Add("OrganizationPathCode"))
+                        columns.Add("\"OrganizationPathCode\" VARCHAR(128) NOT NULL");
+                    break;
             }
         }
 
@@ -254,6 +265,24 @@ public class PostgreSQLDDLGenerator
             }
         }
 
+        var hasOrganization = entity.Interfaces.Any(i => i.InterfaceType == EntityInterfaceType.Organization && i.IsEnabled);
+        if (hasOrganization)
+        {
+            var orgIdField = entity.Fields.FirstOrDefault(f => f.PropertyName == "OrganizationId");
+            if (orgIdField != null)
+            {
+                var indexName = $"IX_{tableName}_OrganizationId";
+                sb.AppendLine($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"OrganizationId\");");
+            }
+
+            var orgPathField = entity.Fields.FirstOrDefault(f => f.PropertyName == "OrganizationPathCode");
+            if (orgPathField != null)
+            {
+                var indexName = $"IX_{tableName}_OrganizationPathCode";
+                sb.AppendLine($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"OrganizationPathCode\");");
+            }
+        }
+
         return sb.ToString();
     }
 
@@ -263,7 +292,8 @@ public class PostgreSQLDDLGenerator
     private string GenerateForeignKeys(EntityDefinition entity, string tableName)
     {
         var sb = new StringBuilder();
-        var refFields = entity.Fields.Where(f => f.IsEntityRef && f.ReferencedEntityId.HasValue);
+        var refFields = entity.Fields.Where(f =>
+            f.IsEntityRef && (f.ReferencedEntityId.HasValue || !string.IsNullOrEmpty(f.TableName)));
 
         if (!refFields.Any())
             return string.Empty;
@@ -507,6 +537,66 @@ public class PostgreSQLDDLGenerator
                     IsRequired = true,
                     DefaultValue = "1",
                     SortOrder = 212
+                });
+                break;
+
+            case EntityInterfaceType.Organization:
+                fields.Add(new FieldMetadata
+                {
+                    PropertyName = "OrganizationId",
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        { "ja", "組織ID" },
+                        { "zh", "组织ID" },
+                        { "en", "Organization Id" }
+                    },
+                    DataType = FieldDataType.Guid,
+                    IsRequired = true,
+                    SortOrder = 300,
+                    IsEntityRef = true,
+                    TableName = "OrganizationNodes"
+                });
+                fields.Add(new FieldMetadata
+                {
+                    PropertyName = "OrganizationCode",
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        { "ja", "組織コード" },
+                        { "zh", "组织编码" },
+                        { "en", "Organization Code" }
+                    },
+                    DataType = FieldDataType.String,
+                    Length = 64,
+                    IsRequired = true,
+                    SortOrder = 301
+                });
+                fields.Add(new FieldMetadata
+                {
+                    PropertyName = "OrganizationName",
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        { "ja", "組織名" },
+                        { "zh", "组织名称" },
+                        { "en", "Organization Name" }
+                    },
+                    DataType = FieldDataType.String,
+                    Length = 200,
+                    IsRequired = false,
+                    SortOrder = 302
+                });
+                fields.Add(new FieldMetadata
+                {
+                    PropertyName = "OrganizationPathCode",
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        { "ja", "組織Pathコード" },
+                        { "zh", "组织路径编码" },
+                        { "en", "Organization Path Code" }
+                    },
+                    DataType = FieldDataType.String,
+                    Length = 128,
+                    IsRequired = true,
+                    SortOrder = 303
                 });
                 break;
         }

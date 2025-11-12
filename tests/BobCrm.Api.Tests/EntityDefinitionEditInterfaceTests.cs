@@ -42,6 +42,32 @@ public class EntityDefinitionEditInterfaceTests
         GetFields(editModel).Should().BeEmpty();
     }
 
+    [Fact]
+    public void SyncInterfaceFields_AddsOrganizationTemplates()
+    {
+        var component = new EntityDefinitionEdit();
+        var editModel = CreateEditModel(component);
+        SetPrivateField(component, "_model", editModel);
+        SetPrivateField(component, "_selectedInterfaces", new[] { EntityInterfaceType.Organization });
+
+        InvokeSync(component);
+
+        var fields = GetFields(editModel);
+        fields.Select(f => f.PropertyName)
+            .Should()
+            .Contain(new[]
+            {
+                "OrganizationId",
+                "OrganizationCode",
+                "OrganizationName",
+                "OrganizationPathCode"
+            });
+
+        var orgId = fields.First(f => f.PropertyName == "OrganizationId");
+        orgId.IsEntityRef.Should().BeTrue();
+        orgId.TableName.Should().Be("OrganizationNodes");
+    }
+
     private static object CreateEditModel(EntityDefinitionEdit component)
     {
         var modelType = component.GetType().GetNestedType("EditModel", BindingFlags.NonPublic)!;

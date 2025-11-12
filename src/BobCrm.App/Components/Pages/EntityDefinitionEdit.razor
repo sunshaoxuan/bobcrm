@@ -124,6 +124,12 @@
                                     </Checkbox>
                                 </SpaceItem>
                                 <SpaceItem>
+                                    <Checkbox @bind-Value="@IsOrganizationSelected" Disabled="@(!_isNew)">
+                                        <strong>@I18n.T("INTERFACE_ORGANIZATION")</strong>
+                                        <span class="interface-hint">@I18n.T("INTERFACE_ORGANIZATION_DESC")</span>
+                                    </Checkbox>
+                                </SpaceItem>
+                                <SpaceItem>
                                     <Checkbox @bind-Value="@IsVersionSelected" Disabled="@(!_isNew)">
                                         <strong>@I18n.T("INTERFACE_VERSION")</strong>
                                         <span class="interface-hint">@I18n.T("INTERFACE_VERSION_DESC")</span>
@@ -361,6 +367,13 @@
             Template("ValidFrom", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效开始", "有効開始", "Valid From")),
             Template("ValidTo", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效结束", "有効終了", "Valid To")),
             Template("VersionNo", FieldDataType.Integer, isRequired: true, label: CreateLabel("时间版本", "時系列バージョン", "Version No"))
+        },
+        [EntityInterfaceType.Organization] = new()
+        {
+            Template("OrganizationId", FieldDataType.Guid, isRequired: true, label: CreateLabel("组织ID", "組織ID", "Organization Id"), isEntityRef: true, referenceTable: "OrganizationNodes"),
+            Template("OrganizationCode", FieldDataType.String, isRequired: true, length: 64, label: CreateLabel("组织编码", "組織コード", "Organization Code")),
+            Template("OrganizationName", FieldDataType.String, length: 200, label: CreateLabel("组织名称", "組織名", "Organization Name")),
+            Template("OrganizationPathCode", FieldDataType.String, isRequired: true, length: 128, label: CreateLabel("组织路径编码", "組織Pathコード", "Organization Path Code"))
         }
     };
 
@@ -385,6 +398,12 @@
     {
         get => _selectedInterfaces.Contains("Audit");
         set => UpdateInterfaceSelection("Audit", value);
+    }
+
+    private bool IsOrganizationSelected
+    {
+        get => _selectedInterfaces.Contains(EntityInterfaceType.Organization);
+        set => UpdateInterfaceSelection(EntityInterfaceType.Organization, value);
     }
 
     private bool IsVersionSelected
@@ -744,6 +763,7 @@
             EntityInterfaceType.Audit => "INTERFACE_AUDIT",
             EntityInterfaceType.Version => "INTERFACE_VERSION",
             EntityInterfaceType.TimeVersion => "INTERFACE_TIME_VERSION",
+            EntityInterfaceType.Organization => "INTERFACE_ORGANIZATION",
             _ => null
         };
 
@@ -816,6 +836,8 @@
             Precision = template.Precision,
             Scale = template.Scale,
             IsRequired = template.IsRequired,
+            IsEntityRef = template.IsEntityRef,
+            TableName = template.ReferenceTable,
             SortOrder = GetNextSortOrder()
         };
     }
@@ -827,6 +849,8 @@
         field.Precision = template.Precision;
         field.Scale = template.Scale;
         field.IsRequired = template.IsRequired;
+        field.IsEntityRef = template.IsEntityRef;
+        field.TableName = template.ReferenceTable;
 
         if (field.DisplayName == null || !field.DisplayName.HasValue())
         {
@@ -856,7 +880,9 @@
         int? length = null,
         int? precision = null,
         int? scale = null,
-        MultilingualTextDto? label = null)
+        MultilingualTextDto? label = null,
+        bool isEntityRef = false,
+        string? referenceTable = null)
     {
         return new InterfaceFieldTemplate
         {
@@ -866,7 +892,9 @@
             Length = length,
             Precision = precision,
             Scale = scale,
-            Label = label ?? new MultilingualTextDto()
+            Label = label ?? new MultilingualTextDto(),
+            IsEntityRef = isEntityRef,
+            ReferenceTable = referenceTable
         };
     }
 
@@ -953,6 +981,8 @@
         public int? Precision { get; init; }
         public int? Scale { get; init; }
         public MultilingualTextDto Label { get; init; } = new();
+        public bool IsEntityRef { get; init; }
+        public string? ReferenceTable { get; init; }
     }
 }
 

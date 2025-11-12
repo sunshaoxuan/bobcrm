@@ -77,6 +77,7 @@ public class CSharpCodeGenerator
                 EntityInterfaceType.Audit => "IAuditable",
                 EntityInterfaceType.Version => "IVersioned",
                 EntityInterfaceType.TimeVersion => "ITimeVersioned",
+                EntityInterfaceType.Organization => "IOrganizational",
                 _ => null
             };
 
@@ -291,6 +292,17 @@ namespace BobCrm.Api.Domain
         DateTime ValidFrom { get; set; }
         DateTime? ValidTo { get; set; }
         int VersionNo { get; set; }
+    }
+
+    /// <summary>
+    /// 组织维度接口 - 记录所属组织及其树路径
+    /// </summary>
+    public interface IOrganizational
+    {
+        Guid OrganizationId { get; set; }
+        string OrganizationCode { get; set; }
+        string? OrganizationName { get; set; }
+        string OrganizationPathCode { get; set; }
     }
 }";
     }
