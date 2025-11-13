@@ -4,6 +4,7 @@ using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
@@ -11,6 +12,7 @@ namespace BobCrm.Api.Services;
 public class AccessService
 {
     private readonly AppDbContext _db;
+    private readonly UserManager<IdentityUser> _userManager;
 
     private record FunctionSeed(string Code, string Name, string? Route, string? Icon, bool IsMenu, int SortOrder, string? ParentCode);
 
@@ -43,11 +45,11 @@ public class AccessService
         new("BAS", "基本设置", null, "appstore", true, 20, "APP.ROOT"),
         new("BAS.ORG", "组织管理", null, "cluster", true, 21, "BAS"),
         new("BAS.ORG.DIRECTORY", "组织档案", "/organizations", "cluster", true, 211, "BAS.ORG"),
-        new("BAS.ORG.ROLES", "角色管理", "/roles", "lock", true, 212, "BAS.ORG"),
+        new("BAS.ORG.ROLES", "角色管理", "/roles", "lock", false, 212, "BAS.ORG"),
         new("BAS.AUTH", "用户与权限", null, "team", true, 22, "BAS"),
         new("BAS.AUTH.USERS", "用户档案", "/users", "user", true, 221, "BAS.AUTH"),
-        new("BAS.AUTH.ROLE.PERM", "角色权限分配", null, "safety", false, 222, "BAS.AUTH"),
-        new("BAS.AUTH.USER.ROLE", "用户角色分配", null, "team", false, 223, "BAS.AUTH"),
+        new("BAS.AUTH.ROLE.PERM", "角色权限分配", "/roles", "safety", true, 222, "BAS.AUTH"),
+        new("BAS.AUTH.USER.ROLE", "用户角色分配", "/users", "team", true, 223, "BAS.AUTH"),
 
         // 3. 客户关系
         new("CRM", "客户关系", null, "team", true, 30, "APP.ROOT"),
@@ -86,9 +88,10 @@ public class AccessService
         new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
 
-    public AccessService(AppDbContext db)
+    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager)
     {
         _db = db;
+        _userManager = userManager;
     }
 
     public async Task<FunctionNode> CreateFunctionAsync(CreateFunctionRequest request, CancellationToken ct = default)
@@ -278,6 +281,8 @@ public class AccessService
             }
         }
 
+        await EnsureDefaultAdminUserAsync();
+
         var sysAdminUsers = await _db.Users
             .Where(u => u.NormalizedUserName == "ADMIN" || u.Email == "admin@local")
             .ToListAsync(ct);
@@ -366,6 +371,35 @@ public class AccessService
         }
 
         return new DataScopeEvaluationResult(false, scopeBindings);
+    }
+
+    private async Task EnsureDefaultAdminUserAsync()
+    {
+        var adminUser = await _userManager.FindByNameAsync("admin");
+        if (adminUser != null)
+        {
+            if (string.IsNullOrWhiteSpace(adminUser.Email))
+            {
+                adminUser.Email = "admin@local";
+                adminUser.EmailConfirmed = true;
+                await _userManager.UpdateAsync(adminUser);
+            }
+            return;
+        }
+
+        adminUser = new IdentityUser
+        {
+            UserName = "admin",
+            Email = "admin@local",
+            EmailConfirmed = true
+        };
+
+        var result = await _userManager.CreateAsync(adminUser, "Admin@12345");
+        if (!result.Succeeded)
+        {
+            var message = string.Join("; ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Failed to create default administrator: {message}");
+        }
     }
 
     private async Task SeedFunctionTreeAsync(CancellationToken ct)

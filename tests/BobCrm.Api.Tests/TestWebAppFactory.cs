@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using BobCrm.Api.Services;
 
 // 测试数据库策略：
 // 1. 使用固定的测试数据库名称（bobcrm_test），与开发环境（bobcrm）完全隔离
@@ -85,6 +86,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 }
             }
             uow.SaveChangesAsync().GetAwaiter().GetResult();
+
+            var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
+            accessService.SeedSystemAdministratorAsync().GetAwaiter().GetResult();
         }
         return host;
     }

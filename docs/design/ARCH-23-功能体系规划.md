@@ -24,8 +24,8 @@
 | 2. 基本设置 | 2.1 组织管理 | 2.1.1 组织档案 | ✅ | `OrganizationManagement.razor` + API 已上线 |
 |  |  | 2.1.2 角色管理 | ✅ | 角色档案页面（角色信息 + 权限树）已上线，支持 FunctionNodes 权限分配 |
 |  | 2.2 用户与权限 | 2.2.1 用户档案 | ✅ | `/api/users` + `Users.razor`（列表/详情/创建/密码+状态编辑）已上线，并复用权限树路由引导 |
-|  |  | 2.2.2 角色权限分配 | ✅ | 角色档案页（FunctionNodes 权限树 + 数据范围）提供完整的功能授权体验 |
-|  |  | 2.2.3 用户角色分配 | ✅ | 用户档案内置角色面板，直接调用 `/api/users/{id}/roles` 进行角色切换 |
+|  |  | 2.2.2 角色权限分配 | ✅ | `BAS.AUTH.ROLE.PERM` 菜单打开 `/roles`，角色档案页提供 FunctionNodes 权限树与数据范围维护 |
+|  |  | 2.2.3 用户角色分配 | ✅ | `BAS.AUTH.USER.ROLE` 菜单指向 `/users`，用户档案内置角色面板并限制为拥有此功能码的人员可操作 |
 | 3. 客户关系 | 3.1 基本档案 | 3.1.1 客户主档<br>3.1.2 合约管理<br>3.1.3 实施管理<br>3.1.4 运维管理 | 🟡 | 客户主档有初版列表/详情模板；其他子模块未实现 |
 |  | 3.2 计划管理 | 3.2.1 计划任务<br>3.2.2 日程安排<br>3.2.3 作业执行<br>3.2.4 作业看板 | ⚪ | 未启动 |
 | 4. 知识库 | 4.1 问与答 | 4.1.1 常见问答<br>4.1.2 客户问答库<br>4.1.3 答复模板 | ⚪ | 未启动 |
@@ -44,7 +44,7 @@
 | 1.4.1 模板设计 | ✅ FormTemplate CRUD + Designer API | ✅ `FormDesigner.razor` | 支持 FormTemplate 存储 |
 | 1.4.2 模板分配 | ✅ TemplateBinding + RuntimeService | 🟡 PageLoader 接入 runtime，缺分配 UI | 需统一 List/Detail 宿主 |
 | 2.1.1 组织档案 | ✅ OrganizationService + API | ✅ `OrganizationManagement.razor` | 已支持树结构 CRUD |
-| 2.1.2 角色管理 | ✅ RoleProfile/Function/DataScope/Assignment API | ✅ `Roles.razor`（角色列表+信息+FunctionNodes 权限树） | 同步写回角色-功能/数据范围，并展示系统角色只读提示 |
+| 2.1.2 角色管理 | ✅ RoleProfile/Function/DataScope/Assignment API | ✅ `Roles.razor`（角色列表+信息+FunctionNodes 权限树） | 同步写回角色-功能/数据范围，并展示系统角色只读提示；入口在“用户与权限 > 角色权限分配” |
 | 2.2.1 用户档案 | ✅ `/api/users` CRUD + 角色分配端点 | ✅ `Users.razor`（双栏列表/详情 + 角色勾选 + 创建模态 + 密码管理） | 配套 `UserService` 与 `UserManagementTests` 覆盖查询/创建/角色更新 |
 | 3.1.1 客户主档 | ✅ Customer CRUD + 动态字段 | 🟡 `Customers.razor`(静态列表)、`PageLoader`（详情） | 列表需模板化、详情已接 runtime |
 
@@ -77,6 +77,8 @@
 3. **验收与回归**：上线前更新“状态列”，确保文档与实现一致，成为回归 checklist。
 
 > **进度更新（2025-11-13）**：`AccessService` 中的 `DefaultFunctionSeeds` 已按照本文三层结构写入 `FunctionNodes` 表，支持后续的权限分配与菜单渲染；新的编码前缀（SYS/BAS/CRM/KB/COLLAB）请在角色、模板绑定等场景沿用。
+
+> **补充（2025-11-14）**：`BAS.AUTH.ROLE.PERM` 与 `BAS.AUTH.USER.ROLE` 现已标记为菜单节点，分别映射到 `/roles` 与 `/users`。同一模块下的 API 启用函数码过滤器（`FunctionPermissionFilter`），与菜单曝光保持一致；系统会在首次启动时自动创建 `admin`/`Admin@12345` 账号并绑定 `SYS.ADMIN` 角色，保障从零环境也能访问这些页面。
 
 ## 7. 菜单展示机制设计
 

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Middleware;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public static class UserEndpoints
             .RequireAuthorization()
             .WithTags("用户档案")
             .WithOpenApi();
+        group.RequireFunction("BAS.AUTH.USERS");
 
         group.MapGet("", async (
             UserManager<IdentityUser> um,
@@ -176,7 +178,7 @@ public static class UserEndpoints
             await UpdateAssignmentsAsync(id, request.Roles, db, ct);
             var roles = await db.RoleAssignments.AsNoTracking().Include(a => a.Role).Where(a => a.UserId == id).ToListAsync(ct);
             return Results.Ok(new { success = true, roles = roles.Select(r => new { r.RoleId, r.OrganizationId }) });
-        });
+        }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
     }

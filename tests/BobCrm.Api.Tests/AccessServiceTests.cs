@@ -4,7 +4,11 @@ using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BobCrm.Api.Tests;
 
@@ -18,6 +22,29 @@ public class AccessServiceTests
         return new AppDbContext(options);
     }
 
+    private static AccessService CreateService(AppDbContext context)
+    {
+        return new AccessService(context, CreateUserManager(context));
+    }
+
+    private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)
+    {
+        var store = new UserStore<IdentityUser>(context);
+        var options = Options.Create(new IdentityOptions());
+        var passwordHasher = new PasswordHasher<IdentityUser>();
+        var userValidators = new List<IUserValidator<IdentityUser>> { new UserValidator<IdentityUser>() };
+        var passwordValidators = new List<IPasswordValidator<IdentityUser>> { new PasswordValidator<IdentityUser>() };
+        var normalizer = new UpperInvariantLookupNormalizer();
+        var describer = new IdentityErrorDescriber();
+
+        var services = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+        var logger = services.GetRequiredService<ILogger<UserManager<IdentityUser>>>();
+
+        return new UserManager<IdentityUser>(store, options, passwordHasher, userValidators, passwordValidators, normalizer, describer, services, logger);
+    }
+
     [Fact]
     public async Task CreateRoleAsync_ShouldPersistFunctionsAndScopes()
     {
@@ -26,7 +53,7 @@ public class AccessServiceTests
         ctx.FunctionNodes.Add(function);
         await ctx.SaveChangesAsync();
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         var role = await service.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "CRM.OP",
@@ -50,7 +77,7 @@ public class AccessServiceTests
         ctx.RoleProfiles.Add(role);
         await ctx.SaveChangesAsync();
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         var assignment = await service.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
@@ -66,7 +93,7 @@ public class AccessServiceTests
     public async Task SeedSystemAdministratorAsync_ShouldCreateSystemRole()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         await service.SeedSystemAdministratorAsync();
 
         var role = await ctx.RoleProfiles.Include(r => r.Functions).Include(r => r.DataScopes).FirstOrDefaultAsync(r => r.IsSystem);
@@ -90,7 +117,7 @@ public class AccessServiceTests
         });
         await ctx.SaveChangesAsync();
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         await service.SeedSystemAdministratorAsync();
 
         var assignment = await ctx.RoleAssignments.Include(a => a.Role).FirstOrDefaultAsync();
@@ -106,7 +133,7 @@ public class AccessServiceTests
         ctx.RoleProfiles.Add(role);
         await ctx.SaveChangesAsync();
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         await service.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
@@ -136,7 +163,7 @@ public class AccessServiceTests
         var orgId1 = Guid.NewGuid();
         var orgId2 = Guid.NewGuid();
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         var assignment1 = await service.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
@@ -167,7 +194,7 @@ public class AccessServiceTests
         var validFrom = DateTime.UtcNow.AddDays(1);
         var validTo = DateTime.UtcNow.AddDays(30);
 
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
         var assignment = await service.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
@@ -184,7 +211,7 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldValidateRequiredFields()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         var act = async () => await service.CreateRoleAsync(new CreateRoleRequest
         {
@@ -200,7 +227,7 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldPreventDuplicateCode()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         await service.CreateRoleAsync(new CreateRoleRequest
         {
@@ -222,7 +249,7 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldAllowSameCodeInDifferentOrganizations()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         var role1 = await service.CreateRoleAsync(new CreateRoleRequest
         {
@@ -248,7 +275,7 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldCreateRoleWithDataScopes()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         var role = await service.CreateRoleAsync(new CreateRoleRequest
         {
@@ -272,7 +299,7 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldCreateRoleWithCustomFilterExpression()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         var role = await service.CreateRoleAsync(new CreateRoleRequest
         {
@@ -297,7 +324,7 @@ public class AccessServiceTests
     public async Task CreateFunctionAsync_ShouldCreateFunctionWithParent()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         var parent = await service.CreateFunctionAsync(new CreateFunctionRequest
         {
@@ -327,7 +354,7 @@ public class AccessServiceTests
     public async Task CreateFunctionAsync_ShouldPreventDuplicateCode()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         await service.CreateFunctionAsync(new CreateFunctionRequest
         {
@@ -349,7 +376,7 @@ public class AccessServiceTests
     public async Task SeedSystemAdministratorAsync_ShouldUpdateExistingSystemRole()
     {
         await using var ctx = CreateContext();
-        var service = new AccessService(ctx);
+        var service = CreateService(ctx);
 
         // First seed
         await service.SeedSystemAdministratorAsync();

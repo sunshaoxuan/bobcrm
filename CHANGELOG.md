@@ -15,12 +15,14 @@
 - **模板绑定基础设施**：FormTemplate 新增 UsageType/Tags/RequiredFunctionCode 字段，引入 `TemplateBinding` 模型、绑定服务与 `/api/templates/bindings`、`/api/templates/runtime` 端点，为系统实体页面的模板化铺路。
 - **模板运行态（前端）**：Blazor `PageLoader` 通过 `TemplateRuntimeClient` 优先消费 `/api/templates/runtime`，显示模板信息与数据范围，缺省时自动回退旧版模板 API。
 - **角色管理界面**：新增 `/roles` 页面，提供角色列表、基础信息编辑与 FunctionNodes 权限树分配功能。
+- **默认管理员预置**：应用启动自动确保 `admin/Admin@12345` 存在并绑定 `SYS.ADMIN` 角色，方便从零数据库直接进入系统。
 - **用户档案**：实现 `/api/users` 查询/创建/更新/角色分配端点、`UserService` 以及 `/users` 页面（列表、详情、角色勾选、密码/状态管理），并补充 `UserManagementTests` 验证 API 行为。
 
 ### Changed
 - **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`。
 - **组织接口提示**：在 UI 与文档中统一组织维度说明，方便在角色框架内复用 `OrganizationId` 字段。
 - **领域化菜单**：新增 `/api/access/functions/me` 以及动态领域导航（领域切换 + 领域内二/三级菜单），菜单与 FunctionNodes 权限实时联动。
+- **权限过滤**：`BAS.AUTH.ROLE.PERM`、`BAS.AUTH.USER.ROLE` 功能节点现同时驱动菜单与 API 过滤，角色/用户相关端点通过 `FunctionPermissionFilter` 自动校验对应函数码，保持“所见即所得”的授权体验。
 
 ### Fixed
 - **组织能力联动**：在接入权限框架的同时，修复组织接口在实体编辑器中的提示与验证不一致问题，防止实体勾选后缺少字段。

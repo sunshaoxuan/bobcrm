@@ -3,6 +3,7 @@ using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
+using BobCrm.Api.Middleware;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,7 @@ public static class AccessEndpoints
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             return Results.Ok(BuildTree(nodes));
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/me", async (
             ClaimsPrincipal user,
@@ -88,7 +89,7 @@ public static class AccessEndpoints
         {
             var node = await service.CreateFunctionAsync(request, ct);
             return Results.Ok(node);
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/roles", async ([FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -99,13 +100,13 @@ public static class AccessEndpoints
                 .OrderBy(r => r.Code)
                 .ToListAsync(ct);
             return Results.Ok(roles);
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPost("/roles", async ([FromBody] CreateRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var role = await service.CreateRoleAsync(request, ct);
             return Results.Ok(role);
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -120,7 +121,7 @@ public static class AccessEndpoints
                 return Results.NotFound(new { error = "Role not found" });
 
             return Results.Ok(role);
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -140,7 +141,7 @@ public static class AccessEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(role);
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -162,7 +163,7 @@ public static class AccessEndpoints
             db.RoleProfiles.Remove(role);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPut("/roles/{roleId:guid}/permissions", async (Guid roleId, [FromBody] UpdatePermissionsRequest request, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -200,13 +201,13 @@ public static class AccessEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { message = "Permissions updated successfully" });
-        });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPost("/assignments", async ([FromBody] AssignRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var assignment = await service.AssignRoleAsync(request, ct);
             return Results.Ok(assignment);
-        });
+        }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         group.MapGet("/assignments/user/{userId}", async (string userId, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -227,7 +228,7 @@ public static class AccessEndpoints
                 .ToListAsync(ct);
 
             return Results.Ok(assignments);
-        });
+        }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         group.MapDelete("/assignments/{assignmentId:guid}", async (Guid assignmentId, [FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -238,7 +239,7 @@ public static class AccessEndpoints
             db.RoleAssignments.Remove(assignment);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
-        });
+        }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
     }
