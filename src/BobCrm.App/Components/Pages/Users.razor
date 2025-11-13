@@ -1,0 +1,354 @@
+@page "/users"
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject UserService UserService
+@inject RoleService RoleService
+@inject BobCrm.App.Services.I18nService I18n
+@inject AntDesign.IMessageService Message
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_USERS")" />
+
+    <div class="user-page">
+        <aside class="user-sider">
+            <div class="role-sider-header">
+                <Input AllowClear
+                       Placeholder="@I18n.T("LBL_SEARCH")"
+                       PrefixIcon="@IconType.Outline.Search"
+                       @bind-Value="_userSearch" />
+                <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" OnClick="ShowCreateModal">
+                    @I18n.T("BTN_NEW_USER")
+                </Button>
+            </div>
+
+            @if (_loadingUsers)
+            {
+                <div class="role-placeholder">@I18n.T("LBL_LOADING")...</div>
+            }
+            else if (_filteredUsers.Count == 0)
+            {
+                <div class="role-placeholder">@I18n.T("TXT_USER_EMPTY")</div>
+            }
+            else
+            {
+                <div class="role-list">
+                    @foreach (var user in _filteredUsers)
+                    {
+                        var selected = _selectedUser?.Id == user.Id;
+                        <button class="role-card @(selected ? "selected" : string.Empty)" @onclick="() => SelectUser(user.Id)">
+                            <div class="role-card-title">
+                                <strong>@user.UserName</strong>
+                                @if (user.IsLocked)
+                                {
+                                    <Tag Color="@("red")">@I18n.T("LBL_USER_LOCKED")</Tag>
+                                }
+                            </div>
+                            <p class="role-card-code">@user.Email</p>
+                        </button>
+                    }
+                </div>
+            }
+        </aside>
+
+        <section class="role-main">
+            @if (_selectedUser == null)
+            {
+                <div class="role-empty">
+                    <Icon Type="@IconType.Outline.User" />
+                    <p>@I18n.T("TXT_USER_SELECT_HINT")</p>
+                </div>
+            }
+            else
+            {
+                <div class="role-detail-grid">
+                    <div class="role-card-panel">
+                        <div class="panel-header">
+                            <h3>@I18n.T("LBL_USER_INFO")</h3>
+                        </div>
+                        <div class="panel-body form-grid">
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_USERNAME")</label>
+                                <Input Value="@_userForm.UserName" Disabled />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_EMAIL")</label>
+                                <Input @bind-Value="_userForm.Email" />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_EMAIL_CONFIRMED")</label>
+                                <Switch Checked="@_userForm.EmailConfirmed"
+                                        OnChange="@(value => _userForm.EmailConfirmed = value)" />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_PHONE")</label>
+                                <Input @bind-Value="_userForm.PhoneNumber" />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_USER_STATUS")</label>
+                                <Switch Checked="@(!_userForm.IsLocked)"
+                                        OnChange="@(value => _userForm.IsLocked = !value)" />
+                                <span class="switch-label">@(!_userForm.IsLocked ? I18n.T("LBL_ROLE_ENABLED") : I18n.T("LBL_ROLE_DISABLED"))</span>
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_PASSWORD")</label>
+                                <Input @bind-Value="_userForm.Password"
+                                       Type="@InputType.Password"
+                                       Placeholder="@I18n.T("PLH_PASSWORD")" />
+                            </div>
+                        </div>
+                        <div class="panel-actions">
+                            <Button Type="@ButtonType.Primary"
+                                    Loading="@_savingInfo"
+                                    OnClick="SaveUserInfo">
+                                @I18n.T("BTN_SAVE_USER")
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="role-card-panel">
+                        <div class="panel-header">
+                            <h3>@I18n.T("LBL_USER_ROLES")</h3>
+                        </div>
+                        <div class="role-list">
+                            @if (_allRoles.Count == 0)
+                            {
+                                <div class="role-placeholder">@I18n.T("TXT_ROLE_EMPTY")</div>
+                            }
+                            else
+                            {
+                                @foreach (var role in _allRoles)
+                                {
+                                    var selected = _selectedRoleIds.Contains(role.Id);
+                                    <label class="role-card @(selected ? "selected" : string.Empty)">
+                                        <Checkbox Checked="@selected"
+                                                  Disabled="@role.IsSystem"
+                                                  OnChange="@(value => ToggleRole(role.Id, value))" />
+                                        <div>
+                                            <strong>@role.Name</strong>
+                                            <p class="role-card-code">@role.Code</p>
+                                        </div>
+                                    </label>
+                                }
+                            }
+                        </div>
+                        <div class="panel-actions">
+                            <Button Type="@ButtonType.Primary"
+                                    Loading="@_savingRoles"
+                                    OnClick="SaveUserRoles">
+                                @I18n.T("BTN_SAVE_PERMISSIONS")
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </section>
+    </div>
+
+    <Modal Title="@I18n.T("BTN_NEW_USER")"
+           @bind-Visible="_showCreateModal"
+           OnOk="CreateUser"
+           OkText="@I18n.T("BTN_CONFIRM")"
+           CancelText="@I18n.T("BTN_CANCEL")">
+        <div class="form-field">
+            <label>@I18n.T("LBL_USERNAME")</label>
+            <Input @bind-Value="_createUser.UserName" />
+        </div>
+        <div class="form-field">
+            <label>@I18n.T("LBL_EMAIL")</label>
+            <Input @bind-Value="_createUser.Email" />
+        </div>
+        <div class="form-field">
+            <label>@I18n.T("LBL_PASSWORD")</label>
+            <Input @bind-Value="_createUser.Password" Type="@InputType.Password" />
+        </div>
+    </Modal>
+</AuthChecker>
+
+@code {
+    private readonly List<UserSummaryDto> _users = new();
+    private readonly List<RoleProfileDto> _allRoles = new();
+    private readonly HashSet<Guid> _selectedRoleIds = new();
+
+    private UserDetailDto? _selectedUser;
+    private UserFormModel _userForm = new();
+    private bool _loadingUsers = true;
+    private bool _savingInfo;
+    private bool _savingRoles;
+    private string _userSearch = string.Empty;
+
+    private bool _showCreateModal;
+    private CreateUserForm _createUser = new();
+
+    private List<UserSummaryDto> _filteredUsers =>
+        string.IsNullOrWhiteSpace(_userSearch)
+            ? _users
+            : _users.Where(u =>
+                (u.UserName?.Contains(_userSearch, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Email?.Contains(_userSearch, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRolesAsync();
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loadingUsers = true;
+        var users = await UserService.GetUsersAsync();
+        _users.Clear();
+        _users.AddRange(users);
+        _loadingUsers = false;
+        if (_selectedUser != null)
+        {
+            await SelectUser(_selectedUser.Id);
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        var roles = await RoleService.GetRolesAsync();
+        _allRoles.Clear();
+        _allRoles.AddRange(roles.OrderBy(r => r.Name));
+    }
+
+    private async Task SelectUser(string userId)
+    {
+        var detail = await UserService.GetUserAsync(userId);
+        if (detail == null)
+        {
+            Message.Error("User not found");
+            return;
+        }
+
+        _selectedUser = detail;
+        _userForm = new UserFormModel
+        {
+            Id = detail.Id,
+            UserName = detail.UserName,
+            Email = detail.Email,
+            EmailConfirmed = detail.EmailConfirmed,
+            PhoneNumber = detail.PhoneNumber,
+            IsLocked = detail.IsLocked
+        };
+        _selectedRoleIds.Clear();
+        foreach (var role in detail.Roles)
+        {
+            _selectedRoleIds.Add(role.RoleId);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveUserInfo()
+    {
+        if (_selectedUser == null)
+        {
+            return;
+        }
+
+        _savingInfo = true;
+        var success = await UserService.UpdateUserAsync(_selectedUser.Id, new UpdateUserRequestDto
+        {
+            Email = _userForm.Email,
+            EmailConfirmed = _userForm.EmailConfirmed,
+            PhoneNumber = _userForm.PhoneNumber,
+            IsLocked = _userForm.IsLocked,
+            Password = string.IsNullOrWhiteSpace(_userForm.Password) ? null : _userForm.Password
+        });
+        _savingInfo = false;
+
+        if (!success)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Save failed");
+            return;
+        }
+
+        Message.Success(I18n.T("MSG_SAVE_SUCCESS") ?? "Saved");
+        await LoadUsersAsync();
+        await SelectUser(_selectedUser.Id);
+    }
+
+    private async Task SaveUserRoles()
+    {
+        if (_selectedUser == null)
+        {
+            return;
+        }
+
+        _savingRoles = true;
+        var success = await UserService.UpdateRolesAsync(_selectedUser.Id, _selectedRoleIds);
+        _savingRoles = false;
+
+        if (!success)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Save failed");
+            return;
+        }
+
+        Message.Success(I18n.T("MSG_SAVE_SUCCESS") ?? "Saved");
+        await SelectUser(_selectedUser.Id);
+    }
+
+    private void ToggleRole(Guid roleId, bool value)
+    {
+        if (value)
+        {
+            _selectedRoleIds.Add(roleId);
+        }
+        else
+        {
+            _selectedRoleIds.Remove(roleId);
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        _createUser = new CreateUserForm();
+        _showCreateModal = true;
+    }
+
+    private async Task CreateUser()
+    {
+        if (string.IsNullOrWhiteSpace(_createUser.UserName) || string.IsNullOrWhiteSpace(_createUser.Email))
+        {
+            Message.Warning(I18n.T("MSG_USER_REQUIRED") ?? "Username and email are required.");
+            return;
+        }
+
+        var detail = await UserService.CreateUserAsync(new CreateUserRequestDto
+        {
+            UserName = _createUser.UserName.Trim(),
+            Email = _createUser.Email.Trim(),
+            Password = string.IsNullOrWhiteSpace(_createUser.Password) ? null : _createUser.Password
+        });
+
+        if (detail == null)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Create failed");
+            return;
+        }
+
+        _showCreateModal = false;
+        await LoadUsersAsync();
+        await SelectUser(detail.Id);
+    }
+
+    private class UserFormModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public bool EmailConfirmed { get; set; }
+        public string? PhoneNumber { get; set; }
+        public bool IsLocked { get; set; }
+        public string? Password { get; set; }
+    }
+
+    private class CreateUserForm
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Password { get; set; }
+    }
+}

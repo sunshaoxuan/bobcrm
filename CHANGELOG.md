@@ -15,6 +15,7 @@
 - **模板绑定基础设施**：FormTemplate 新增 UsageType/Tags/RequiredFunctionCode 字段，引入 `TemplateBinding` 模型、绑定服务与 `/api/templates/bindings`、`/api/templates/runtime` 端点，为系统实体页面的模板化铺路。
 - **模板运行态（前端）**：Blazor `PageLoader` 通过 `TemplateRuntimeClient` 优先消费 `/api/templates/runtime`，显示模板信息与数据范围，缺省时自动回退旧版模板 API。
 - **角色管理界面**：新增 `/roles` 页面，提供角色列表、基础信息编辑与 FunctionNodes 权限树分配功能。
+- **用户档案**：实现 `/api/users` 查询/创建/更新/角色分配端点、`UserService` 以及 `/users` 页面（列表、详情、角色勾选、密码/状态管理），并补充 `UserManagementTests` 验证 API 行为。
 
 ### Changed
 - **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`。
@@ -860,5 +861,5 @@
 ---
 
 **维护者**：BobCRM 开发团队  
-**最后更新**：2025-11-05
+**最后更新**：2025-11-13
 

@@ -272,14 +272,16 @@
   border-radius: var(--radius-card);
 }
 
-.role-page {
+.role-page,
+.user-page {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: var(--spacing-4);
   margin-top: var(--spacing-4);
 }
 
-.role-sider {
+.role-sider,
+.user-sider {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-card);
   padding: var(--spacing-3);
@@ -434,7 +436,8 @@
 }
 
 @media (max-width: 992px) {
-  .role-page {
+  .role-page,
+  .user-page {
     grid-template-columns: 1fr;
   }
 

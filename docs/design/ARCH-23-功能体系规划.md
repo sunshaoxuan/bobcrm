@@ -1,6 +1,6 @@
 # ARCH-23 功能体系规划
 
-> 版本：0.1（2025-11-13）  
+> 版本：0.2（2025-11-13）  
 > 目的：梳理 OneCRM 的 3 级功能蓝图，标记现有实现与缺口，作为后续开发/验收基线。
 
 ---
@@ -23,7 +23,9 @@
 |  | 1.6 人工智能 | 1.6.1 模型设置<br>1.6.2 工作流程<br>1.6.3 智能体 | ⚪ | 未启动 |
 | 2. 基本设置 | 2.1 组织管理 | 2.1.1 组织档案 | ✅ | `OrganizationManagement.razor` + API 已上线 |
 |  |  | 2.1.2 角色管理 | ✅ | 角色档案页面（角色信息 + 权限树）已上线，支持 FunctionNodes 权限分配 |
-|  | 2.2 用户与权限 | 2.2.1 用户档案<br>2.2.2 角色权限分配<br>2.2.3 用户角色分配 | ⚪ | 需基于现有 Identity + AccessService 搭建前端 |
+|  | 2.2 用户与权限 | 2.2.1 用户档案 | ✅ | `/api/users` + `Users.razor`（列表/详情/创建/密码+状态编辑）已上线，并复用权限树路由引导 |
+|  |  | 2.2.2 角色权限分配 | ✅ | 角色档案页（FunctionNodes 权限树 + 数据范围）提供完整的功能授权体验 |
+|  |  | 2.2.3 用户角色分配 | ✅ | 用户档案内置角色面板，直接调用 `/api/users/{id}/roles` 进行角色切换 |
 | 3. 客户关系 | 3.1 基本档案 | 3.1.1 客户主档<br>3.1.2 合约管理<br>3.1.3 实施管理<br>3.1.4 运维管理 | 🟡 | 客户主档有初版列表/详情模板；其他子模块未实现 |
 |  | 3.2 计划管理 | 3.2.1 计划任务<br>3.2.2 日程安排<br>3.2.3 作业执行<br>3.2.4 作业看板 | ⚪ | 未启动 |
 | 4. 知识库 | 4.1 问与答 | 4.1.1 常见问答<br>4.1.2 客户问答库<br>4.1.3 答复模板 | ⚪ | 未启动 |
@@ -42,7 +44,8 @@
 | 1.4.1 模板设计 | ✅ FormTemplate CRUD + Designer API | ✅ `FormDesigner.razor` | 支持 FormTemplate 存储 |
 | 1.4.2 模板分配 | ✅ TemplateBinding + RuntimeService | 🟡 PageLoader 接入 runtime，缺分配 UI | 需统一 List/Detail 宿主 |
 | 2.1.1 组织档案 | ✅ OrganizationService + API | ✅ `OrganizationManagement.razor` | 已支持树结构 CRUD |
-| 2.1.2 角色管理 | ✅ RoleProfile/Function/DataScope/Assignment API | ⚪ | 需构建角色档案界面与权限选择 |
+| 2.1.2 角色管理 | ✅ RoleProfile/Function/DataScope/Assignment API | ✅ `Roles.razor`（角色列表+信息+FunctionNodes 权限树） | 同步写回角色-功能/数据范围，并展示系统角色只读提示 |
+| 2.2.1 用户档案 | ✅ `/api/users` CRUD + 角色分配端点 | ✅ `Users.razor`（双栏列表/详情 + 角色勾选 + 创建模态 + 密码管理） | 配套 `UserService` 与 `UserManagementTests` 覆盖查询/创建/角色更新 |
 | 3.1.1 客户主档 | ✅ Customer CRUD + 动态字段 | 🟡 `Customers.razor`(静态列表)、`PageLoader`（详情） | 列表需模板化、详情已接 runtime |
 
 其余节点暂为空白或仅有数据库/日志基础，需按路线图补齐。

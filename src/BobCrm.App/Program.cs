@@ -22,6 +22,7 @@ builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
 builder.Services.AddScoped<BobCrm.App.Services.RoleService>();
+builder.Services.AddScoped<BobCrm.App.Services.UserService>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateRuntimeClient>();
 builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
 // Multilingual text resolution services
