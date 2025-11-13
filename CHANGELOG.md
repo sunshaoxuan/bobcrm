@@ -7,6 +7,14 @@
 
 ---
 
+## [0.5.9] - 2025-11-13
+
+### Added
+- `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`，面向产品/实现协作者，提供前端操作步骤、故障排查及最佳实践。
+
+### Changed
+- 重构文档目录：根据“设计/指南/参考/历史/流程/示例”拆分为 `docs/design/`, `docs/guides/`, `docs/reference/`, `docs/history/`, `docs/process/`, `docs/examples/`，并更新 `docs/PROC-00-文档索引.md` 及 README 入口说明。
+
 ## [0.5.8] - 2025-11-07
 
 ### 新增 (Added)

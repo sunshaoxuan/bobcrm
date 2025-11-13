@@ -39,19 +39,19 @@ dotnet test
 
 ## 文档索引
 完整文档已按“分类简写-两位编号-中文标题.md”归档，入口见：
-- docs/PROC-00-文档索引.md
+- `docs/PROC-00-文档索引.md`
 
-常用直达：
-- 产品设计：docs/PROD-01-客户信息管理系统设计文档.md
-- 接口契约：docs/API-01-接口文档.md
-- 架构说明：docs/ARCH-01-实体自定义与发布系统设计文档.md
-- 界面规范：docs/UI-01-UIUE设计说明书.md
-- 测试指南：docs/TEST-01-测试指南.md
-- 多语设计：docs/I18N-01-多语机制设计文档.md
+按类型分类的常用入口：
+- 设计：`docs/design/`（如 `PROD-01`、`ARCH-20`、`ARCH-21`、`UI-01` 等）
+- 指南：`docs/guides/`（如 `FRONT-01` 实体与动态数据操作指南、`TEST-01` 测试指南）
+- 参考：`docs/reference/API-01-接口文档.md`
+- 历史：`docs/history/`（差距/修复记录）
+- 流程：`docs/process/`（PR 清单、文档规范等）
+- 示例：`docs/examples/EX-01-订单管理示例.md`
 
 ## 贡献
-- PR 检查清单：docs/PROC-01-PR检查清单.md
-- 文档同步规范：docs/PROC-02-文档同步规范.md
+- PR 检查清单：`docs/process/PROC-01-PR检查清单.md`
+- 文档同步规范：`docs/process/PROC-02-文档同步规范.md`
 
 ## 变更日志
 - CHANGELOG.md
