@@ -7,13 +7,46 @@
 
 ---
 
-## [0.5.9] - 2025-11-13
+## [0.5.11] - 2025-11-13
 
 ### Added
-- `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`，面向产品/实现协作者，提供前端操作步骤、故障排查及最佳实践。
+- **角色与权限框架**：新增 `RoleProfile`、`FunctionNode`、`RoleFunctionPermission`、`RoleDataScope`、`RoleAssignment`、`AccessService` 及 `/api/access` 端点，覆盖角色建档、功能授权、数据范围设置与用户-角色绑定。
+- **系统默认种子**：启动时自动生成标准功能树（Dashboard / Customers / Entity / Settings 等）、`SYS.ADMIN` 角色以及 `admin`→`SYS.ADMIN` 绑定，保证默认账号可访问整套功能。
 
 ### Changed
-- 重构文档目录：根据“设计/指南/参考/历史/流程/示例”拆分为 `docs/design/`, `docs/guides/`, `docs/reference/`, `docs/history/`, `docs/process/`, `docs/examples/`，并更新 `docs/PROC-00-文档索引.md` 及 README 入口说明。
+- **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`。
+- **组织接口提示**：在 UI 与文档中统一组织维度说明，方便在角色框架内复用 `OrganizationId` 字段。
+
+### Fixed
+- **组织能力联动**：在接入权限框架的同时，修复组织接口在实体编辑器中的提示与验证不一致问题，防止实体勾选后缺少字段。
+
+## [0.5.10] - 2025-11-12
+
+### Added
+- **组织管理**：新增 `OrganizationNode` 模型、EF 配置、领域服务、API 以及 Blazor 管理页，支持树形组织的增删改、PathCode 计算与实时刷新。
+- **组织接口 (IOrganizational)**：实体定义可勾选“组织维度”，自动注入 `OrganizationId` 字段并与权限层打通，后端只持久化 ID、其余信息由权限上下文注入。
+- **业务领域 / 自动命名**：实体编辑器提供领域下拉，命名空间自动拼接成 `BobCrm.<Domain>.<Entity>`，新增字段默认生成为 `Field1/Field2...`，减少手工输入。
+- **回归测试**：为实体编辑器的行内增删、接口联动与多语提示补充集成测试，锁定关键交互。
+
+### Changed
+- **实体定义编辑体验**：② 区域改为 Card + Collapse，可折叠的属性面板更节省空间；图标字段加入预览提示并说明可接受的 Icon 名称/图片 URL。
+- **文档同步**：在 UI 设计说明中补充组织接口、领域命名与自动字段策略，保持产品规范一致。
+
+### Fixed
+- **多语言控件稳定性**：修复 Dropdown 拉出后无法收起、宽度不一致、ESC/点击空白不生效等问题，并补齐缺失的 i18n 字典。
+- **AntDesign 兼容性**：改写 Popover / Dropdown API 使用方式，去除 `VisibleChange` 等不存在的参数，同时移除 `AllowClear` 带来的 affix misalignment。
+- **子实体与建模缺陷**：解决新增子实体后列表不刷新、必填校验不触发、数据库迁移缺失及 117 个单元测试失败等问题。
+
+## [0.5.9] - 2025-11-11
+
+### Added
+- **实体定义页重构**：实现“实体信息 / 子实体 / 接口”多标签改版，子实体改为表格行内编辑；同时为多语控件增加默认语言加粗、灰色背景和行标题。
+- **多语言输入重写**：MultilingualInput 采用自定义 Overlay 与 Ant Design Dropdown 组合，支持宽度同步、焦点展开、失焦收起。
+- **持久化与测试**：补充实体聚合管理的持久化逻辑，并新增覆盖常见行为的单元测试。
+
+### Fixed
+- **多语言控件体验**：逐步修复双重描边、错位、Overlay 不对齐、滚动条缺失、无法关闭、点击空白不收起等问题。
+- **页面滚动与遮罩**：解除全局 overflow 限制，保证下拉面板不会阻止页面滚动；按需移除 `Suffix` / `AllowClear`，避免 affix-wrapper 造成宽度差异。
 
 ## [0.5.8] - 2025-11-07
 
