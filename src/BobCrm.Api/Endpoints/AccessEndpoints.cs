@@ -45,10 +45,137 @@ public static class AccessEndpoints
             return Results.Ok(role);
         });
 
+        group.MapGet("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var role = await db.RoleProfiles
+                .AsNoTracking()
+                .Include(r => r.Functions)
+                .ThenInclude(f => f.Function)
+                .Include(r => r.DataScopes)
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct);
+
+            if (role == null)
+                return Results.NotFound(new { error = "Role not found" });
+
+            return Results.Ok(role);
+        });
+
+        group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var role = await db.RoleProfiles.FindAsync(new object[] { roleId }, ct);
+            if (role == null)
+                return Results.NotFound(new { error = "Role not found" });
+
+            if (role.IsSystem)
+                return Results.BadRequest(new { error = "Cannot update system role" });
+
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                role.Name = request.Name;
+            if (request.Description is not null)
+                role.Description = request.Description;
+            if (request.IsEnabled.HasValue)
+                role.IsEnabled = request.IsEnabled.Value;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(role);
+        });
+
+        group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var role = await db.RoleProfiles
+                .Include(r => r.Functions)
+                .Include(r => r.DataScopes)
+                .Include(r => r.Assignments)
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct);
+
+            if (role == null)
+                return Results.NotFound(new { error = "Role not found" });
+
+            if (role.IsSystem)
+                return Results.BadRequest(new { error = "Cannot delete system role" });
+
+            if (role.Assignments?.Any() == true)
+                return Results.BadRequest(new { error = "Cannot delete role with assignments" });
+
+            db.RoleProfiles.Remove(role);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
+        group.MapPut("/roles/{roleId:guid}/permissions", async (Guid roleId, [FromBody] UpdatePermissionsRequest request, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var role = await db.RoleProfiles
+                .Include(r => r.Functions)
+                .Include(r => r.DataScopes)
+                .FirstOrDefaultAsync(r => r.Id == roleId, ct);
+
+            if (role == null)
+                return Results.NotFound(new { error = "Role not found" });
+
+            // Update function permissions
+            db.RoleFunctionPermissions.RemoveRange(role.Functions);
+            if (request.FunctionIds?.Count > 0)
+            {
+                role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
+                {
+                    RoleId = roleId,
+                    FunctionId = fid
+                }).ToList();
+            }
+
+            // Update data scopes
+            db.RoleDataScopes.RemoveRange(role.DataScopes);
+            if (request.DataScopes?.Count > 0)
+            {
+                role.DataScopes = request.DataScopes.Select(ds => new RoleDataScope
+                {
+                    RoleId = roleId,
+                    EntityName = ds.EntityName,
+                    ScopeType = ds.ScopeType,
+                    FilterExpression = ds.FilterExpression
+                }).ToList();
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { message = "Permissions updated successfully" });
+        });
+
         group.MapPost("/assignments", async ([FromBody] AssignRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var assignment = await service.AssignRoleAsync(request, ct);
             return Results.Ok(assignment);
+        });
+
+        group.MapGet("/assignments/user/{userId}", async (string userId, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var assignments = await db.RoleAssignments
+                .AsNoTracking()
+                .Include(a => a.Role)
+                .Where(a => a.UserId == userId)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.RoleId,
+                    RoleCode = a.Role!.Code,
+                    RoleName = a.Role!.Name,
+                    a.OrganizationId,
+                    a.ValidFrom,
+                    a.ValidTo
+                })
+                .ToListAsync(ct);
+
+            return Results.Ok(assignments);
+        });
+
+        group.MapDelete("/assignments/{assignmentId:guid}", async (Guid assignmentId, [FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var assignment = await db.RoleAssignments.FindAsync(new object[] { assignmentId }, ct);
+            if (assignment == null)
+                return Results.NotFound(new { error = "Assignment not found" });
+
+            db.RoleAssignments.Remove(assignment);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
         });
 
         return app;

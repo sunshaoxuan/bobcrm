@@ -97,4 +97,281 @@ public class AccessServiceTests
         assignment.Should().NotBeNull();
         assignment!.Role!.IsSystem.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task AssignRoleAsync_ShouldPreventDuplicateAssignment()
+    {
+        await using var ctx = CreateContext();
+        var role = new RoleProfile { Code = "TEST.ROLE", Name = "Test Role" };
+        ctx.RoleProfiles.Add(role);
+        await ctx.SaveChangesAsync();
+
+        var service = new AccessService(ctx);
+        await service.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId = "user-1",
+            RoleId = role.Id,
+            OrganizationId = null
+        });
+
+        var act = async () => await service.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId = "user-1",
+            RoleId = role.Id,
+            OrganizationId = null
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Assignment already exists.");
+    }
+
+    [Fact]
+    public async Task AssignRoleAsync_ShouldAllowSameRoleDifferentOrganization()
+    {
+        await using var ctx = CreateContext();
+        var role = new RoleProfile { Code = "TEST.ROLE", Name = "Test Role" };
+        ctx.RoleProfiles.Add(role);
+        await ctx.SaveChangesAsync();
+
+        var orgId1 = Guid.NewGuid();
+        var orgId2 = Guid.NewGuid();
+
+        var service = new AccessService(ctx);
+        var assignment1 = await service.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId = "user-1",
+            RoleId = role.Id,
+            OrganizationId = orgId1
+        });
+
+        var assignment2 = await service.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId = "user-1",
+            RoleId = role.Id,
+            OrganizationId = orgId2
+        });
+
+        assignment1.OrganizationId.Should().Be(orgId1);
+        assignment2.OrganizationId.Should().Be(orgId2);
+        (await ctx.RoleAssignments.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task AssignRoleAsync_ShouldSupportValidityPeriod()
+    {
+        await using var ctx = CreateContext();
+        var role = new RoleProfile { Code = "TEMP.ROLE", Name = "Temporary Role" };
+        ctx.RoleProfiles.Add(role);
+        await ctx.SaveChangesAsync();
+
+        var validFrom = DateTime.UtcNow.AddDays(1);
+        var validTo = DateTime.UtcNow.AddDays(30);
+
+        var service = new AccessService(ctx);
+        var assignment = await service.AssignRoleAsync(new AssignRoleRequest
+        {
+            UserId = "user-1",
+            RoleId = role.Id,
+            ValidFrom = validFrom,
+            ValidTo = validTo
+        });
+
+        assignment.ValidFrom.Should().Be(validFrom);
+        assignment.ValidTo.Should().Be(validTo);
+    }
+
+    [Fact]
+    public async Task CreateRoleAsync_ShouldValidateRequiredFields()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        var act = async () => await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "",
+            Name = "Test Role"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Role code and name are required.");
+    }
+
+    [Fact]
+    public async Task CreateRoleAsync_ShouldPreventDuplicateCode()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "DUPLICATE.ROLE",
+            Name = "First Role"
+        });
+
+        var act = async () => await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "DUPLICATE.ROLE",
+            Name = "Second Role"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Role code already exists within the organization.");
+    }
+
+    [Fact]
+    public async Task CreateRoleAsync_ShouldAllowSameCodeInDifferentOrganizations()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        var role1 = await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "SALES.MANAGER",
+            Name = "Sales Manager",
+            OrganizationId = Guid.NewGuid()
+        });
+
+        var role2 = await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "SALES.MANAGER",
+            Name = "Sales Manager",
+            OrganizationId = Guid.NewGuid()
+        });
+
+        role1.OrganizationId.Should().HaveValue();
+        role2.OrganizationId.Should().HaveValue();
+        role1.OrganizationId!.Value.Should().NotBe(role2.OrganizationId!.Value);
+        (await ctx.RoleProfiles.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CreateRoleAsync_ShouldCreateRoleWithDataScopes()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        var role = await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "DATA.SCOPED.ROLE",
+            Name = "Data Scoped Role",
+            DataScopes = new List<RoleDataScopeDto>
+            {
+                new() { EntityName = "Customer", ScopeType = RoleDataScopeTypes.Organization },
+                new() { EntityName = "Order", ScopeType = RoleDataScopeTypes.Self },
+                new() { EntityName = "*", ScopeType = RoleDataScopeTypes.All }
+            }
+        });
+
+        role.DataScopes.Should().HaveCount(3);
+        role.DataScopes.Should().Contain(s => s.EntityName == "Customer" && s.ScopeType == RoleDataScopeTypes.Organization);
+        role.DataScopes.Should().Contain(s => s.EntityName == "Order" && s.ScopeType == RoleDataScopeTypes.Self);
+        role.DataScopes.Should().Contain(s => s.EntityName == "*" && s.ScopeType == RoleDataScopeTypes.All);
+    }
+
+    [Fact]
+    public async Task CreateRoleAsync_ShouldCreateRoleWithCustomFilterExpression()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        var role = await service.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "CUSTOM.FILTER.ROLE",
+            Name = "Custom Filter Role",
+            DataScopes = new List<RoleDataScopeDto>
+            {
+                new()
+                {
+                    EntityName = "Customer",
+                    ScopeType = RoleDataScopeTypes.Custom,
+                    FilterExpression = "Region == 'APAC' && Status == 'Active'"
+                }
+            }
+        });
+
+        var customScope = role.DataScopes.Should().ContainSingle(s => s.ScopeType == RoleDataScopeTypes.Custom).Subject;
+        customScope.FilterExpression.Should().Be("Region == 'APAC' && Status == 'Active'");
+    }
+
+    [Fact]
+    public async Task CreateFunctionAsync_ShouldCreateFunctionWithParent()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        var parent = await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "APP.CRM",
+            Name = "CRM Module"
+        });
+
+        var child = await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "APP.CRM.CUSTOMERS",
+            Name = "Customers",
+            ParentId = parent.Id,
+            Route = "/customers",
+            Icon = "team",
+            IsMenu = true,
+            SortOrder = 10
+        });
+
+        child.ParentId.Should().Be(parent.Id);
+        child.Route.Should().Be("/customers");
+        child.Icon.Should().Be("team");
+        child.IsMenu.Should().BeTrue();
+        child.SortOrder.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task CreateFunctionAsync_ShouldPreventDuplicateCode()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "DUPLICATE.FUNCTION",
+            Name = "First Function"
+        });
+
+        var act = async () => await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "DUPLICATE.FUNCTION",
+            Name = "Second Function"
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Function code already exists.");
+    }
+
+    [Fact]
+    public async Task SeedSystemAdministratorAsync_ShouldUpdateExistingSystemRole()
+    {
+        await using var ctx = CreateContext();
+        var service = new AccessService(ctx);
+
+        // First seed
+        await service.SeedSystemAdministratorAsync();
+        var role = await ctx.RoleProfiles.Include(r => r.Functions).FirstOrDefaultAsync(r => r.IsSystem);
+        var initialFunctionCount = role!.Functions.Count;
+
+        // Add a new function
+        ctx.FunctionNodes.Add(new FunctionNode
+        {
+            Code = "APP.NEW_FEATURE",
+            Name = "New Feature",
+            IsMenu = true,
+            SortOrder = 999
+        });
+        await ctx.SaveChangesAsync();
+
+        // Second seed should add the new function to admin role
+        await service.SeedSystemAdministratorAsync();
+        await ctx.Entry(role).ReloadAsync();
+        await ctx.Entry(role).Collection(r => r.Functions).LoadAsync();
+
+        role.Functions.Count.Should().Be(initialFunctionCount + 1);
+        role.Functions.Should().Contain(f => f.FunctionId == ctx.FunctionNodes.First(fn => fn.Code == "APP.NEW_FEATURE").Id);
+    }
 }

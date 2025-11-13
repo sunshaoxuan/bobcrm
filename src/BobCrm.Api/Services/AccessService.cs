@@ -22,6 +22,10 @@ public class AccessService
         new("APP.ENTITY.PUBLISH", "Publish Entity", null, "cloud-upload", false, 31, "APP.ENTITY"),
         new("APP.TEMPLATES", "Templates", "/templates", "appstore", true, 40, "APP.ROOT"),
         new("APP.ORGANIZATIONS", "Organizations", "/organizations", "cluster", true, 50, "APP.ROOT"),
+        new("APP.ROLES", "Roles", "/roles", "lock", true, 55, "APP.ROOT"),
+        new("APP.ROLES.CREATE", "Create Role", null, "plus", false, 56, "APP.ROLES"),
+        new("APP.ROLES.EDIT", "Edit Role", null, "edit", false, 57, "APP.ROLES"),
+        new("APP.ROLES.PERMISSIONS", "Configure Permissions", null, "safety", false, 58, "APP.ROLES"),
         new("APP.SETTINGS", "Settings", "/settings", "setting", true, 60, "APP.ROOT")
     ];
 

@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Routing;
+using BobCrm.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -6,27 +7,23 @@ public static class UserEndpoints
 {
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder app)
     {
-        var themeGroup = app.MapGroup("/api/theme")
-            .WithTags("Theme")
-            .WithOpenApi();
+        var group = app.MapGroup("/api/users").RequireAuthorization();
 
-        MapThemeDefaults(themeGroup);
+        group.MapGet("/", async (AppDbContext db) =>
+        {
+            var users = await db.Users.Select(u => new { u.Id, u.UserName, u.Email }).ToListAsync();
+            return Results.Ok(users);
+        });
+
+        group.MapGet("/{userId}", async (string userId, AppDbContext db) =>
+        {
+            var user = await db.Users.FindAsync(userId);
+            if (user == null)
+                return Results.NotFound(new { error = "User not found" });
+
+            return Results.Ok(new { user.Id, user.UserName, user.Email });
+        });
 
         return app;
-    }
-
-    private static void MapThemeDefaults(IEndpointRouteBuilder themeGroup)
-    {
-        themeGroup.MapGet("/defaults", (IConfiguration cfg, ILogger<Program> logger) =>
-        {
-            var initColor = cfg.GetValue<string>("Theme:InitColor");
-            var initTheme = cfg.GetValue<string>("Theme:InitTheme") ?? "light";
-            logger.LogDebug("[Theme] Defaults requested: theme={Theme}, color={Color}", initTheme, initColor);
-            return Results.Json(new { initColor, initTheme });
-        })
-        .WithName("GetThemeDefaults")
-        .WithSummary("获取主题默认值")
-        .WithDescription("供早期客户端快速读取开箱即用的主题信息")
-        .AllowAnonymous();
     }
 }
