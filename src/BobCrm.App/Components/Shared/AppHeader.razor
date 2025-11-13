@@ -23,46 +23,6 @@
         <MenuButton ActiveDomain="@ActiveDomain" />
     </div>
     <div class="header-utilities">
-        <div class="header-utility-group">
-            <HeaderLangMenu />
-            <NotificationCenter Localizer="I18n.T" />
-        </div>
-        <div class="theme-toggle">
-            <button class="@(IsLightTheme ? "active" : string.Empty)" @onclick="() => SwitchTheme(ThemeState.CalmLight)" title="Calm Light">
-                <Icon Type="@IconType.Outline.Bulb" />
-            </button>
-            <button class="@(IsDarkTheme ? "active" : string.Empty)" @onclick="() => SwitchTheme(ThemeState.CalmDark)" title="Calm Dark">
-                <Icon Type="@IconType.Outline.BgColors" />
-            </button>
-        </div>
-        <div class="nav-mode-toggle">
-            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.Icons))"
-                    title="@I18n.T("LBL_NAV_MODE_ICONS")"
-                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.Icons)">
-                <Icon Type="@IconType.Outline.Appstore" />
-            </button>
-            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.Labels))"
-                    title="@I18n.T("LBL_NAV_MODE_TEXT")"
-                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.Labels)">
-                <span>Ab</span>
-            </button>
-            <button class="@(NavModeButtonClass(LayoutState.NavDisplayMode.IconText))"
-                    title="@I18n.T("LBL_NAV_MODE_BOTH")"
-                    @onclick="() => ChangeNavMode(LayoutState.NavDisplayMode.IconText)">
-                <Icon Type="@IconType.Outline.ColumnWidth" />
-            </button>
-        </div>
-        <div class="header-actions desktop-only">
-            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="ToggleRightPanel">
-                <Icon Type="@IconType.Outline.Layout" /> @I18n.T("BTN_WORK_BAR")
-            </Button>
-            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoStickyBar">
-                <Icon Type="@IconType.Outline.Filter" /> @I18n.T("BTN_TOOL_BAR")
-            </Button>
-            <Button Size="@ButtonSize.Small" Type="@ButtonType.Default" OnClick="DemoBulkBar">
-                <Icon Type="@IconType.Outline.Select" /> @I18n.T("BTN_BULK_BAR")
-            </Button>
-        </div>
         <DomainSelector Domains="@Domains"
                        ActiveDomain="@ActiveDomain"
                        OnDomainChanged="HandleDomainChanged" />
