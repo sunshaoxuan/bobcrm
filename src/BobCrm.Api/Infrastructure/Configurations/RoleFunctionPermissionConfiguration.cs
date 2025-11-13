@@ -15,5 +15,10 @@ public class RoleFunctionPermissionConfiguration : IEntityTypeConfiguration<Role
             .WithMany(x => x.Roles)
             .HasForeignKey(x => x.FunctionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.TemplateBinding)
+            .WithMany()
+            .HasForeignKey(x => x.TemplateBindingId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

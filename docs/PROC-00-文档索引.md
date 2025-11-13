@@ -14,6 +14,8 @@
 - [ARCH-14-数据结构自动对齐系统设计文档](design/ARCH-14-数据结构自动对齐系统设计文档.md)
 - [ARCH-20-实体定义管理设计](design/ARCH-20-实体定义管理设计.md)
 - [ARCH-21-组织与权限体系设计](design/ARCH-21-组织与权限体系设计.md)
+- [ARCH-22-标准实体模板化与权限联动设计](design/ARCH-22-标准实体模板化与权限联动设计.md)
+- [ARCH-23-功能体系规划](design/ARCH-23-功能体系规划.md)
 - [PROD-01-客户信息管理系统设计文档（含 docx）](design/PROD-01-客户信息管理系统设计文档.md)
 - [PROD-02-客户系统开发任务与接口文档](design/PROD-02-客户系统开发任务与接口文档.md)
 - [UI-01-UIUE设计说明书](design/UI-01-UIUE设计说明书.md)

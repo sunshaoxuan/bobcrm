@@ -1,0 +1,495 @@
+@page "/roles"
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject RoleService RoleService
+@inject BobCrm.App.Services.I18nService I18n
+@inject AntDesign.IMessageService Message
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_ROLES")" />
+
+    <div class="role-page">
+        <aside class="role-sider">
+            <div class="role-sider-header">
+                <Input AllowClear
+                       Placeholder="@I18n.T("LBL_SEARCH")"
+                       PrefixIcon="@IconType.Outline.Search"
+                       @bind-Value="_roleSearch" />
+                <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" OnClick="ShowCreateModal">
+                    @I18n.T("BTN_NEW_ROLE")
+                </Button>
+            </div>
+
+            @if (_loadingRoles)
+            {
+                <div class="role-placeholder">@I18n.T("LBL_LOADING")...</div>
+            }
+            else if (_filteredRoles.Count == 0)
+            {
+                <div class="role-placeholder">@I18n.T("TXT_ROLE_EMPTY")</div>
+            }
+            else
+            {
+                <div class="role-list">
+                    @foreach (var role in _filteredRoles)
+                    {
+                        var selected = _selectedRole?.Id == role.Id;
+                        <button class="role-card @(selected ? "selected" : string.Empty)" @onclick="() => SelectRole(role.Id)">
+                            <div class="role-card-title">
+                                <strong>@role.Name</strong>
+                                @if (role.IsSystem)
+                                {
+                                    <Tag Color="@("cyan")">@I18n.T("LBL_ROLE_SYSTEM")</Tag>
+                                }
+                                else if (!role.IsEnabled)
+                                {
+                                    <Tag Color="@("red")">@I18n.T("LBL_ROLE_DISABLED")</Tag>
+                                }
+                            </div>
+                            <p class="role-card-code">@role.Code</p>
+                        </button>
+                    }
+                </div>
+            }
+        </aside>
+
+        <section class="role-main">
+            @if (_selectedRole == null)
+            {
+                <div class="role-empty">
+                    <Icon Type="@IconType.Outline.FileProtect" />
+                    <p>@I18n.T("TXT_ROLE_SELECT_HINT")</p>
+                </div>
+            }
+            else
+            {
+                <div class="role-detail-grid">
+                    <div class="role-card-panel">
+                        <div class="panel-header">
+                            <h3>@I18n.T("LBL_ROLE_INFO")</h3>
+                            @if (_selectedRole.IsSystem)
+                            {
+                                <Tag Color="@("cyan")">@I18n.T("LBL_ROLE_SYSTEM")</Tag>
+                            }
+                        </div>
+                        <div class="panel-body form-grid">
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_ROLE_CODE")</label>
+                                <Input Value="@_roleForm.Code" Disabled />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_ROLE_NAME")</label>
+                                <Input @bind-Value="_roleForm.Name" Disabled="@_selectedRole.IsSystem" />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_ROLE_DESCRIPTION")</label>
+                                <Input TextArea Rows="3" @bind-Value="_roleForm.Description" Disabled="@_selectedRole.IsSystem" />
+                            </div>
+                            <div class="form-field">
+                                <label>@I18n.T("LBL_ROLE_STATUS")</label>
+                                <Switch Checked="@_roleForm.IsEnabled"
+                                        Disabled="@_selectedRole.IsSystem"
+                                        OnChange="@(value => _roleForm.IsEnabled = value)" />
+                                <span class="switch-label">@(_roleForm.IsEnabled ? I18n.T("LBL_ROLE_ENABLED") : I18n.T("LBL_ROLE_DISABLED"))</span>
+                            </div>
+                        </div>
+                        <div class="panel-actions">
+                            <Button Type="@ButtonType.Primary"
+                                    Loading="@_savingInfo"
+                                    Disabled="@_selectedRole.IsSystem"
+                                    OnClick="SaveRoleInfo">
+                                @I18n.T("BTN_SAVE_ROLE")
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="role-card-panel">
+                        <div class="panel-header">
+                            <h3>@I18n.T("LBL_ROLE_PERMISSIONS")</h3>
+                        </div>
+                        @if (_functionTree.Count == 0)
+                        {
+                            <div class="role-placeholder">@I18n.T("TXT_ROLE_NO_FUNCTION")</div>
+                        }
+                        else
+                        {
+                            <div class="permission-tree">
+                                @foreach (var node in _functionTree)
+                                {
+                                    @RenderFunctionNode(node)
+                                }
+                            </div>
+                        }
+                        <div class="panel-actions">
+                            <Button Type="@ButtonType.Primary"
+                                    Loading="@_savingPermissions"
+                                    Disabled="@(_functionTree.Count == 0)"
+                                    OnClick="SavePermissions">
+                                @I18n.T("BTN_SAVE_PERMISSIONS")
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </section>
+    </div>
+
+    <Modal Title="@I18n.T("BTN_NEW_ROLE")"
+           @bind-Visible="_showCreateModal"
+           OnOk="CreateRole"
+           OkText="@I18n.T("BTN_CONFIRM")"
+           CancelText="@I18n.T("BTN_CANCEL")">
+        <div class="form-field">
+            <label>@I18n.T("LBL_ROLE_CODE")</label>
+            <Input @bind-Value="_createForm.Code" />
+        </div>
+        <div class="form-field">
+            <label>@I18n.T("LBL_ROLE_NAME")</label>
+            <Input @bind-Value="_createForm.Name" />
+        </div>
+    </Modal>
+</AuthChecker>
+
+@code {
+    private readonly List<RoleProfileDto> _roles = new();
+    private List<RoleProfileDto> _filteredRoles => string.IsNullOrWhiteSpace(_roleSearch)
+        ? _roles
+        : _roles.Where(r => r.Name.Contains(_roleSearch, StringComparison.OrdinalIgnoreCase) ||
+                            r.Code.Contains(_roleSearch, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private RoleProfileDto? _selectedRole;
+    private RoleFormModel _roleForm = new();
+    private readonly HashSet<Guid> _selectedFunctions = new();
+    private readonly Dictionary<Guid, FunctionMenuNode> _functionLookup = new();
+    private readonly Dictionary<Guid, Guid?> _parentLookup = new();
+    private List<FunctionMenuNode> _functionTree = new();
+
+    private bool _loadingRoles = true;
+    private bool _savingInfo;
+    private bool _savingPermissions;
+    private string _roleSearch = string.Empty;
+
+    private bool _showCreateModal;
+    private CreateRoleForm _createForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRolesAsync();
+        await LoadFunctionTreeAsync();
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        _loadingRoles = true;
+        var roles = await RoleService.GetRolesAsync();
+        _roles.Clear();
+        _roles.AddRange(roles.OrderBy(r => r.IsSystem ? 0 : 1).ThenBy(r => r.Name));
+        _loadingRoles = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadFunctionTreeAsync()
+    {
+        _functionTree = await RoleService.GetFunctionTreeAsync();
+        _functionLookup.Clear();
+        _parentLookup.Clear();
+        foreach (var node in _functionTree)
+        {
+            HydrateLookups(node, null);
+        }
+        StateHasChanged();
+    }
+
+    private void HydrateLookups(FunctionMenuNode node, Guid? parentId)
+    {
+        _functionLookup[node.Id] = node;
+        _parentLookup[node.Id] = parentId;
+        foreach (var child in node.Children)
+        {
+            HydrateLookups(child, node.Id);
+        }
+    }
+
+    private async Task SelectRole(Guid roleId)
+    {
+        if (_selectedRole?.Id == roleId)
+        {
+            return;
+        }
+
+        var detail = await RoleService.GetRoleAsync(roleId);
+        if (detail == null)
+        {
+            Message.Error("Role not found");
+            return;
+        }
+
+        _selectedRole = detail;
+        _roleForm = new RoleFormModel
+        {
+            Code = detail.Code,
+            Name = detail.Name,
+            Description = detail.Description,
+            IsEnabled = detail.IsEnabled
+        };
+
+        _selectedFunctions.Clear();
+        foreach (var fn in detail.Functions)
+        {
+            _selectedFunctions.Add(fn.FunctionId);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveRoleInfo()
+    {
+        if (_selectedRole == null)
+        {
+            return;
+        }
+
+        _savingInfo = true;
+        var success = await RoleService.UpdateRoleAsync(_selectedRole.Id, new UpdateRoleRequestDto
+        {
+            Name = _roleForm.Name,
+            Description = _roleForm.Description,
+            IsEnabled = _roleForm.IsEnabled
+        });
+        _savingInfo = false;
+
+        if (!success)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Save failed");
+            return;
+        }
+
+        Message.Success(I18n.T("MSG_SAVE_SUCCESS") ?? "Saved");
+        await LoadRolesAsync();
+        await SelectRole(_selectedRole.Id);
+    }
+
+    private async Task SavePermissions()
+    {
+        if (_selectedRole == null)
+        {
+            return;
+        }
+
+        _savingPermissions = true;
+        var success = await RoleService.UpdatePermissionsAsync(_selectedRole.Id, new UpdatePermissionsRequestDto
+        {
+            FunctionIds = _selectedFunctions.ToList(),
+            DataScopes = _selectedRole.DataScopes
+        });
+        _savingPermissions = false;
+
+        if (!success)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Save failed");
+            return;
+        }
+
+        Message.Success(I18n.T("MSG_SAVE_SUCCESS") ?? "Saved");
+        await SelectRole(_selectedRole.Id);
+    }
+
+    private RenderFragment RenderFunctionNode(FunctionMenuNode node) => builder =>
+    {
+        var index = 0;
+        builder.OpenElement(index++, "div");
+        builder.AddAttribute(index++, "class", "permission-node");
+
+        builder.OpenElement(index++, "div");
+        builder.AddAttribute(index++, "class", "permission-node-header");
+        builder.OpenComponent<Checkbox>(index++);
+        builder.AddAttribute(index++, "Checked", IsNodeChecked(node));
+        builder.AddAttribute(index++, "Indeterminate", IsNodeIndeterminate(node));
+        builder.AddAttribute(index++, "Disabled", _selectedRole?.IsSystem == true);
+        builder.AddAttribute(index++, "OnChange", EventCallback.Factory.Create<bool>(this, value => ToggleNode(node, value)));
+        builder.CloseComponent();
+        builder.OpenElement(index++, "span");
+        builder.AddAttribute(index++, "class", "permission-node-label");
+        builder.AddContent(index++, node.Name);
+        builder.CloseElement();
+        builder.CloseElement();
+
+        if (node.Children.Count > 0)
+        {
+            builder.OpenElement(index++, "div");
+            builder.AddAttribute(index++, "class", "permission-children");
+            foreach (var child in node.Children.OrderBy(c => c.SortOrder))
+            {
+                builder.AddContent(index++, RenderFunctionNode(child));
+            }
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    private bool IsNodeChecked(FunctionMenuNode node) => _selectedFunctions.Contains(node.Id);
+
+    private bool IsNodeIndeterminate(FunctionMenuNode node)
+    {
+        if (node.Children.Count == 0)
+        {
+            return false;
+        }
+
+        var childStates = node.Children.Select(child =>
+        {
+            if (IsNodeChecked(child) && child.Children.Count == 0)
+            {
+                return (checkedChild: true, indeterminateChild: false);
+            }
+
+            return (checkedChild: IsNodeChecked(child), indeterminateChild: IsNodeIndeterminate(child));
+        }).ToList();
+
+        var anyChecked = childStates.Any(s => s.checkedChild || s.indeterminateChild);
+        var allChecked = node.Children.All(child => IsNodeFullyChecked(child));
+        return anyChecked && !allChecked;
+    }
+
+    private bool IsNodeFullyChecked(FunctionMenuNode node)
+    {
+        if (!IsNodeChecked(node))
+        {
+            return false;
+        }
+
+        return node.Children.All(IsNodeFullyChecked);
+    }
+
+    private void ToggleNode(FunctionMenuNode node, bool value)
+    {
+        if (_selectedRole?.IsSystem == true)
+        {
+            return;
+        }
+
+        if (value)
+        {
+            AddNodeWithDescendants(node);
+            SelectAncestors(node.Id);
+        }
+        else
+        {
+            RemoveNodeWithDescendants(node);
+            CleanupAncestors(node.Id);
+        }
+    }
+
+    private void AddNodeWithDescendants(FunctionMenuNode node)
+    {
+        _selectedFunctions.Add(node.Id);
+        foreach (var child in node.Children)
+        {
+            AddNodeWithDescendants(child);
+        }
+    }
+
+    private void RemoveNodeWithDescendants(FunctionMenuNode node)
+    {
+        _selectedFunctions.Remove(node.Id);
+        foreach (var child in node.Children)
+        {
+            RemoveNodeWithDescendants(child);
+        }
+    }
+
+    private void SelectAncestors(Guid nodeId)
+    {
+        if (!_parentLookup.TryGetValue(nodeId, out var parent) || parent == null)
+        {
+            return;
+        }
+
+        _selectedFunctions.Add(parent.Value);
+        SelectAncestors(parent.Value);
+    }
+
+    private void CleanupAncestors(Guid nodeId)
+    {
+        if (!_parentLookup.TryGetValue(nodeId, out var parent) || parent == null)
+        {
+            return;
+        }
+
+        if (!HasDescendantSelected(parent.Value))
+        {
+            _selectedFunctions.Remove(parent.Value);
+            CleanupAncestors(parent.Value);
+        }
+    }
+
+    private bool HasDescendantSelected(Guid nodeId)
+    {
+        if (_selectedFunctions.Contains(nodeId))
+        {
+            return true;
+        }
+
+        if (!_functionLookup.TryGetValue(nodeId, out var node))
+        {
+            return false;
+        }
+
+        return node.Children.Any(child => HasDescendantSelected(child.Id));
+    }
+
+    private void ShowCreateModal()
+    {
+        _createForm = new CreateRoleForm
+        {
+            Code = $"ROLE.{DateTime.UtcNow:yyyyMMddHHmmss}",
+            Name = I18n.T("LBL_ROLE_DEFAULT_NAME") ?? "新角色"
+        };
+        _showCreateModal = true;
+    }
+
+    private async Task CreateRole()
+    {
+        if (string.IsNullOrWhiteSpace(_createForm.Code) || string.IsNullOrWhiteSpace(_createForm.Name))
+        {
+            Message.Warning(I18n.T("MSG_ROLE_REQUIRED") ?? "Code and Name are required.");
+            return;
+        }
+
+        var role = await RoleService.CreateRoleAsync(new CreateRoleRequestDto
+        {
+            Code = _createForm.Code.Trim(),
+            Name = _createForm.Name.Trim(),
+            IsEnabled = true
+        });
+
+        if (role == null)
+        {
+            Message.Error(I18n.T("MSG_SAVE_FAILED") ?? "Create failed");
+            return;
+        }
+
+        _showCreateModal = false;
+        await LoadRolesAsync();
+        await SelectRole(role.Id);
+    }
+
+    private FunctionMenuNode? ResolveNode(Guid id)
+    {
+        return _functionLookup.TryGetValue(id, out var node) ? node : null;
+    }
+
+    private record RoleFormModel
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsEnabled { get; set; } = true;
+    }
+
+    private record CreateRoleForm
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+    }
+}

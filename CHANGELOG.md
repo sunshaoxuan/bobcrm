@@ -12,10 +12,14 @@
 ### Added
 - **角色与权限框架**：新增 `RoleProfile`、`FunctionNode`、`RoleFunctionPermission`、`RoleDataScope`、`RoleAssignment`、`AccessService` 及 `/api/access` 端点，覆盖角色建档、功能授权、数据范围设置与用户-角色绑定。
 - **系统默认种子**：启动时自动生成标准功能树（Dashboard / Customers / Entity / Settings 等）、`SYS.ADMIN` 角色以及 `admin`→`SYS.ADMIN` 绑定，保证默认账号可访问整套功能。
+- **模板绑定基础设施**：FormTemplate 新增 UsageType/Tags/RequiredFunctionCode 字段，引入 `TemplateBinding` 模型、绑定服务与 `/api/templates/bindings`、`/api/templates/runtime` 端点，为系统实体页面的模板化铺路。
+- **模板运行态（前端）**：Blazor `PageLoader` 通过 `TemplateRuntimeClient` 优先消费 `/api/templates/runtime`，显示模板信息与数据范围，缺省时自动回退旧版模板 API。
+- **角色管理界面**：新增 `/roles` 页面，提供角色列表、基础信息编辑与 FunctionNodes 权限树分配功能。
 
 ### Changed
 - **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`。
 - **组织接口提示**：在 UI 与文档中统一组织维度说明，方便在角色框架内复用 `OrganizationId` 字段。
+- **领域化菜单**：新增 `/api/access/functions/me` 以及动态领域导航（领域切换 + 领域内二/三级菜单），菜单与 FunctionNodes 权限实时联动。
 
 ### Fixed
 - **组织能力联动**：在接入权限框架的同时，修复组织接口在实体编辑器中的提示与验证不一致问题，防止实体勾选后缺少字段。

@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
@@ -13,20 +16,74 @@ public class AccessService
 
     private static readonly FunctionSeed[] DefaultFunctionSeeds =
     [
-        new("APP.ROOT", "Application", null, "appstore", true, 0, null),
-        new("APP.DASHBOARD", "Dashboard", "/", "home", true, 10, "APP.ROOT"),
-        new("APP.CUSTOMERS", "Customers", "/customers", "team", true, 20, "APP.ROOT"),
-        new("APP.CUSTOMERS.CREATE", "Create Customer", null, "plus", false, 21, "APP.CUSTOMERS"),
-        new("APP.CUSTOMERS.EDIT", "Edit Customer", null, "edit", false, 22, "APP.CUSTOMERS"),
-        new("APP.ENTITY", "Entity Definitions", "/entity-definitions", "profile", true, 30, "APP.ROOT"),
-        new("APP.ENTITY.PUBLISH", "Publish Entity", null, "cloud-upload", false, 31, "APP.ENTITY"),
-        new("APP.TEMPLATES", "Templates", "/templates", "appstore", true, 40, "APP.ROOT"),
-        new("APP.ORGANIZATIONS", "Organizations", "/organizations", "cluster", true, 50, "APP.ROOT"),
-        new("APP.ROLES", "Roles", "/roles", "lock", true, 55, "APP.ROOT"),
-        new("APP.ROLES.CREATE", "Create Role", null, "plus", false, 56, "APP.ROLES"),
-        new("APP.ROLES.EDIT", "Edit Role", null, "edit", false, 57, "APP.ROLES"),
-        new("APP.ROLES.PERMISSIONS", "Configure Permissions", null, "safety", false, 58, "APP.ROLES"),
-        new("APP.SETTINGS", "Settings", "/settings", "setting", true, 60, "APP.ROOT")
+        new("APP.ROOT", "应用根节点", null, "appstore", true, 0, null),
+
+        // 1. 系统管理
+        new("SYS", "系统管理", null, "setting", true, 10, "APP.ROOT"),
+        new("SYS.SET", "系统设置", null, "setting", true, 11, "SYS"),
+        new("SYS.SET.CONFIG", "系统设置", "/settings", "setting", true, 111, "SYS.SET"),
+        new("SYS.MSG", "邮件与消息", null, "mail", true, 12, "SYS"),
+        new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
+        new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
+        new("SYS.MSG.TEMPLATE", "消息模板", null, "book", false, 123, "SYS.MSG"),
+        new("SYS.ENTITY", "实体管理", null, "profile", true, 13, "SYS"),
+        new("SYS.ENTITY.EDITOR", "业务实体编辑", "/entity-definitions", "profile", true, 131, "SYS.ENTITY"),
+        new("SYS.TEMPLATE", "模板管理", null, "appstore", true, 14, "SYS"),
+        new("SYS.TEMPLATE.DESIGN", "模板设计", "/templates", "appstore", true, 141, "SYS.TEMPLATE"),
+        new("SYS.TEMPLATE.ASSIGN", "模板分配", null, "branches", false, 142, "SYS.TEMPLATE"),
+        new("SYS.LOG", "日志管理", null, "audit", true, 15, "SYS"),
+        new("SYS.LOG.USER", "用户使用记录", null, "user", false, 151, "SYS.LOG"),
+        new("SYS.LOG.SYSTEM", "系统日志", null, "file-search", false, 152, "SYS.LOG"),
+        new("SYS.AI", "人工智能", null, "robot", true, 16, "SYS"),
+        new("SYS.AI.MODEL", "模型设置", null, "sliders", false, 161, "SYS.AI"),
+        new("SYS.AI.WORKFLOW", "工作流程", null, "branches", false, 162, "SYS.AI"),
+        new("SYS.AI.AGENT", "智能体", null, "apartment", false, 163, "SYS.AI"),
+
+        // 2. 基本设置
+        new("BAS", "基本设置", null, "appstore", true, 20, "APP.ROOT"),
+        new("BAS.ORG", "组织管理", null, "cluster", true, 21, "BAS"),
+        new("BAS.ORG.DIRECTORY", "组织档案", "/organizations", "cluster", true, 211, "BAS.ORG"),
+        new("BAS.ORG.ROLES", "角色管理", "/roles", "lock", true, 212, "BAS.ORG"),
+        new("BAS.AUTH", "用户与权限", null, "team", true, 22, "BAS"),
+        new("BAS.AUTH.USERS", "用户档案", "/users", "user", true, 221, "BAS.AUTH"),
+        new("BAS.AUTH.ROLE.PERM", "角色权限分配", null, "safety", false, 222, "BAS.AUTH"),
+        new("BAS.AUTH.USER.ROLE", "用户角色分配", null, "team", false, 223, "BAS.AUTH"),
+
+        // 3. 客户关系
+        new("CRM", "客户关系", null, "team", true, 30, "APP.ROOT"),
+        new("CRM.CORE", "基本档案", null, "database", true, 31, "CRM"),
+        new("CRM.CORE.ACCOUNTS", "客户主档", "/customers", "team", true, 311, "CRM.CORE"),
+        new("CRM.CORE.CONTRACTS", "合约管理", null, "file-done", false, 312, "CRM.CORE"),
+        new("CRM.CORE.IMPLEMENT", "实施管理", null, "tool", false, 313, "CRM.CORE"),
+        new("CRM.CORE.SERVICE", "运维管理", null, "safety", false, 314, "CRM.CORE"),
+        new("CRM.PLAN", "计划管理", null, "calendar", true, 32, "CRM"),
+        new("CRM.PLAN.TASKS", "计划任务", null, "schedule", true, 321, "CRM.PLAN"),
+        new("CRM.PLAN.SCHEDULE", "日程安排", null, "calendar", false, 322, "CRM.PLAN"),
+        new("CRM.PLAN.EXEC", "作业执行", null, "play-circle", false, 323, "CRM.PLAN"),
+        new("CRM.PLAN.KANBAN", "作业看板", null, "appstore", false, 324, "CRM.PLAN"),
+
+        // 4. 知识库
+        new("KB", "知识库", null, "book", true, 40, "APP.ROOT"),
+        new("KB.QA", "问与答", null, "question-circle", true, 41, "KB"),
+        new("KB.QA.FAQ", "常见问答", null, "question-circle", true, 411, "KB.QA"),
+        new("KB.QA.CUSTOMER", "客户问答库", null, "message", false, 412, "KB.QA"),
+        new("KB.QA.REPLY", "答复模板", null, "file-text", false, 413, "KB.QA"),
+        new("KB.PROD", "产品与补丁", null, "build", true, 42, "KB"),
+        new("KB.PROD.VERSION", "产品版本", null, "barcode", true, 421, "KB.PROD"),
+        new("KB.PROD.PATCH", "补丁管理", null, "tool", false, 422, "KB.PROD"),
+        new("KB.PROD.DEPLOY", "客户部署记录", null, "file-search", false, 423, "KB.PROD"),
+        new("KB.DOC", "文档与手册", null, "book", true, 43, "KB"),
+        new("KB.DOC.PRODUCT", "产品文档", null, "book", true, 431, "KB.DOC"),
+        new("KB.DOC.MANUAL", "操作手册", null, "read", false, 432, "KB.DOC"),
+
+        // 5. 工作协作
+        new("COLLAB", "工作协作", null, "team", true, 50, "APP.ROOT"),
+        new("COLLAB.WORK", "工作记录", null, "schedule", true, 51, "COLLAB"),
+        new("COLLAB.WORK.PERSONAL", "个人记录", null, "user", true, 511, "COLLAB.WORK"),
+        new("COLLAB.WORK.LOG", "工作日志", null, "file-text", false, 512, "COLLAB.WORK"),
+        new("COLLAB.FILE", "文件管理", null, "paper-clip", true, 52, "COLLAB"),
+        new("COLLAB.FILE.ATTACH", "附件管理", null, "paper-clip", true, 521, "COLLAB.FILE"),
+        new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
 
     public AccessService(AppDbContext db)
@@ -253,6 +310,64 @@ public class AccessService
         }
     }
 
+    public async Task EnsureFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(functionCode))
+        {
+            return;
+        }
+
+        if (!await HasFunctionAccessAsync(userId, functionCode, ct))
+        {
+            throw new UnauthorizedAccessException("User does not have required function permission.");
+        }
+    }
+
+    public async Task<bool> HasFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(functionCode))
+        {
+            return true;
+        }
+
+        var normalizedCode = functionCode.Trim();
+        var now = DateTime.UtcNow;
+
+        return await _db.RoleAssignments
+            .Where(a => a.UserId == userId &&
+                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                        (!a.ValidTo.HasValue || a.ValidTo >= now))
+            .SelectMany(a => a.Role!.Functions)
+            .Join(_db.FunctionNodes,
+                rf => rf.FunctionId,
+                fn => fn.Id,
+                (rf, fn) => fn.Code)
+            .AnyAsync(code => code == normalizedCode, ct);
+    }
+
+    public async Task<DataScopeEvaluationResult> EvaluateDataScopeAsync(string userId, string entityName, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var normalizedEntity = entityName.Trim().ToLowerInvariant();
+
+        var scopeBindings = await _db.RoleAssignments
+            .Where(a => a.UserId == userId &&
+                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                        (!a.ValidTo.HasValue || a.ValidTo >= now) &&
+                        a.Role != null)
+            .SelectMany(a => a.Role!.DataScopes
+                .Where(ds => ds.EntityName == "*" || ds.EntityName.ToLower() == normalizedEntity)
+                .Select(ds => new ScopeBinding(ds, a.OrganizationId)))
+            .ToListAsync(ct);
+
+        if (scopeBindings.Any(sb => sb.Scope.ScopeType == RoleDataScopeTypes.All))
+        {
+            return new DataScopeEvaluationResult(true, Array.Empty<ScopeBinding>());
+        }
+
+        return new DataScopeEvaluationResult(false, scopeBindings);
+    }
+
     private async Task SeedFunctionTreeAsync(CancellationToken ct)
     {
         var existing = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
@@ -295,4 +410,15 @@ public class AccessService
             await _db.SaveChangesAsync(ct);
         }
     }
+}
+
+public record ScopeBinding(RoleDataScope Scope, Guid? OrganizationId);
+
+public record DataScopeEvaluationResult(bool HasFullAccess, IReadOnlyList<ScopeBinding> Scopes)
+{
+    public IReadOnlyList<Guid?> OrganizationFilter =>
+        Scopes.Select(sb => sb.OrganizationId)
+            .Where(id => id.HasValue)
+            .Distinct()
+            .ToList();
 }

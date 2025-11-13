@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace BobCrm.Api.Domain;
 
 /// <summary>
@@ -37,6 +39,14 @@ public class FormTemplate
     /// <summary>布局JSON（Widget树）</summary>
     public string? LayoutJson { get; set; }
 
+    /// <summary>使用场景</summary>
+    public BobCrm.Api.Domain.FormTemplateUsageType UsageType { get; set; } = BobCrm.Api.Domain.FormTemplateUsageType.Detail;
+
+    /// <summary>标签集合</summary>
+    public List<string>? Tags { get; set; }
+
+    /// <summary>访问所需功能编码</summary>
+    public string? RequiredFunctionCode { get; set; }
     /// <summary>模板描述（可选）</summary>
     public string? Description { get; set; }
 

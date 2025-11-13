@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Routing
 @using System.Net.Http.Json
+@using System.Collections.Generic
+@using System.Linq
+@using BobCrm.App.Models
 @using BobCrm.App.Services
 @using AntDesign
 @inject AuthService Auth
@@ -23,14 +26,30 @@
             <span class="rail-tagline">@_railTagline</span>
         </div>
         <div class="rail-group">
-            @foreach (var item in _railItems)
+            @if (_menuLoading)
             {
-                <Tooltip Title="@I18n.T(item.LabelKey)" Placement="Placement.Right">
-                    <button class="rail-item @(IsActiveRail(item) ? "active" : string.Empty)" @onclick="() => NavigateTo(item.Href)">
-                        <span class="rail-item-icon"><Icon Type="@item.Icon" /></span>
-                        <span class="rail-item-label">@I18n.T(item.LabelKey)</span>
-                    </button>
-                </Tooltip>
+                <div class="rail-placeholder">@I18n.T("LBL_LOADING")</div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_menuError))
+            {
+                <div class="rail-placeholder rail-error">@_menuError</div>
+            }
+            else if (_domains.Count == 0)
+            {
+                <div class="rail-placeholder">暂无菜单</div>
+            }
+            else
+            {
+                @foreach (var domain in _domains)
+                {
+                    var isActive = _activeDomain?.Id == domain.Id;
+                    <Tooltip Title="@domain.Name" Placement="Placement.Right">
+                        <button type="button" class="rail-item @(isActive ? "active" : string.Empty)" @onclick="() => OnDomainSelected(domain)">
+                            <span class="rail-item-icon"><Icon Type="@ResolveIcon(domain.Icon)" /></span>
+                            <span class="rail-item-label">@domain.Name</span>
+                        </button>
+                    </Tooltip>
+                }
             }
         </div>
         <div class="rail-group rail-footer">
@@ -65,6 +84,65 @@
                                 <Button Ghost OnClick="HideSticky">关闭</Button>
                             </div>
                         </div>
+                    }
+                    @if (!_menuLoading && _activeDomain != null)
+                    {
+                        <section class="domain-menu-panel">
+                            <div class="domain-menu-header">
+                                <div>
+                                    <p class="domain-eyebrow">DOMAIN</p>
+                                    <h2>@_activeDomain.Name</h2>
+                                </div>
+                                <button type="button" class="domain-refresh" @onclick="RefreshMenu">
+                                    <Icon Type="@IconType.Outline.Reload" />
+                                </button>
+                            </div>
+                            @{
+                                var visibleModules = GetDisplayModules()
+                                    .Select(m => (Module: m, Functions: GetFunctionEntries(m).ToList()))
+                                    .Where(entry => entry.Functions.Count > 0)
+                                    .ToList();
+                            }
+                            <div class="domain-modules">
+                                @foreach (var entry in visibleModules)
+                                {
+                                    var module = entry.Module;
+                                    var functions = entry.Functions;
+                                    <div class="domain-module-card">
+                                        <div class="module-header">
+                                            <div class="module-icon">
+                                                <Icon Type="@ResolveIcon(module.Icon)" />
+                                            </div>
+                                            <div class="module-meta">
+                                                <strong>@module.Name</strong>
+                                                @if (!string.IsNullOrEmpty(module.Route))
+                                                {
+                                                    <span class="module-route">@module.Route</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="module-links">
+                                            @foreach (var function in functions)
+                                            {
+                                                var route = NormalizeRoute(function.Route);
+                                                var active = IsFunctionActive(function);
+                                                <button type="button"
+                                                        class="module-link @(active ? "active" : string.Empty)"
+                                                        disabled="@string.IsNullOrWhiteSpace(route)"
+                                                        @onclick="() => NavigateTo(route)">
+                                                    <span class="link-icon"><Icon Type="@ResolveIcon(function.Icon)" /></span>
+                                                    <span class="link-label">@function.Name</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @if (visibleModules.Count == 0)
+                                {
+                                    <div class="domain-empty">该领域暂未开放可用功能</div>
+                                }
+                            </div>
+                        </section>
                     }
                     @Body
                 </div>
@@ -109,16 +187,12 @@
 @code {
     private const string RootHref = "/";
     private const string SettingsHref = "/settings";
-    private record RailItem(string Icon, string LabelKey, string Href);
 
-    private readonly RailItem[] _railItems =
-    [
-        new(IconType.Outline.Home, "MENU_DASHBOARD", RootHref),
-        new(IconType.Outline.Team, "MENU_CUSTOMERS", "/customers"),
-        new(IconType.Outline.Profile, "MENU_ENTITY", "/entity-definitions"),
-        new(IconType.Outline.Cluster, "MENU_ORG", "/organizations"),
-        new(IconType.Outline.Appstore, "MENU_TEMPLATES", "/templates")
-    ];
+    private readonly List<FunctionMenuNode> _domains = new();
+    private FunctionMenuNode? _activeDomain;
+    private bool _menuLoading = true;
+    private string? _menuError;
+    private string _currentRoute = "/";
 
     [Parameter] public RenderFragment? Body { get; set; }
     [CascadingParameter] public int I18nRenderVersion { get; set; }
@@ -128,6 +202,7 @@
 
     protected override void OnInitialized()
     {
+        _currentRoute = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
         Auth.OnUnauthorized += HandleUnauthorized;
         ThemeState.OnChanged += HandleThemeChanged;
         Layout.OnChanged += HandleLayoutChanged;
@@ -140,6 +215,7 @@
     {
         if (firstRender)
         {
+            await LoadMenuAsync();
             await LoadNavModeAsync();
         }
     }
@@ -151,6 +227,53 @@
             _lastI18nVersion = I18nRenderVersion;
             UpdateRailTagline();
         }
+    }
+
+    private async Task LoadMenuAsync()
+    {
+        try
+        {
+            _menuLoading = true;
+            _menuError = null;
+            var resp = await Auth.GetWithRefreshAsync("/api/access/functions/me");
+            if (!resp.IsSuccessStatusCode)
+            {
+                _menuError = "菜单加载失败";
+                _domains.Clear();
+                _activeDomain = null;
+            }
+            else
+            {
+                var tree = await resp.Content.ReadFromJsonAsync<List<FunctionMenuNode>>();
+                _domains.Clear();
+                _domains.AddRange(ExtractDomainNodes(tree));
+                var resolved = ResolveActiveDomain() ?? _domains.FirstOrDefault();
+                _activeDomain = resolved;
+                Layout.SetCurrentDomain(_activeDomain?.Code);
+            }
+        }
+        catch (Exception ex)
+        {
+            _menuError = ex.Message;
+            _domains.Clear();
+            _activeDomain = null;
+        }
+        finally
+        {
+            _menuLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private List<FunctionMenuNode> ExtractDomainNodes(List<FunctionMenuNode>? nodes)
+    {
+        if (nodes == null || nodes.Count == 0) return new();
+        var root = nodes.FirstOrDefault(n => string.Equals(n.Code, "APP.ROOT", StringComparison.OrdinalIgnoreCase));
+        var domains = (root?.Children ?? nodes)
+            .Where(n => n.IsMenu)
+            .OrderBy(n => n.SortOrder)
+            .ToList();
+        return domains;
     }
 
     private async Task LoadNavModeAsync()
@@ -177,7 +300,13 @@
 
     private void HandleThemeChanged() => SafeRender();
     private void HandleLayoutChanged() => SafeRender();
-    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e) => SafeRender();
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentRoute = NormalizeRelative(Nav.ToBaseRelativePath(e.Location));
+        SyncActiveDomainWithUri();
+        SafeRender();
+    }
+
     private void HandleI18nChanged()
     {
         UpdateRailTagline();
@@ -201,29 +330,21 @@
         return string.IsNullOrEmpty(trimmed) ? "/" : trimmed;
     }
 
-    private bool IsActiveRail(RailItem item)
+    private void NavigateTo(string href)
     {
-        var current = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
-        var target = NormalizeRelative(item.Href);
-        if (target == "/")
-        {
-            return current == "/";
-        }
-
-        return current.StartsWith(target, StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(href)) return;
+        Nav.NavigateTo(href);
     }
-
-    private void NavigateTo(string href) => Nav.NavigateTo(href);
 
     private void CloseOverlay() => Layout.SetSiderOverlay(false);
     private void ToggleRightPanel() => Layout.ToggleRightPanel();
     private bool ShowCustomerSider => IsCustomerRoute();
     private bool IsCustomerRoute()
     {
-        var current = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
-        return current.StartsWith("customers", StringComparison.OrdinalIgnoreCase) ||
-               current.StartsWith("customer", StringComparison.OrdinalIgnoreCase);
+        return _currentRoute.StartsWith("customers", StringComparison.OrdinalIgnoreCase) ||
+               _currentRoute.StartsWith("customer", StringComparison.OrdinalIgnoreCase);
     }
+
     private async Task InvokeSticky(Func<Task>? callback)
     {
         if (callback != null)
@@ -234,6 +355,161 @@
 
     private void HideSticky() => Interaction.HideStickyBar();
     private string NavModeClass => $"nav-mode-{Layout.NavMode.ToString().ToLowerInvariant()}";
+
+    private void OnDomainSelected(FunctionMenuNode domain)
+    {
+        if (_activeDomain?.Id == domain.Id)
+        {
+            var route = FindFirstNavigableRoute(domain);
+            if (!string.IsNullOrWhiteSpace(route))
+            {
+                NavigateTo(route!);
+            }
+            return;
+        }
+
+        _activeDomain = domain;
+        Layout.SetCurrentDomain(domain.Code);
+        var firstRoute = FindFirstNavigableRoute(domain);
+        if (!string.IsNullOrWhiteSpace(firstRoute))
+        {
+            NavigateTo(firstRoute!);
+        }
+        else
+        {
+            SafeRender();
+        }
+    }
+
+    private void SyncActiveDomainWithUri()
+    {
+        if (_domains.Count == 0) return;
+        var resolved = ResolveActiveDomain();
+        if (resolved != null && (_activeDomain == null || resolved.Id != _activeDomain.Id))
+        {
+            _activeDomain = resolved;
+            Layout.SetCurrentDomain(_activeDomain?.Code);
+        }
+    }
+
+    private FunctionMenuNode? ResolveActiveDomain()
+    {
+        if (_domains.Count == 0) return null;
+        foreach (var domain in _domains)
+        {
+            if (DomainContainsRoute(domain, _currentRoute))
+            {
+                return domain;
+            }
+        }
+        return _domains.FirstOrDefault();
+    }
+
+    private bool DomainContainsRoute(FunctionMenuNode node, string route)
+    {
+        if (!string.IsNullOrWhiteSpace(node.Route) && PathMatches(node.Route, route))
+        {
+            return true;
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (DomainContainsRoute(child, route))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool PathMatches(string? route, string current)
+    {
+        var normalized = NormalizeRelative(route ?? string.Empty);
+        if (normalized == "/")
+        {
+            return current == "/";
+        }
+        return current.StartsWith(normalized.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<FunctionMenuNode> GetDisplayModules()
+    {
+        if (_activeDomain == null) yield break;
+        foreach (var module in _activeDomain.Children.OrderBy(c => c.SortOrder))
+        {
+            if (module.Children.Any() || !string.IsNullOrWhiteSpace(module.Route))
+            {
+                yield return module;
+            }
+        }
+    }
+
+    private IEnumerable<FunctionMenuNode> GetFunctionEntries(FunctionMenuNode module)
+    {
+        if (module.Children.Count == 0 && !string.IsNullOrWhiteSpace(module.Route))
+        {
+            yield return module;
+            yield break;
+        }
+
+        foreach (var child in module.Children.OrderBy(c => c.SortOrder))
+        {
+            if (child.Children.Count > 0 && string.IsNullOrWhiteSpace(child.Route))
+            {
+                foreach (var leaf in GetFunctionEntries(child))
+                {
+                    yield return leaf;
+                }
+            }
+            else
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private bool IsFunctionActive(FunctionMenuNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.Route)) return false;
+        return PathMatches(node.Route, _currentRoute);
+    }
+
+    private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
+
+    private string NormalizeRoute(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route)) return string.Empty;
+        if (route.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return route;
+        }
+
+        return route.StartsWith("/") ? route : "/" + route.Trim();
+    }
+
+    private string? FindFirstNavigableRoute(FunctionMenuNode node)
+    {
+        if (!string.IsNullOrWhiteSpace(node.Route))
+        {
+            return NormalizeRoute(node.Route);
+        }
+
+        foreach (var child in node.Children.OrderBy(c => c.SortOrder))
+        {
+            var candidate = FindFirstNavigableRoute(child);
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private void RefreshMenu()
+    {
+        _ = LoadMenuAsync();
+    }
 
     public void Dispose()
     {

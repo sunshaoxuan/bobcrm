@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Json;
 using BobCrm.Api.Domain;
@@ -39,6 +40,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<FormTemplate> FormTemplates => Set<FormTemplate>();
+    public DbSet<TemplateBinding> TemplateBindings => Set<TemplateBinding>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
 
     // 本地化
@@ -123,10 +125,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         // - 添加"无访问行不筛选"的表达式
 
         // 索引配置
-        ConfigureIndexes(b);
+        ConfigureIndexes(b, jsonOptions);
     }
 
-    private void ConfigureIndexes(ModelBuilder b)
+    private void ConfigureIndexes(ModelBuilder b, JsonSerializerOptions jsonOptions)
     {
         // Customer 索引
         b.Entity<Customer>()
@@ -174,6 +176,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasIndex(ul => new { ul.UserId, ul.EntityType });
 
         // FormTemplate 索引和约束
+        var tagsConverter = new ValueConverter<List<string>?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, jsonOptions),
+            v => string.IsNullOrEmpty(v)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>());
         b.Entity<FormTemplate>()
             .HasIndex(ft => new { ft.UserId, ft.EntityType });
 
@@ -182,6 +189,38 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<FormTemplate>()
             .HasIndex(ft => new { ft.EntityType, ft.IsSystemDefault });
+
+        b.Entity<FormTemplate>()
+            .Property(ft => ft.Tags)
+            .HasColumnType("jsonb")
+            .HasConversion(tagsConverter);
+
+        b.Entity<FormTemplate>()
+            .Property(ft => ft.RequiredFunctionCode)
+            .HasMaxLength(128);
+
+        b.Entity<TemplateBinding>()
+            .HasIndex(tb => new { tb.EntityType, tb.UsageType, tb.IsSystem })
+            .IsUnique();
+
+        b.Entity<TemplateBinding>()
+            .Property(tb => tb.EntityType)
+            .HasMaxLength(128)
+            .IsRequired();
+
+        b.Entity<TemplateBinding>()
+            .Property(tb => tb.RequiredFunctionCode)
+            .HasMaxLength(128);
+
+        b.Entity<TemplateBinding>()
+            .Property(tb => tb.UpdatedBy)
+            .HasMaxLength(128);
+
+        b.Entity<TemplateBinding>()
+            .HasOne(tb => tb.Template)
+            .WithMany()
+            .HasForeignKey(tb => tb.TemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // EntityDefinition 配置
         b.Entity<EntityDefinition>()

@@ -1,0 +1,176 @@
+# ARCH-22 标准实体模板化与权限联动设计
+
+> 版本：0.1（2025-11-13）  
+> 作者：Codex AI  
+> 适用范围：组织、用户、角色、客户等系统级实体的模板化渲染与权限联动能力
+
+---
+
+## 1. 背景与动机
+
+BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目前系统级实体（组织、用户、角色、客户）的管理页面仍是手写 Razor 组件：
+
+- 无法重用 FormTemplate 体系，难以继承未来的布局/字段增强。
+- 这些实体的权限与组织维度有单独的实现，缺乏统一入口，扩展成本高。
+- 无法在界面层快速叠加公式/脚本控制，限制了“低代码”的愿景。
+
+为此，需要一套“标准实体模板化 + 权限联动”方案，确保系统内置实体也遵循与动态实体一致的模型、模板、权限策略，为后续无代码化铺平道路。
+
+## 2. 设计目标
+
+| 维度 | 目标 |
+| --- | --- |
+| 功能 | 组织 / 用户 / 角色 / 客户等系统级实体的列表、详情、编辑全部改用默认模板管理，允许用户复制并自定义。 |
+| 体验 | 页面通过模板描述布局和字段，能与 FormDesigner/TemplateLibrary 打通；访问权限由角色功能 & 数据范围决定。 |
+| 技术 | 在不破坏现有动态实体体系的前提下，新增模板绑定、运行时渲染、权限拦截和组织维度注入机制。 |
+| 扩展 | 预留“公式”和“嵌入式脚本”挂点，用于控制字段显隐、校验、联动等复杂 UI 行为。 |
+
+## 3. 范围与非目标
+
+### 本阶段范围
+1. 标准实体（Organization, User, Role, Customer）页面改造成模板驱动（列表 + 详情/编辑）。
+2. 为上述实体预置系统模板（`IsSystemDefault = true`），初始化数据。
+3. 将导航菜单指向模板化页面，并在 PageLoader 侧增加权限检查。
+4. 后端提供统一的模板运行态 API（含权限 & 数据范围验证）。
+5. 文档、测试、迁移脚本全部补齐。
+
+### 非目标
+- 暂不开放 GUI 公式编辑器，仅定义接口与数据结构，后续迭代实现。
+- 暂不处理复杂流程引擎，只聚焦 CRUD 层面的灵活渲染。
+- 暂不支持跨实体复合模板（主实体+多个子实体的联动视图），保持单实体渲染。
+
+## 4. 现状分析
+
+| 模块 | 现状 | 痛点 |
+| --- | --- | --- |
+| FormTemplate | 已支持 CRUD、用户默认 / 系统默认、FormDesigner | 仅 PageLoader/TemplateGallery 在用，系统级页面不使用 |
+| PageLoader | 能基于模板渲染动态实体详情 | 无法承载列表，也未与权限联动 |
+| 权限框架 | 已有 RoleProfile / FunctionNode / AccessService，支持数据范围 | 组件层没有统一接入点，手写页面各自判断 |
+| 组织/用户/角色/客户页面 | 手写 Razor + 服务 | 与模板体系脱节，需重复开发 |
+
+## 5. 总体方案
+
+### 5.1 模板驱动策略
+1. **模板类型扩展**  
+   - `FormTemplate` 新增 `UsageType` 字段（`List`, `Detail`, `Edit`, `Combined`）。  
+   - 系统实体至少有一组 `List + Detail/Edit` 模板。  
+   - 新增 `SystemEntityTemplateProfile`（虚拟模型，不单独建表，使用 FormTemplate + Tag 存储）描述默认绑定关系。
+
+2. **模板绑定**  
+   - 新增 `TemplateBinding` 元信息（EntityType + UsageType + TemplateId）。  
+   - 系统级实体使用“系统绑定”，普通实体默认回退到现有逻辑。  
+   - 允许管理员在模板中心切换绑定（需具备相应功能权限）。
+
+3. **运行时渲染**  
+   - **列表**：在 `DynamicEntityData.razor` 中新增 `ListTemplateHost`，使用模板描述列、筛选、批量操作。  
+   - **详情/编辑**：继续复用 PageLoader，扩展 `UsageType` 参数决定渲染模式。  
+   - **内置组件库**：为常见控件（组织树选择器、角色功能树、数据范围表）提供 Widget 定义，可由模板引用。
+
+### 5.2 权限联动
+1. **功能权限**：导航 / API 根据 `FunctionCode` 控制可见性与访问。模板在绑定时记录 `RequiredFunctionCode`。  
+2. **数据范围**：模板运行前调用 `AccessService.EvaluateDataScope(entity, action)`，得到组织/条件过滤，传给后端查询。  
+3. **组织维度注入**：对实现 `IOrganizational` 的实体，模板渲染上下文自动带入 `OrganizationId` 下拉或固定值。
+
+### 5.3 公式与脚本挂点
+1. 在 `FormTemplate.LayoutJson` 中新增 `behaviors` 节点，支持声明：`onLoad`, `onChange(field)`, `beforeSave`。  
+2. 行为脚本先支持 **表达式+内置函数**（如 `SetVisible`, `SetRequired`, `FetchOptions`），后续再扩展全功能脚本。
+3. 运行时由 `FormRuntimeService` 解析并执行，确保沙箱与审计。
+
+## 6. 数据模型与存储设计
+
+| 实体 | 变更 |
+| --- | --- |
+| `FormTemplate` | 新增 `UsageType (enum)`、`Tags (json)`、`RequiredFunctionCode`。 |
+| `TemplateBinding`（新） | `Id`, `EntityType`, `UsageType`, `TemplateId`, `IsSystem`, `UpdatedBy`, `UpdatedAt`。 |
+| `RoleFunctionPermission` | 追加 `TemplateBindingId`（可空），用于精准授权模板入口。 |
+| `FunctionNode` 种子 | 添加 `Org.Management`, `User.Management`, `Role.Management`, `Customer.Management`。 |
+
+迁移策略：
+1. 扩展 `FormTemplate` 表字段。
+2. 新建 `TemplateBindings` 表，并为系统实体插入默认记录。
+3. 种入系统模板数据（使用 JSON 文件 + Migration/Seeder）。
+
+## 7. 后端服务设计
+
+| 服务 | 职责 |
+| --- | --- |
+| `TemplateBindingService`（新） | 维护绑定关系、提供查询接口、处理系统默认模板切换。 |
+| `TemplateRuntimeService` | 组合模板 + 实体元数据 + 权限结果，输出渲染上下文（字段、权限、数据范围、组织维度）。 |
+| `AccessService` 扩展 | 新增 `EnsureFunctionAccess(functionCode)`、`FilterQueryable(entityType, baseQuery)`。 |
+| `OrganizationService` | 提供 `GetAvailableOrganizationsForUser(userId)` 给模板控件使用。 |
+
+API 规划：
+1. `GET /api/templates/bindings/{entityType}?usage=list`  
+2. `PUT /api/templates/bindings/{entityType}`（需要对应功能权限）  
+3. `POST /api/templates/runtime/{entityType}` → 返回渲染上下文  
+4. 列表/详情数据 API 新增 `scopeToken` 参数，后端依据 AccessService 生成
+
+## 8. 前端架构与交互
+
+1. **导航与路由**
+   - `Customers.razor`、`OrganizationManagement.razor`、`Profile.razor`、`Role` 相关页面改为轻量“宿主”组件：加载 TemplateBinding → 渲染 `TemplateHost`。
+   - `TemplateHost` 根据 `UsageType` 选择 `ListTemplateHost` 或 `PageLoader`。
+   - 如果模板缺失或权限不足，显示统一的空状态/权限提示。
+
+> **当前进度**：新增 `TemplateRuntimeClient` 并将 `PageLoader` 接入 `/api/templates/runtime/{entityType}`，展示模板名称与 `AppliedScopes`，为系统实体详情切换模板驱动铺好运行时上下文（保留旧模板 API 作为回退）。
+
+2. **ListTemplateHost**
+   - 支持列定义、筛选器、批量操作按模板描述渲染。
+   - 与数据 API 交互：模板可声明数据源（默认 `entityType` 对应 API），也可自定义。
+   - 内置分页、排序、多选、行双击 → 打开详情模板。
+
+3. **DetailTemplateHost**
+   - 复用 PageLoader，但新增“行为脚本”执行器与权限控制（按钮级别）。
+   - 保存前调用 `beforeSave` 行为，可阻止保存并给出提示。
+
+4. **权限与组织维度提示**
+   - 当角色数据范围限制到某些组织时，列表查询条件栏自动显示已应用的组织过滤。
+   - 模板中的组织字段默认采用 `OrganizationPicker` 组件，自动绑定当前上下文。
+
+## 9. 公式 / 脚本扩展路径
+
+| 阶段 | 能力 | 备注 |
+| --- | --- | --- |
+| Phase 1 | Declarative 行为（显示/隐藏/必填/赋值） | 使用 JSON DSL，运行在前端。 |
+| Phase 2 | 受限表达式（如 `if`, `math`, `date`) | 通过轻量表达式解析器执行，支持取接口值。 |
+| Phase 3 | 插件脚本 | 采用沙箱（如 ClearScript）在服务器端执行，确保审计与限流。 |
+
+## 10. 安全与权限
+
+1. **功能权限**：模板绑定记录 `RequiredFunctionCode`，前端渲染前必须调用 `/api/access/ensure?code=...`。  
+2. **数据范围**：后端在查询时自动注入 WHERE 条件；列表 API 返回 `appliedScopes` 供前端展示。  
+3. **审计**：模板执行的行为脚本需记录日志（模板 ID、用户、操作类型、结果）。  
+4. **脚本安全**：Phase 1 仅 declarative，无代码注入风险。Phase 2 之后需严格校验表达式白名单。
+
+## 11. 迁移与发布计划
+
+| 步骤 | 内容 |
+| --- | --- |
+| 1 | 数据迁移：扩展 `FormTemplate`、创建 `TemplateBindings`、插入系统模板。 |
+| 2 | 后端：实现 TemplateBindingService / Runtime API / 权限钩子。 |
+| 3 | 前端：构建 ListTemplateHost、改造页面宿主、调通权限提示。 |
+| 4 | 自动化测试：单元（服务）、组件（模板宿主）、端到端（常见操作流）。 |
+| 5 | 文档更新：模板指南、权限配置指南、变更日志。 |
+| 6 | 部署与回滚方案：配置开关 `FeatureFlags.UseTemplateHostForSystemEntities`，便于灰度。 |
+
+## 12. 风险与缓解
+
+| 风险 | 影响 | 缓解 |
+| --- | --- | --- |
+| 模板缺失或损坏导致系统级页面无法打开 | 高 | 绑定表保留“保底模板”且提供实时健康检查；宿主支持降级到旧页面（FeatureFlag）。 |
+| 权限配置错误造成越权 | 高 | AccessService 统一入口，新增集成测试覆盖常见角色。 |
+| 公式脚本执行效率低 | 中 | Phase 1 采用前端 declarative 方案，复杂场景延后。 |
+| 模板 JSON 与客户端组件版本不兼容 | 中 | 增加 TemplateSchemaVersion，运行时做兼容转换。 |
+
+## 13. 里程碑与交付
+
+| 里程碑 | 内容 | 预计时间 |
+| --- | --- | --- |
+| M1 | 数据模型 & 后端服务（模板绑定 + runtime + 权限钩子） | 2025-11-18 |
+| M2 | ListTemplateHost + PageLoader 扩展，组织/用户页面迁移 | 2025-11-22 |
+| M3 | 角色/客户页面迁移 + 权限联动验证 + 自动化测试 | 2025-11-26 |
+| M4 | 行为 DSL（Phase 1）+ 文档/指南 + FeatureFlag 灰度 | 2025-11-28 |
+
+---
+
+此文档将作为后续开发的依据，如需调整请在 `docs/history/CHANGELOG.md` 及本档案相应章节中更新。

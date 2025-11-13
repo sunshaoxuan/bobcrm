@@ -10,4 +10,7 @@ public class RoleFunctionPermission
 
     public Guid FunctionId { get; set; }
     public FunctionNode? Function { get; set; }
+
+    public int? TemplateBindingId { get; set; }
+    public TemplateBinding? TemplateBinding { get; set; }
 }

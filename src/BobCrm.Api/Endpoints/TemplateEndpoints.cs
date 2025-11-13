@@ -4,6 +4,7 @@ using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Domain;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Services;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -357,6 +358,70 @@ public static class TemplateEndpoints
         .WithName("GetEffectiveTemplate")
         .WithSummary("获取有效模板")
         .WithDescription("按优先级获取模板：用户默认 > 系统默认 > 第一个创建的模板");
+
+        group.MapGet("/bindings/{entityType}", async (
+            string entityType,
+            FormTemplateUsageType? usageType,
+            TemplateBindingService bindingService,
+            CancellationToken ct) =>
+        {
+            var resolvedUsage = usageType ?? FormTemplateUsageType.Detail;
+            var binding = await bindingService.GetBindingAsync(entityType, resolvedUsage, ct);
+            return binding is null
+                ? Results.NotFound(new { error = "Template binding not found." })
+                : Results.Ok(binding.ToDto());
+        })
+        .WithName("GetTemplateBinding")
+        .WithSummary("获取实体模板绑定")
+        .WithDescription("按照实体与用途获取模板绑定记录。");
+
+        group.MapPut("/bindings", async (
+            UpsertTemplateBindingRequest request,
+            ClaimsPrincipal user,
+            TemplateBindingService bindingService,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            var binding = await bindingService.UpsertBindingAsync(
+                request.EntityType,
+                request.UsageType,
+                request.TemplateId,
+                request.IsSystem,
+                uid,
+                request.RequiredFunctionCode,
+                ct);
+
+            return Results.Ok(binding.ToDto());
+        })
+        .WithName("UpsertTemplateBinding")
+        .WithSummary("更新模板绑定")
+        .WithDescription("创建或更新实体与模板之间的绑定关系。");
+
+        group.MapPost("/runtime/{entityType}", async (
+            string entityType,
+            TemplateRuntimeRequest request,
+            ClaimsPrincipal user,
+            TemplateRuntimeService runtimeService,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            request ??= new TemplateRuntimeRequest();
+            var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
+            return Results.Ok(context);
+        })
+        .WithName("BuildTemplateRuntime")
+        .WithSummary("获取模板运行时上下文")
+        .WithDescription("结合权限与数据范围返回模板所需的运行时信息。");
 
         return app;
     }

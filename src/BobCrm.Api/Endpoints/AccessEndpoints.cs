@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
@@ -20,6 +21,67 @@ public static class AccessEndpoints
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             return Results.Ok(BuildTree(nodes));
+        });
+
+        group.MapGet("/functions/me", async (
+            ClaimsPrincipal user,
+            [FromServices] AppDbContext db,
+            CancellationToken ct) =>
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var now = DateTime.UtcNow;
+            var functionIds = await db.RoleAssignments
+                .AsNoTracking()
+                .Where(a => a.UserId == userId &&
+                            (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                            (!a.ValidTo.HasValue || a.ValidTo >= now))
+                .Join(db.RoleFunctionPermissions.AsNoTracking(),
+                    a => a.RoleId,
+                    rfp => rfp.RoleId,
+                    (assignment, permission) => permission.FunctionId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var nodes = await db.FunctionNodes
+                .AsNoTracking()
+                .OrderBy(f => f.SortOrder)
+                .ToListAsync(ct);
+
+            if (nodes.Count == 0)
+            {
+                return Results.Ok(new List<FunctionNodeDto>());
+            }
+
+            var dict = nodes.ToDictionary(n => n.Id);
+            var allowed = new HashSet<Guid>(functionIds);
+            if (nodes.FirstOrDefault(n => n.Code == "APP.ROOT") is { } rootNode)
+            {
+                allowed.Add(rootNode.Id);
+            }
+
+        foreach (var id in functionIds)
+        {
+            var current = id;
+            while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
+            {
+                var parentId = node.ParentId.Value;
+                allowed.Add(parentId);
+                current = parentId;
+            }
+        }
+
+            var filtered = nodes.Where(n => allowed.Contains(n.Id)).ToList();
+            if (filtered.Count == 0)
+            {
+                return Results.Ok(new List<FunctionNodeDto>());
+            }
+
+            return Results.Ok(BuildTree(filtered));
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request, [FromServices] AccessService service, CancellationToken ct) =>

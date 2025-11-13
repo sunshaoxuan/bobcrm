@@ -7,12 +7,14 @@
 @using BobCrm.App.Services.Widgets
 @using BobCrm.App.Services.Widgets.Rendering
 @using Microsoft.AspNetCore.Components.Rendering
+@using System.Linq
 
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.FieldActionService FieldActions
+@inject BobCrm.App.Services.TemplateRuntimeClient TemplateRuntime
 @inject IRuntimeWidgetRenderer RuntimeRenderer
 
 <AuthChecker>
@@ -51,6 +53,29 @@ else if (entityData != null)
             </div>
         }
     </div>
+
+    @if (runtimeContext != null)
+    {
+        <div class="runtime-template-banner">
+            <div class="runtime-template-line">
+                <span class="runtime-template-label">@I18n.T("LBL_TEMPLATE")</span>
+                <strong>@runtimeContext.Template.Name</strong>
+                <span class="runtime-template-meta">@runtimeContext.Binding.EntityType.ToUpperInvariant() · @runtimeContext.Template.UsageType</span>
+            </div>
+            @if (appliedScopes.Length > 0)
+            {
+                <div class="runtime-template-line">
+                    <span class="runtime-template-label">@I18n.T("LBL_SCOPE_TYPE")</span>
+                    <div class="runtime-scope-chips">
+                        @foreach (var scope in appliedScopes)
+                        {
+                            <span class="scope-chip">@scope</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     @if (isEditMode)
     {
@@ -94,6 +119,9 @@ else if (entityData != null)
     private System.Text.Json.JsonElement? entityData;
     private List<DraggableWidget> layoutWidgets = new();
 
+    private TemplateRuntimeResponse? runtimeContext;
+    private string[] appliedScopes = Array.Empty<string>();
+
     private readonly EditValueManager editValueManager = new();
     private readonly TabStateManager tabStateManager = new();
     
@@ -128,43 +156,62 @@ else if (entityData != null)
 
             await JS.InvokeVoidAsync("console.log", $"[PageLoader] Loading data for entity: {EntityType}, ID: {Id}");
 
-            // 1. 【实体匹配】加载有效模板（根据EntityType）
-            // 优先级：用户默认模板 > 系统默认模板 > 第一个创建的模板
-            var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
+            runtimeContext = null;
+            appliedScopes = Array.Empty<string>();
             string? layoutJson = null;
 
-            if (templateResp.IsSuccessStatusCode)
+            var runtime = await TemplateRuntime.GetRuntimeAsync(EntityType, TemplateUsageType.Detail);
+            if (runtime != null)
             {
-                var templateContent = await templateResp.Content.ReadAsStringAsync();
-                var template = System.Text.Json.JsonSerializer.Deserialize<FormTemplate>(
-                    templateContent,
-                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (template != null)
-                {
-                    layoutJson = template.LayoutJson;
-                    await JS.InvokeVoidAsync("console.log",
-                        $"[PageLoader] Template loaded: {template.Name} (ID: {template.Id}, IsDefault: {template.IsUserDefault})");
-                }
+                runtimeContext = runtime;
+                appliedScopes = runtime.AppliedScopes?
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(System.StringComparer.OrdinalIgnoreCase)
+                    .ToArray() ?? Array.Empty<string>();
+                layoutJson = runtime.Template.LayoutJson;
+                await JS.InvokeVoidAsync("console.log",
+                    $"[PageLoader] Runtime binding resolved: {runtime.Binding.Id}");
             }
-            else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                // 如果没有找到模板，回退到旧的UserLayout API
-                await JS.InvokeVoidAsync("console.warn",
-                    $"[PageLoader] No FormTemplate found for entity {EntityType}, falling back to UserLayout API");
 
-                var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
-                if (layoutResp.IsSuccessStatusCode)
-                {
-                    var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                    layoutJson = layoutDoc.GetRawText();
-                    await JS.InvokeVoidAsync("console.log", $"[PageLoader] Fallback layout loaded from UserLayout");
-                }
-            }
-            else
+            if (string.IsNullOrWhiteSpace(layoutJson))
             {
-                await JS.InvokeVoidAsync("console.warn",
-                    $"[PageLoader] Failed to load template: {templateResp.StatusCode}");
+                // 1. 【实体匹配】加载有效模板（根据EntityType）
+                // 优先级：用户默认模板 > 系统默认模板 > 第一个创建的模板
+                var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
+
+                if (templateResp.IsSuccessStatusCode)
+                {
+                    var templateContent = await templateResp.Content.ReadAsStringAsync();
+                    var template = System.Text.Json.JsonSerializer.Deserialize<FormTemplate>(
+                        templateContent,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (template != null)
+                    {
+                        layoutJson = template.LayoutJson;
+                        await JS.InvokeVoidAsync("console.log",
+                            $"[PageLoader] Template loaded: {template.Name} (ID: {template.Id}, IsDefault: {template.IsUserDefault})");
+                    }
+                }
+                else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // 如果没有找到模板，回退到旧的UserLayout API
+                    await JS.InvokeVoidAsync("console.warn",
+                        $"[PageLoader] No FormTemplate found for entity {EntityType}, falling back to UserLayout API");
+
+                    var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
+                    if (layoutResp.IsSuccessStatusCode)
+                    {
+                        var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                        layoutJson = layoutDoc.GetRawText();
+                        await JS.InvokeVoidAsync("console.log", $"[PageLoader] Fallback layout loaded from UserLayout");
+                    }
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("console.warn",
+                        $"[PageLoader] Failed to load template: {templateResp.StatusCode}");
+                }
             }
 
             // 2. 加载实体数据

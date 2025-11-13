@@ -535,3 +535,51 @@ a.link-primary,
   margin: 0;
   color: var(--text-muted);
 }
+
+.runtime-template-banner {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.runtime-template-line {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.runtime-template-label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.runtime-template-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.runtime-scope-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scope-chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(63, 124, 255, 0.1);
+  border: 1px solid rgba(63, 124, 255, 0.2);
+  font-size: 12px;
+  color: var(--text);
+}

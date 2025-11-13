@@ -72,7 +72,7 @@ public class AccessServiceTests
         var role = await ctx.RoleProfiles.Include(r => r.Functions).Include(r => r.DataScopes).FirstOrDefaultAsync(r => r.IsSystem);
         role.Should().NotBeNull();
         var functionCodes = await ctx.FunctionNodes.Select(f => f.Code).ToListAsync();
-        functionCodes.Should().Contain("APP.DASHBOARD");
+        functionCodes.Should().Contain("SYS.SET.CONFIG");
         role!.Functions.Should().HaveCount(functionCodes.Count);
         role.DataScopes.Should().ContainSingle(s => s.ScopeType == RoleDataScopeTypes.All);
     }

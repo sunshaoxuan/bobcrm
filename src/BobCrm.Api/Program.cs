@@ -184,6 +184,8 @@ builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.A
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 builder.Services.AddScoped<AccessService>();
+builder.Services.AddScoped<TemplateBindingService>();
+builder.Services.AddScoped<TemplateRuntimeService>();
 
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());

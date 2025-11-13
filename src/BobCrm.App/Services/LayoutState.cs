@@ -11,6 +11,7 @@ public class LayoutState
     public bool IsSiderOverlayOpen { get; private set; }
     public bool IsRightPanelVisible { get; private set; }
     public NavDisplayMode NavMode { get; private set; } = NavDisplayMode.IconText;
+    public string? CurrentDomainCode { get; private set; }
 
     public event Action? OnChanged;
 
@@ -45,6 +46,13 @@ public class LayoutState
     {
         if (NavMode == mode) return;
         NavMode = mode;
+        Notify();
+    }
+
+    public void SetCurrentDomain(string? code)
+    {
+        if (string.Equals(CurrentDomainCode, code, StringComparison.OrdinalIgnoreCase)) return;
+        CurrentDomainCode = code;
         Notify();
     }
 
