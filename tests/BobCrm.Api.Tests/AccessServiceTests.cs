@@ -3,6 +3,7 @@ using BobCrm.Api.Domain.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Tests;
@@ -70,7 +71,30 @@ public class AccessServiceTests
 
         var role = await ctx.RoleProfiles.Include(r => r.Functions).Include(r => r.DataScopes).FirstOrDefaultAsync(r => r.IsSystem);
         role.Should().NotBeNull();
-        role!.Functions.Should().NotBeEmpty();
+        var functionCodes = await ctx.FunctionNodes.Select(f => f.Code).ToListAsync();
+        functionCodes.Should().Contain("APP.DASHBOARD");
+        role!.Functions.Should().HaveCount(functionCodes.Count);
         role.DataScopes.Should().ContainSingle(s => s.ScopeType == RoleDataScopeTypes.All);
+    }
+
+    [Fact]
+    public async Task SeedSystemAdministratorAsync_ShouldAssignExistingAdminUser()
+    {
+        await using var ctx = CreateContext();
+        ctx.Users.Add(new IdentityUser
+        {
+            UserName = "admin",
+            NormalizedUserName = "ADMIN",
+            Email = "admin@local",
+            EmailConfirmed = true
+        });
+        await ctx.SaveChangesAsync();
+
+        var service = new AccessService(ctx);
+        await service.SeedSystemAdministratorAsync();
+
+        var assignment = await ctx.RoleAssignments.Include(a => a.Role).FirstOrDefaultAsync();
+        assignment.Should().NotBeNull();
+        assignment!.Role!.IsSystem.Should().BeTrue();
     }
 }
