@@ -1,6 +1,7 @@
 ﻿@using AntDesign
 @using System.Threading.Tasks
 @using BobCrm.App.Services
+@using BobCrm.App.Models
 @using Microsoft.AspNetCore.Components.Routing
 @rendermode RenderMode.InteractiveServer
 @implements IDisposable
@@ -15,47 +16,11 @@
 
 <div class="app-header">
     <div class="header-meta">
-        <div class="header-toggle-group">
-            <button class="nav-icon desktop-only" @onclick="ToggleCollapse" title="折叠侧栏">
-                <Icon Type="@IconType.Outline.MenuFold" />
-            </button>
-            <button class="nav-icon mobile-only" @onclick="ToggleOverlay" title="显示侧栏">
-                <Icon Type="@IconType.Outline.Menu" />
-            </button>
-        </div>
         <div class="header-brand">
             <strong>OneCRM</strong>
             <span>@_headerSubtitle</span>
         </div>
-        <div class="header-context">
-            <nav class="breadcrumb" aria-label="Breadcrumb">
-                @if (_breadcrumbs.Count == 0)
-                {
-                    <span aria-current="page">总览</span>
-                }
-                else
-                {
-                    @for (var i = 0; i < _breadcrumbs.Count; i++)
-                    {
-                        if (i > 0)
-                        {
-                            <span class="breadcrumb-sep">/</span>
-                        }
-
-                        var item = _breadcrumbs[i];
-                        if (i == _breadcrumbs.Count - 1)
-                        {
-                            <span aria-current="page">@item.Label</span>
-                        }
-                        else
-                        {
-                            <a href="@item.Url">@item.Label</a>
-                        }
-                    }
-                }
-            </nav>
-            <span class="context-pill">@_contextLabel</span>
-        </div>
+        <MenuButton ActiveDomain="@ActiveDomain" />
     </div>
     <div class="header-utilities">
         <div class="header-utility-group">
@@ -98,6 +63,9 @@
                 <Icon Type="@IconType.Outline.Select" /> @I18n.T("BTN_BULK_BAR")
             </Button>
         </div>
+        <DomainSelector Domains="@Domains"
+                       ActiveDomain="@ActiveDomain"
+                       OnDomainChanged="HandleDomainChanged" />
         @if (isAuthenticated)
         {
             <div class="user-profile-group">
@@ -128,6 +96,9 @@
 
 @code {
     [CascadingParameter] public int I18nRenderVersion { get; set; }
+    [Parameter] public List<FunctionMenuNode> Domains { get; set; } = new();
+    [Parameter] public FunctionMenuNode? ActiveDomain { get; set; }
+    [Parameter] public EventCallback<FunctionMenuNode> OnDomainChanged { get; set; }
 
     private record BreadcrumbItem(string Label, string Url);
 
@@ -330,7 +301,12 @@
     {
         try { InvokeAsync(StateHasChanged); } catch { }
     }
-    
+
+    private async Task HandleDomainChanged(FunctionMenuNode domain)
+    {
+        await OnDomainChanged.InvokeAsync(domain);
+    }
+
     private class UserInfoDto
     {
         public string? UserName { get; set; }

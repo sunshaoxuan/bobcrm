@@ -1,0 +1,202 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject LayoutState Layout
+@inject I18nService I18n
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (IsOpen && Domain != null)
+{
+    <div class="menu-panel-overlay" @onclick="HandleOverlayClick" @onkeydown="HandleKeyDown">
+        <div class="menu-panel" @onclick:stopPropagation tabindex="-1" @ref="_panelElement">
+            <div class="menu-panel-header">
+                <div class="menu-panel-title">
+                    <Button Size="@ButtonSize.Small" Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="OnBackToDomains">
+                        @I18n.T("BTN_BACK_TO_DOMAINS")
+                    </Button>
+                    <h3>
+                        <Icon Type="@ResolveIcon(Domain.Icon)" />
+                        <span>@Domain.Name</span>
+                    </h3>
+                </div>
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" OnClick="HandleClose" />
+            </div>
+
+            <div class="menu-panel-body">
+                @if (_modules.Count == 0)
+                {
+                    <div class="menu-panel-empty">
+                        <Icon Type="@IconType.Outline.Inbox" Style="font-size: 48px; opacity: 0.3;" />
+                        <p>@I18n.T("LBL_NO_FUNCTIONS")</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var moduleEntry in _modules)
+                    {
+                        <div class="module-group">
+                            <div class="module-group-header">
+                                <div class="module-icon">
+                                    <Icon Type="@ResolveIcon(moduleEntry.Module.Icon)" />
+                                </div>
+                                <h4 class="module-title">@moduleEntry.Module.Name</h4>
+                            </div>
+                            <div class="function-cards">
+                                @foreach (var function in moduleEntry.Functions)
+                                {
+                                    var isActive = IsFunctionActive(function);
+                                    var route = NormalizeRoute(function.Route);
+                                    var isDisabled = string.IsNullOrWhiteSpace(route);
+
+                                    <button type="button"
+                                            class="function-card @(isActive ? "active" : string.Empty)"
+                                            disabled="@isDisabled"
+                                            @onclick="() => HandleFunctionClick(route)">
+                                        <div class="function-card-icon">
+                                            <Icon Type="@ResolveIcon(function.Icon)" />
+                                        </div>
+                                        <div class="function-card-label">@function.Name</div>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public FunctionMenuNode? Domain { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnBackToDomains { get; set; }
+
+    private record ModuleEntry(FunctionMenuNode Module, List<FunctionMenuNode> Functions);
+
+    private readonly List<ModuleEntry> _modules = new();
+    private ElementReference _panelElement;
+    private string _currentRoute = "/";
+
+    protected override void OnInitialized()
+    {
+        _currentRoute = NormalizeRelative(Nav.ToBaseRelativePath(Nav.Uri));
+        Nav.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Domain != null)
+        {
+            BuildModuleList();
+        }
+    }
+
+    private void BuildModuleList()
+    {
+        _modules.Clear();
+
+        if (Domain == null) return;
+
+        foreach (var module in Domain.Children.OrderBy(m => m.SortOrder))
+        {
+            var functions = GetFunctionEntries(module).ToList();
+            if (functions.Count > 0)
+            {
+                _modules.Add(new ModuleEntry(module, functions));
+            }
+        }
+    }
+
+    private IEnumerable<FunctionMenuNode> GetFunctionEntries(FunctionMenuNode module)
+    {
+        // 如果模块本身有路由，它就是叶子节点
+        if (module.Children.Count == 0 && !string.IsNullOrWhiteSpace(module.Route))
+        {
+            yield return module;
+            yield break;
+        }
+
+        // 递归收集所有叶子功能
+        foreach (var child in module.Children.OrderBy(c => c.SortOrder))
+        {
+            if (child.Children.Count > 0 && string.IsNullOrWhiteSpace(child.Route))
+            {
+                foreach (var leaf in GetFunctionEntries(child))
+                {
+                    yield return leaf;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(child.Route))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private bool IsFunctionActive(FunctionMenuNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.Route)) return false;
+        var normalized = NormalizeRelative(node.Route);
+        if (normalized == "/")
+        {
+            return _currentRoute == "/";
+        }
+        return _currentRoute.StartsWith(normalized.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task HandleFunctionClick(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route)) return;
+        await OnClose.InvokeAsync();
+        Nav.NavigateTo(route);
+    }
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleOverlayClick()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _ = HandleClose();
+        }
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _currentRoute = NormalizeRelative(Nav.ToBaseRelativePath(e.Location));
+        InvokeAsync(StateHasChanged);
+    }
+
+    private static string NormalizeRelative(string relative)
+    {
+        var trimmed = relative?.Trim('/') ?? string.Empty;
+        return string.IsNullOrEmpty(trimmed) ? "/" : trimmed;
+    }
+
+    private string NormalizeRoute(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route)) return string.Empty;
+        if (route.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return route;
+        }
+        return route.StartsWith("/") ? route : "/" + route.Trim();
+    }
+
+    private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

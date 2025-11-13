@@ -15,56 +15,14 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@* Calm App Shell：左侧 rail + glass sider + 顶部导航 *@
+@* Compact Top Menu Shell *@
 
-<div class="chrome-shell @ThemeState.CurrentTheme @NavModeClass">
-    <nav class="chrome-rail">
-        <div class="rail-brand">
-            <button class="rail-logo-button" @onclick="@(() => NavigateTo(RootHref))">
-                <span class="rail-logo-wordmark">OneCRM</span>
-            </button>
-            <span class="rail-tagline">@_railTagline</span>
-        </div>
-        <div class="rail-group">
-            @if (_menuLoading)
-            {
-                <div class="rail-placeholder">@I18n.T("LBL_LOADING")</div>
-            }
-            else if (!string.IsNullOrWhiteSpace(_menuError))
-            {
-                <div class="rail-placeholder rail-error">@_menuError</div>
-            }
-            else if (_domains.Count == 0)
-            {
-                <div class="rail-placeholder">暂无菜单</div>
-            }
-            else
-            {
-                @foreach (var domain in _domains)
-                {
-                    var isActive = _activeDomain?.Id == domain.Id;
-                    <Tooltip Title="@domain.Name" Placement="Placement.Right">
-                        <button type="button" class="rail-item @(isActive ? "active" : string.Empty)" @onclick="() => OnDomainSelected(domain)">
-                            <span class="rail-item-icon"><Icon Type="@ResolveIcon(domain.Icon)" /></span>
-                            <span class="rail-item-label">@domain.Name</span>
-                        </button>
-                    </Tooltip>
-                }
-            }
-        </div>
-        <div class="rail-group rail-footer">
-            <Tooltip Title="@I18n.T("MENU_SETTINGS")" Placement="Placement.Right">
-                <button class="rail-item" @onclick="@(() => NavigateTo(SettingsHref))">
-                    <span class="rail-item-icon"><Icon Type="@IconType.Outline.Setting" /></span>
-                    <span class="rail-item-label">@I18n.T("MENU_SETTINGS")</span>
-                </button>
-            </Tooltip>
-        </div>
-    </nav>
-
-    <div class="chrome-app app-shell layout-root @(Layout.IsSiderCollapsed ? "sider-collapsed" : "") @(Layout.IsSiderOverlayOpen ? "sider-overlay-open" : "")">
+<div class="chrome-shell @ThemeState.CurrentTheme compact-menu-layout">
+    <div class="chrome-app app-shell layout-root">
         <div class="layout-main">
-            <AppHeader />
+            <AppHeader Domains="@_domains"
+                      ActiveDomain="@_activeDomain"
+                      OnDomainChanged="OnDomainChanged" />
             <div class="layout-content">
                 <div class="layout-body">
                     @if (Interaction.IsStickyBarVisible)
@@ -84,65 +42,6 @@
                                 <Button Ghost OnClick="HideSticky">关闭</Button>
                             </div>
                         </div>
-                    }
-                    @if (!_menuLoading && _activeDomain != null)
-                    {
-                        <section class="domain-menu-panel">
-                            <div class="domain-menu-header">
-                                <div>
-                                    <p class="domain-eyebrow">DOMAIN</p>
-                                    <h2>@_activeDomain.Name</h2>
-                                </div>
-                                <button type="button" class="domain-refresh" @onclick="RefreshMenu">
-                                    <Icon Type="@IconType.Outline.Reload" />
-                                </button>
-                            </div>
-                            @{
-                                var visibleModules = GetDisplayModules()
-                                    .Select(m => (Module: m, Functions: GetFunctionEntries(m).ToList()))
-                                    .Where(entry => entry.Functions.Count > 0)
-                                    .ToList();
-                            }
-                            <div class="domain-modules">
-                                @foreach (var entry in visibleModules)
-                                {
-                                    var module = entry.Module;
-                                    var functions = entry.Functions;
-                                    <div class="domain-module-card">
-                                        <div class="module-header">
-                                            <div class="module-icon">
-                                                <Icon Type="@ResolveIcon(module.Icon)" />
-                                            </div>
-                                            <div class="module-meta">
-                                                <strong>@module.Name</strong>
-                                                @if (!string.IsNullOrEmpty(module.Route))
-                                                {
-                                                    <span class="module-route">@module.Route</span>
-                                                }
-                                            </div>
-                                        </div>
-                                        <div class="module-links">
-                                            @foreach (var function in functions)
-                                            {
-                                                var route = NormalizeRoute(function.Route);
-                                                var active = IsFunctionActive(function);
-                                                <button type="button"
-                                                        class="module-link @(active ? "active" : string.Empty)"
-                                                        disabled="@string.IsNullOrWhiteSpace(route)"
-                                                        @onclick="() => NavigateTo(route)">
-                                                    <span class="link-icon"><Icon Type="@ResolveIcon(function.Icon)" /></span>
-                                                    <span class="link-label">@function.Name</span>
-                                                </button>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                                @if (visibleModules.Count == 0)
-                                {
-                                    <div class="domain-empty">该领域暂未开放可用功能</div>
-                                }
-                            </div>
-                        </section>
                     }
                     @Body
                 </div>
@@ -174,11 +73,6 @@
                 }
             </div>
         </div>
-
-        @if (Layout.IsSiderOverlayOpen)
-        {
-            <button class="sider-mask mobile-only" @onclick="CloseOverlay"></button>
-        }
 
         <GlobalOverlayHost />
     </div>
@@ -336,7 +230,6 @@
         Nav.NavigateTo(href);
     }
 
-    private void CloseOverlay() => Layout.SetSiderOverlay(false);
     private void ToggleRightPanel() => Layout.ToggleRightPanel();
     private bool ShowCustomerSider => IsCustomerRoute();
     private bool IsCustomerRoute()
@@ -354,22 +247,18 @@
     }
 
     private void HideSticky() => Interaction.HideStickyBar();
-    private string NavModeClass => $"nav-mode-{Layout.NavMode.ToString().ToLowerInvariant()}";
 
-    private void OnDomainSelected(FunctionMenuNode domain)
+    private void OnDomainChanged(FunctionMenuNode domain)
     {
         if (_activeDomain?.Id == domain.Id)
         {
-            var route = FindFirstNavigableRoute(domain);
-            if (!string.IsNullOrWhiteSpace(route))
-            {
-                NavigateTo(route!);
-            }
             return;
         }
 
         _activeDomain = domain;
         Layout.SetCurrentDomain(domain.Code);
+
+        // 导航到该领域的第一个可用路由
         var firstRoute = FindFirstNavigableRoute(domain);
         if (!string.IsNullOrWhiteSpace(firstRoute))
         {
@@ -432,50 +321,6 @@
         return current.StartsWith(normalized.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
     }
 
-    private IEnumerable<FunctionMenuNode> GetDisplayModules()
-    {
-        if (_activeDomain == null) yield break;
-        foreach (var module in _activeDomain.Children.OrderBy(c => c.SortOrder))
-        {
-            if (module.Children.Any() || !string.IsNullOrWhiteSpace(module.Route))
-            {
-                yield return module;
-            }
-        }
-    }
-
-    private IEnumerable<FunctionMenuNode> GetFunctionEntries(FunctionMenuNode module)
-    {
-        if (module.Children.Count == 0 && !string.IsNullOrWhiteSpace(module.Route))
-        {
-            yield return module;
-            yield break;
-        }
-
-        foreach (var child in module.Children.OrderBy(c => c.SortOrder))
-        {
-            if (child.Children.Count > 0 && string.IsNullOrWhiteSpace(child.Route))
-            {
-                foreach (var leaf in GetFunctionEntries(child))
-                {
-                    yield return leaf;
-                }
-            }
-            else
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private bool IsFunctionActive(FunctionMenuNode node)
-    {
-        if (string.IsNullOrWhiteSpace(node.Route)) return false;
-        return PathMatches(node.Route, _currentRoute);
-    }
-
-    private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
-
     private string NormalizeRoute(string? route)
     {
         if (string.IsNullOrWhiteSpace(route)) return string.Empty;
@@ -483,7 +328,6 @@
         {
             return route;
         }
-
         return route.StartsWith("/") ? route : "/" + route.Trim();
     }
 

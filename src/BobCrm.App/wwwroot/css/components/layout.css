@@ -629,6 +629,8 @@
 }
 
 .app-header {
+  position: relative;
+  z-index: 100;
   display: grid;
   grid-template-columns: minmax(280px, 1fr) auto auto;
   gap: var(--spacing-4);
@@ -644,6 +646,35 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+}
+
+.menu-trigger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #d9d9d9);
+  border-radius: 6px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-primary, #000000);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 32px;
+}
+
+.menu-trigger-button:hover {
+  border-color: var(--primary-color, #1890ff);
+  color: var(--primary-color, #1890ff);
+}
+
+.menu-trigger-button:active {
+  transform: scale(0.98);
+}
+
+.menu-trigger-label {
+  white-space: nowrap;
 }
 
 .header-toggle-group {
@@ -1139,6 +1170,18 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+/* Dark theme support for menu button */
+
+.calm-dark .menu-trigger-button {
+  background: var(--bg-surface, #1f1f1f);
+  border-color: var(--border-color, #434343);
+  color: var(--text-primary, #ffffff);
+}
+
+.calm-dark .menu-trigger-button:hover {
+  border-color: var(--primary-color, #1890ff);
 }
 
 /* --- Navigation refresh overrides --- */

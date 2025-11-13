@@ -1,0 +1,135 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject LayoutState Layout
+@inject I18nService I18n
+
+@if (Layout.IsDomainSelectorOpen && Domains.Count > 0)
+{
+    <div class="domain-selector-overlay" @onclick="HandleOverlayClick"></div>
+}
+
+<div class="domain-selector">
+    <button type="button"
+            class="domain-button"
+            @onclick="TogglePopover"
+            @onclick:stopPropagation
+            @ref="_buttonElement"
+            title="@(ActiveDomain?.Name ?? I18n.T("LBL_SELECT_DOMAIN"))">
+        @if (ActiveDomain != null)
+        {
+            <span class="domain-icon">
+                <Icon Type="@ResolveIcon(ActiveDomain.Icon)" />
+            </span>
+        }
+        else
+        {
+            <span class="domain-icon">
+                <Icon Type="@IconType.Outline.Appstore" />
+            </span>
+        }
+    </button>
+
+    @if (Layout.IsDomainSelectorOpen && Domains.Count > 0)
+    {
+        <div class="domain-popover" @onclick:stopPropagation>
+            <div class="domain-list" @onkeydown="HandleKeyDown" tabindex="0" @ref="_listElement">
+                @foreach (var domain in Domains)
+                {
+                    var isActive = ActiveDomain?.Id == domain.Id;
+                    var index = Domains.IndexOf(domain);
+                    <button type="button"
+                            class="domain-item @(isActive ? "active" : string.Empty) @(_focusedIndex == index ? "focused" : string.Empty)"
+                            @onclick="() => SelectDomain(domain)"
+                            @onmouseenter="() => _focusedIndex = index">
+                        <span class="domain-item-icon">
+                            <Icon Type="@ResolveIcon(domain.Icon)" />
+                        </span>
+                        <span class="domain-item-name">@domain.Name</span>
+                        @if (isActive)
+                        {
+                            <span class="domain-item-check">
+                                <Icon Type="@IconType.Outline.Check" />
+                            </span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<FunctionMenuNode> Domains { get; set; } = new();
+    [Parameter] public FunctionMenuNode? ActiveDomain { get; set; }
+    [Parameter] public EventCallback<FunctionMenuNode> OnDomainChanged { get; set; }
+
+    private ElementReference _buttonElement;
+    private ElementReference _listElement;
+    private int _focusedIndex = -1;
+
+    protected override void OnInitialized()
+    {
+        Layout.OnChanged += HandleLayoutChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (Layout.IsDomainSelectorOpen && _focusedIndex == -1 && ActiveDomain != null)
+        {
+            _focusedIndex = Domains.FindIndex(d => d.Id == ActiveDomain.Id);
+            StateHasChanged();
+        }
+    }
+
+    private void HandleLayoutChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void TogglePopover()
+    {
+        Layout.ToggleDomainSelector();
+    }
+
+    private void HandleOverlayClick()
+    {
+        Layout.CloseDomainSelector();
+    }
+
+    private async Task SelectDomain(FunctionMenuNode domain)
+    {
+        Layout.CloseDomainSelector();
+        await OnDomainChanged.InvokeAsync(domain);
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _focusedIndex = Math.Min(_focusedIndex + 1, Domains.Count - 1);
+                StateHasChanged();
+                break;
+            case "ArrowUp":
+                _focusedIndex = Math.Max(_focusedIndex - 1, 0);
+                StateHasChanged();
+                break;
+            case "Enter":
+                if (_focusedIndex >= 0 && _focusedIndex < Domains.Count)
+                {
+                    _ = SelectDomain(Domains[_focusedIndex]);
+                }
+                break;
+            case "Escape":
+                Layout.CloseDomainSelector();
+                break;
+        }
+    }
+
+    private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
+
+    public void Dispose()
+    {
+        Layout.OnChanged -= HandleLayoutChanged;
+    }
+}

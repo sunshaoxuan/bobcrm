@@ -16,6 +16,7 @@
 - [ARCH-21-组织与权限体系设计](design/ARCH-21-组织与权限体系设计.md)
 - [ARCH-22-标准实体模板化与权限联动设计](design/ARCH-22-标准实体模板化与权限联动设计.md)
 - [ARCH-23-功能体系规划](design/ARCH-23-功能体系规划.md)
+- [ARCH-24-紧凑型顶部菜单导航设计](design/ARCH-24-紧凑型顶部菜单导航设计.md)
 - [PROD-01-客户信息管理系统设计文档（含 docx）](design/PROD-01-客户信息管理系统设计文档.md)
 - [PROD-02-客户系统开发任务与接口文档](design/PROD-02-客户系统开发任务与接口文档.md)
 - [UI-01-UIUE设计说明书](design/UI-01-UIUE设计说明书.md)

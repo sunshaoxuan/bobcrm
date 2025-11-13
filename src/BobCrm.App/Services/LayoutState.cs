@@ -13,6 +13,10 @@ public class LayoutState
     public NavDisplayMode NavMode { get; private set; } = NavDisplayMode.IconText;
     public string? CurrentDomainCode { get; private set; }
 
+    // 新增：菜单面板状态
+    public bool IsMenuPanelOpen { get; private set; }
+    public bool IsDomainSelectorOpen { get; private set; }
+
     public event Action? OnChanged;
 
     public void ToggleSiderCollapsed() => SetSiderCollapsed(!IsSiderCollapsed);
@@ -53,6 +57,49 @@ public class LayoutState
     {
         if (string.Equals(CurrentDomainCode, code, StringComparison.OrdinalIgnoreCase)) return;
         CurrentDomainCode = code;
+        Notify();
+    }
+
+    public void ToggleMenuPanel() => SetMenuPanelOpen(!IsMenuPanelOpen);
+
+    public void OpenMenuPanel()
+    {
+        SetMenuPanelOpen(true);
+    }
+
+    public void CloseMenuPanel()
+    {
+        SetMenuPanelOpen(false);
+    }
+
+    private void SetMenuPanelOpen(bool open)
+    {
+        if (open == IsMenuPanelOpen) return;
+        IsMenuPanelOpen = open;
+        // 关闭菜单面板时，也关闭领域选择器
+        if (!open)
+        {
+            IsDomainSelectorOpen = false;
+        }
+        Notify();
+    }
+
+    public void ToggleDomainSelector() => SetDomainSelectorOpen(!IsDomainSelectorOpen);
+
+    public void CloseDomainSelector()
+    {
+        SetDomainSelectorOpen(false);
+    }
+
+    private void SetDomainSelectorOpen(bool open)
+    {
+        if (open == IsDomainSelectorOpen) return;
+        IsDomainSelectorOpen = open;
+        // 打开领域选择器时，关闭菜单面板
+        if (open)
+        {
+            IsMenuPanelOpen = false;
+        }
         Notify();
     }
 

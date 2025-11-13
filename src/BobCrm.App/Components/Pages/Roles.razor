@@ -36,7 +36,7 @@
                         var selected = _selectedRole?.Id == role.Id;
                         <button class="role-card @(selected ? "selected" : string.Empty)" @onclick="() => SelectRole(role.Id)">
                             <div class="role-card-title">
-                                <strong>@role.Name</strong>
+                                <strong>@GetRoleDisplayName(role)</strong>
                                 @if (role.IsSystem)
                                 {
                                     <Tag Color="@("cyan")">@I18n.T("LBL_ROLE_SYSTEM")</Tag>
@@ -79,11 +79,25 @@
                             </div>
                             <div class="form-field">
                                 <label>@I18n.T("LBL_ROLE_NAME")</label>
-                                <Input @bind-Value="_roleForm.Name" Disabled="@_selectedRole.IsSystem" />
+                                @if (_selectedRole.IsSystem)
+                                {
+                                    <Input Value="@GetRoleDisplayName(_selectedRole)" Disabled />
+                                }
+                                else
+                                {
+                                    <Input @bind-Value="_roleForm.Name" />
+                                }
                             </div>
                             <div class="form-field">
                                 <label>@I18n.T("LBL_ROLE_DESCRIPTION")</label>
-                                <Input TextArea Rows="3" @bind-Value="_roleForm.Description" Disabled="@_selectedRole.IsSystem" />
+                                @if (_selectedRole.IsSystem)
+                                {
+                                    <Input TextArea Rows="3" Value="@GetRoleDescription(_selectedRole)" Disabled />
+                                }
+                                else
+                                {
+                                    <Input TextArea Rows="3" @bind-Value="_roleForm.Description" />
+                                }
                             </div>
                             <div class="form-field">
                                 <label>@I18n.T("LBL_ROLE_STATUS")</label>
@@ -477,6 +491,36 @@
     private FunctionMenuNode? ResolveNode(Guid id)
     {
         return _functionLookup.TryGetValue(id, out var node) ? node : null;
+    }
+
+    private string GetRoleDisplayName(RoleProfileDto role)
+    {
+        if (!role.IsSystem)
+        {
+            return role.Name;
+        }
+
+        // For system roles, try to get i18n translation based on code
+        return role.Code switch
+        {
+            "SYS.ADMIN" => I18n.T("ROLE_SYSTEM_ADMIN_NAME") ?? role.Name,
+            _ => role.Name
+        };
+    }
+
+    private string? GetRoleDescription(RoleProfileDto role)
+    {
+        if (!role.IsSystem)
+        {
+            return role.Description;
+        }
+
+        // For system roles, try to get i18n translation based on code
+        return role.Code switch
+        {
+            "SYS.ADMIN" => I18n.T("ROLE_SYSTEM_ADMIN_DESC"),
+            _ => role.Description
+        };
     }
 
     private record RoleFormModel
