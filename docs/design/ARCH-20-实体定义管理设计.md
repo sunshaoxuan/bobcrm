@@ -1,0 +1,115 @@
+# ARCH-20 实体定义管理设计
+
+## 1. 引言
+实体定义管理是 OneCRM 的元数据枢纽，负责：
+
+- 以多语言方式维护实体/字段信息；
+- 将主实体与子实体 1:N 关系以内嵌页签呈现；
+- 自动注入接口字段（Base/Audit/Version/Organization 等）并同步到发布流程；
+- 启用“所见即所得”的 UI/UE 规范，避免旧版“弹窗+表单”式体验。
+
+本文提供从领域模型到前端交互的完整设计，取代旧版 `UI-04-实体定义画面改版说明.md` 中零散的补丁式记录。
+
+## 2. 范围与非目标
+### 2.1 范围
+- 主实体信息卡片：命名空间生成、业务领域、图标、分类、多语说明；
+- 子实体 Tabs：行内增删字段、排序、接口字段占位；
+- 多语言输入组件；
+- 接口字段同步（Base/Archive/Audit/Version/TimeVersion/Organization）；
+- API 与服务层契约；
+- 前端渲染与交互状态；
+- 测试策略。
+
+### 2.2 非目标
+- 动态实体运行时数据管理；
+- 模板/布局设计器；
+- 权限与发布流程（见 `ARCH-21`）。
+
+## 3. 术语
+| 术语 | 说明 |
+| --- | --- |
+| EntityDefinition | 主实体定义聚合根 |
+| SubEntityDefinition | 子实体定义 |
+| FieldMetadata | 字段元数据 |
+| InterfaceField | 由接口模板注入的保留字段 |
+| MultilingualInput | 自定义多语输入控件 |
+
+## 4. 功能概览
+### 4.1 主实体信息
+1. **命名空间生成**：`BobCrm.{Domain}.{EntityName}`，只读展示；领域来自下拉框（CRM/SCM/FA/HR/MFM/Custom）。
+2. **实体名校验**：PascalCase，无空格、数字开头。
+3. **描述/图标/类别**：图标支持 AntD 图标名或 URL，类别用于左侧导航分组。
+4. **多语言显示名**：复用 `MultilingualInput`，提示文案 `LBL_CLICK_TO_EDIT_MULTILINGUAL`。
+
+### 4.2 子实体与字段
+- Tabs 代表子实体，支持新增、重命名、删除；
+- 字段行内编辑：PropertyName、DisplayName（多语）、类型、长度/精度、必填、默认值、排序；
+- 禁止删除接口字段，除非取消对应接口；
+- 页面底部自动校验：字段名唯一、必填项完成、接口字段齐全。
+
+### 4.3 接口勾选
+| 接口 | 字段 | 说明 |
+| --- | --- | --- |
+| Base | Id/IsDeleted/DeletedAt/DeletedBy | 聚合必需字段 |
+| Archive | Code/Name | 档案信息 |
+| Audit | Created*/Updated* | 审计 |
+| Version | Version | 乐观锁 |
+| TimeVersion | ValidFrom/ValidTo/VersionNo | 时间版本 |
+| Organization | OrganizationId | 组织维度（仅保留 ID） |
+
+## 5. 领域模型
+### 5.1 聚合关系
+```
+EntityDefinition
+ ├── SubEntityDefinition (List)
+ │    └── FieldMetadata (List)
+ └── EntityInterface (List)
+```
+
+### 5.2 关键约束
+- `EntityDefinition.Code` 唯一；
+- 子实体 `Code` 在同一主实体内唯一；
+- `FieldMetadata.PropertyName` 在其所属实体内唯一；
+- 接口字段所有权由 `_interfaceFieldOwnership` 字典管理，避免误删；
+- `OrganizationId` 在实体层只存 ID，其他信息由权限体系补齐。
+
+## 6. 后端与 API
+### 6.1 AppDbContext
+新增 DbSet：`EntityDefinitions`、`SubEntityDefinitions`、`FieldMetadatas`、`EntityInterfaces` 并在 `OnModelCreating` 中配置 jsonb 转换。
+
+### 6.2 核心端点
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET /api/entity-definitions` | 列表查询 |
+| `POST /api/entity-definitions` | 创建实体（含字段、接口） |
+| `PUT /api/entity-definitions/{id}` | 更新实体（含接口同步） |
+| `POST /api/entity-definitions/{id}/publish` | 触发发布（独立文档描述） |
+
+后台使用 `InterfaceFieldMapping.GetFields` 注入保留字段；`OrganizationId` 注入时带上 `IsEntityRef = true`，由权限模块负责引用组织表。
+
+## 7. 前端实现
+### 7.1 组件结构
+- `EntityDefinitionEdit.razor`：承载主表单、Tabs、字段表格、接口侧边；
+- `MultilingualInput.razor`：复用 JS 与 CSS；
+- 状态管理：`_selectedInterfaces`、`_interfaceFieldOwnership`、`_model.Fields`。
+
+### 7.2 交互细则
+1. **折叠卡片**：主实体信息使用 Card + Collapse，默认展开，可收起节省空间；
+2. **表格样式**：`field-editor-table` CSS 提供 hover、分隔、必填图标；
+3. **多语提示**：空值时显示 `LBL_CLICK_TO_EDIT_MULTILINGUAL`；
+4. **接口提示**：底部 `TXT_INTERFACE_AUTO_FIELDS_TIP` 描述不可直接删除接口字段；
+5. **组织接口**：勾选后仅显示 `OrganizationId` 字段，提示“绑定组织树实现分组织管理”；
+6. **校验反馈**：保存前运行本地校验，失败则调用 `MessageService.Warning/Error`。
+
+## 8. 测试策略
+| 测试层级 | 重点 |
+| --- | --- |
+| 单元测试（后端） | 接口字段注入、命名空间生成、接口字段锁定、数据验证 |
+| 单元测试（前端 BUnit） | `_interfaceFieldOwnership` 逻辑、折叠/展开状态、字段排序 |
+| 集成测试 | `EntityDefinitionEndpoints` CRUD、接口字段序列化 |
+| 手工回归 | 多语言输入、接口切换、子实体 Tab 操作、保存/发布流程 |
+
+## 9. 部署与后续
+- 上线前运行 `dotnet ef database update` 同步最新结构；
+- 若需新增接口类型，需同时扩展 `InterfaceFieldMapping`、前端模板、i18n 文案；
+- 后续工作：将功能与权限文档拆分至 `ARCH-21`，在文档索引中按主题索引，避免补丁式记录。
