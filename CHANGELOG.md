@@ -19,11 +19,19 @@
   - 实现失焦自动关闭：两个菜单都添加透明覆盖层，点击外部区域自动收起
   - 移除"返回领域菜单"按钮，简化交互流程
   - 菜单面板覆盖层从 header 下方开始，不遮盖顶部导航栏
+- **系统实体同步增强**：`EntityDefinitionSynchronizer` 现在会自动更新现有系统实体的 `Source` 字段，确保 Customer、OrganizationNode、RoleProfile 等系统实体及其字段的 Source 标记正确为 "System"
 
 ### Changed
 - **菜单定位机制**：从全局居中的 Modal 定位改为基于按钮位置的动态定位，解决菜单与触发按钮不对齐的问题
 - **领域选择器样式**：移除 transform scale 动画，改用 opacity 避免触发元素尺寸变化导致的位置跳动
 - **z-index 层级**：domain-selector (1500) > menu-panel (1001) > overlays (1000/1400)，确保正确的层叠顺序
+
+### Fixed
+- **实体定义列表 API 契约不匹配**：修复 `/api/entity-definitions` 端点返回的 JSON 结构与前端 DTO 不匹配的问题
+  - 前端 `EntityDefinitionDto` 添加 `FieldCount` 属性
+  - API 列表端点的 `Interfaces` 字段从字符串数组改为完整对象数组（包含 Id, InterfaceType, IsEnabled）
+  - 确保 API 响应能被前端正确反序列化，系统实体（Customer、OrganizationNode、RoleProfile）现在可以在实体定义管理页面正确显示
+- **Customer 实体字段缺少 Source 标记**：为 Customer 实体的所有字段（Id, Code, Name, Version, ExtData）添加 `Source = FieldSource.System`，与 OrganizationNode 和 RoleProfile 保持一致
 
 ## [0.5.11] - 2025-11-13
 

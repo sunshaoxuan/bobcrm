@@ -38,7 +38,8 @@
       "Bash(psql:*)",
       "Bash(node -e:*)",
       "Bash(/tmp/entities.json)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(if exist \"tests\\BobCrm.Api.Tests\\EntityDefinitionContractTests.cs\" del \"tests\\BobCrm.Api.Tests\\EntityDefinitionContractTests.cs\")"
     ],
     "deny": [],
     "ask": []
