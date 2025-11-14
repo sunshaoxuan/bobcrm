@@ -127,7 +127,12 @@ public static class EntityDefinitionEndpoints
                     ed.UpdatedAt,
                     ed.CreatedBy,
                     FieldCount = ed.Fields.Count,
-                    Interfaces = ed.Interfaces.Select(i => i.InterfaceType).ToList()
+                    Interfaces = ed.Interfaces.Select(i => new
+                    {
+                        i.Id,
+                        i.InterfaceType,
+                        i.IsEnabled
+                    }).ToList()
                 })
                 .ToListAsync();
 

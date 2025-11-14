@@ -36,6 +36,7 @@ public class EntityDefinitionDto
     public string? CreatedBy { get; set; }
     public string? UpdatedBy { get; set; }
 
+    public int FieldCount { get; set; }
     public List<FieldMetadataDto> Fields { get; set; } = new();
     public List<EntityInterfaceDto> Interfaces { get; set; } = new();
 }

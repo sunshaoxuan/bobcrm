@@ -35,7 +35,10 @@
       "Bash(if exist \"src\\BobCrm.App\\Components\\Pages\\Roles.razor\" del \"src\\BobCrm.App\\Components\\Pages\\Roles.razor\")",
       "Bash(if exist \"src\\BobCrm.App\\Components\\Pages\\RolePermissions.razor\" del \"src\\BobCrm.App\\Components\\Pages\\RolePermissions.razor\")",
       "Bash(if exist \"src\\BobCrm.App\\Components\\Pages\\UserRoles.razor\" del \"src\\BobCrm.App\\Components\\Pages\\UserRoles.razor\")",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(node -e:*)",
+      "Bash(/tmp/entities.json)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
