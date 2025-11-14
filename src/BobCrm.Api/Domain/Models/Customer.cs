@@ -70,7 +70,8 @@ public class Customer : IBizEntity
                 },
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
-                SortOrder = 1
+                SortOrder = 1,
+                Source = FieldSource.System
             },
             new FieldMetadata
             {
@@ -84,7 +85,8 @@ public class Customer : IBizEntity
                 DataType = FieldDataType.String,
                 Length = 64,
                 IsRequired = true,
-                SortOrder = 2
+                SortOrder = 2,
+                Source = FieldSource.System
             },
             new FieldMetadata
             {
@@ -98,7 +100,8 @@ public class Customer : IBizEntity
                 DataType = FieldDataType.String,
                 Length = 256,
                 IsRequired = true,
-                SortOrder = 3
+                SortOrder = 3,
+                Source = FieldSource.System
             },
             new FieldMetadata
             {
@@ -112,7 +115,8 @@ public class Customer : IBizEntity
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 DefaultValue = "1",
-                SortOrder = 4
+                SortOrder = 4,
+                Source = FieldSource.System
             },
             new FieldMetadata
             {
@@ -125,7 +129,8 @@ public class Customer : IBizEntity
                 },
                 DataType = FieldDataType.Text,
                 IsRequired = false,
-                SortOrder = 5
+                SortOrder = 5,
+                Source = FieldSource.System
             }
         };
 
