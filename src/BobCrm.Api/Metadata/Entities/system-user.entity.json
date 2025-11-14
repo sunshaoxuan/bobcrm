@@ -1,0 +1,157 @@
+{
+  "Namespace": "BobCrm.Api.Domain.Models",
+  "EntityName": "SystemUser",
+  "FullTypeName": "BobCrm.Api.Domain.Models.SystemUser",
+  "EntityRoute": "users",
+  "DisplayName": {
+    "zh": "系统用户",
+    "ja": "システムユーザー",
+    "en": "System Users"
+  },
+  "Description": {
+    "zh": "管理系统用户及其访问状态",
+    "ja": "システムユーザーとアクセス状態を管理します",
+    "en": "Manage system users and their access state"
+  },
+  "ApiEndpoint": "/api/users",
+  "StructureType": "Single",
+  "Status": "Published",
+  "Source": "System",
+  "IsRootEntity": true,
+  "IsEnabled": true,
+  "Order": 5,
+  "Icon": "user",
+  "Category": "system",
+  "Fields": [
+    {
+      "PropertyName": "Id",
+      "DisplayName": {
+        "zh": "ID",
+        "ja": "ID",
+        "en": "ID"
+      },
+      "DataType": "Guid",
+      "IsRequired": true,
+      "SortOrder": 1,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "UserName",
+      "DisplayName": {
+        "zh": "用户名",
+        "ja": "ユーザー名",
+        "en": "User Name"
+      },
+      "DataType": "String",
+      "Length": 128,
+      "IsRequired": true,
+      "SortOrder": 2,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "Email",
+      "DisplayName": {
+        "zh": "邮箱",
+        "ja": "メール",
+        "en": "Email"
+      },
+      "DataType": "String",
+      "Length": 256,
+      "IsRequired": false,
+      "SortOrder": 3,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "EmailConfirmed",
+      "DisplayName": {
+        "zh": "邮箱已验证",
+        "ja": "メール確認",
+        "en": "Email Confirmed"
+      },
+      "DataType": "Boolean",
+      "IsRequired": true,
+      "SortOrder": 4,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "PhoneNumber",
+      "DisplayName": {
+        "zh": "手机号",
+        "ja": "電話番号",
+        "en": "Phone Number"
+      },
+      "DataType": "String",
+      "Length": 32,
+      "IsRequired": false,
+      "SortOrder": 5,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "PhoneNumberConfirmed",
+      "DisplayName": {
+        "zh": "手机号已验证",
+        "ja": "電話確認",
+        "en": "Phone Confirmed"
+      },
+      "DataType": "Boolean",
+      "IsRequired": true,
+      "SortOrder": 6,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "TwoFactorEnabled",
+      "DisplayName": {
+        "zh": "双因素认证",
+        "ja": "二要素認証",
+        "en": "Two Factor Enabled"
+      },
+      "DataType": "Boolean",
+      "IsRequired": true,
+      "SortOrder": 7,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "LockoutEnabled",
+      "DisplayName": {
+        "zh": "允许锁定",
+        "ja": "ロックアウト可",
+        "en": "Lockout Enabled"
+      },
+      "DataType": "Boolean",
+      "IsRequired": true,
+      "SortOrder": 8,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "LockoutEnd",
+      "DisplayName": {
+        "zh": "解锁时间",
+        "ja": "ロック解除日",
+        "en": "Lockout End"
+      },
+      "DataType": "DateTime",
+      "IsRequired": false,
+      "SortOrder": 9,
+      "Source": "System"
+    },
+    {
+      "PropertyName": "AccessFailedCount",
+      "DisplayName": {
+        "zh": "失败次数",
+        "ja": "失敗回数",
+        "en": "Access Failed Count"
+      },
+      "DataType": "Integer",
+      "IsRequired": true,
+      "SortOrder": 10,
+      "Source": "System"
+    }
+  ],
+  "Interfaces": [
+    {
+      "InterfaceType": "Base",
+      "IsEnabled": true,
+      "IsLocked": true
+    }
+  ]
+}
