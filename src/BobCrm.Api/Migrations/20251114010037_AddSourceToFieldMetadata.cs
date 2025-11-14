@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BobCrm.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTemplateBindings : Migration
+    public partial class AddSourceToFieldMetadata : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -37,6 +37,13 @@ namespace BobCrm.Api.Migrations
                 type: "integer",
                 nullable: false,
                 defaultValue: 0);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Source",
+                table: "FieldMetadatas",
+                type: "character varying(20)",
+                maxLength: 20,
+                nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "TemplateBindings",
@@ -117,6 +124,10 @@ namespace BobCrm.Api.Migrations
             migrationBuilder.DropColumn(
                 name: "UsageType",
                 table: "FormTemplates");
+
+            migrationBuilder.DropColumn(
+                name: "Source",
+                table: "FieldMetadatas");
         }
     }
 }

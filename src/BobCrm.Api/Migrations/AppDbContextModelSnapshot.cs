@@ -527,6 +527,10 @@ namespace BobCrm.Api.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Source")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid?>("SubEntityDefinitionId")
                         .HasColumnType("uuid");
 

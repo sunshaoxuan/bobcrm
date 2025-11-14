@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BobCrm.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251113090338_AddTemplateBindings")]
-    partial class AddTemplateBindings
+    [Migration("20251114010037_AddSourceToFieldMetadata")]
+    partial class AddSourceToFieldMetadata
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -529,6 +529,10 @@ namespace BobCrm.Api.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid?>("SubEntityDefinitionId")
                         .HasColumnType("uuid");
