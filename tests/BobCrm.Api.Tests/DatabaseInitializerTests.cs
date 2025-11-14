@@ -1,5 +1,6 @@
 using BobCrm.Api.Abstractions;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +30,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         var json = await resp.Content.ReadAsStringAsync();
 
         // 验证Customer实体已注册
-        Assert.Contains("BobCrm.Api.Domain.Customer", json); // entityType (FullTypeName)
+        Assert.Contains("BobCrm.Api.Base.Customer", json); // entityType (FullTypeName)
         Assert.Contains("customer", json); // entityRoute
         Assert.Contains("Customer", json); // entityName
         Assert.Contains("displayName", json); // 多语言显示名字段
@@ -45,7 +46,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
     //
     //     // 手动禁用Customer实体
     //     var customer = await db.EntityDefinitions
-    //         .FirstOrDefaultAsync(e => e.FullTypeName == "BobCrm.Api.Domain.Customer");
+    //         .FirstOrDefaultAsync(e => e.FullTypeName == "BobCrm.Api.Base.Customer");
 
     [Fact]
     public async Task AutoRegister_Re_Enables_Previously_Disabled_Entity_DISABLED()
@@ -79,27 +80,27 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         // 验证所有必要的数据都已初始化
         
         // 1. Customers
-        var customersExist = await db.Set<Domain.Customer>().AnyAsync();
+        var customersExist = await db.Set<Customer>().AnyAsync();
         Assert.True(customersExist, "应该有初始客户数据");
         
         // 2. FieldDefinitions
-        var fieldsExist = await db.Set<Domain.FieldDefinition>().AnyAsync();
+        var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
         Assert.True(fieldsExist, "应该有字段定义");
         
         // 3. LocalizationLanguages
-        var langsExist = await db.Set<Domain.LocalizationLanguage>().AnyAsync();
+        var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
         Assert.True(langsExist, "应该有语言配置");
         
         // 4. LocalizationResources
-        var resourcesExist = await db.Set<Domain.LocalizationResource>().AnyAsync();
+        var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
         Assert.True(resourcesExist, "应该有多语言资源");
 
         // 5. EntityDefinitions
-        var entitiesExist = await db.Set<Domain.Models.EntityDefinition>().AnyAsync();
+        var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
         Assert.True(entitiesExist, "应该有实体定义");
 
         // 6. UserLayouts (default template)
-        var defaultLayout = await db.Set<Domain.UserLayout>()
+        var defaultLayout = await db.Set<UserLayout>()
             .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
         Assert.NotNull(defaultLayout);
         Assert.False(string.IsNullOrWhiteSpace(defaultLayout.LayoutJson));
@@ -116,12 +117,12 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var existing = await db.Set<Domain.LocalizationResource>()
+            var existing = await db.Set<LocalizationResource>()
                 .FirstOrDefaultAsync(r => r.Key == existingKey);
 
             if (existing != null)
             {
-                db.Set<Domain.LocalizationResource>().Remove(existing);
+                db.Set<LocalizationResource>().Remove(existing);
                 await db.SaveChangesAsync();
             }
         }
@@ -131,7 +132,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var deleted = await db.Set<Domain.LocalizationResource>()
+            var deleted = await db.Set<LocalizationResource>()
                 .FirstOrDefaultAsync(r => r.Key == existingKey);
             Assert.Null(deleted);
         }
@@ -148,7 +149,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var added = await db.Set<Domain.LocalizationResource>()
+            var added = await db.Set<LocalizationResource>()
                 .FirstOrDefaultAsync(r => r.Key == existingKey);
 
             Assert.NotNull(added);

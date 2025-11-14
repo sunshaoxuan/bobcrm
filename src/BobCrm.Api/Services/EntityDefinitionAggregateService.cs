@@ -1,7 +1,8 @@
-using BobCrm.Api.Domain.Aggregates;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Aggregates;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using AggregateValidationResult = BobCrm.Api.Base.Aggregates.ValidationResult;
 
 namespace BobCrm.Api.Services;
 
@@ -93,7 +94,7 @@ public class EntityDefinitionAggregateService
     /// <summary>
     /// 验证聚合（不保存）
     /// </summary>
-    public Domain.Aggregates.ValidationResult ValidateAggregate(EntityDefinitionAggregate aggregate)
+    public AggregateValidationResult ValidateAggregate(EntityDefinitionAggregate aggregate)
     {
         return aggregate.Validate();
     }

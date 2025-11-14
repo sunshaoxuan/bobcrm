@@ -26,6 +26,7 @@
 - **菜单定位机制**：从全局居中的 Modal 定位改为基于按钮位置的动态定位，解决菜单与触发按钮不对齐的问题
 - **领域选择器样式**：移除 transform scale 动画，改用 opacity 避免触发元素尺寸变化导致的位置跳动
 - **z-index 层级**：domain-selector (1500) > menu-panel (1001) > overlays (1000/1400)，确保正确的层叠顺序
+- **命名空间统一**：将所有 `BobCrm.Domain.*` 代码命名空间、默认占位字符串与示例脚本更新为 `BobCrm.Base.*`，同步修复系统实体同步器、数据库初始化测试与文档示例，确保“Domain” 仅用于业务领域档案
 
 ### Fixed
 - **实体定义列表 API 契约不匹配**：修复 `/api/entity-definitions` 端点返回的 JSON 结构与前端 DTO 不匹配的问题
@@ -674,7 +675,7 @@
 
 ### 变更 (Changed)
 - **EntityMetadata 结构规范化**：
-  - EntityType（主键）：改为存储类全名（如 `BobCrm.Api.Domain.Customer`）
+  - EntityType（主键）：改为存储类全名（如 `BobCrm.Api.Base.Customer`）
   - EntityName（新增）：类短名（如 `Customer`）
   - EntityRoute（新增）：URL路由名（如 `customer`）
   - 用于精确反射查找和反向检查

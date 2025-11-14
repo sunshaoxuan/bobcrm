@@ -1,7 +1,8 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Abstractions;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Infrastructure;
 
@@ -68,7 +69,7 @@ public class EntityDefinitionSynchronizer
     /// </summary>
     private List<Type> ScanBizEntityTypes()
     {
-        var assembly = typeof(Domain.Customer).Assembly;
+        var assembly = typeof(Customer).Assembly;
         var bizEntityInterface = typeof(IBizEntity);
 
         var types = assembly.GetTypes()
@@ -169,7 +170,7 @@ public class EntityDefinitionSynchronizer
         _logger.LogWarning("[EntitySync] Resetting system entity to default: {FullTypeName}", fullTypeName);
 
         // 查找对应的类型
-        var entityType = typeof(Domain.Customer).Assembly.GetTypes()
+        var entityType = typeof(Customer).Assembly.GetTypes()
             .FirstOrDefault(t => t.FullName == fullTypeName);
 
         if (entityType == null)
