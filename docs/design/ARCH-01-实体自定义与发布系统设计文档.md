@@ -358,10 +358,17 @@ CREATE INDEX IX_DDLScripts_Status ON DDLScripts(Status);
 ├─────────────────────────────────────────────────────────┤
 │ EntityDefinitions              │ 元数据表                 │
 │ FieldMetadata                  │ 元数据表                 │
+│ FieldDataTypes                 │ 字段类型档案             │
+│ FieldSources                   │ 字段来源档案             │
 │ DDLScripts                     │ 元数据表                 │
 │ [动态生成的业务表]              │ 运行时表                 │
 └─────────────────────────────────────────────────────────┘
 ```
+
+> **字段档案补充**
+>
+> - `FieldDataTypes`：记录 String、Int32、Decimal、EntityRef 等字段类型的 Code、CLR 类型、分类以及多语言说明。所有字段类型下拉与校验逻辑均读取此表，后续需要新增类型时，只需插入档案即可。
+> - `FieldSources`：记录字段来源（System、Custom、Interface……）的 Code/Name/Description。实体编辑器和同步器都直接引用此档案，允许未来扩展更多来源类型，而无需修改枚举或代码。
 
 ### 核心服务
 

@@ -20,6 +20,7 @@
   - 移除"返回领域菜单"按钮，简化交互流程
   - 菜单面板覆盖层从 header 下方开始，不遮盖顶部导航栏
 - **系统实体同步增强**：`EntityDefinitionSynchronizer` 现在会自动更新现有系统实体的 `Source` 字段，确保 Customer、OrganizationNode、RoleProfile 等系统实体及其字段的 Source 标记正确为 "System"
+- **字段档案**：新增 `FieldDataTypes` / `FieldSources` 档案表、实体模型与初始化脚本，统一存储字段类型/来源（含多语描述）。实体编辑器、字段校验等位置均可直接读取档案数据，后续扩展无需修改枚举或代码。
 
 ### Changed
 - **菜单定位机制**：从全局居中的 Modal 定位改为基于按钮位置的动态定位，解决菜单与触发按钮不对齐的问题
@@ -891,4 +892,3 @@
 
 **维护者**：BobCRM 开发团队  
 **最后更新**：2025-11-13
-
