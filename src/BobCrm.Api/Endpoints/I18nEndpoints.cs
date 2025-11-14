@@ -1,31 +1,33 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Domain;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
-/// 国际化/多语言相关端点
+/// REST endpoints for localization resources.
 /// </summary>
 public static class I18nEndpoints
 {
     public static IEndpointRouteBuilder MapI18nEndpoints(this IEndpointRouteBuilder app)
     {
+        var docLang = ResolveDocumentationLanguage(app);
+        string Doc(string key) => ResolveDocString(app, docLang, key);
+
         var group = app.MapGroup("/api/i18n")
-            .WithTags("国际化")
+            .WithTags("Localization")
             .WithOpenApi();
 
-        // 获取当前缓存版本（用于客户端版本检查）
         group.MapGet("/version", (ILocalization loc) =>
         {
             var version = loc.GetCacheVersion();
             return Results.Json(new { version });
         })
         .WithName("GetI18nVersion")
-        .WithSummary("获取多语资源版本")
-        .WithDescription("客户端用于检查本地缓存是否需要更新");
+        .WithSummary(Doc("DOC_I18N_VERSION_SUMMARY"))
+        .WithDescription(Doc("DOC_I18N_VERSION_DESCRIPTION"));
 
-        // 获取所有多语资源（管理用）
         group.MapGet("/resources", (
             AppDbContext db,
             ILocalization loc,
@@ -35,7 +37,6 @@ public static class I18nEndpoints
             var version = loc.GetCacheVersion().ToString();
             var etag = $"\"{version}\"";
 
-            // 检查 If-None-Match 头
             if (http.Request.Headers.TryGetValue("If-None-Match", out var clientEtag) && clientEtag == etag)
             {
                 logger.LogDebug("[I18n] Resources not modified, returning 304");
@@ -44,76 +45,135 @@ public static class I18nEndpoints
 
             var list = db.LocalizationResources.AsNoTracking().ToList();
 
-            // 设置 ETag 和 Cache-Control 头
             http.Response.Headers["ETag"] = etag;
-            http.Response.Headers["Cache-Control"] = "public, max-age=1800"; // 30 分钟
+            http.Response.Headers["Cache-Control"] = "public, max-age=1800";
 
             logger.LogDebug("[I18n] Returning {Count} resources with ETag {ETag}", list.Count, etag);
             return Results.Json(list);
         })
         .RequireAuthorization()
         .WithName("GetI18nResources")
-        .WithSummary("获取所有多语资源")
-        .WithDescription("管理用：获取完整的多语资源列表，支持ETag缓存");
+        .WithSummary(Doc("DOC_I18N_RESOURCES_SUMMARY"))
+        .WithDescription(Doc("DOC_I18N_RESOURCES_DESCRIPTION"));
 
-        // 获取指定语言的字典
-        group.MapGet("/{lang}", (
-            string lang,
+        group.MapGet("/{lang?}", async (
+            string? lang,
+            AppDbContext db,
             ILocalization loc,
             HttpContext http,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            CancellationToken ct) =>
         {
-            lang = (lang ?? "ja").ToLowerInvariant();
+            var resolvedLang = await ResolveLanguageAsync(lang, db, http, logger, ct);
             var version = loc.GetCacheVersion().ToString();
-            var etag = $"\"{version}_{lang}\"";
+            var etag = $"\"{version}_{resolvedLang}\"";
 
-            // 检查 If-None-Match 头
             if (http.Request.Headers.TryGetValue("If-None-Match", out var clientEtag) && clientEtag == etag)
             {
-                logger.LogDebug("[I18n] Language dictionary not modified for {Lang}, returning 304", lang);
+                logger.LogDebug("[I18n] Language dictionary not modified for {Lang}, returning 304", resolvedLang);
                 return Results.StatusCode(304); // Not Modified
             }
 
-            // 使用 ILocalization 获取缓存的字典（统一数据源）
-            var dict = loc.GetDictionary(lang);
+            var dict = loc.GetDictionary(resolvedLang);
 
-            // 设置 ETag 和 Cache-Control 头
             http.Response.Headers["ETag"] = etag;
-            http.Response.Headers["Cache-Control"] = "public, max-age=1800"; // 30 分钟
+            http.Response.Headers["Cache-Control"] = "public, max-age=1800";
 
-            logger.LogDebug("[I18n] Returning {Count} entries for language {Lang} with ETag {ETag}", 
-                dict.Count, lang, etag);
+            logger.LogDebug("[I18n] Returning {Count} entries for language {Lang} with ETag {ETag}",
+                dict.Count, resolvedLang, etag);
             return Results.Json(dict);
         })
         .WithName("GetLanguageDictionary")
-        .WithSummary("获取指定语言字典")
-        .WithDescription("获取指定语言的键值对字典，支持ETag缓存");
+        .WithSummary(Doc("DOC_I18N_LANGUAGE_SUMMARY"))
+        .WithDescription(Doc("DOC_I18N_LANGUAGE_DESCRIPTION"));
 
-        // 获取可用语言列表
-        group.MapGet("/languages", (AppDbContext db, ILogger<Program> logger) =>
+        group.MapGet("/languages", async (AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var list = db.LocalizationLanguages.AsNoTracking()
+            var list = await db.LocalizationLanguages.AsNoTracking()
+                .OrderBy(l => l.Code)
                 .Select(l => new { code = l.Code, name = l.NativeName })
-                .ToList();
+                .ToListAsync(ct);
 
             if (list.Count == 0)
             {
-                logger.LogInformation("[I18n] No languages in database, returning defaults");
-                list = new[]
-                {
-                    new { code = "ja", name = "日本語" },
-                    new { code = "zh", name = "中文" },
-                    new { code = "en", name = "English" }
-                }.ToList();
+                logger.LogWarning("[I18n] No languages configured in LocalizationLanguages table");
             }
-            
-            logger.LogDebug("[I18n] Returning {Count} available languages", list.Count);
+            else
+            {
+                logger.LogDebug("[I18n] Returning {Count} available languages", list.Count);
+            }
+
             return Results.Json(list);
         })
         .WithName("GetLanguages")
-        .WithSummary("获取可用语言列表")
-        .WithDescription("获取系统支持的所有语言及其本地化名称");
+        .WithSummary(Doc("DOC_I18N_LANGUAGES_SUMMARY"))
+        .WithDescription(Doc("DOC_I18N_LANGUAGES_DESCRIPTION"));
 
         return app;
+    }
+
+    private static async Task<string> ResolveLanguageAsync(
+        string? requestedLang,
+        AppDbContext db,
+        HttpContext http,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedLang))
+        {
+            return requestedLang.ToLowerInvariant();
+        }
+
+        var headerLang = http.Request.Headers["X-Lang"].FirstOrDefault()
+            ?? http.Request.Query["lang"].FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(headerLang))
+        {
+            return headerLang.ToLowerInvariant();
+        }
+
+        var fallback = await db.LocalizationLanguages.AsNoTracking()
+            .OrderBy(l => l.Id)
+            .Select(l => l.Code)
+            .FirstOrDefaultAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(fallback))
+        {
+            return fallback.ToLowerInvariant();
+        }
+
+        logger.LogWarning("[I18n] No localization languages configured; falling back to 'en'");
+        return "en";
+    }
+
+    private static string ResolveDocumentationLanguage(IEndpointRouteBuilder app)
+    {
+        using var scope = app.ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var systemLang = db.SystemSettings
+            .AsNoTracking()
+            .Select(s => s.DefaultLanguage)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(systemLang))
+        {
+            return systemLang.ToLowerInvariant();
+        }
+
+        var fallback = db.LocalizationLanguages
+            .AsNoTracking()
+            .OrderBy(l => l.Id)
+            .Select(l => l.Code)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(fallback) ? "en" : fallback.ToLowerInvariant();
+    }
+
+    private static string ResolveDocString(IEndpointRouteBuilder app, string lang, string key)
+    {
+        using var scope = app.ServiceProvider.CreateScope();
+        var localization = scope.ServiceProvider.GetRequiredService<ILocalization>();
+        return localization.T(key, lang);
     }
 }
