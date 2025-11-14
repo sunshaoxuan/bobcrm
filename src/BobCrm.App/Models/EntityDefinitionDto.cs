@@ -65,6 +65,7 @@ public class FieldMetadataDto
     public int SortOrder { get; set; }
     public string? DefaultValue { get; set; }
     public string? ValidationRules { get; set; }
+    public string? Source { get; set; }
 }
 
 /// <summary>
@@ -275,4 +276,14 @@ public static class EntitySource
 {
     public const string System = "System";
     public const string Custom = "Custom";
+}
+
+/// <summary>
+/// 字段来源常量
+/// </summary>
+public static class FieldSource
+{
+    public const string System = "System";
+    public const string Custom = "Custom";
+    public const string Interface = "Interface";
 }

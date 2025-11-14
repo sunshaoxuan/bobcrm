@@ -208,12 +208,12 @@
                             {
                                 foreach (var field in _model.Fields)
                                 {
-                                    var isInterface = IsInterfaceField(field.PropertyName);
-                                    var interfaceLabel = GetInterfaceFieldLabel(field.PropertyName);
+                                    var isProtected = IsProtectedField(field);
+                                    var sourceLabel = GetFieldSourceLabel(field);
                                     <tr>
                                         <td>
                                             <Input @bind-Value="field.PropertyName"
-                                                   Disabled="@isInterface"
+                                                   Disabled="@isProtected"
                                                    Placeholder="Code"
                                                    Class="field-control" />
                                         </td>
@@ -225,7 +225,7 @@
                                         <td>
                                             <Select TItemValue="string" TItem="string"
                                                     @bind-Value="field.DataType"
-                                                    Disabled="@isInterface"
+                                                    Disabled="@isProtected"
                                                     Style="width: 140px;">
                                                 <SelectOptions>
                                                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String"><ChildContent Context="opt">String</ChildContent></SelectOption>
@@ -242,49 +242,42 @@
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Length"
-                                                                    Disabled="@isInterface"
+                                                                    Disabled="@isProtected"
                                                                     Placeholder="-" Style="width: 100px;" />
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Precision"
-                                                                    Disabled="@isInterface"
+                                                                    Disabled="@isProtected"
                                                                     Placeholder="-" Style="width: 100px;" />
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Scale"
-                                                                    Disabled="@isInterface"
+                                                                    Disabled="@isProtected"
                                                                     Placeholder="-" Style="width: 100px;" />
                                         </td>
                                         <td class="field-required">
                                             <Switch @bind-Value="field.IsRequired"
-                                                    Disabled="@isInterface" />
+                                                    Disabled="@isProtected" />
                                         </td>
                                         <td>
                                             <Input @bind-Value="field.DefaultValue"
-                                                   Disabled="@isInterface"
+                                                   Disabled="@isProtected"
                                                    Placeholder="@I18n.T("TXT_DEFAULT_VALUE_HINT")"
                                                    Class="field-control" />
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int" @bind-Value="field.SortOrder"
-                                                                    Disabled="@isInterface"
+                                                                    Disabled="@isProtected"
                                                                     Min="0" Style="width: 100px;" />
                                         </td>
                                         <td>
-                                            @if (!string.IsNullOrEmpty(interfaceLabel))
-                                            {
-                                                <Tag>@interfaceLabel</Tag>
-                                            }
-                                            else
-                                            {
-                                                <Tag>@I18n.T("LBL_SOURCE_CUSTOM")</Tag>
-                                            }
+                                            <Tag>@sourceLabel</Tag>
                                         </td>
                                         <td>
                                             <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")"
                                                         OnConfirm="() => RemoveField(field)"
-                                                        Disabled="@isInterface">
-                                                <Button Danger Size="@ButtonSize.Small" Disabled="@isInterface">
+                                                        Disabled="@isProtected">
+                                                <Button Danger Size="@ButtonSize.Small" Disabled="@isProtected">
                                                     @I18n.T("BTN_DELETE")
                                                 </Button>
                                             </Popconfirm>
@@ -585,7 +578,8 @@
             DisplayName = new MultilingualTextDto(),
             DataType = FieldDataType.String,
             IsRequired = false,
-            SortOrder = sortOrder
+            SortOrder = sortOrder,
+            Source = FieldSource.Custom
         });
     }
 
@@ -602,7 +596,8 @@
             return;
         }
 
-        if (IsInterfaceField(field.PropertyName))
+        // 受保护的字段不能删除（接口字段和系统字段）
+        if (IsProtectedField(field))
         {
             return;
         }
@@ -741,6 +736,45 @@
             && _interfaceFieldOwnership.ContainsKey(propertyName);
     }
 
+    private bool IsProtectedField(FieldMetadataDto field)
+    {
+        // 接口字段受保护
+        if (IsInterfaceField(field.PropertyName))
+        {
+            return true;
+        }
+
+        // 系统字段受保护
+        if (field.Source == FieldSource.System)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private string? GetFieldSourceLabel(FieldMetadataDto field)
+    {
+        // 优先显示接口来源
+        if (IsInterfaceField(field.PropertyName))
+        {
+            return GetInterfaceFieldLabel(field.PropertyName);
+        }
+
+        // 显示字段来源
+        if (field.Source == FieldSource.System)
+        {
+            return I18n!.T("LBL_SOURCE_SYSTEM");
+        }
+
+        if (field.Source == FieldSource.Interface)
+        {
+            return I18n!.T("LBL_SOURCE_INTERFACE");
+        }
+
+        return I18n!.T("LBL_SOURCE_CUSTOM");
+    }
+
     private string? GetInterfaceFieldLabel(string? propertyName)
     {
         if (string.IsNullOrWhiteSpace(propertyName))
@@ -835,7 +869,8 @@
             IsRequired = template.IsRequired,
             IsEntityRef = template.IsEntityRef,
             TableName = template.ReferenceTable,
-            SortOrder = GetNextSortOrder()
+            SortOrder = GetNextSortOrder(),
+            Source = FieldSource.Interface
         };
     }
 
