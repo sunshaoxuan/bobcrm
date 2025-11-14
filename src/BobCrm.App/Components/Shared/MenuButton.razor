@@ -201,7 +201,7 @@
         return _currentRoute.StartsWith(normalized.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task HandleFunctionClick(string route)
+    private void HandleFunctionClick(string route)
     {
         if (string.IsNullOrWhiteSpace(route)) return;
         Layout.CloseMenuPanel();

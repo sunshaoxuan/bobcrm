@@ -84,7 +84,6 @@
 
     private readonly List<FunctionMenuNode> _domains = new();
     private FunctionMenuNode? _activeDomain;
-    private bool _menuLoading = true;
     private string? _menuError;
     private string _currentRoute = "/";
 
@@ -127,7 +126,6 @@
     {
         try
         {
-            _menuLoading = true;
             _menuError = null;
             var resp = await Auth.GetWithRefreshAsync("/api/access/functions/me");
             if (!resp.IsSuccessStatusCode)
@@ -154,7 +152,6 @@
         }
         finally
         {
-            _menuLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
