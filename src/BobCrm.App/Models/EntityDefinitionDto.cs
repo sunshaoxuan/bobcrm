@@ -97,6 +97,8 @@ public class CreateEntityDefinitionRequest
     /// </summary>
     public MultilingualTextDto? Description { get; set; }
 
+    public string? Icon { get; set; }
+    public string? Category { get; set; }
     public string StructureType { get; set; } = "Single";
     public List<string> Interfaces { get; set; } = new();
     public List<FieldMetadataDto> Fields { get; set; } = new();

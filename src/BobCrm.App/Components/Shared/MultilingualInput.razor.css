@@ -40,70 +40,61 @@
     line-height: 30px;
 }
 
-/* Overlay backdrop - full screen clickable layer */
 .multilingual-overlay-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 1040;
     background: transparent;
 }
 
-/* Overlay container - positioned relative to trigger */
 .multilingual-overlay-container {
-    position: absolute;
-    z-index: 1050;
-    margin-top: 8px;
-    background: #f7f8fb;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 6px 24px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.03);
-    padding: 12px 16px;
-    min-width: 400px;
-    max-width: 600px;
-    max-height: 400px;
-    overflow-y: auto;
+    position: fixed;
+    z-index: 1051;
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: 0 28px 60px rgba(15, 23, 42, 0.35);
+    padding: 24px 26px 24px;
 }
 
 /* Overlay content */
 .multilingual-overlay {
     box-sizing: border-box;
+    max-height: 360px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: transparent;
 }
 
 /* Row layout - flexbox for better width control */
-.multilingual-input-row {
+ .multilingual-input-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(22, 45, 78, 0.08);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Focus effect on container, not individual inputs */
 .multilingual-input-row:focus-within {
-    border-color: #1890ff;
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-    background: #fff;
-}
-
-.multilingual-input-row:last-child {
-    margin-bottom: 0;
+    border-color: #4f7df2;
+    box-shadow: 0 8px 20px rgba(79, 125, 242, 0.25);
 }
 
 /* Default language highlight */
 .multilingual-input-row.default-language {
-    background: #f0f5ff;
-    border-color: rgba(24, 144, 255, 0.15);
+    background: #eff3ff;
+    border-color: rgba(79, 125, 242, 0.4);
 }
 
 .multilingual-input-row.default-language:focus-within {
     background: #fff;
-    border-color: #1890ff;
 }
 
 /* Language label - fixed width */

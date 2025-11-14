@@ -80,7 +80,7 @@ public static class EntityDefinitionEndpoints
                 .FirstOrDefaultAsync();
 
             var isValid = entity != null;
-            
+
             return Results.Json(new { isValid, entityRoute, entity });
         })
         .WithName("ValidateEntityRoute")
@@ -194,7 +194,8 @@ public static class EntityDefinitionEndpoints
                     f.TableName,
                     f.SortOrder,
                     f.DefaultValue,
-                    f.ValidationRules
+                    f.ValidationRules,
+                    f.Source
                 }),
                 Interfaces = definition.Interfaces.Select(i => new
                 {
@@ -312,7 +313,8 @@ public static class EntityDefinitionEndpoints
                     if (fieldDto.DisplayName == null || !fieldDto.DisplayName.Any() ||
                         !fieldDto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
                     {
-                        return Results.BadRequest(new {
+                        return Results.BadRequest(new
+                        {
                             error = $"字段 {fieldDto.PropertyName} 的显示名至少需要提供一种语言的文本"
                         });
                     }

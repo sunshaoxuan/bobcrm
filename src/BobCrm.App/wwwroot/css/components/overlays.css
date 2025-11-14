@@ -291,31 +291,27 @@
 }
 
 /* Multilingual Input Popover - Fixed positioning to handle scroll */
-.multilingual-popover-overlay {
-  position: fixed !important;
-  z-index: 1050;
+.multilingual-popover {
+    z-index: 1050;
 }
 
-.multilingual-popover-overlay .ant-popover {
-  position: fixed !important;
+.multilingual-popover .ant-popover-inner {
+    background: var(--surface-elevated);
+    border-radius: 18px;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-raised);
+    padding: 6px;
+    max-width: 520px;
 }
 
-.multilingual-popover-overlay .ant-popover-inner {
-  background: #f7f8fb;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 6px 24px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.03);
-  padding: 0;
-}
-
-.multilingual-popover-overlay .ant-popover-inner-content {
-  padding: 0;
-  max-height: 400px;
-  overflow-y: auto;
+.multilingual-popover .ant-popover-inner-content {
+    padding: 4px;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 /* Dark theme support for multilingual popover */
-:root.theme-calm-dark .multilingual-popover-overlay .ant-popover-inner {
-  background: var(--surface-elevated);
-  border-color: var(--border-soft);
+:root.theme-calm-dark .multilingual-popover .ant-popover-inner {
+    background: var(--surface-elevated);
+    border-color: var(--border-soft);
 }
