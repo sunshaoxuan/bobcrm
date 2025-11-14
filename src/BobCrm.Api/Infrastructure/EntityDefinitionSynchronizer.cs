@@ -107,7 +107,7 @@ public class EntityDefinitionSynchronizer
 
         // 检查数据库中是否已存在
         var existing = await _db.EntityDefinitions
-            .AsNoTracking()
+            .Include(ed => ed.Fields)
             .FirstOrDefaultAsync(ed => ed.FullTypeName == definition.FullTypeName);
 
         if (existing == null)
@@ -126,15 +126,37 @@ public class EntityDefinitionSynchronizer
         }
         else
         {
-            // 实体已存在
-            _logger.LogDebug("[EntitySync] Entity already exists, skipping: {FullTypeName}",
+            // 实体已存在，检查并更新Source字段
+            bool needsUpdate = false;
+
+            if (existing.Source != EntitySource.System)
+            {
+                _logger.LogInformation("[EntitySync] Updating Source to System for: {FullTypeName}",
+                    definition.FullTypeName);
+                existing.Source = EntitySource.System;
+                needsUpdate = true;
+            }
+
+            // 同步更新所有字段的Source为System（如果不正确的话）
+            foreach (var existingField in existing.Fields)
+            {
+                if (existingField.Source != FieldSource.System)
+                {
+                    existingField.Source = FieldSource.System;
+                    needsUpdate = true;
+                }
+            }
+
+            if (needsUpdate)
+            {
+                existing.UpdatedAt = DateTime.UtcNow;
+                _logger.LogInformation("[EntitySync] Updated Source fields for: {FullTypeName}",
+                    definition.FullTypeName);
+                return true;
+            }
+
+            _logger.LogDebug("[EntitySync] Entity already exists and is correctly configured: {FullTypeName}",
                 definition.FullTypeName);
-
-            // 可选：检查是否需要更新非用户可修改的字段
-            // 例如：DisplayNameKey、Icon等元数据字段可以自动更新
-            // 但Fields、Interfaces等用户可能已修改的字段不应覆盖
-
-            // 暂时不做任何更新，完全以数据库为准
             return false;
         }
     }

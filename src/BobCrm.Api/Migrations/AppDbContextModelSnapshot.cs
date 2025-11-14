@@ -51,7 +51,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.CustomerAccess", b =>
@@ -77,7 +77,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("UserId", "CustomerId")
                         .IsUnique();
 
-                    b.ToTable("CustomerAccesses");
+                    b.ToTable("CustomerAccesses", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.CustomerLocalization", b =>
@@ -97,7 +97,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasKey("CustomerId", "Language");
 
-                    b.ToTable("CustomerLocalizations");
+                    b.ToTable("CustomerLocalizations", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.FieldDefinition", b =>
@@ -144,7 +144,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("FieldDefinitions");
+                    b.ToTable("FieldDefinitions", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.FieldValue", b =>
@@ -171,7 +171,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("CustomerId", "FieldDefinitionId");
 
-                    b.ToTable("FieldValues");
+                    b.ToTable("FieldValues", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.FormTemplate", b =>
@@ -232,7 +232,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("UserId", "EntityType", "IsUserDefault");
 
-                    b.ToTable("FormTemplates");
+                    b.ToTable("FormTemplates", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.LocalizationLanguage", b =>
@@ -256,7 +256,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("LocalizationLanguages");
+                    b.ToTable("LocalizationLanguages", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.LocalizationResource", b =>
@@ -274,7 +274,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("LocalizationResources");
+                    b.ToTable("LocalizationResources", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.DDLScript", b =>
@@ -319,7 +319,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("DDLScripts");
+                    b.ToTable("DDLScripts", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityDefinition", b =>
@@ -440,7 +440,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("Namespace", "EntityName")
                         .IsUnique();
 
-                    b.ToTable("EntityDefinitions");
+                    b.ToTable("EntityDefinitions", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityInterface", b =>
@@ -471,7 +471,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("EntityDefinitionId", "InterfaceType")
                         .IsUnique();
 
-                    b.ToTable("EntityInterfaces");
+                    b.ToTable("EntityInterfaces", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.FieldMetadata", b =>
@@ -556,7 +556,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("EntityDefinitionId", "PropertyName");
 
-                    b.ToTable("FieldMetadatas");
+                    b.ToTable("FieldMetadatas", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.FunctionNode", b =>
@@ -900,7 +900,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SystemSettings");
+                    b.ToTable("SystemSettings", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.Models.TemplateBinding", b =>
@@ -944,7 +944,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("EntityType", "UsageType", "IsSystem")
                         .IsUnique();
 
-                    b.ToTable("TemplateBindings");
+                    b.ToTable("TemplateBindings", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.RefreshToken", b =>
@@ -979,7 +979,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("UserId", "ExpiresAt");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.UserLayout", b =>
@@ -1008,7 +1008,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("UserId", "EntityType")
                         .IsUnique();
 
-                    b.ToTable("UserLayouts");
+                    b.ToTable("UserLayouts", (string)null);
                 });
 
             modelBuilder.Entity("BobCrm.Api.Domain.UserPreferences", b =>
@@ -1046,7 +1046,7 @@ namespace BobCrm.Api.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UserPreferences");
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
@@ -1065,7 +1065,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DataProtectionKeys");
+                    b.ToTable("DataProtectionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
