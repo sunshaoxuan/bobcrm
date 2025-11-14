@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using BobCrm.Api.Domain;
 using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Domain.Models.Metadata;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -59,6 +60,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<RoleFunctionPermission> RoleFunctionPermissions => Set<RoleFunctionPermission>();
     public DbSet<RoleDataScope> RoleDataScopes => Set<RoleDataScope>();
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
+    public DbSet<FieldDataTypeEntry> FieldDataTypes => Set<FieldDataTypeEntry>();
+    public DbSet<FieldSourceEntry> FieldSources => Set<FieldSourceEntry>();
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
 
     // 数据保护
@@ -228,6 +231,23 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasForeignKey(tb => tb.TemplateId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        b.Entity<FieldDataTypeEntry>()
+            .HasIndex(dt => dt.Code)
+            .IsUnique();
+
+        b.Entity<FieldDataTypeEntry>()
+            .Property(dt => dt.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(new ValueConverter<Dictionary<string, string?>?, string?>(
+                v => v == null ? null : JsonSerializer.Serialize(v, jsonOptions),
+                v => string.IsNullOrEmpty(v)
+                    ? null
+                    : JsonSerializer.Deserialize<Dictionary<string, string?>>(v, jsonOptions)));
+
+        b.Entity<FieldSourceEntry>()
+            .HasIndex(fs => fs.Code)
+            .IsUnique();
+
         b.Entity<EntityDomain>()
             .HasIndex(d => d.Code)
             .IsUnique();
@@ -307,6 +327,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .WithMany(ed => ed.DDLScripts)
             .HasForeignKey(ds => ds.EntityDefinitionId)
             .OnDelete(DeleteBehavior.Cascade);
+
     }
 
     private AppDbContext db => this;

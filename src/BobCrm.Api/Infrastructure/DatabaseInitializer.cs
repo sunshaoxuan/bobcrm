@@ -1,5 +1,6 @@
 using BobCrm.Api.Domain;
 using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Domain.Models.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -19,6 +20,82 @@ public static class DatabaseInitializer
             await synchronizer.SyncSystemEntitiesAsync();
             await CleanupSampleEntityDefinitionsAsync(appDbContext);
             await CleanupTestUsersAsync(appDbContext);
+        }
+        // ✅ Field data types（系统字段类型档案）
+        {
+            var presets = new[]
+            {
+                CreateFieldDataType("String", "System.String", "Text",
+                    CreateLabel("适合短文本字段", "短いテキストに使用", "Use for short text fields")),
+                CreateFieldDataType("Text", "System.String", "Text",
+                    CreateLabel("适合长文本字段", "長いテキストに使用", "Use for long text")),
+                CreateFieldDataType("Int32", "System.Int32", "Number",
+                    CreateLabel("32位整型", "32bit 整数", "32-bit integer")),
+                CreateFieldDataType("Int64", "System.Int64", "Number",
+                    CreateLabel("64位整型", "64bit 整数", "64-bit integer")),
+                CreateFieldDataType("Decimal", "System.Decimal", "Number",
+                    CreateLabel("十进制数值", "10進小数", "Decimal number")),
+                CreateFieldDataType("Boolean", "System.Boolean", "Boolean",
+                    CreateLabel("布尔值", "ブール値", "Boolean value")),
+                CreateFieldDataType("DateTime", "System.DateTime", "DateTime",
+                    CreateLabel("日期时间", "日時", "Date & time")),
+                CreateFieldDataType("Date", "System.DateOnly", "DateTime",
+                    CreateLabel("日期", "日付", "Date only")),
+                CreateFieldDataType("Guid", "System.Guid", "Identity",
+                    CreateLabel("全局唯一标识", "グローバル一意識別子", "Global unique identifier")),
+                CreateFieldDataType("EntityRef", "System.Guid", "Reference",
+                    CreateLabel("实体引用", "エンティティ参照", "Entity reference"))
+            };
+
+            var existing = await db.Set<FieldDataTypeEntry>()
+                .IgnoreQueryFilters()
+                .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var preset in presets)
+            {
+                if (!existing.TryGetValue(preset.Code, out var record))
+                {
+                    await db.Set<FieldDataTypeEntry>().AddAsync(preset);
+                }
+                else
+                {
+                    record.ClrType = preset.ClrType;
+                    record.Category = preset.Category;
+                    record.Description = preset.Description;
+                    record.IsEnabled = true;
+                    record.SortOrder = preset.SortOrder;
+                    record.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+        }
+        // ✅ Field source 枚举档案
+        {
+            var presets = new[]
+            {
+                CreateFieldSource("System", "系统字段", "由系统实体同步，禁止删除", 10),
+                CreateFieldSource("Custom", "自定义字段", "由用户自行添加，可删除", 20),
+                CreateFieldSource("Interface", "接口字段", "由接口模板注入，用于审计、档案等功能", 30)
+            };
+
+            var existing = await db.Set<FieldSourceEntry>()
+                .IgnoreQueryFilters()
+                .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var preset in presets)
+            {
+                if (!existing.TryGetValue(preset.Code, out var record))
+                {
+                    await db.Set<FieldSourceEntry>().AddAsync(preset);
+                }
+                else
+                {
+                    record.Name = preset.Name;
+                    record.Description = preset.Description;
+                    record.IsEnabled = true;
+                    record.SortOrder = preset.SortOrder;
+                    record.UpdatedAt = DateTime.UtcNow;
+                }
+            }
         }
         var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
         // 初始化期间禁用查询过滤器，避免权限检查干扰
@@ -468,6 +545,43 @@ public static class DatabaseInitializer
             },
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    private static FieldDataTypeEntry CreateFieldDataType(
+        string code,
+        string clrType,
+        string category,
+        Dictionary<string, string?> description)
+    {
+        return new FieldDataTypeEntry
+        {
+            Code = code,
+            ClrType = clrType,
+            Category = category,
+            Description = description,
+            SortOrder = 100
+        };
+    }
+
+    private static FieldSourceEntry CreateFieldSource(string code, string name, string description, int sortOrder)
+    {
+        return new FieldSourceEntry
+        {
+            Code = code,
+            Name = name,
+            Description = description,
+            SortOrder = sortOrder
+        };
+    }
+
+    private static Dictionary<string, string?> CreateLabel(string zh, string ja, string en)
+    {
+        return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["zh"] = zh,
+            ["ja"] = ja,
+            ["en"] = en
         };
     }
 }
