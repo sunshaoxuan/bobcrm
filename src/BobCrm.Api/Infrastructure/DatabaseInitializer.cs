@@ -17,6 +17,8 @@ public static class DatabaseInitializer
         {
             var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance);
             await synchronizer.SyncSystemEntitiesAsync();
+            await CleanupSampleEntityDefinitionsAsync(appDbContext);
+            await CleanupTestUsersAsync(appDbContext);
         }
         var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
         // 初始化期间禁用查询过滤器，避免权限检查干扰
@@ -185,6 +187,41 @@ public static class DatabaseInitializer
                 }
             }
         }
+        // ✅ EntityDomain - 通过数据库管理领域档案
+        {
+            var presetDomains = new[]
+            {
+                CreateDomain("CRM", 10, "CRM - 客户关系管理", "CRM - 顧客関係管理", "CRM - Customer Relationship Management"),
+                CreateDomain("SCM", 20, "SCM - 供应链管理", "SCM - サプライチェーン管理", "SCM - Supply Chain Management"),
+                CreateDomain("FA", 30, "FA - 财务会计", "FA - 財務会計", "FA - Financial Accounting"),
+                CreateDomain("HR", 40, "HR - 人力资源", "HR - 人事", "HR - Human Resources"),
+                CreateDomain("MFM", 50, "MFM - 生产制造", "MFM - 生産製造", "MFM - Manufacturing"),
+                CreateDomain("System", 5, "System - 内置实体", "System - システム内蔵エンティティ", "System - Built-in Entities"),
+                CreateDomain("Custom", 100, "Custom - 自定义实体", "Custom - カスタムエンティティ", "Custom - Custom Entities")
+            };
+
+            var codes = presetDomains.Select(d => d.Code).ToArray();
+            var existingDomains = await db.Set<EntityDomain>()
+                .IgnoreQueryFilters()
+                .Where(d => codes.Contains(d.Code))
+                .ToDictionaryAsync(d => d.Code, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var preset in presetDomains)
+            {
+                if (!existingDomains.TryGetValue(preset.Code, out var existing))
+                {
+                    await db.Set<EntityDomain>().AddAsync(preset);
+                }
+                else
+                {
+                    existing.Name = new Dictionary<string, string?>(preset.Name, StringComparer.OrdinalIgnoreCase);
+                    existing.SortOrder = preset.SortOrder;
+                    existing.IsSystem = preset.IsSystem;
+                    existing.IsEnabled = true;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+        }
         // EntityDefinition 自动同步已在 Program.cs 中由 EntityDefinitionSynchronizer 处理
         // ✅ 统一从 JSON 文件加载 i18n 资源（单一数据源原则，动态语言支持）
         {
@@ -346,5 +383,91 @@ public static class DatabaseInitializer
     {
         try { await db.Database.EnsureDeletedAsync(); } catch { }
         await InitializeAsync(db);
+    }
+
+    private static readonly string[] DeprecatedSampleNamespaces =
+    {
+        "BobCrm.Domain.Test",
+        "BobCrm.Domain.Sample",
+        "BobCrm.Domain.Example"
+    };
+
+    private static readonly string[] DeprecatedSampleEntityNames =
+    {
+        "TestSingleEntity",
+        "Order",
+        "OrderLine",
+        "OrderLineAttribute",
+        "ChildEntity",
+        "DraftEntity",
+        "PublishedEntity",
+        "IndependentEntity",
+        "Product"
+    };
+
+    private static async Task CleanupSampleEntityDefinitionsAsync(AppDbContext db)
+    {
+        var sampleEntities = await db.EntityDefinitions
+            .Where(ed =>
+                ed.Source == EntitySource.Custom &&
+                (DeprecatedSampleNamespaces.Contains(ed.Namespace) ||
+                 DeprecatedSampleEntityNames.Contains(ed.EntityName)))
+            .ToListAsync();
+
+        if (!sampleEntities.Any())
+        {
+            return;
+        }
+
+        db.EntityDefinitions.RemoveRange(sampleEntities);
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task CleanupTestUsersAsync(AppDbContext db)
+    {
+        var testUsers = await db.Users
+            .Where(u => u.UserName != null && u.UserName.StartsWith("user_"))
+            .ToListAsync();
+
+        if (!testUsers.Any())
+        {
+            return;
+        }
+
+        var userIds = testUsers.Select(u => u.Id).ToList();
+
+        db.CustomerAccesses.RemoveRange(db.CustomerAccesses.Where(ca => userIds.Contains(ca.UserId)));
+        db.RoleAssignments.RemoveRange(db.RoleAssignments.Where(ra => userIds.Contains(ra.UserId)));
+        db.UserLayouts.RemoveRange(db.UserLayouts.Where(ul => userIds.Contains(ul.UserId)));
+        db.UserPreferences.RemoveRange(db.UserPreferences.Where(up => userIds.Contains(up.UserId)));
+        db.FormTemplates.RemoveRange(db.FormTemplates.Where(ft => userIds.Contains(ft.UserId)));
+        db.RefreshTokens.RemoveRange(db.RefreshTokens.Where(rt => userIds.Contains(rt.UserId)));
+
+        db.UserClaims.RemoveRange(db.UserClaims.Where(uc => userIds.Contains(uc.UserId)));
+        db.UserLogins.RemoveRange(db.UserLogins.Where(ul => userIds.Contains(ul.UserId)));
+        db.UserTokens.RemoveRange(db.UserTokens.Where(ut => userIds.Contains(ut.UserId)));
+        db.UserRoles.RemoveRange(db.UserRoles.Where(ur => userIds.Contains(ur.UserId)));
+
+        db.Users.RemoveRange(testUsers);
+        await db.SaveChangesAsync();
+    }
+
+    private static EntityDomain CreateDomain(string code, int sortOrder, string zh, string ja, string en)
+    {
+        return new EntityDomain
+        {
+            Code = code,
+            SortOrder = sortOrder,
+            IsSystem = true,
+            IsEnabled = true,
+            Name = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["zh"] = zh,
+                ["ja"] = ja,
+                ["en"] = en
+            },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
     }
 }

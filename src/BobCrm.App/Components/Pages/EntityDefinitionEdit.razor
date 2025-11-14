@@ -2,12 +2,17 @@
 @page "/entity-definitions/edit/{Id:guid}"
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
+@inject BobCrm.App.Services.EntityDomainService DomainService
 @inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
+@using System.Globalization
+@using System.Net.Http.Json
+@using System.Linq
 @using AntDesign
 @inject IMultilingualTextResolver MultilingualResolver
+@inject BobCrm.App.Services.AuthService Auth
 
 <AuthChecker>
     <PageHeader Title="@(_isNew ? I18n.T("LBL_CREATE_ENTITY_DEF") : I18n.T("LBL_EDIT_ENTITY_DEF"))" OnBack="GoBack">
@@ -48,11 +53,13 @@
                                     Value="_model.Category"
                                     ValueChanged="OnDomainChanged"
                                     ValueExpression="() => _model.Category"
+                                    Disabled="@(_domainOptions.Count == 0)"
                                     Style="width: 220px;">
                                 @foreach (var option in _domainOptions)
                                 {
-                                    <SelectOption TItemValue="string" TItem="string" Value="@option.Code" Label="@option.Label">
-                                        <ChildContent Context="optionContent">@option.Label</ChildContent>
+                                    var label = MultilingualResolver.Resolve(option.Name, option.Code);
+                                    <SelectOption TItemValue="string" TItem="string" Value="@option.Code" Label="@label">
+                                        <ChildContent Context="optionContent">@label</ChildContent>
                                     </SelectOption>
                                 }
                             </Select>
@@ -147,25 +154,26 @@
 
                         <FormItem Label="@I18n.T("LBL_ICON")">
                             <div class="icon-input-wrapper">
-                                <Input @bind-Value="@_model.Icon"
-                                       Placeholder="@I18n.T("TXT_ICON_FIELD_PLACEHOLDER")"
-                                       Class="field-control" />
-                                <div class="icon-preview-zone">
+                                <div class="icon-input-column">
+                                    <Input @bind-Value="@_model.Icon"
+                                           Placeholder="@I18n.T("TXT_ICON_FIELD_PLACEHOLDER")"
+                                           Class="field-control" />
+                                    <div class="interface-tip icon-help-tip">
+                                        <div>@I18n.T("TXT_ICON_FIELD_HINT_ANTD")</div>
+                                        <div>@I18n.T("TXT_ICON_FIELD_HINT_URL")</div>
+                                    </div>
+                                </div>
+                                <div class="icon-preview-box">
                                     @if (IsIconUrl(_model.Icon))
                                     {
                                         <img src="@_model.Icon" alt="icon preview" class="icon-preview-img" />
                                     }
                                     else
                                     {
-                                        <Icon Type="@GetIconName()" Style="font-size: 28px; color: #1890ff;" />
+                                        <Icon Type="@GetIconName()" Style="font-size: 20px; color: #1890ff;" />
                                     }
-                                    <div class="icon-hint">@I18n.T("TXT_ICON_FIELD_HINT")</div>
                                 </div>
                             </div>
-                        </FormItem>
-
-                        <FormItem Label="@I18n.T("LBL_CATEGORY")">
-                            <Input @bind-Value="@_model.Category" Placeholder="@I18n.T("TXT_CATEGORY_PLACEHOLDER")" Class="field-control" />
                         </FormItem>
 
                         <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
@@ -224,7 +232,9 @@
                                         </td>
                                         <td>
                                             <Select TItemValue="string" TItem="string"
-                                                    @bind-Value="field.DataType"
+                                                    Value="field.DataType"
+                                                    ValueChanged="value => OnFieldDataTypeChanged(field, value)"
+                                                    ValueExpression="() => field.DataType"
                                                     Disabled="@isProtected"
                                                     Style="width: 140px;">
                                                 <SelectOptions>
@@ -274,13 +284,11 @@
                                             <Tag>@sourceLabel</Tag>
                                         </td>
                                         <td>
-                                            <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")"
-                                                        OnConfirm="() => RemoveField(field)"
-                                                        Disabled="@isProtected">
-                                                <Button Danger Size="@ButtonSize.Small" Disabled="@isProtected">
-                                                    @I18n.T("BTN_DELETE")
-                                                </Button>
-                                            </Popconfirm>
+                                            <Button Danger Size="@ButtonSize.Small"
+                                                    Disabled="@isProtected"
+                                                    OnClick="async () => await RequestFieldDeletion(field)">
+                                                @I18n.T("BTN_DELETE")
+                                            </Button>
                                         </td>
                                     </tr>
                                 }
@@ -312,6 +320,7 @@
     [Parameter] public Guid? Id { get; set; }
     [CascadingParameter] public int I18nRenderVersion { get; set; }
     [Inject] private IMessageService MessageService { get; set; } = default!;
+    [Inject] private ModalService ModalService { get; set; } = default!;
 
     private bool _isNew => !Id.HasValue;
     private bool _loading = false;
@@ -319,53 +328,197 @@
     private int _lastI18nRenderVersion = -1;
     private const string DefaultIconType = "appstore";
     private const string NamespaceRoot = "BobCrm.";
+    private const string SystemNamespacePrefix = "BobCrm.Api.";
+    private const int DefaultStringLength = 50;
+    private const int DefaultDecimalPrecision = 18;
+    private const int DefaultDecimalScale = 2;
+    private const string ResourceKeyFieldDefaultName = "TXT_FIELD_DEFAULT_NAME";
+    private const string ResourceKeyFieldId = "LBL_FIELD_ID";
+    private const string ResourceKeyFieldIsDeleted = "LBL_FIELD_IS_DELETED";
+    private const string ResourceKeyFieldDeletedAt = "LBL_FIELD_DELETED_AT";
+    private const string ResourceKeyFieldDeletedBy = "LBL_FIELD_DELETED_BY";
+    private const string ResourceKeyFieldCode = "LBL_FIELD_CODE";
+    private const string ResourceKeyFieldName = "LBL_FIELD_NAME";
+    private const string ResourceKeyFieldCreatedAt = "LBL_FIELD_CREATED_AT";
+    private const string ResourceKeyFieldCreatedBy = "LBL_FIELD_CREATED_BY";
+    private const string ResourceKeyFieldUpdatedAt = "LBL_FIELD_UPDATED_AT";
+    private const string ResourceKeyFieldUpdatedBy = "LBL_FIELD_UPDATED_BY";
+    private const string ResourceKeyFieldVersion = "LBL_FIELD_VERSION";
+    private const string ResourceKeyFieldValidFrom = "LBL_FIELD_VALID_FROM";
+    private const string ResourceKeyFieldValidTo = "LBL_FIELD_VALID_TO";
+    private const string ResourceKeyFieldVersionNo = "LBL_FIELD_VERSION_NO";
+    private const string ResourceKeyFieldOrganizationId = "LBL_FIELD_ORGANIZATION_ID";
+    private static readonly HashSet<string> RequiredResourceKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ResourceKeyFieldDefaultName,
+        ResourceKeyFieldId,
+        ResourceKeyFieldIsDeleted,
+        ResourceKeyFieldDeletedAt,
+        ResourceKeyFieldDeletedBy,
+        ResourceKeyFieldCode,
+        ResourceKeyFieldName,
+        ResourceKeyFieldCreatedAt,
+        ResourceKeyFieldCreatedBy,
+        ResourceKeyFieldUpdatedAt,
+        ResourceKeyFieldUpdatedBy,
+        ResourceKeyFieldVersion,
+        ResourceKeyFieldValidFrom,
+        ResourceKeyFieldValidTo,
+        ResourceKeyFieldVersionNo,
+        ResourceKeyFieldOrganizationId
+    };
     private bool _entityInfoExpanded = true;
+    private string[] _languageCodes = Array.Empty<string>();
+    private bool _interfaceTemplatesInitialized;
+    private Dictionary<string, List<InterfaceFieldTemplate>> _interfaceFieldTemplates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, string>> _resourceCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _interfaceFieldOwnership = new(StringComparer.OrdinalIgnoreCase);
-    private readonly (string Code, string Label)[] _domainOptions = new[]
+    private List<EntityDomainDto> _domainOptions = new();
+
+    private async Task EnsureLanguagesAsync()
     {
-        ("CRM", "CRM - 客户关系管理"),
-        ("SCM", "SCM - 供应链管理"),
-        ("FA", "FA - 财务会计"),
-        ("HR", "HR - 人力资源"),
-        ("MFM", "MFM - 生产制造"),
-        ("Custom", "Custom")
-    };
-    private static readonly Dictionary<string, List<InterfaceFieldTemplate>> InterfaceFieldTemplates = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [EntityInterfaceType.Base] = new()
+        if (_languageCodes.Length > 0)
         {
-            Template("Id", FieldDataType.Guid, isRequired: true, label: CreateLabel("标识", "ID", "Id")),
-            Template("IsDeleted", FieldDataType.Boolean, label: CreateLabel("已删除", "削除フラグ", "Is Deleted")),
-            Template("DeletedAt", FieldDataType.DateTime, label: CreateLabel("删除时间", "削除日時", "Deleted At")),
-            Template("DeletedBy", FieldDataType.String, length: 64, label: CreateLabel("删除人", "削除者", "Deleted By"))
-        },
-        [EntityInterfaceType.Archive] = new()
-        {
-            Template("Code", FieldDataType.String, isRequired: true, length: 64, label: CreateLabel("编码", "コード", "Code")),
-            Template("Name", FieldDataType.String, isRequired: true, length: 200, label: CreateLabel("名称", "名称", "Name"))
-        },
-        [EntityInterfaceType.Audit] = new()
-        {
-            Template("CreatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabel("创建时间", "作成日時", "Created At")),
-            Template("CreatedBy", FieldDataType.String, length: 64, label: CreateLabel("创建人", "作成者", "Created By")),
-            Template("UpdatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabel("修改时间", "更新日時", "Updated At")),
-            Template("UpdatedBy", FieldDataType.String, length: 64, label: CreateLabel("修改人", "更新者", "Updated By"))
-        },
-        [EntityInterfaceType.Version] = new()
-        {
-            Template("Version", FieldDataType.Integer, isRequired: true, label: CreateLabel("版本号", "バージョン", "Version"))
-        },
-        [EntityInterfaceType.TimeVersion] = new()
-        {
-            Template("ValidFrom", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效开始", "有効開始", "Valid From")),
-            Template("ValidTo", FieldDataType.DateTime, isRequired: true, label: CreateLabel("生效结束", "有効終了", "Valid To")),
-            Template("VersionNo", FieldDataType.Integer, isRequired: true, label: CreateLabel("时间版本", "時系列バージョン", "Version No"))
-        },
-        [EntityInterfaceType.Organization] = new()
-        {
-            Template("OrganizationId", FieldDataType.Guid, isRequired: true, label: CreateLabel("组织ID", "組織ID", "Organization Id"), isEntityRef: true, referenceTable: "OrganizationNodes")
+            return;
         }
-    };
+
+        try
+        {
+            var http = await Auth.CreateClientWithLangAsync();
+            var apiLanguages = await http.GetFromJsonAsync<List<ApiLanguageDto>>("/api/i18n/languages");
+            if (apiLanguages != null && apiLanguages.Count > 0)
+            {
+                _languageCodes = apiLanguages
+                    .Where(l => !string.IsNullOrWhiteSpace(l.code))
+                    .Select(l => l.code.ToLowerInvariant())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EntityDefinitionEdit] Failed to load languages: {ex.Message}");
+        }
+    }
+
+    private async Task EnsureLocalizationResourcesAsync()
+    {
+        if (_resourceCache.Count >= RequiredResourceKeys.Count)
+        {
+            return;
+        }
+
+        try
+        {
+            var http = await Auth.CreateAuthedClientAsync();
+            var resources = await http.GetFromJsonAsync<List<LocalizationResourceDto>>("/api/i18n/resources");
+            if (resources == null || resources.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var resource in resources)
+            {
+                if (string.IsNullOrWhiteSpace(resource.Key)
+                    || resource.Translations == null
+                    || !RequiredResourceKeys.Contains(resource.Key))
+                {
+                    continue;
+                }
+
+                _resourceCache[resource.Key] = new Dictionary<string, string>(resource.Translations, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EntityDefinitionEdit] Failed to load localization resources: {ex.Message}");
+        }
+    }
+
+    private IReadOnlyList<string> GetLanguageCodes() => _languageCodes;
+
+    private async Task LoadDomainsAsync()
+    {
+        try
+        {
+            var domains = await DomainService.GetAllAsync();
+            _domainOptions = domains
+                .OrderBy(d => d.SortOrder)
+                .ThenBy(d => d.Code, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            EnsureDefaultDomainSelection();
+        }
+        catch (Exception ex)
+        {
+            _domainOptions.Clear();
+            MessageService.Error($"{I18n.T("MSG_DOMAIN_LOAD_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private void EnsureDefaultDomainSelection()
+    {
+        if (_domainOptions.Count == 0)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.Category)
+            || !_domainOptions.Any(d => string.Equals(d.Code, _model.Category, StringComparison.OrdinalIgnoreCase)))
+        {
+            _model.Category = _domainOptions.First().Code;
+        }
+    }
+
+    private void EnsureInterfaceTemplatesInitialized()
+    {
+        if (_interfaceTemplatesInitialized)
+        {
+            return;
+        }
+
+        _interfaceFieldTemplates = BuildInterfaceFieldTemplates();
+        _interfaceTemplatesInitialized = true;
+    }
+
+    private Dictionary<string, List<InterfaceFieldTemplate>> BuildInterfaceFieldTemplates()
+    {
+        return new Dictionary<string, List<InterfaceFieldTemplate>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [EntityInterfaceType.Base] = new()
+            {
+                Template("Id", FieldDataType.Guid, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldId)),
+                Template("IsDeleted", FieldDataType.Boolean, label: CreateLabelFromResource(ResourceKeyFieldIsDeleted)),
+                Template("DeletedAt", FieldDataType.DateTime, label: CreateLabelFromResource(ResourceKeyFieldDeletedAt)),
+                Template("DeletedBy", FieldDataType.String, length: 64, label: CreateLabelFromResource(ResourceKeyFieldDeletedBy))
+            },
+            [EntityInterfaceType.Archive] = new()
+            {
+                Template("Code", FieldDataType.String, isRequired: true, length: 64, label: CreateLabelFromResource(ResourceKeyFieldCode)),
+                Template("Name", FieldDataType.String, isRequired: true, length: 200, label: CreateLabelFromResource(ResourceKeyFieldName))
+            },
+            [EntityInterfaceType.Audit] = new()
+            {
+                Template("CreatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldCreatedAt)),
+                Template("CreatedBy", FieldDataType.String, length: 64, label: CreateLabelFromResource(ResourceKeyFieldCreatedBy)),
+                Template("UpdatedAt", FieldDataType.DateTime, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldUpdatedAt)),
+                Template("UpdatedBy", FieldDataType.String, length: 64, label: CreateLabelFromResource(ResourceKeyFieldUpdatedBy))
+            },
+            [EntityInterfaceType.Version] = new()
+            {
+                Template("Version", FieldDataType.Integer, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldVersion))
+            },
+            [EntityInterfaceType.TimeVersion] = new()
+            {
+                Template("ValidFrom", FieldDataType.DateTime, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldValidFrom)),
+                Template("ValidTo", FieldDataType.DateTime, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldValidTo)),
+                Template("VersionNo", FieldDataType.Integer, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldVersionNo))
+            },
+            [EntityInterfaceType.Organization] = new()
+            {
+                Template("OrganizationId", FieldDataType.Guid, isRequired: true, label: CreateLabelFromResource(ResourceKeyFieldOrganizationId), isEntityRef: true, referenceTable: "OrganizationNodes")
+            }
+        };
+    }
 
     private EditModel _model = new();
     private string[] _selectedInterfaces = Array.Empty<string>();
@@ -426,6 +579,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadDomainsAsync();
+        await EnsureLanguagesAsync();
+        await EnsureLocalizationResourcesAsync();
+        EnsureInterfaceTemplatesInitialized();
+
         if (!_isNew)
         {
             await LoadEntity();
@@ -468,7 +626,6 @@
                         : null,
                     StructureType = entity.StructureType,
                     Icon = entity.Icon,
-                    Category = entity.Category,
                     Order = entity.Order,
                     IsEnabled = entity.IsEnabled,
                     Fields = entity.Fields.Select(f => new FieldMetadataDto
@@ -476,7 +633,7 @@
                         Id = f.Id,
                         PropertyName = f.PropertyName,
                         DisplayName = f.DisplayName != null ? new MultilingualTextDto(f.DisplayName) : new MultilingualTextDto(),
-                        DataType = f.DataType,
+                        DataType = NormalizeDataTypeForUi(f.DataType),
                         Length = f.Length,
                         Precision = f.Precision,
                         Scale = f.Scale,
@@ -486,12 +643,17 @@
                         TableName = f.TableName,
                         SortOrder = f.SortOrder,
                         DefaultValue = f.DefaultValue,
-                        ValidationRules = f.ValidationRules
+                        ValidationRules = f.ValidationRules,
+                        Source = f.Source ?? FieldSource.Custom
                     }).ToList()
                 };
 
+                EnsureFieldDefaults(_model.Fields);
+                _model.Category = ResolveExistingDomain(entity.Category, entity.Namespace);
+                EnsureDefaultDomainSelection();
                 _selectedInterfaces = entity.Interfaces.Where(i => i.IsEnabled).Select(i => i.InterfaceType).ToArray();
                 SyncInterfaceFields();
+                EnsureFieldDefaults(_model.Fields);
             }
         }
         catch (Exception ex)
@@ -517,6 +679,12 @@
                 return;
             }
 
+            if (!ValidateFields())
+            {
+                _saving = false;
+                return;
+            }
+
             if (_isNew)
             {
                 var request = new CreateEntityDefinitionRequest
@@ -525,9 +693,11 @@
                     EntityName = _model.EntityName,
                     DisplayName = _model.DisplayName,
                     Description = _model.Description,
+                    Icon = _model.Icon,
+                    Category = _model.Category,
                     StructureType = _model.StructureType,
                     Interfaces = _selectedInterfaces.ToList(),
-                    Fields = _model.Fields
+                    Fields = CloneFieldsForApi(_model.Fields)
                 };
 
                 await EntityDefService.CreateAsync(request);
@@ -543,7 +713,7 @@
                     Category = _model.Category,
                     IsEnabled = _model.IsEnabled,
                     Order = _model.Order,
-                    Fields = _model.Fields,
+                    Fields = CloneFieldsForApi(_model.Fields),
                     Interfaces = _selectedInterfaces.ToList()
                 };
 
@@ -571,22 +741,138 @@
         }
 
         var sortOrder = _model.Fields.Any() ? _model.Fields.Max(f => f.SortOrder) + 10 : 100;
-        _model.Fields.Add(new FieldMetadataDto
+        var propertyName = GenerateDefaultFieldName();
+        var field = new FieldMetadataDto
         {
             Id = Guid.NewGuid(),
-            PropertyName = GenerateDefaultFieldName(),
-            DisplayName = new MultilingualTextDto(),
+            PropertyName = propertyName,
             DataType = FieldDataType.String,
             IsRequired = false,
             SortOrder = sortOrder,
             Source = FieldSource.Custom
-        });
+        };
+
+        EnsureFieldDefaults(field);
+        _model.Fields.Add(field);
+    }
+
+    private void EnsureFieldDefaults(IEnumerable<FieldMetadataDto>? fields)
+    {
+        if (fields == null)
+        {
+            return;
+        }
+
+        foreach (var field in fields)
+        {
+            EnsureFieldDefaults(field);
+        }
+    }
+
+    private void EnsureFieldDefaults(FieldMetadataDto? field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(field.PropertyName))
+        {
+            field.PropertyName = GenerateDefaultFieldName();
+        }
+
+        if (field.DisplayName == null || !field.DisplayName.HasValue())
+        {
+            field.DisplayName = CreateDefaultDisplayName(field.PropertyName);
+        }
+        else
+        {
+            EnsureDisplayNameLanguages(field.DisplayName, field.PropertyName);
+        }
+
+        ApplyDataTypeDefaults(field);
+    }
+
+    private void EnsureDisplayNameLanguages(MultilingualTextDto? label, string? fallbackHint = null)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        var fallback = !string.IsNullOrWhiteSpace(fallbackHint)
+            ? fallbackHint!
+            : label.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+
+        foreach (var code in GetLanguageCodes())
+        {
+            if (!label.ContainsKey(code))
+            {
+                label[code] = fallback;
+            }
+        }
     }
 
     private Task OnFieldDisplayNameChanged(FieldMetadataDto field, MultilingualTextDto? value)
     {
         field.DisplayName = value ?? new MultilingualTextDto();
+        EnsureDisplayNameLanguages(field.DisplayName, field.PropertyName);
         return Task.CompletedTask;
+    }
+
+    private void OnFieldDataTypeChanged(FieldMetadataDto field, string? newType)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        field.DataType = newType ?? FieldDataType.String;
+        ApplyDataTypeDefaults(field);
+    }
+
+    private void ApplyDataTypeDefaults(FieldMetadataDto field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        var normalizedType = NormalizeDataTypeForApi(field.DataType);
+
+        if (IsStringType(normalizedType))
+        {
+            field.Length ??= DefaultStringLength;
+            field.Precision = null;
+            field.Scale = null;
+            return;
+        }
+
+        if (string.Equals(normalizedType, FieldDataType.Decimal, StringComparison.OrdinalIgnoreCase))
+        {
+            field.Length = null;
+
+            if (!field.Precision.HasValue || field.Precision.Value <= 0)
+            {
+                field.Precision = DefaultDecimalPrecision;
+            }
+
+            if (!field.Scale.HasValue || field.Scale.Value < 0)
+            {
+                field.Scale = DefaultDecimalScale;
+            }
+
+            if (field.Scale.Value >= field.Precision.Value)
+            {
+                field.Scale = Math.Max(0, field.Precision.Value - 1);
+            }
+
+            return;
+        }
+
+        field.Length = null;
+        field.Precision = null;
+        field.Scale = null;
     }
 
     private void RemoveField(FieldMetadataDto field)
@@ -603,6 +889,29 @@
         }
 
         _model.Fields.Remove(field);
+    }
+
+    private async Task RequestFieldDeletion(FieldMetadataDto field)
+    {
+        if (field == null || IsProtectedField(field))
+        {
+            return;
+        }
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            Title = I18n.T("MSG_CONFIRM_DELETE"),
+            Content = I18n.T("TXT_DELETE_FIELD_WARNING"),
+            OkText = I18n.T("BTN_DELETE"),
+            CancelText = I18n.T("BTN_CANCEL"),
+            OkType = ButtonType.Primary,
+            Centered = true
+        });
+
+        if (confirmed)
+        {
+            RemoveField(field);
+        }
     }
 
     // 子实体事件处理
@@ -661,7 +970,7 @@
 
     private Task OnDomainChanged(string value)
     {
-        _model.Category = value;
+        _model.Category = EnsureDomainCode(value);
         UpdateNamespaceFromEntityName();
         return Task.CompletedTask;
     }
@@ -690,13 +999,7 @@
 
     private string ResolveDomainCode()
     {
-        var domain = _model?.Category;
-        if (string.IsNullOrWhiteSpace(domain))
-        {
-            return "Custom";
-        }
-
-        return domain.Trim();
+        return EnsureDomainCode(_model?.Category);
     }
 
     private string GenerateDefaultFieldName()
@@ -728,6 +1031,231 @@
         } while (taken.Contains(candidate));
 
         return candidate;
+    }
+
+    private MultilingualTextDto CreateDefaultDisplayName(string propertyName)
+    {
+        var index = ExtractNumericSuffix(propertyName);
+        if (index <= 0)
+        {
+            index = (_model?.Fields?.Count ?? 0) + 1;
+        }
+
+        var label = new MultilingualTextDto();
+        var translations = GetResourceTranslations(ResourceKeyFieldDefaultName);
+
+        foreach (var code in GetLanguageCodes())
+        {
+            var format = ResolveResourceValue(translations, code);
+            label[code] = string.IsNullOrWhiteSpace(format)
+                ? string.Empty
+                : string.Format(CultureInfo.InvariantCulture, format, index);
+        }
+
+        return label;
+    }
+
+    private static int ExtractNumericSuffix(string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return 0;
+        }
+
+        var digits = new string(propertyName.Reverse()
+            .TakeWhile(char.IsDigit)
+            .Reverse()
+            .ToArray());
+
+        return int.TryParse(digits, out var result) ? result : 0;
+    }
+
+    private static string NormalizeDataTypeForUi(string? serverType)
+    {
+        if (string.IsNullOrWhiteSpace(serverType))
+        {
+            return FieldDataType.String;
+        }
+
+        return serverType switch
+        {
+            "Int32" => FieldDataType.Integer,
+            "Int64" => FieldDataType.Long,
+            _ => serverType
+        };
+    }
+
+    private static string NormalizeDataTypeForApi(string? uiType)
+    {
+        var value = uiType ?? FieldDataType.String;
+
+        return value switch
+        {
+            var v when string.Equals(v, FieldDataType.Integer, StringComparison.OrdinalIgnoreCase) => "Int32",
+            var v when string.Equals(v, FieldDataType.Long, StringComparison.OrdinalIgnoreCase) => "Int64",
+            var v when string.Equals(v, FieldDataType.Text, StringComparison.OrdinalIgnoreCase) => FieldDataType.String,
+            _ => value
+        };
+    }
+
+    private static List<FieldMetadataDto> CloneFieldsForApi(IEnumerable<FieldMetadataDto> source)
+    {
+        return source.Select(field => new FieldMetadataDto
+        {
+            Id = field.Id,
+            PropertyName = field.PropertyName,
+            DisplayName = field.DisplayName != null ? new MultilingualTextDto(field.DisplayName) : null,
+            DataType = NormalizeDataTypeForApi(field.DataType),
+            Length = field.Length,
+            Precision = field.Precision,
+            Scale = field.Scale,
+            IsRequired = field.IsRequired,
+            IsEntityRef = field.IsEntityRef,
+            ReferencedEntityId = field.ReferencedEntityId,
+            TableName = field.TableName,
+            SortOrder = field.SortOrder,
+            DefaultValue = field.DefaultValue,
+            ValidationRules = field.ValidationRules,
+            Source = field.Source
+        }).ToList();
+    }
+
+    private bool ValidateFields()
+    {
+        if (_model.Fields == null || !_model.Fields.Any())
+        {
+            return true;
+        }
+
+        foreach (var field in _model.Fields)
+        {
+            var label = string.IsNullOrWhiteSpace(field.PropertyName)
+                ? I18n.T("LBL_FIELD_UNNAMED")
+                : field.PropertyName;
+
+            if (string.IsNullOrWhiteSpace(field.PropertyName))
+            {
+                MessageService.Error(string.Format(I18n.T("MSG_FIELD_PROPERTY_REQUIRED"), label));
+                return false;
+            }
+
+            if (field.DisplayName == null || !field.DisplayName.HasValue())
+            {
+                MessageService.Error(string.Format(I18n.T("MSG_FIELD_DISPLAYNAME_REQUIRED"), label));
+                return false;
+            }
+
+            var normalizedType = NormalizeDataTypeForApi(field.DataType);
+            if (string.IsNullOrWhiteSpace(normalizedType))
+            {
+                MessageService.Error(string.Format(I18n.T("MSG_FIELD_TYPE_REQUIRED"), label));
+                return false;
+            }
+
+            if (IsStringType(normalizedType))
+            {
+                if (!field.Length.HasValue || field.Length.Value <= 0)
+                {
+                    MessageService.Error(string.Format(I18n.T("MSG_FIELD_STRING_LENGTH_REQUIRED"), label));
+                    return false;
+                }
+            }
+            else if (string.Equals(normalizedType, FieldDataType.Decimal, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!field.Precision.HasValue || field.Precision.Value <= 0 ||
+                    !field.Scale.HasValue || field.Scale.Value < 0 ||
+                    field.Scale.Value > field.Precision.Value)
+                {
+                    MessageService.Error(string.Format(I18n.T("MSG_FIELD_DECIMAL_REQUIRED"), label));
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsStringType(string dataType)
+    {
+        return string.Equals(dataType, FieldDataType.String, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(dataType, FieldDataType.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string ResolveExistingDomain(string? category, string? namespaceValue)
+    {
+        if (TryMatchDomain(category, out var normalized))
+        {
+            return normalized;
+        }
+
+        if (!string.IsNullOrWhiteSpace(namespaceValue) && _domainOptions.Count > 0)
+        {
+            foreach (var option in _domainOptions)
+            {
+                if (string.Equals(option.Code, "System", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var prefix = $"{NamespaceRoot}{option.Code}.";
+                if (namespaceValue.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    return option.Code;
+                }
+            }
+
+            if (namespaceValue.StartsWith(SystemNamespacePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryMatchDomain("System", out var systemDomain))
+                {
+                    return systemDomain;
+                }
+            }
+        }
+
+        return EnsureDomainCode(category);
+    }
+
+    private string EnsureDomainCode(string? candidate)
+    {
+        if (TryMatchDomain(candidate, out var normalized))
+        {
+            return normalized;
+        }
+
+        if (_domainOptions.Count > 0)
+        {
+            return _domainOptions.First().Code;
+        }
+
+        return string.IsNullOrWhiteSpace(candidate) ? "Custom" : candidate;
+    }
+
+    private bool TryMatchDomain(string? candidate, out string normalized)
+    {
+        normalized = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        if (_domainOptions.Count == 0)
+        {
+            return false;
+        }
+
+        var match = _domainOptions
+            .Select(opt => opt.Code)
+            .FirstOrDefault(code => string.Equals(code, candidate, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(match))
+        {
+            normalized = match;
+            return true;
+        }
+
+        return false;
     }
 
     private bool IsInterfaceField(string? propertyName)
@@ -815,9 +1343,11 @@
 
         var required = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        EnsureInterfaceTemplatesInitialized();
+
         foreach (var interfaceType in _selectedInterfaces)
         {
-            if (!InterfaceFieldTemplates.TryGetValue(interfaceType, out var templates))
+            if (!_interfaceFieldTemplates.TryGetValue(interfaceType, out var templates))
             {
                 continue;
             }
@@ -857,7 +1387,7 @@
 
     private FieldMetadataDto CreateInterfaceField(InterfaceFieldTemplate template)
     {
-        return new FieldMetadataDto
+        var field = new FieldMetadataDto
         {
             Id = Guid.NewGuid(),
             PropertyName = template.PropertyName,
@@ -872,6 +1402,9 @@
             SortOrder = GetNextSortOrder(),
             Source = FieldSource.Interface
         };
+
+        ApplyDataTypeDefaults(field);
+        return field;
     }
 
     private void ApplyTemplate(FieldMetadataDto field, InterfaceFieldTemplate template)
@@ -893,16 +1426,83 @@
         {
             field.SortOrder = GetNextSortOrder();
         }
+
+        ApplyDataTypeDefaults(field);
     }
 
-    private static MultilingualTextDto CreateLabel(string zh, string ja, string en)
+    private MultilingualTextDto CreateLabelFromResource(string resourceKey)
     {
-        return new MultilingualTextDto
+        var label = new MultilingualTextDto();
+        var translations = GetResourceTranslations(resourceKey);
+
+        foreach (var code in GetLanguageCodes())
         {
-            ["zh"] = zh,
-            ["ja"] = ja,
-            ["en"] = en
-        };
+            label[code] = ResolveResourceValue(translations, code);
+        }
+
+        return label;
+    }
+
+    private string ResolveResourceValue(IReadOnlyDictionary<string, string>? translations, string langCode)
+    {
+        if (translations == null || translations.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (TryGetTranslationValue(translations, langCode, out var specific))
+        {
+            return specific;
+        }
+
+        foreach (var fallback in translations.Values)
+        {
+            if (!string.IsNullOrWhiteSpace(fallback))
+            {
+                return fallback;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private IReadOnlyDictionary<string, string>? GetResourceTranslations(string resourceKey)
+    {
+        if (string.IsNullOrWhiteSpace(resourceKey))
+        {
+            return null;
+        }
+
+        return _resourceCache.TryGetValue(resourceKey, out var translations) ? translations : null;
+    }
+
+    private static bool TryGetTranslationValue(IReadOnlyDictionary<string, string> translations, string? langCode, out string value)
+    {
+        value = string.Empty;
+        if (string.IsNullOrWhiteSpace(langCode))
+        {
+            return false;
+        }
+
+        if (translations.TryGetValue(langCode, out var direct) && !string.IsNullOrWhiteSpace(direct))
+        {
+            value = direct;
+            return true;
+        }
+
+        var neutral = langCode.Contains('-')
+            ? langCode.Split('-', 2)[0]
+            : langCode;
+
+        if (!string.Equals(neutral, langCode, StringComparison.OrdinalIgnoreCase)
+            && translations.TryGetValue(neutral, out var neutralValue)
+            && !string.IsNullOrWhiteSpace(neutralValue))
+        {
+            value = neutralValue;
+            return true;
+        }
+
+        return false;
     }
 
     private static InterfaceFieldTemplate Template(
@@ -932,7 +1532,9 @@
 
     private MultilingualTextDto CloneLabel(MultilingualTextDto source)
     {
-        return new MultilingualTextDto(source);
+        var clone = new MultilingualTextDto(source);
+        EnsureDisplayNameLanguages(clone);
+        return clone;
     }
 
     private int GetNextSortOrder()
@@ -985,9 +1587,23 @@
                    .ToLowerInvariant();
 
         return string.IsNullOrWhiteSpace(icon) ? DefaultIconType : icon;
-    }    private void GoBack()
+    }
+
+    private void GoBack()
     {
         Nav.NavigateTo("/entity-definitions");
+    }
+
+    private class ApiLanguageDto
+    {
+        public string code { get; set; } = string.Empty;
+        public string name { get; set; } = string.Empty;
+    }
+
+    private class LocalizationResourceDto
+    {
+        public string Key { get; set; } = string.Empty;
+        public Dictionary<string, string>? Translations { get; set; }
     }
 
     private class EditModel

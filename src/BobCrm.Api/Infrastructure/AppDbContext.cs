@@ -59,6 +59,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<RoleFunctionPermission> RoleFunctionPermissions => Set<RoleFunctionPermission>();
     public DbSet<RoleDataScope> RoleDataScopes => Set<RoleDataScope>();
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
+    public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
 
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
@@ -104,6 +105,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<SubEntityDefinition>()
             .Property(s => s.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<EntityDomain>()
+            .Property(d => d.Name)
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 
@@ -221,6 +227,13 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .WithMany()
             .HasForeignKey(tb => tb.TemplateId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        b.Entity<EntityDomain>()
+            .HasIndex(d => d.Code)
+            .IsUnique();
+
+        b.Entity<EntityDomain>()
+            .HasIndex(d => d.SortOrder);
 
         // EntityDefinition 配置
         b.Entity<EntityDefinition>()

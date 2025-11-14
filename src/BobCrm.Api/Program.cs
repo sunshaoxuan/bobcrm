@@ -343,10 +343,10 @@ if (!skipDbInit)
 
     // Seed test data (development only)
 
-        try
-        {
-            await TestDataSeeder.SeedTestDataAsync(db);
-        }
+    try
+    {
+        await TestDataSeeder.SeedTestDataAsync(db);
+    }
     catch (Exception ex)
 
     {
@@ -368,6 +368,7 @@ app.MapI18nEndpoints();
 app.MapCustomerEndpoints();
 app.MapLayoutEndpoints();
 app.MapTemplateEndpoints();
+app.MapDomainEndpoints();
 app.MapEntityDefinitionEndpoints();
 app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();

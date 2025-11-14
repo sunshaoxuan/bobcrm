@@ -60,6 +60,18 @@ public void CloseDomainSelector()
 
 ---
 
+### 任务 1.2.1：领域档案数据来源（新增）
+**目标**：前端领域列表改为从后端 EntityDomain 档案表读取，支持多语名称与自定义排序。
+
+**实现要点**：
+- 新增 `EntityDomain` 实体、`/api/entity-domains` 端点以及 `EntityDomainService`（App/Api 双端）。
+- 数据由数据库档案维护，默认提供 CRM/SCM/FA/HR/MFM/System/Custom，可随时在表中扩展。
+- `EntityDefinitionEdit` 页面的领域下拉、`DomainSelector` 等组件统一走 API 数据源。
+
+**文档更新**：本任务已落实在本计划文档以及变更日志，禁止再在前端写死领域列表。
+
+---
+
 ### 任务 1.3：创建 MenuPanel 组件框架
 **目标**：创建菜单面板的基本容器结构
 
@@ -122,6 +134,14 @@ public void CloseDomainSelector()
 - [ ] 左侧导航已移除，页面全宽显示
 
 **预计总时间**: 6 小时
+
+---
+
+## 附录：I18n 端点多语化（新增说明）
+
+- `I18nEndpoints` 的 Swagger Summary/Description 现已改为读取 `DOC_I18N_*` 多语资源，文本不再写死在代码中。
+- 请在 `i18n-resources.json` 中维护以下键值：`DOC_I18N_VERSION_*`、`DOC_I18N_RESOURCES_*`、`DOC_I18N_LANGUAGE_*`、`DOC_I18N_LANGUAGES_*`。
+- 若新增或调整 I18n 相关端点，请同步新增资源键并更新数据库。
 
 ---
 
