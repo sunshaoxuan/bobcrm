@@ -1,5 +1,5 @@
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Core.DomainCommon.Validation;

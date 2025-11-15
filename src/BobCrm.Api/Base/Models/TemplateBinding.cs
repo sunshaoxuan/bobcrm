@@ -1,6 +1,6 @@
 using System;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 描述实体与模板之间的绑定关系。

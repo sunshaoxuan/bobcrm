@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Infrastructure;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 系统用户（IdentityUser包装）- 仅用于实体定义元数据，让UI可以统一管理
@@ -28,9 +28,9 @@ public class SystemUser : IBizEntity
         var type = typeof(SystemUser);
         var definition = new EntityDefinition
         {
-            Namespace = type.Namespace ?? "BobCrm.Api.Domain.Models",
+            Namespace = type.Namespace ?? "BobCrm.Api.Base.Models",
             EntityName = type.Name,
-            FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Models.SystemUser",
+            FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.SystemUser",
             EntityRoute = "users",
             DisplayName = ResolveText("LBL_SYSTEM_USER", "System User"),
             Description = ResolveText("DESC_SYSTEM_USER", "Manage system users and their access state"),

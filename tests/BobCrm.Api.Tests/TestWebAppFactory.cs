@@ -7,7 +7,7 @@ using BobCrm.Api.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Services;
 

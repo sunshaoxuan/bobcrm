@@ -318,7 +318,7 @@ public async Task PublishNewEntityAsync_ShouldSucceed_WithValidDraftEntity()
     {
         Id = Guid.NewGuid(),
         EntityName = "Product",
-        Namespace = "BobCrm.Api.Domain",
+        Namespace = "BobCrm.Api.Base",
         Status = EntityStatus.Draft,
         Source = EntitySource.Custom,
         Fields = new List<FieldMetadata>
@@ -774,7 +774,7 @@ private EntityDefinition CreatePublishedEntity(string name, FieldMetadata[]? fie
     {
         Id = Guid.NewGuid(),
         EntityName = name,
-        Namespace = "BobCrm.Api.Domain",
+        Namespace = "BobCrm.Api.Base",
         Status = EntityStatus.Published,
         Source = EntitySource.Custom,
         Fields = fields?.ToList() ?? new List<FieldMetadata>()

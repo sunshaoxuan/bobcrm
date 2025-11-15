@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using BobCrm.Api.Abstractions;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 角色档案 - 绑定组织并聚合功能/数据范围
@@ -43,9 +43,9 @@ public class RoleProfile : IBizEntity
         var type = typeof(RoleProfile);
         var definition = new EntityDefinition
         {
-            Namespace = type.Namespace ?? "BobCrm.Api.Domain.Models",
+            Namespace = type.Namespace ?? "BobCrm.Api.Base.Models",
             EntityName = type.Name,
-            FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Models.RoleProfile",
+            FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.RoleProfile",
             EntityRoute = "roles",
             DisplayName = new Dictionary<string, string?>
             {

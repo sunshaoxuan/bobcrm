@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Endpoints;
 

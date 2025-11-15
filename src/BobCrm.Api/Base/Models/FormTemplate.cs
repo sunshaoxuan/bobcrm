@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 表单模板 - 支持每个实体多个命名模板
@@ -40,7 +40,7 @@ public class FormTemplate
     public string? LayoutJson { get; set; }
 
     /// <summary>使用场景</summary>
-    public BobCrm.Api.Domain.FormTemplateUsageType UsageType { get; set; } = BobCrm.Api.Domain.FormTemplateUsageType.Detail;
+    public BobCrm.Api.Base.FormTemplateUsageType UsageType { get; set; } = BobCrm.Api.Base.FormTemplateUsageType.Detail;
 
     /// <summary>标签集合</summary>
     public List<string>? Tags { get; set; }

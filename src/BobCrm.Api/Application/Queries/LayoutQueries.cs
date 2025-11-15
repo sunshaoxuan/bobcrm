@@ -1,5 +1,5 @@
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Application.Queries;
 

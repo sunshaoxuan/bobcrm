@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

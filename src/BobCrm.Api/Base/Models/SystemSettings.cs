@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 public class SystemSettings
 {

@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 本地化数据实体必须实现的接口

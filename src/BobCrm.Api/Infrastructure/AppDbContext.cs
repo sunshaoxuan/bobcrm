@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Json;
-using BobCrm.Api.Domain;
-using BobCrm.Api.Domain.Models;
-using BobCrm.Api.Domain.Models.Metadata;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Base.Models.Metadata;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

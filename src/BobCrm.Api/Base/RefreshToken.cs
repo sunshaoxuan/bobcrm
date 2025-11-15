@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 刷新令牌实体

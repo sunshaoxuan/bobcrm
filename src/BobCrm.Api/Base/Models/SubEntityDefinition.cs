@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 子实体定义

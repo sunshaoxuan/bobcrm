@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using BobCrm.Api.Abstractions;
-using BobCrm.Api.Domain.Attributes;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Attributes;
+using BobCrm.Api.Base.Models;
 
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 客户实体 - 实现IBizEntity以支持统一的实体定义系统
@@ -29,9 +29,9 @@ public class Customer : IBizEntity
         var type = typeof(Customer);
         var definition = new EntityDefinition
         {
-            Namespace = type.Namespace ?? "BobCrm.Api.Domain",
+            Namespace = type.Namespace ?? "BobCrm.Api.Base",
             EntityName = type.Name,
-            FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Customer",
+            FullTypeName = type.FullName ?? "BobCrm.Api.Base.Customer",
             EntityRoute = "customer",
             DisplayName = new Dictionary<string, string?>
             {

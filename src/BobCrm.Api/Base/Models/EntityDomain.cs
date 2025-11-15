@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 业务领域档案，用于对实体分类并支持多语言显示

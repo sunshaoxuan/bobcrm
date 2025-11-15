@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain.Models.Metadata;
+namespace BobCrm.Api.Base.Models.Metadata;
 
 public class FieldDataTypeEntry
 {

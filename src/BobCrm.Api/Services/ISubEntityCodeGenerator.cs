@@ -1,5 +1,5 @@
-using BobCrm.Api.Domain.Aggregates;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Aggregates;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Services;
 

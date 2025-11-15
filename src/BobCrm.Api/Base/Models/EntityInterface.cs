@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 实体接口 - 通过勾选快速添加常用字段

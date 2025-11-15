@@ -1,5 +1,5 @@
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using System.Security.Claims;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Http;

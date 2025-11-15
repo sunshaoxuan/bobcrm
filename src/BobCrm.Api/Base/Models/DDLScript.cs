@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// DDL脚本 - 记录实体发布时生成和执行的DDL语句

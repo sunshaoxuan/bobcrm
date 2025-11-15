@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Core.DomainCommon.Validation;
 

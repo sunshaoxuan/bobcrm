@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 角色实体数据范围

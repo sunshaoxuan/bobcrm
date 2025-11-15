@@ -24,7 +24,7 @@ namespace BobCrm.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Customer", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Customer", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -56,7 +56,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("Customers", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.CustomerAccess", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.CustomerAccess", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -82,7 +82,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("CustomerAccesses", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.CustomerLocalization", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.CustomerLocalization", b =>
                 {
                     b.Property<int>("CustomerId")
                         .HasColumnType("integer")
@@ -102,7 +102,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("CustomerLocalizations", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.FieldDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.FieldDefinition", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -149,7 +149,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("FieldDefinitions", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.FieldValue", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.FieldValue", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -176,7 +176,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("FieldValues", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.FormTemplate", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.FormTemplate", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -237,7 +237,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("FormTemplates", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.LocalizationLanguage", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.LocalizationLanguage", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -261,7 +261,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("LocalizationLanguages", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.LocalizationResource", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.LocalizationResource", b =>
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(256)
@@ -279,7 +279,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("LocalizationResources", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityDomain", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EntityDomain", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -318,7 +318,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("EntityDomains", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.DDLScript", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.DDLScript", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -363,7 +363,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("DDLScripts", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EntityDefinition", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -484,7 +484,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("EntityDefinitions", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityInterface", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EntityInterface", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -515,7 +515,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("EntityInterfaces", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FieldMetadata", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -600,7 +600,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("FieldMetadatas", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FunctionNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FunctionNode", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -643,7 +643,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("FunctionNodes", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.OrganizationNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.OrganizationNode", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -694,7 +694,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("OrganizationNodes", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleAssignment", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -727,7 +727,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("RoleAssignments", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleDataScope", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleDataScope", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -757,7 +757,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("RoleDataScopes", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleFunctionPermission", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleFunctionPermission", b =>
                 {
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
@@ -777,7 +777,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("RoleFunctionPermissions", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleProfile", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleProfile", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -824,7 +824,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("RoleProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.SubEntityDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.SubEntityDefinition", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -887,7 +887,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("SubEntityDefinitions", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.SystemSettings", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.SystemSettings", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -944,7 +944,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("SystemSettings", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.TemplateBinding", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.TemplateBinding", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -988,7 +988,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("TemplateBindings", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.RefreshToken", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1023,7 +1023,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.UserLayout", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.UserLayout", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1052,7 +1052,7 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("UserLayouts", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.UserPreferences", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.UserPreferences", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1305,9 +1305,9 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.CustomerLocalization", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.CustomerLocalization", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Customer", "Customer")
+                    b.HasOne("BobCrm.Api.Base.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1316,9 +1316,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Customer");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.DDLScript", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.DDLScript", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.EntityDefinition", "EntityDefinition")
+                    b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "EntityDefinition")
                         .WithMany("DDLScripts")
                         .HasForeignKey("EntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1327,9 +1327,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("EntityDefinition");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityInterface", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EntityInterface", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.EntityDefinition", "EntityDefinition")
+                    b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "EntityDefinition")
                         .WithMany("Interfaces")
                         .HasForeignKey("EntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1338,25 +1338,25 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("EntityDefinition");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FieldMetadata", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.EntityDefinition", "EntityDefinition")
+                    b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "EntityDefinition")
                         .WithMany("Fields")
                         .HasForeignKey("EntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BobCrm.Api.Domain.Models.FieldMetadata", "ParentField")
+                    b.HasOne("BobCrm.Api.Base.Models.FieldMetadata", "ParentField")
                         .WithMany("ChildFields")
                         .HasForeignKey("ParentFieldId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("BobCrm.Api.Domain.Models.EntityDefinition", "ReferencedEntity")
+                    b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "ReferencedEntity")
                         .WithMany()
                         .HasForeignKey("ReferencedEntityId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("BobCrm.Api.Domain.Models.SubEntityDefinition", "SubEntityDefinition")
+                    b.HasOne("BobCrm.Api.Base.Models.SubEntityDefinition", "SubEntityDefinition")
                         .WithMany("Fields")
                         .HasForeignKey("SubEntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -1370,9 +1370,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("SubEntityDefinition");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FunctionNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FunctionNode", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.FunctionNode", "Parent")
+                    b.HasOne("BobCrm.Api.Base.Models.FunctionNode", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -1380,9 +1380,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.OrganizationNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.OrganizationNode", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.OrganizationNode", "Parent")
+                    b.HasOne("BobCrm.Api.Base.Models.OrganizationNode", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -1390,9 +1390,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleAssignment", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleAssignment", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.RoleProfile", "Role")
+                    b.HasOne("BobCrm.Api.Base.Models.RoleProfile", "Role")
                         .WithMany("Assignments")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1401,9 +1401,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleDataScope", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleDataScope", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.RoleProfile", "Role")
+                    b.HasOne("BobCrm.Api.Base.Models.RoleProfile", "Role")
                         .WithMany("DataScopes")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1412,21 +1412,21 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleFunctionPermission", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleFunctionPermission", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.FunctionNode", "Function")
+                    b.HasOne("BobCrm.Api.Base.Models.FunctionNode", "Function")
                         .WithMany("Roles")
                         .HasForeignKey("FunctionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BobCrm.Api.Domain.Models.RoleProfile", "Role")
+                    b.HasOne("BobCrm.Api.Base.Models.RoleProfile", "Role")
                         .WithMany("Functions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BobCrm.Api.Domain.Models.TemplateBinding", "TemplateBinding")
+                    b.HasOne("BobCrm.Api.Base.Models.TemplateBinding", "TemplateBinding")
                         .WithMany()
                         .HasForeignKey("TemplateBindingId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -1438,9 +1438,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("TemplateBinding");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.SubEntityDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.SubEntityDefinition", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.Models.EntityDefinition", "EntityDefinition")
+                    b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "EntityDefinition")
                         .WithMany()
                         .HasForeignKey("EntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1449,9 +1449,9 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("EntityDefinition");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.TemplateBinding", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.TemplateBinding", b =>
                 {
-                    b.HasOne("BobCrm.Api.Domain.FormTemplate", "Template")
+                    b.HasOne("BobCrm.Api.Base.FormTemplate", "Template")
                         .WithMany()
                         .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1511,7 +1511,7 @@ namespace BobCrm.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.EntityDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EntityDefinition", b =>
                 {
                     b.Navigation("DDLScripts");
 
@@ -1520,24 +1520,24 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Interfaces");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FieldMetadata", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
                 {
                     b.Navigation("ChildFields");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.FunctionNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.FunctionNode", b =>
                 {
                     b.Navigation("Children");
 
                     b.Navigation("Roles");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.OrganizationNode", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.OrganizationNode", b =>
                 {
                     b.Navigation("Children");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.RoleProfile", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.RoleProfile", b =>
                 {
                     b.Navigation("Assignments");
 
@@ -1546,7 +1546,7 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Functions");
                 });
 
-            modelBuilder.Entity("BobCrm.Api.Domain.Models.SubEntityDefinition", b =>
+            modelBuilder.Entity("BobCrm.Api.Base.Models.SubEntityDefinition", b =>
                 {
                     b.Navigation("Fields");
                 });

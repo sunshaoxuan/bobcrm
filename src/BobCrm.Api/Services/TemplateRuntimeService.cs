@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Services;
 

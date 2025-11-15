@@ -1,6 +1,6 @@
 using System;
-using BobCrm.Api.Domain;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Core.DomainCommon;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;

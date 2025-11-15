@@ -23,7 +23,7 @@ public class Product : IEntityMetadataProvider
         var type = typeof(Product);
         return new EntityMetadata
         {
-            EntityType = type.FullName ?? "BobCrm.Api.Domain.Product",  // 类全名（主键）
+            EntityType = type.FullName ?? "BobCrm.Api.Base.Product",  // 类全名（主键）
             EntityName = type.Name,                                      // 类短名：Product
             EntityRoute = "product",                                     // URL路径：product（小写）
             DisplayNameKey = "ENTITY_PRODUCT",
@@ -50,7 +50,7 @@ public class Product : IEntityMetadataProvider
 EntityMetadata表新增1条记录：
 | EntityType (类全名) | EntityName | EntityRoute | IsEnabled | UpdatedAt |
 |---------------------|------------|-------------|-----------|-----------|
-| BobCrm.Api.Domain.Product | Product | product | true | NULL |
+| BobCrm.Api.Base.Product | Product | product | true | NULL |
 ```
 
 ---
@@ -66,19 +66,19 @@ EntityMetadata表新增1条记录：
          只找到Customer类（Product已删除）
          validEntityTypeNames = ["customer"]
      → 步骤2：反向验证
-         查询数据库：[BobCrm.Api.Domain.Customer, BobCrm.Api.Domain.Product]
+         查询数据库：[BobCrm.Api.Base.Customer, BobCrm.Api.Base.Product]
          检查Product：类不存在或未实现接口
          → UPDATE EntityMetadata 
             SET IsEnabled = false, UpdatedAt = NOW()
-            WHERE EntityType = 'BobCrm.Api.Domain.Product'
-     → ✅ 输出："✗ Disabled (class not found or invalid): Product (BobCrm.Api.Domain.Product)"
+            WHERE EntityType = 'BobCrm.Api.Base.Product'
+     → ✅ 输出："✗ Disabled (class not found or invalid): Product (BobCrm.Api.Base.Product)"
 
 // 3. 结果
 EntityMetadata表：
 | EntityType (类全名) | EntityName | EntityRoute | IsEnabled | UpdatedAt        |
 |---------------------|------------|-------------|-----------|------------------|
-| BobCrm.Api.Domain.Customer | Customer | customer | true | NULL |
-| BobCrm.Api.Domain.Product | Product | product | false | 2025-11-05 19:30 | ← 自动失效
+| BobCrm.Api.Base.Customer | Customer | customer | true | NULL |
+| BobCrm.Api.Base.Product | Product | product | false | 2025-11-05 19:30 | ← 自动失效
 ```
 
 ---
@@ -103,8 +103,8 @@ EntityMetadata表：
 EntityMetadata表：
 | EntityType (类全名) | EntityName | EntityRoute | IsEnabled | UpdatedAt        |
 |---------------------|------------|-------------|-----------|------------------|
-| BobCrm.Api.Domain.Customer | Customer | customer | true | NULL |
-| BobCrm.Api.Domain.Product | Product | product | true | 2025-11-05 19:35 | ← 重新启用
+| BobCrm.Api.Base.Customer | Customer | customer | true | NULL |
+| BobCrm.Api.Base.Product | Product | product | true | 2025-11-05 19:35 | ← 重新启用
 ```
 
 ---
@@ -115,7 +115,7 @@ EntityMetadata表：
 -- 管理员手动禁用customer（如：维护中）
 UPDATE "EntityMetadata" 
 SET "IsEnabled" = false, "UpdatedAt" = NOW()
-WHERE "EntityType" = 'BobCrm.Api.Domain.Customer';
+WHERE "EntityType" = 'BobCrm.Api.Base.Customer';
 
 -- 系统启动后
 启动 → AutoRegisterEntityMetadataAsync()
@@ -132,7 +132,7 @@ public static EntityMetadata GetMetadata()
     var type = typeof(Customer);
     return new EntityMetadata
     {
-        EntityType = type.FullName ?? "BobCrm.Api.Domain.Customer",
+        EntityType = type.FullName ?? "BobCrm.Api.Base.Customer",
         EntityName = type.Name,
         EntityRoute = "customer",
         IsEnabled = false,  // ⭐ 在代码中控制

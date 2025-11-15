@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 public class CustomerLocalization : ILocalizationData
 {

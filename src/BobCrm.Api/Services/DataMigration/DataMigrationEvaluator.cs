@@ -1,5 +1,5 @@
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services.DataMigration;

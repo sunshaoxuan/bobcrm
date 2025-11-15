@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Endpoints;

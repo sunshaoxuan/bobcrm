@@ -1,5 +1,5 @@
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Services.EntityLocking;
 using Microsoft.EntityFrameworkCore;
 

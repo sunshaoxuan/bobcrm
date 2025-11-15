@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 本地化数据的基类，提供通用的本地化属性访问

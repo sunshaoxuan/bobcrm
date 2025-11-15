@@ -1,4 +1,4 @@
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

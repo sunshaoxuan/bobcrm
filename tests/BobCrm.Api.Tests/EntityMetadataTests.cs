@@ -77,7 +77,7 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         // Customer 实体应该存在且已启用
         var hasCustomer = entityArray.Any(e => 
             e.TryGetProperty("entityType", out var et) && 
-            et.GetString() == "BobCrm.Api.Domain.Customer");
+            et.GetString() == "BobCrm.Api.Base.Customer");
         Assert.True(hasCustomer, "应该包含Customer实体");
     }
 
@@ -148,7 +148,7 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         // Customer 实体应该已自动注册（注意：API返回的是camelCase）
         var customerEntity = entityArray.FirstOrDefault(e => 
             e.TryGetProperty("entityType", out var et) && 
-            et.GetString() == "BobCrm.Api.Domain.Customer");
+            et.GetString() == "BobCrm.Api.Base.Customer");
         
         Assert.False(customerEntity.Equals(default(JsonElement)), "Customer实体应该已自动注册");
         

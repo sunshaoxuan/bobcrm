@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using BobCrm.Api.Abstractions;
 
-namespace BobCrm.Api.Domain.Models;
+namespace BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 组织节点（树形结构）
@@ -62,9 +62,9 @@ public class OrganizationNode : IBizEntity
         var type = typeof(OrganizationNode);
         var definition = new EntityDefinition
         {
-            Namespace = type.Namespace ?? "BobCrm.Api.Domain.Models",
+            Namespace = type.Namespace ?? "BobCrm.Api.Base.Models",
             EntityName = type.Name,
-            FullTypeName = type.FullName ?? "BobCrm.Api.Domain.Models.OrganizationNode",
+            FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.OrganizationNode",
             EntityRoute = "organization-nodes",
             DisplayName = new Dictionary<string, string?>
             {

@@ -1,6 +1,6 @@
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain.Aggregates;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Aggregates;
+using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 

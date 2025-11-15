@@ -1,5 +1,5 @@
-using BobCrm.Api.Domain;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

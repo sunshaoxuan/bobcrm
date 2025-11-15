@@ -1,5 +1,5 @@
 using System.Text;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Services;
 
@@ -241,7 +241,7 @@ public class CSharpCodeGenerator
     {
         return @"using System;
 
-namespace BobCrm.Api.Domain
+namespace BobCrm.Api.Base
 {
     /// <summary>
     /// 基础实体接口 - 所有实体都应实现此接口

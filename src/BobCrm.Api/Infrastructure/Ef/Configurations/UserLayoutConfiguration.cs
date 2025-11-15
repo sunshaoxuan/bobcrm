@@ -1,4 +1,4 @@
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

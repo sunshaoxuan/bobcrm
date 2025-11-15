@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// Utility helpers for mapping user layout scopes (customer, entity types, etc.).

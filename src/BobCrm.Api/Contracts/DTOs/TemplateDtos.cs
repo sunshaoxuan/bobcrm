@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Contracts.DTOs;
 

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Middleware;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

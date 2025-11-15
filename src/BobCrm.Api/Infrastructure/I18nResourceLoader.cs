@@ -1,5 +1,5 @@
 using System.Text.Json;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Infrastructure;
 

@@ -77,14 +77,14 @@ public class AdminAndAccessTests : IClassFixture<TestWebAppFactory>
             }
             // 授予admin访问所有客户的权限
             var db = sp.GetRequiredService<BobCrm.Api.Infrastructure.AppDbContext>();
-            var repo = sp.GetRequiredService<BobCrm.Api.Core.Persistence.IRepository<BobCrm.Api.Domain.CustomerAccess>>();
+            var repo = sp.GetRequiredService<BobCrm.Api.Core.Persistence.IRepository<BobCrm.Api.Base.CustomerAccess>>();
             var custIds = db.Customers.IgnoreQueryFilters().Select(c => c.Id).ToList();
             foreach (var cid in custIds)
             {
                 var exists = repo.Query(a => a.CustomerId == cid && a.UserId == admin.Id).Any();
                 if (!exists)
                 {
-                    await repo.AddAsync(new BobCrm.Api.Domain.CustomerAccess { CustomerId = cid, UserId = admin.Id, CanEdit = true });
+                    await repo.AddAsync(new BobCrm.Api.Base.CustomerAccess { CustomerId = cid, UserId = admin.Id, CanEdit = true });
                 }
             }
             await sp.GetRequiredService<BobCrm.Api.Core.Persistence.IUnitOfWork>().SaveChangesAsync();

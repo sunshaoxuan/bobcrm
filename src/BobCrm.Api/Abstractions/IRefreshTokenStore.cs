@@ -1,4 +1,4 @@
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Abstractions;
 

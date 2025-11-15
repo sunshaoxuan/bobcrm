@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 用户布局 - 支持按实体类型（EntityType）保存不同的布局模板

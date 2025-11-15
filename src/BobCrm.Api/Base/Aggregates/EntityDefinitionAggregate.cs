@@ -1,6 +1,6 @@
-namespace BobCrm.Api.Domain.Aggregates;
+namespace BobCrm.Api.Base.Aggregates;
 
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 
 /// <summary>
 /// 实体定义聚合根

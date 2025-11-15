@@ -2,7 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Core.Persistence;
-using BobCrm.Api.Domain;
+using BobCrm.Api.Base;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Http;
 

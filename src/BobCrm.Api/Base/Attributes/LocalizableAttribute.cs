@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain.Attributes;
+namespace BobCrm.Api.Base.Attributes;
 
 /// <summary>
 /// 标记属性可以被本地化

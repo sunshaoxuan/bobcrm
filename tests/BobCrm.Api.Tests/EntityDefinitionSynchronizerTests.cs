@@ -1,4 +1,4 @@
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -95,7 +95,7 @@ public class EntityDefinitionSynchronizerTests : IDisposable
     {
         // Arrange
         // Using Customer type but not syncing it first
-        var customerType = typeof(BobCrm.Api.Domain.Customer).FullName!;
+        var customerType = typeof(BobCrm.Api.Base.Customer).FullName!;
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(

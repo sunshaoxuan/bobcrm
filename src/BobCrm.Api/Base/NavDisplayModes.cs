@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 public static class NavDisplayModes
 {

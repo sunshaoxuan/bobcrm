@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain;
+namespace BobCrm.Api.Base;
 
 /// <summary>
 /// 描述 FormTemplate 的使用场景（列表/详情/编辑等）。

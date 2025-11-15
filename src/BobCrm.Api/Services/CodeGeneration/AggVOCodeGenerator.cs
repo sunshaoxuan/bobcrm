@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using BobCrm.Api.Domain.Models;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Services.CodeGeneration;
 
@@ -31,7 +31,7 @@ public class AggVOCodeGenerator : IAggVOCodeGenerator
         var headVOClassName = $"{masterEntity.EntityName}VO";
 
         // Using statements
-        sb.AppendLine("using BobCrm.Api.Domain.Aggregates;");
+        sb.AppendLine("using BobCrm.Api.Base.Aggregates;");
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine("using System.Threading.Tasks;");

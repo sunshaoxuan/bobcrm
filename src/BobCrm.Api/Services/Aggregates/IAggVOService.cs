@@ -1,4 +1,4 @@
-using BobCrm.Api.Domain.Aggregates;
+using BobCrm.Api.Base.Aggregates;
 
 namespace BobCrm.Api.Services.Aggregates;
 

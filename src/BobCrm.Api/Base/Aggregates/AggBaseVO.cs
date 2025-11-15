@@ -1,4 +1,4 @@
-namespace BobCrm.Api.Domain.Aggregates;
+namespace BobCrm.Api.Base.Aggregates;
 
 /// <summary>
 /// 聚合根值对象的抽象基类
