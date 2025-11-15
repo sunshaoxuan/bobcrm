@@ -404,6 +404,124 @@ public class AccessService
         return assignment;
     }
 
+    public async Task<IReadOnlyDictionary<FormTemplateUsageType, FunctionNode>> EnsureEntityMenuAsync(
+        EntityDefinition entity,
+        IReadOnlyDictionary<FormTemplateUsageType, TemplateBinding> bindings,
+        CancellationToken ct = default)
+    {
+        if (entity == null)
+        {
+            throw new ArgumentNullException(nameof(entity));
+        }
+
+        if (bindings == null)
+        {
+            throw new ArgumentNullException(nameof(bindings));
+        }
+
+        var result = new Dictionary<FormTemplateUsageType, FunctionNode>();
+
+        var root = await EnsureFunctionNodeAsync(
+            code: "APP.ROOT",
+            name: "应用根节点",
+            parentId: null,
+            route: null,
+            icon: "appstore",
+            isMenu: true,
+            sortOrder: 0,
+            ct);
+
+        var parent = await EnsureFunctionNodeAsync(
+            code: "CRM.CORE",
+            name: "基本档案",
+            parentId: root.Id,
+            route: null,
+            icon: "database",
+            isMenu: true,
+            sortOrder: 31,
+            ct);
+
+        var codes = BuildFunctionCodes(entity.EntityRoute);
+        var displayName = ResolveDisplayName(entity);
+        var listRoute = ResolveListRoute(entity);
+        var listNode = await EnsureFunctionNodeAsync(
+            codes.ListCode,
+            displayName,
+            parent.Id,
+            listRoute,
+            entity.Icon ?? "profile",
+            isMenu: true,
+            sortOrder: 500 + entity.Order,
+            ct);
+        result[FormTemplateUsageType.List] = listNode;
+
+        if (bindings.TryGetValue(FormTemplateUsageType.Detail, out _))
+        {
+            var detailNode = await EnsureFunctionNodeAsync(
+                codes.DetailCode,
+                $"{displayName} Detail",
+                listNode.Id,
+                null,
+                entity.Icon ?? "profile",
+                isMenu: false,
+                sortOrder: listNode.SortOrder + 1,
+                ct);
+            result[FormTemplateUsageType.Detail] = detailNode;
+        }
+
+        if (bindings.TryGetValue(FormTemplateUsageType.Edit, out _))
+        {
+            var editNode = await EnsureFunctionNodeAsync(
+                codes.EditCode,
+                $"{displayName} Edit",
+                listNode.Id,
+                null,
+                entity.Icon ?? "profile",
+                isMenu: false,
+                sortOrder: listNode.SortOrder + 2,
+                ct);
+            result[FormTemplateUsageType.Edit] = editNode;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        var adminRole = await _db.RoleProfiles
+            .Include(r => r.Functions)
+            .FirstOrDefaultAsync(r => r.IsSystem, ct);
+
+        if (adminRole != null)
+        {
+            foreach (var (usage, node) in result)
+            {
+                if (!bindings.TryGetValue(usage, out var binding))
+                {
+                    continue;
+                }
+
+                var permission = adminRole.Functions.FirstOrDefault(f => f.FunctionId == node.Id);
+
+                if (permission == null)
+                {
+                    permission = new RoleFunctionPermission
+                    {
+                        RoleId = adminRole.Id,
+                        FunctionId = node.Id,
+                        TemplateBindingId = binding.Id
+                    };
+                    adminRole.Functions.Add(permission);
+                }
+                else if (permission.TemplateBindingId != binding.Id)
+                {
+                    permission.TemplateBindingId = binding.Id;
+                }
+            }
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return result;
+    }
+
     public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
     {
         await SeedFunctionTreeAsync(ct);
@@ -568,6 +686,68 @@ public class AccessService
         }
 
         return new DataScopeEvaluationResult(false, scopeBindings);
+    }
+
+    private async Task<FunctionNode> EnsureFunctionNodeAsync(
+        string code,
+        string name,
+        Guid? parentId,
+        string? route,
+        string? icon,
+        bool isMenu,
+        int sortOrder,
+        CancellationToken ct)
+    {
+        var node = await _db.FunctionNodes.FirstOrDefaultAsync(f => f.Code == code, ct);
+        if (node == null)
+        {
+            node = new FunctionNode { Code = code };
+            _db.FunctionNodes.Add(node);
+        }
+
+        node.Name = name;
+        node.ParentId = parentId;
+        node.Route = route;
+        node.Icon = icon;
+        node.IsMenu = isMenu;
+        node.SortOrder = sortOrder;
+
+        return node;
+    }
+
+    private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
+    {
+        var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
+        return (baseCode, $"{baseCode}.DETAIL", $"{baseCode}.EDIT");
+    }
+
+    private static string ResolveDisplayName(EntityDefinition entity)
+    {
+        if (entity.DisplayName != null)
+        {
+            var value = entity.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return entity.EntityName;
+    }
+
+    private static string? ResolveListRoute(EntityDefinition entity)
+    {
+        if (string.IsNullOrWhiteSpace(entity.ApiEndpoint))
+        {
+            return null;
+        }
+
+        if (entity.ApiEndpoint.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+            return entity.ApiEndpoint[4..];
+        }
+
+        return entity.ApiEndpoint;
     }
 
     private async Task EnsureDefaultAdminUserAsync()
