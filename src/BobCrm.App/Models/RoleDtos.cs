@@ -23,6 +23,7 @@ public class RoleFunctionDto
     public Guid RoleId { get; set; }
     public Guid FunctionId { get; set; }
     public FunctionMenuNode? Function { get; set; }
+    public int? TemplateBindingId { get; set; }
 }
 
 public class RoleDataScopeDto
@@ -55,4 +56,11 @@ public class UpdatePermissionsRequestDto
 {
     public List<Guid> FunctionIds { get; set; } = new();
     public List<RoleDataScopeDto> DataScopes { get; set; } = new();
+    public List<FunctionPermissionSelectionDto> FunctionPermissions { get; set; } = new();
+}
+
+public class FunctionPermissionSelectionDto
+{
+    public Guid FunctionId { get; set; }
+    public int? TemplateBindingId { get; set; }
 }

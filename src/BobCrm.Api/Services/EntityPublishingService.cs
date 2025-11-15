@@ -4,6 +4,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
 
@@ -21,6 +22,8 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly TemplateBindingService _templateBindingService;
     private readonly AccessService _accessService;
     private readonly ILogger<EntityPublishingService> _logger;
+    private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly IDefaultTemplateService _defaultTemplateService;
 
     public EntityPublishingService(
         AppDbContext db,
@@ -40,6 +43,7 @@ public class EntityPublishingService : IEntityPublishingService
         _templateBindingService = templateBindingService;
         _accessService = accessService;
         _logger = logger;
+        _defaultTemplateService = defaultTemplateService;
     }
 
     /// <summary>
@@ -122,7 +126,7 @@ public class EntityPublishingService : IEntityPublishingService
             await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
 
             result.Success = true;
-            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully and locked", entity.EntityName);
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully, locked, and default template ensured", entity.EntityName);
         }
         catch (Exception ex)
         {
@@ -230,7 +234,7 @@ public class EntityPublishingService : IEntityPublishingService
             await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
 
             result.Success = true;
-            _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully", entity.EntityName);
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully and default template updated", entity.EntityName);
         }
         catch (Exception ex)
         {
