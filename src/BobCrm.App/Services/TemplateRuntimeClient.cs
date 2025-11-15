@@ -2,6 +2,7 @@ using System;
 using System.Net.Http.Json;
 using BobCrm.App.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BobCrm.App.Services;
 
@@ -10,18 +11,29 @@ public class TemplateRuntimeClient
     private readonly AuthService _auth;
     private readonly ILogger<TemplateRuntimeClient> _logger;
 
+    protected TemplateRuntimeClient()
+    {
+        _auth = null!;
+        _logger = NullLogger<TemplateRuntimeClient>.Instance;
+    }
+
     public TemplateRuntimeClient(AuthService auth, ILogger<TemplateRuntimeClient> logger)
     {
         _auth = auth;
-        _logger = logger;
+        _logger = logger ?? NullLogger<TemplateRuntimeClient>.Instance;
     }
 
-    public async Task<TemplateRuntimeResponse?> GetRuntimeAsync(
+    public virtual async Task<TemplateRuntimeResponse?> GetRuntimeAsync(
         string entityType,
         TemplateUsageType usageType,
         string? functionOverride = null,
         CancellationToken cancellationToken = default)
     {
+        if (_auth is null)
+        {
+            return null;
+        }
+
         try
         {
             var client = await _auth.CreateClientWithAuthAsync();
