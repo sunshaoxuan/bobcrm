@@ -4,6 +4,7 @@
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.EntityDomainService DomainService
 @inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.ToastService ToastService
 @inject NavigationManager Nav
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
@@ -674,7 +675,7 @@
             // 验证多语言显示名
             if (_model.DisplayName == null || !_model.DisplayName.HasValue())
             {
-                MessageService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
+                ToastService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
                 _saving = false;
                 return;
             }
@@ -701,7 +702,7 @@
                 };
 
                 await EntityDefService.CreateAsync(request);
-                MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
+                ToastService.Success(I18n.T("MSG_CREATE_SUCCESS"));
             }
             else
             {
@@ -718,14 +719,14 @@
                 };
 
                 await EntityDefService.UpdateAsync(Id!.Value, request);
-                MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
+                ToastService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
             }
 
             GoBack();
         }
         catch (Exception ex)
         {
-            MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            ToastService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
