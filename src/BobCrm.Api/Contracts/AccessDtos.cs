@@ -1,6 +1,18 @@
+using System.Collections.Generic;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Contracts.DTOs;
+
+public class MultilingualText : Dictionary<string, string?>
+{
+    public MultilingualText() : base(StringComparer.OrdinalIgnoreCase)
+    {
+    }
+
+    public MultilingualText(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
+    {
+    }
+}
 
 public record FunctionNodeDto
 {
@@ -8,10 +20,13 @@ public record FunctionNodeDto
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public MultilingualText? DisplayName { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
     public bool IsMenu { get; init; }
     public int SortOrder { get; init; }
+    public int? TemplateId { get; init; }
+    public string? TemplateName { get; init; }
     public List<FunctionNodeDto> Children { get; init; } = new();
 }
 
@@ -20,11 +35,30 @@ public record CreateFunctionRequest
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public MultilingualText? DisplayName { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
     public bool IsMenu { get; init; } = true;
     public int SortOrder { get; init; } = 100;
+    public int? TemplateId { get; init; }
 }
+
+public record UpdateFunctionRequest
+{
+    public Guid? ParentId { get; init; }
+    public bool ClearParent { get; init; }
+    public string? Name { get; init; }
+    public MultilingualText? DisplayName { get; init; }
+    public string? Route { get; init; }
+    public bool ClearRoute { get; init; }
+    public string? Icon { get; init; }
+    public bool? IsMenu { get; init; }
+    public int? SortOrder { get; init; }
+    public int? TemplateId { get; init; }
+    public bool ClearTemplate { get; init; }
+}
+
+public record FunctionOrderUpdate(Guid Id, Guid? ParentId, int SortOrder);
 
 public record CreateRoleRequest
 {

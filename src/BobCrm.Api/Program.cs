@@ -184,6 +184,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.A
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 builder.Services.AddScoped<AccessService>();
+builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 
