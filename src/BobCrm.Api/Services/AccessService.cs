@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Identity;
@@ -33,6 +34,7 @@ public class AccessService
         new("SYS", "系统管理", null, "setting", true, 10, "APP.ROOT"),
         new("SYS.SET", "系统设置", null, "setting", true, 11, "SYS"),
         new("SYS.SET.CONFIG", "系统设置", "/settings", "setting", true, 111, "SYS.SET"),
+        new("SYS.SET.MENU", "菜单管理", "/menus", "menu", true, 112, "SYS.SET"),
         new("SYS.MSG", "邮件与消息", null, "mail", true, 12, "SYS"),
         new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
         new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
@@ -106,9 +108,9 @@ public class AccessService
 
     public async Task<FunctionNode> CreateFunctionAsync(CreateFunctionRequest request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name))
+        if (string.IsNullOrWhiteSpace(request.Code))
         {
-            throw new InvalidOperationException("Function code and name are required.");
+            throw new InvalidOperationException("Function code is required.");
         }
 
         var exists = await _db.FunctionNodes.AnyAsync(f => f.Code == request.Code, ct);
@@ -146,6 +148,154 @@ public class AccessService
         _db.FunctionNodes.Add(node);
         await _db.SaveChangesAsync(ct);
         return node;
+    }
+
+    public async Task<FunctionNode> UpdateFunctionAsync(Guid id, UpdateFunctionRequest request, CancellationToken ct = default)
+    {
+        var node = await _db.FunctionNodes.FindAsync(new object[] { id }, ct);
+        if (node == null)
+        {
+            throw new InvalidOperationException("Function node not found.");
+        }
+
+        if (request.ParentId.HasValue)
+        {
+            if (request.ParentId.Value == id)
+            {
+                throw new InvalidOperationException("Node cannot be its own parent.");
+            }
+
+            var parentExists = await _db.FunctionNodes.AnyAsync(f => f.Id == request.ParentId.Value, ct);
+            if (!parentExists)
+            {
+                throw new InvalidOperationException("Parent node does not exist.");
+            }
+
+            node.ParentId = request.ParentId;
+        }
+        else if (request.ClearParent)
+        {
+            node.ParentId = null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            node.Name = request.Name.Trim();
+        }
+
+        if (request.DisplayName != null)
+        {
+            node.DisplayName = new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                node.Name = MultilingualTextHelper.Resolve(node.DisplayName, node.Name);
+            }
+        }
+
+        if (request.ClearRoute)
+        {
+            node.Route = null;
+        }
+        else if (request.Route != null)
+        {
+            node.Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim();
+        }
+
+        if (request.Icon != null)
+        {
+            node.Icon = string.IsNullOrWhiteSpace(request.Icon) ? null : request.Icon.Trim();
+        }
+
+        if (request.IsMenu.HasValue)
+        {
+            node.IsMenu = request.IsMenu.Value;
+        }
+
+        if (request.SortOrder.HasValue)
+        {
+            node.SortOrder = request.SortOrder.Value;
+        }
+
+        if (request.ClearTemplate)
+        {
+            node.TemplateId = null;
+            node.Template = null;
+        }
+        else if (request.TemplateId.HasValue)
+        {
+            var template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
+            if (template == null)
+            {
+                throw new InvalidOperationException("Template does not exist.");
+            }
+
+            node.TemplateId = template.Id;
+            node.Template = template;
+        }
+
+        if (node.TemplateId.HasValue && node.Template == null)
+        {
+            await _db.Entry(node).Reference(n => n.Template).LoadAsync(ct);
+        }
+        else if (!node.TemplateId.HasValue)
+        {
+            node.Template = null;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return node;
+    }
+
+    public async Task DeleteFunctionAsync(Guid id, CancellationToken ct = default)
+    {
+        var node = await _db.FunctionNodes
+            .Include(n => n.Children)
+            .FirstOrDefaultAsync(n => n.Id == id, ct);
+
+        if (node == null)
+        {
+            throw new InvalidOperationException("Function node not found.");
+        }
+
+        if (node.Children.Count > 0)
+        {
+            throw new InvalidOperationException("Cannot delete node with children.");
+        }
+
+        var referenced = await _db.RoleFunctionPermissions.AnyAsync(rf => rf.FunctionId == id, ct);
+        if (referenced)
+        {
+            throw new InvalidOperationException("Cannot delete node referenced by roles.");
+        }
+
+        _db.FunctionNodes.Remove(node);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task ReorderFunctionsAsync(IEnumerable<FunctionOrderUpdate> updates, CancellationToken ct = default)
+    {
+        var updateList = updates.ToList();
+        if (updateList.Count == 0)
+        {
+            return;
+        }
+
+        var ids = updateList.Select(u => u.Id).ToList();
+        var nodes = await _db.FunctionNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
+
+        foreach (var update in updateList)
+        {
+            var node = nodes.FirstOrDefault(n => n.Id == update.Id);
+            if (node == null)
+            {
+                throw new InvalidOperationException($"Function node {update.Id} not found.");
+            }
+
+            node.ParentId = update.ParentId;
+            node.SortOrder = update.SortOrder;
+        }
+
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task<RoleProfile> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default)
@@ -230,6 +380,124 @@ public class AccessService
         _db.RoleAssignments.Add(assignment);
         await _db.SaveChangesAsync(ct);
         return assignment;
+    }
+
+    public async Task<IReadOnlyDictionary<FormTemplateUsageType, FunctionNode>> EnsureEntityMenuAsync(
+        EntityDefinition entity,
+        IReadOnlyDictionary<FormTemplateUsageType, TemplateBinding> bindings,
+        CancellationToken ct = default)
+    {
+        if (entity == null)
+        {
+            throw new ArgumentNullException(nameof(entity));
+        }
+
+        if (bindings == null)
+        {
+            throw new ArgumentNullException(nameof(bindings));
+        }
+
+        var result = new Dictionary<FormTemplateUsageType, FunctionNode>();
+
+        var root = await EnsureFunctionNodeAsync(
+            code: "APP.ROOT",
+            name: "应用根节点",
+            parentId: null,
+            route: null,
+            icon: "appstore",
+            isMenu: true,
+            sortOrder: 0,
+            ct);
+
+        var parent = await EnsureFunctionNodeAsync(
+            code: "CRM.CORE",
+            name: "基本档案",
+            parentId: root.Id,
+            route: null,
+            icon: "database",
+            isMenu: true,
+            sortOrder: 31,
+            ct);
+
+        var codes = BuildFunctionCodes(entity.EntityRoute);
+        var displayName = ResolveDisplayName(entity);
+        var listRoute = ResolveListRoute(entity);
+        var listNode = await EnsureFunctionNodeAsync(
+            codes.ListCode,
+            displayName,
+            parent.Id,
+            listRoute,
+            entity.Icon ?? "profile",
+            isMenu: true,
+            sortOrder: 500 + entity.Order,
+            ct);
+        result[FormTemplateUsageType.List] = listNode;
+
+        if (bindings.TryGetValue(FormTemplateUsageType.Detail, out _))
+        {
+            var detailNode = await EnsureFunctionNodeAsync(
+                codes.DetailCode,
+                $"{displayName} Detail",
+                listNode.Id,
+                null,
+                entity.Icon ?? "profile",
+                isMenu: false,
+                sortOrder: listNode.SortOrder + 1,
+                ct);
+            result[FormTemplateUsageType.Detail] = detailNode;
+        }
+
+        if (bindings.TryGetValue(FormTemplateUsageType.Edit, out _))
+        {
+            var editNode = await EnsureFunctionNodeAsync(
+                codes.EditCode,
+                $"{displayName} Edit",
+                listNode.Id,
+                null,
+                entity.Icon ?? "profile",
+                isMenu: false,
+                sortOrder: listNode.SortOrder + 2,
+                ct);
+            result[FormTemplateUsageType.Edit] = editNode;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        var adminRole = await _db.RoleProfiles
+            .Include(r => r.Functions)
+            .FirstOrDefaultAsync(r => r.IsSystem, ct);
+
+        if (adminRole != null)
+        {
+            foreach (var (usage, node) in result)
+            {
+                if (!bindings.TryGetValue(usage, out var binding))
+                {
+                    continue;
+                }
+
+                var permission = adminRole.Functions.FirstOrDefault(f => f.FunctionId == node.Id);
+
+                if (permission == null)
+                {
+                    permission = new RoleFunctionPermission
+                    {
+                        RoleId = adminRole.Id,
+                        FunctionId = node.Id,
+                        TemplateBindingId = binding.Id
+                    };
+                    adminRole.Functions.Add(permission);
+                }
+                else if (permission.TemplateBindingId != binding.Id)
+                {
+                    permission.TemplateBindingId = binding.Id;
+                }
+            }
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return result;
     }
 
     public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
@@ -398,6 +666,68 @@ public class AccessService
         return new DataScopeEvaluationResult(false, scopeBindings);
     }
 
+    private async Task<FunctionNode> EnsureFunctionNodeAsync(
+        string code,
+        string name,
+        Guid? parentId,
+        string? route,
+        string? icon,
+        bool isMenu,
+        int sortOrder,
+        CancellationToken ct)
+    {
+        var node = await _db.FunctionNodes.FirstOrDefaultAsync(f => f.Code == code, ct);
+        if (node == null)
+        {
+            node = new FunctionNode { Code = code };
+            _db.FunctionNodes.Add(node);
+        }
+
+        node.Name = name;
+        node.ParentId = parentId;
+        node.Route = route;
+        node.Icon = icon;
+        node.IsMenu = isMenu;
+        node.SortOrder = sortOrder;
+
+        return node;
+    }
+
+    private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
+    {
+        var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
+        return (baseCode, $"{baseCode}.DETAIL", $"{baseCode}.EDIT");
+    }
+
+    private static string ResolveDisplayName(EntityDefinition entity)
+    {
+        if (entity.DisplayName != null)
+        {
+            var value = entity.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return entity.EntityName;
+    }
+
+    private static string? ResolveListRoute(EntityDefinition entity)
+    {
+        if (string.IsNullOrWhiteSpace(entity.ApiEndpoint))
+        {
+            return null;
+        }
+
+        if (entity.ApiEndpoint.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+            return entity.ApiEndpoint[4..];
+        }
+
+        return entity.ApiEndpoint;
+    }
+
     private async Task EnsureDefaultAdminUserAsync()
     {
         var adminUser = await _userManager.FindByNameAsync("admin");
@@ -442,6 +772,7 @@ public class AccessService
             }
 
             node.Name = seed.Name;
+            node.DisplayName = new Dictionary<string, string?>(seed.DisplayNameMap, StringComparer.OrdinalIgnoreCase);
             node.Route = seed.Route;
             node.Icon = seed.Icon;
             node.IsMenu = seed.IsMenu;

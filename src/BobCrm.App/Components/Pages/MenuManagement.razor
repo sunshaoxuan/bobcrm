@@ -1,0 +1,732 @@
+@page "/menus"
+@using System.Linq
+@using BobCrm.App.Models
+@using BobCrm.App.Services.Multilingual
+@inject MenuService MenuService
+@inject I18nService I18n
+@inject AntDesign.IMessageService Message
+@inject IMultilingualTextResolver MultilingualResolver
+
+<PageTitle>@I18n.T("MENU_MENU_MANAGE") · OneCRM</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_MENU_MANAGE")" Description="@I18n.T("TXT_MENU_MANAGE_DESC")" />
+
+    @if (_loading)
+    {
+        <div class="menu-loading">
+            <Spin Size="@SpinSize.Large" />
+        </div>
+    }
+    else
+    {
+        <div class="menu-layout">
+            <section class="menu-tree-panel">
+                <div class="menu-tree-header">
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" OnClick="() => OpenCreateModal(null)">
+                        @I18n.T("BTN_ADD_ROOT_MENU")
+                    </Button>
+                    <Button Icon="@IconType.Outline.Reload" OnClick="() => LoadTreeAsync(_selectedNode?.Id)">
+                        @I18n.T("BTN_REFRESH")
+                    </Button>
+                </div>
+
+                <div class="menu-tree-container">
+                    <div class="drop-zone drop-root"
+                         @ondragover="AllowDrop"
+                         @ondrop="@(e => HandleRootDrop("append", e))">
+                        @I18n.T("TXT_MENU_DROP_ROOT")
+                    </div>
+                    @if (_tree.Count == 0)
+                    {
+                        <div class="menu-empty">@I18n.T("TXT_MENU_EMPTY")</div>
+                    }
+                    else
+                    {
+                        <ul class="menu-tree">
+                            @foreach (var node in _tree)
+                            {
+                                @RenderNode(node)
+                            }
+                        </ul>
+                    }
+                </div>
+            </section>
+
+            <section class="menu-detail-panel">
+                @if (_selectedNode is null)
+                {
+                    <div class="menu-placeholder">
+                        <Icon Type="@IconType.Outline.Menu" />
+                        <p>@I18n.T("TXT_MENU_SELECT_HINT")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="menu-detail-card">
+                        <h3>@I18n.T("LBL_MENU_DETAIL")</h3>
+                        <dl>
+                            <dt>@I18n.T("LBL_MENU_NAME")</dt>
+                            <dd>@ResolveNodeName(_selectedNode)</dd>
+                            <dt>@I18n.T("LBL_MENU_CODE")</dt>
+                            <dd>@_selectedNode.Code</dd>
+                            <dt>@I18n.T("LBL_MENU_ROUTE")</dt>
+                            <dd>@(_selectedNode.Route ?? "--")</dd>
+                            <dt>@I18n.T("LBL_MENU_TEMPLATE")</dt>
+                            <dd>@ResolveTemplateLabel(_selectedNode)</dd>
+                            <dt>@I18n.T("LBL_MENU_ICON")</dt>
+                            <dd>@(_selectedNode.Icon ?? "--")</dd>
+                            <dt>@I18n.T("LBL_MENU_SORT")</dt>
+                            <dd>@_selectedNode.SortOrder</dd>
+                        </dl>
+                        <div class="menu-detail-actions">
+                            <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Edit" OnClick="() => OpenEditModal(_selectedNode)">
+                                @I18n.T("BTN_EDIT_MENU")
+                            </Button>
+                            <Button Icon="@IconType.Outline.Plus" OnClick="() => OpenCreateModal(_selectedNode)">
+                                @I18n.T("BTN_ADD_CHILD_MENU")
+                            </Button>
+                            <Popconfirm Title="@I18n.T("MSG_MENU_DELETE_CONFIRM")"
+                                        OnConfirm="async () => await DeleteNodeAsync(_selectedNode)">
+                                <Button Danger Icon="@IconType.Outline.Delete">
+                                    @I18n.T("BTN_DELETE_MENU")
+                                </Button>
+                            </Popconfirm>
+                        </div>
+                    </div>
+                }
+            </section>
+        </div>
+    }
+
+    <Modal @bind-Visible="_isModalVisible"
+           Title="@(_isCreating ? I18n.T("BTN_ADD_MENU") : I18n.T("BTN_EDIT_MENU"))"
+           DestroyOnClose="true"
+           ConfirmLoading="_saving"
+           OnOk="SubmitAsync"
+           OkText="@I18n.T("BTN_SAVE")"
+           CancelText="@I18n.T("BTN_CANCEL")">
+        <div class="menu-form">
+            <div class="form-field">
+                <label>@I18n.T("LBL_MENU_PARENT")</label>
+                <Input Value="@(_form.ParentName ?? I18n.T("LBL_MENU_ROOT"))" Disabled />
+            </div>
+            <div class="form-field">
+                <label>@I18n.T("LBL_MENU_CODE")</label>
+                <Input @bind-Value="_form.Code" Disabled="@(!_isCreating)" />
+            </div>
+            <div class="form-field">
+                <label>@I18n.T("LBL_MENU_NAME")</label>
+                <Input @bind-Value="_form.Name" />
+            </div>
+            <div class="form-field">
+                <label>@I18n.T("LBL_MENU_I18N")</label>
+                <MultilingualInput @bind-Value="_form.DisplayName" />
+            </div>
+            <div class="form-inline">
+                <div class="form-field">
+                    <label>@I18n.T("LBL_MENU_ICON")</label>
+                    <Input @bind-Value="_form.Icon" />
+                </div>
+                <div class="form-field">
+                    <label>@I18n.T("LBL_MENU_SORT")</label>
+                    <InputNumber @bind-Value="_form.SortOrder" Min="0" Step="10" />
+                </div>
+                <div class="form-field switch-field">
+                    <label>@I18n.T("LBL_MENU_IS_MENU")</label>
+                    <Switch Checked="@_form.IsMenu" OnChange="@(value => _form.IsMenu = value)" />
+                </div>
+            </div>
+            <div class="form-field">
+                <label>@I18n.T("LBL_MENU_NAVIGATION_TYPE")</label>
+                <RadioGroup Value="_form.NavigationType"
+                            ValueChanged="OnNavigationTypeChanged">
+                    <RadioButton Value="route">@I18n.T("LBL_MENU_NAV_ROUTE")</RadioButton>
+                    <RadioButton Value="template">@I18n.T("LBL_MENU_NAV_TEMPLATE")</RadioButton>
+                </RadioGroup>
+            </div>
+            @if (_form.NavigationType == "route")
+            {
+                <div class="form-field">
+                    <label>@I18n.T("LBL_MENU_ROUTE")</label>
+                    <Input @bind-Value="_form.Route" Placeholder="/customers" />
+                </div>
+            }
+            else
+            {
+                <div class="form-field">
+                    <label>@I18n.T("LBL_MENU_TEMPLATE")</label>
+                    @if (!_templatesLoaded)
+                    {
+                        <div class="menu-templates-loading">
+                            <Spin Size="@SpinSize.Small" />
+                        </div>
+                    }
+                    else if (_templates.Count == 0)
+                    {
+                        <Alert Message="@I18n.T("TXT_MENU_TEMPLATE_EMPTY")" Type="@AlertType.Info" ShowIcon />
+                    }
+                    else
+                    {
+                        <Select TItem="TemplateSummary"
+                                TValue="int?"
+                                @bind-Value="_form.TemplateId"
+                                Placeholder="@I18n.T("LBL_MENU_TEMPLATE_SELECT")">
+                            @foreach (var template in _templates)
+                            {
+                                <SelectOption Value="@template.Id">
+                                    @template.Name (@(template.EntityType ?? "--"))
+                                </SelectOption>
+                            }
+                        </Select>
+                    }
+                </div>
+            }
+        </div>
+    </Modal>
+</AuthChecker>
+
+@code {
+    private readonly List<FunctionMenuNode> _tree = new();
+    private readonly Dictionary<Guid, FunctionMenuNode> _lookup = new();
+    private readonly Dictionary<Guid, Guid?> _parentLookup = new();
+    private FunctionMenuNode? _selectedNode;
+    private FunctionMenuNode? _editingNode;
+    private bool _loading = true;
+    private bool _isModalVisible;
+    private bool _isCreating;
+    private bool _saving;
+    private Guid? _draggingNodeId;
+    private MenuFormModel _form = new();
+    private readonly List<TemplateSummary> _templates = new();
+    private bool _templatesLoaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTreeAsync();
+    }
+
+    private async Task LoadTreeAsync(Guid? selectedId = null)
+    {
+        _loading = true;
+        try
+        {
+            var nodes = await MenuService.GetManageTreeAsync();
+            _tree.Clear();
+            _tree.AddRange(nodes);
+            RebuildLookups();
+            if (selectedId.HasValue && _lookup.TryGetValue(selectedId.Value, out var node))
+            {
+                _selectedNode = node;
+            }
+            else
+            {
+                _selectedNode = _tree.FirstOrDefault();
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_MENU_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RebuildLookups()
+    {
+        _lookup.Clear();
+        _parentLookup.Clear();
+        foreach (var root in _tree)
+        {
+            HydrateLookup(root, null);
+        }
+    }
+
+    private void HydrateLookup(FunctionMenuNode node, Guid? parentId)
+    {
+        _lookup[node.Id] = node;
+        _parentLookup[node.Id] = parentId;
+        foreach (var child in node.Children)
+        {
+            HydrateLookup(child, node.Id);
+        }
+    }
+
+    private RenderFragment RenderNode(FunctionMenuNode node) => @<li class="menu-node @(IsSelected(node) ? "selected" : null)">
+        <div class="drop-zone drop-before"
+             @ondragover="AllowDrop"
+             @ondrop="@(e => HandleDrop(node.Id, "before", e))"></div>
+        <div class="menu-node-card"
+             draggable="true"
+             @ondragstart="@(_ => OnDragStart(node.Id))"
+             @ondragend="OnDragEnd"
+             @ondragover="AllowDrop"
+             @ondrop="@(e => HandleDrop(node.Id, "into", e))">
+            <div class="menu-node-content" @onclick="() => SelectNode(node)">
+                <div class="menu-node-title">
+                    <span class="menu-node-name">@ResolveNodeName(node)</span>
+                    <span class="menu-node-code">@node.Code</span>
+                </div>
+                <div class="menu-node-meta">
+                    <span>@(node.Route ?? "--")</span>
+                    <span>@ResolveTemplateLabel(node)</span>
+                </div>
+            </div>
+            <div class="menu-node-actions">
+                <Tooltip Title="@I18n.T("BTN_ADD_CHILD_MENU")">
+                    <Button Size="@ButtonSize.Small"
+                            Shape="@ButtonShape.Circle"
+                            Icon="@IconType.Outline.Plus"
+                            OnClick="() => OpenCreateModal(node)" />
+                </Tooltip>
+                <Tooltip Title="@I18n.T("BTN_EDIT_MENU")">
+                    <Button Size="@ButtonSize.Small"
+                            Shape="@ButtonShape.Circle"
+                            Icon="@IconType.Outline.Edit"
+                            OnClick="() => OpenEditModal(node)" />
+                </Tooltip>
+                <Tooltip Title="@I18n.T("BTN_DELETE_MENU")">
+                    <Popconfirm Title="@I18n.T("MSG_MENU_DELETE_CONFIRM")"
+                                OnConfirm="async () => await DeleteNodeAsync(node)">
+                        <Button Size="@ButtonSize.Small"
+                                Shape="@ButtonShape.Circle"
+                                Icon="@IconType.Outline.Delete"
+                                Danger />
+                    </Popconfirm>
+                </Tooltip>
+            </div>
+        </div>
+        <div class="drop-zone drop-after"
+             @ondragover="AllowDrop"
+             @ondrop="@(e => HandleDrop(node.Id, "after", e))"></div>
+        @if (node.Children.Count > 0)
+        {
+            <ul>
+                @foreach (var child in node.Children)
+                {
+                    @RenderNode(child)
+                }
+            </ul>
+        }
+    </li>;
+
+    private string ResolveNodeName(FunctionMenuNode node)
+    {
+        return MultilingualResolver.Resolve(node.DisplayName, node.Name);
+    }
+
+    private string ResolveTemplateLabel(FunctionMenuNode node)
+    {
+        if (!string.IsNullOrWhiteSpace(node.TemplateName))
+        {
+            return node.TemplateName!;
+        }
+
+        return node.TemplateId?.ToString() ?? "--";
+    }
+
+    private bool IsSelected(FunctionMenuNode node) => _selectedNode?.Id == node.Id;
+
+    private void SelectNode(FunctionMenuNode node)
+    {
+        _selectedNode = node;
+    }
+
+    private void OnDragStart(Guid id)
+    {
+        _draggingNodeId = id;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggingNodeId = null;
+    }
+
+    private void AllowDrop(DragEventArgs e)
+    {
+        e.PreventDefault();
+    }
+
+    private async Task HandleDrop(Guid targetId, string position, DragEventArgs e)
+    {
+        e.PreventDefault();
+        if (_draggingNodeId is null || _draggingNodeId == targetId)
+        {
+            return;
+        }
+
+        if (!_lookup.TryGetValue(_draggingNodeId.Value, out var dragged) || !_lookup.TryGetValue(targetId, out var target))
+        {
+            return;
+        }
+
+        var originalParentId = _parentLookup.TryGetValue(dragged.Id, out var parentId) ? parentId : dragged.ParentId;
+        var originalParent = originalParentId.HasValue && _lookup.TryGetValue(originalParentId.Value, out var parentNode)
+            ? parentNode
+            : null;
+
+        RemoveFromParent(dragged, originalParent);
+
+        FunctionMenuNode? newParent;
+        List<FunctionMenuNode> siblings;
+
+        if (position == "into")
+        {
+            newParent = target;
+            siblings = target.Children;
+            siblings.Add(dragged);
+        }
+        else
+        {
+            newParent = _parentLookup.TryGetValue(target.Id, out var targetParentId) && targetParentId.HasValue
+                ? _lookup[targetParentId.Value]
+                : null;
+            siblings = newParent?.Children ?? _tree;
+            var insertIndex = siblings.FindIndex(n => n.Id == target.Id);
+            if (insertIndex < 0)
+            {
+                insertIndex = siblings.Count;
+            }
+            if (position == "after")
+            {
+                insertIndex++;
+            }
+            insertIndex = Math.Clamp(insertIndex, 0, siblings.Count);
+            siblings.Insert(insertIndex, dragged);
+        }
+
+        dragged.ParentId = newParent?.Id;
+
+        var updateMap = new Dictionary<Guid, MenuNodeOrderRequest>();
+        foreach (var update in BuildOrderUpdates(newParent))
+        {
+            updateMap[update.Id] = update;
+        }
+        if (originalParent?.Id != newParent?.Id)
+        {
+            foreach (var update in BuildOrderUpdates(originalParent))
+            {
+                updateMap[update.Id] = update;
+            }
+        }
+
+        var success = await MenuService.ReorderAsync(updateMap.Values.ToList());
+        if (!success)
+        {
+            await Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
+            await LoadTreeAsync(dragged.Id);
+            _draggingNodeId = null;
+            return;
+        }
+
+        RebuildLookups();
+        _selectedNode = dragged;
+        _draggingNodeId = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleRootDrop(string position, DragEventArgs e)
+    {
+        e.PreventDefault();
+        if (_draggingNodeId is null)
+        {
+            return;
+        }
+
+        if (!_lookup.TryGetValue(_draggingNodeId.Value, out var dragged))
+        {
+            return;
+        }
+
+        var originalParentId = _parentLookup.TryGetValue(dragged.Id, out var parentId) ? parentId : dragged.ParentId;
+        var originalParent = originalParentId.HasValue && _lookup.TryGetValue(originalParentId.Value, out var parentNode)
+            ? parentNode
+            : null;
+
+        RemoveFromParent(dragged, originalParent);
+
+        if (position == "append")
+        {
+            _tree.Add(dragged);
+        }
+        else
+        {
+            _tree.Insert(0, dragged);
+        }
+
+        dragged.ParentId = null;
+
+        var updateMap = new Dictionary<Guid, MenuNodeOrderRequest>();
+        foreach (var update in BuildOrderUpdates(null))
+        {
+            updateMap[update.Id] = update;
+        }
+        if (originalParent != null)
+        {
+            foreach (var update in BuildOrderUpdates(originalParent))
+            {
+                updateMap[update.Id] = update;
+            }
+        }
+
+        var success = await MenuService.ReorderAsync(updateMap.Values.ToList());
+        if (!success)
+        {
+            await Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
+            await LoadTreeAsync(dragged.Id);
+            _draggingNodeId = null;
+            return;
+        }
+
+        RebuildLookups();
+        _selectedNode = dragged;
+        _draggingNodeId = null;
+        StateHasChanged();
+    }
+
+    private void RemoveFromParent(FunctionMenuNode node, FunctionMenuNode? parent)
+    {
+        if (parent == null)
+        {
+            _tree.Remove(node);
+        }
+        else
+        {
+            parent.Children.Remove(node);
+        }
+    }
+
+    private IEnumerable<MenuNodeOrderRequest> BuildOrderUpdates(FunctionMenuNode? parent)
+    {
+        var siblings = parent?.Children ?? _tree;
+        for (var i = 0; i < siblings.Count; i++)
+        {
+            var sibling = siblings[i];
+            sibling.SortOrder = (i + 1) * 10;
+            yield return new MenuNodeOrderRequest
+            {
+                Id = sibling.Id,
+                ParentId = parent?.Id,
+                SortOrder = sibling.SortOrder
+            };
+        }
+    }
+
+    private void OpenCreateModal(FunctionMenuNode? parent)
+    {
+        _isCreating = true;
+        _editingNode = null;
+        _form = new MenuFormModel
+        {
+            ParentId = parent?.Id,
+            ParentName = parent != null ? ResolveNodeName(parent) : I18n.T("LBL_MENU_ROOT"),
+            DisplayName = new MultilingualTextDto(),
+            SortOrder = GetNextSortOrder(parent),
+            NavigationType = "route",
+            IsMenu = true
+        };
+        _isModalVisible = true;
+    }
+
+    private void OpenEditModal(FunctionMenuNode node)
+    {
+        _isCreating = false;
+        _editingNode = node;
+        var parentName = _parentLookup.TryGetValue(node.Id, out var parentId) && parentId.HasValue && _lookup.TryGetValue(parentId.Value, out var parent)
+            ? ResolveNodeName(parent)
+            : I18n.T("LBL_MENU_ROOT");
+
+        _form = new MenuFormModel
+        {
+            ParentId = parentId,
+            ParentName = parentName,
+            Code = node.Code,
+            Name = node.Name,
+            DisplayName = node.DisplayName != null ? new MultilingualTextDto(node.DisplayName) : new MultilingualTextDto(),
+            Route = node.Route,
+            Icon = node.Icon,
+            IsMenu = node.IsMenu,
+            SortOrder = node.SortOrder,
+            TemplateId = node.TemplateId,
+            NavigationType = node.TemplateId.HasValue ? "template" : "route"
+        };
+
+        _isModalVisible = true;
+        if (_form.NavigationType == "template" && !_templatesLoaded)
+        {
+            _ = LoadTemplatesAsync();
+        }
+    }
+
+    private int GetNextSortOrder(FunctionMenuNode? parent)
+    {
+        var siblings = parent?.Children ?? _tree;
+        if (siblings.Count == 0)
+        {
+            return 100;
+        }
+        var max = siblings.Max(s => s.SortOrder);
+        return max + 10;
+    }
+
+    private async Task DeleteNodeAsync(FunctionMenuNode node)
+    {
+        var success = await MenuService.DeleteAsync(node.Id);
+        if (!success)
+        {
+            await Message.Error(I18n.T("MSG_MENU_DELETE_FAILED"));
+            return;
+        }
+
+        await Message.Success(I18n.T("MSG_MENU_DELETE_SUCCESS"));
+        await LoadTreeAsync(_parentLookup.TryGetValue(node.Id, out var parentId) ? parentId : null);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_form.Code) && _isCreating)
+        {
+            await Message.Warning(I18n.T("MSG_MENU_CODE_REQUIRED"));
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isCreating)
+            {
+                var resolvedName = ResolveFormName();
+                var request = new CreateMenuNodeRequest
+                {
+                    ParentId = _form.ParentId,
+                    Code = _form.Code.Trim(),
+                    Name = resolvedName,
+                    DisplayName = _form.DisplayName,
+                    Icon = _form.Icon,
+                    IsMenu = _form.IsMenu,
+                    SortOrder = _form.SortOrder,
+                    Route = _form.NavigationType == "route" ? NormalizeRoute(_form.Route) : null,
+                    TemplateId = _form.NavigationType == "template" ? _form.TemplateId : null
+                };
+
+                var node = await MenuService.CreateAsync(request);
+                if (node == null)
+                {
+                    await Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
+                    return;
+                }
+
+                await Message.Success(I18n.T("MSG_MENU_CREATE_SUCCESS"));
+                _isModalVisible = false;
+                await LoadTreeAsync(node.Id);
+            }
+            else if (_editingNode != null)
+            {
+                var request = new UpdateMenuNodeRequest
+                {
+                    Name = string.IsNullOrWhiteSpace(_form.Name) ? null : _form.Name.Trim(),
+                    DisplayName = _form.DisplayName,
+                    Icon = _form.Icon,
+                    IsMenu = _form.IsMenu,
+                    SortOrder = _form.SortOrder
+                };
+
+                if (_form.NavigationType == "route")
+                {
+                    var normalizedRoute = NormalizeRoute(_form.Route);
+                    request.Route = normalizedRoute;
+                    request.ClearRoute = normalizedRoute == null;
+                    request.ClearTemplate = true;
+                }
+                else
+                {
+                    request.TemplateId = _form.TemplateId;
+                    request.ClearTemplate = !_form.TemplateId.HasValue;
+                    request.ClearRoute = true;
+                }
+
+                var node = await MenuService.UpdateAsync(_editingNode.Id, request);
+                if (node == null)
+                {
+                    await Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
+                    return;
+                }
+
+                await Message.Success(I18n.T("MSG_MENU_SAVE_SUCCESS"));
+                _isModalVisible = false;
+                await LoadTreeAsync(node.Id);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private string ResolveFormName()
+    {
+        if (!string.IsNullOrWhiteSpace(_form.Name))
+        {
+            return _form.Name.Trim();
+        }
+        return MultilingualResolver.Resolve(_form.DisplayName, _form.Code);
+    }
+
+    private string? NormalizeRoute(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return null;
+        }
+        return route.Trim();
+    }
+
+    private async Task OnNavigationTypeChanged(string value)
+    {
+        _form.NavigationType = value;
+        if (value == "template")
+        {
+            _form.Route = null;
+            if (!_templatesLoaded)
+            {
+                await LoadTemplatesAsync();
+            }
+        }
+        else if (value == "route")
+        {
+            _form.TemplateId = null;
+        }
+    }
+
+    private async Task LoadTemplatesAsync()
+    {
+        var templates = await MenuService.GetTemplatesAsync();
+        _templates.Clear();
+        _templates.AddRange(templates);
+        _templatesLoaded = true;
+        StateHasChanged();
+    }
+
+    private class MenuFormModel
+    {
+        public Guid? ParentId { get; set; }
+        public string? ParentName { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public MultilingualTextDto DisplayName { get; set; } = new();
+        public string? Route { get; set; }
+        public string? Icon { get; set; }
+        public bool IsMenu { get; set; } = true;
+        public int SortOrder { get; set; } = 100;
+        public int? TemplateId { get; set; }
+        public string NavigationType { get; set; } = "route";
+    }
+}

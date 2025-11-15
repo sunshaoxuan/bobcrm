@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -39,6 +40,12 @@ public class FunctionNode
 
     public bool IsMenu { get; set; } = true;
     public int SortOrder { get; set; } = 100;
+
+    /// <summary>
+    /// 关联的模板（可选）
+    /// </summary>
+    public int? TemplateId { get; set; }
+    public FormTemplate? Template { get; set; }
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
 
