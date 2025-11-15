@@ -1,6 +1,7 @@
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
 
@@ -16,6 +17,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly IEntityLockService _lockService;
     private readonly ILogger<EntityPublishingService> _logger;
     private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly IDefaultTemplateService _defaultTemplateService;
 
     public EntityPublishingService(
         AppDbContext db,
@@ -23,7 +25,8 @@ public class EntityPublishingService : IEntityPublishingService
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
         EntityMenuRegistrar menuRegistrar,
-        ILogger<EntityPublishingService> logger)
+        ILogger<EntityPublishingService> logger,
+        IDefaultTemplateService defaultTemplateService)
     {
         _db = db;
         _ddlGenerator = ddlGenerator;
@@ -31,6 +34,7 @@ public class EntityPublishingService : IEntityPublishingService
         _lockService = lockService;
         _menuRegistrar = menuRegistrar;
         _logger = logger;
+        _defaultTemplateService = defaultTemplateService;
     }
 
     /// <summary>
@@ -127,6 +131,20 @@ public class EntityPublishingService : IEntityPublishingService
             }
 
             result.Success = true;
+            try
+            {
+                await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
+            }
+            catch (Exception templateEx)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Failed to generate default template: {templateEx.Message}";
+                _logger.LogError(templateEx, "[Publish] ✗ Failed to generate default template for {Entity}", entity.EntityName);
+                return result;
+            }
+
+            result.Success = true;
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully, locked, and default template ensured", entity.EntityName);
         }
         catch (Exception ex)
         {
@@ -248,6 +266,20 @@ public class EntityPublishingService : IEntityPublishingService
             }
 
             result.Success = true;
+            try
+            {
+                await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
+            }
+            catch (Exception templateEx)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Failed to regenerate default template: {templateEx.Message}";
+                _logger.LogError(templateEx, "[Publish] ✗ Failed to regenerate default template for {Entity}", entity.EntityName);
+                return result;
+            }
+
+            result.Success = true;
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully and default template updated", entity.EntityName);
         }
         catch (Exception ex)
         {

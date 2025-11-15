@@ -1,4 +1,7 @@
 using BobCrm.Api.Base;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
@@ -25,6 +28,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly Mock<IEntityLockService> _mockLockService;
     private readonly Mock<ILogger<EntityMenuRegistrar>> _mockMenuLogger;
     private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly Mock<IDefaultTemplateService> _mockTemplateService;
 
     public EntityPublishingAndDDLTests()
     {
@@ -39,6 +43,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockLockService = new Mock<IEntityLockService>();
         _mockMenuLogger = new Mock<ILogger<EntityMenuRegistrar>>();
         _menuRegistrar = new EntityMenuRegistrar(_db, _mockMenuLogger.Object);
+        _mockTemplateService = new Mock<IDefaultTemplateService>();
     }
 
     [Fact]
@@ -440,6 +445,13 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockLockService.Verify(
             x => x.LockEntityAsync(entityId, It.IsAny<string>()),
             Times.Once);
+
+        _mockTemplateService.Verify(
+            x => x.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entityId),
+                "test-user",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -529,6 +541,13 @@ public class EntityPublishingAndDDLTests : IDisposable
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
         updatedEntity!.Status.Should().Be(EntityStatus.Published);
         updatedEntity.UpdatedBy.Should().Be("test-user");
+
+        _mockTemplateService.Verify(
+            x => x.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entityId),
+                "test-user",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
