@@ -73,6 +73,24 @@ EntityDefinition
 - 接口字段所有权由 `_interfaceFieldOwnership` 字典管理，避免误删；
 - `OrganizationId` 在实体层只存 ID，其他信息由权限体系补齐。
 
+### 5.3 字段软删除机制
+为保证数据完整性和可追溯性，`FieldMetadata` 采用软删除模式：
+
+**软删除字段**：
+- `IsDeleted`：布尔标志，默认 `false`
+- `DeletedAt`：删除时间戳（可空）
+- `DeletedBy`：删除操作用户ID（可空）
+
+**删除规则**：
+- **Custom 字段**：标记为已删除，保留元数据记录
+- **Interface/System 字段**：必须先取消接口或不可删除
+- 必填字段软删除时，DDL 生成逻辑自动将其改为可空类型
+
+**查询过滤**：
+- 所有字段查询 API 自动添加 `.Where(f => !f.IsDeleted)` 过滤
+- DDL 预览、实体编辑页面均只显示未删除字段
+- 软删除记录保留在数据库，用于审计和回滚
+
 ## 6. 后端与 API
 ### 6.1 AppDbContext
 新增 DbSet：`EntityDefinitions`、`SubEntityDefinitions`、`FieldMetadatas`、`EntityInterfaces` 并在 `OnModelCreating` 中配置 jsonb 转换。
@@ -82,10 +100,37 @@ EntityDefinition
 | --- | --- | --- |
 | `GET /api/entity-definitions` | 列表查询 |
 | `POST /api/entity-definitions` | 创建实体（含字段、接口） |
-| `PUT /api/entity-definitions/{id}` | 更新实体（含接口同步） |
+| `PUT /api/entity-definitions/{id}` | 更新实体（含接口同步、字段 CRUD） |
 | `POST /api/entity-definitions/{id}/publish` | 触发发布（独立文档描述） |
 
 后台使用 `InterfaceFieldMapping.GetFields` 注入保留字段；`OrganizationId` 注入时带上 `IsEntityRef = true`，由权限模块负责引用组织表。
+
+### 6.3 字段更新逻辑（`PUT /api/entity-definitions/{id}`）
+字段更新遵循 **Source-based 保护策略**：
+
+**System 字段**（`Source = FieldSource.System`）：
+- 只允许更新：`DisplayName`、`SortOrder`
+- 禁止修改：数据类型、必填性、长度、精度等核心属性
+- 示例：Customer 的 Id、Code、Name 字段
+
+**Interface 字段**（`Source = FieldSource.Interface`）：
+- 允许更新：`DisplayName`、`SortOrder`、`DefaultValue`
+- 禁止修改：数据类型、必填性（由接口定义决定）
+- 示例：CreatedAt、UpdatedAt、OrganizationId
+
+**Custom 字段**（`Source = FieldSource.Custom`）：
+- 允许更新：所有属性（除 `Source` 本身）
+- 用户自定义字段，拥有完全控制权
+
+**字段新增**：
+- 前端生成临时 GUID（仅用于 UI 状态管理）
+- 后端检测到不存在的 ID 时，创建新 `FieldMetadata` 对象
+- **不使用前端提供的 ID**，让数据库自动生成主键，避免 `DbUpdateConcurrencyException`
+
+**字段删除**：
+- Custom 字段：软删除（设置 `IsDeleted = true`、`DeletedAt`、`DeletedBy`）
+- Interface/System 字段：抛出异常（必须先取消接口勾选）
+- 必填字段软删除时，DDL 生成器自动将其改为 `nullable`
 
 ## 7. 前端实现
 ### 7.1 组件结构
@@ -98,8 +143,53 @@ EntityDefinition
 2. **表格样式**：`field-editor-table` CSS 提供 hover、分隔、必填图标；
 3. **多语提示**：空值时显示 `LBL_CLICK_TO_EDIT_MULTILINGUAL`；
 4. **接口提示**：底部 `TXT_INTERFACE_AUTO_FIELDS_TIP` 描述不可直接删除接口字段；
-5. **组织接口**：勾选后仅显示 `OrganizationId` 字段，提示“绑定组织树实现分组织管理”；
-6. **校验反馈**：保存前运行本地校验，失败则调用 `MessageService.Warning/Error`。
+5. **组织接口**：勾选后仅显示 `OrganizationId` 字段，提示"绑定组织树实现分组织管理"；
+6. **操作反馈**：使用全局 `ToastService` 提供清晰的操作结果反馈。
+
+### 7.3 全局 Toast 通知系统
+为提升用户体验，实体定义编辑页面集成全局 Toast 通知系统：
+
+**ToastService** (`src/BobCrm.App/Services/ToastService.cs`)：
+- 提供四种消息类型：`Success()`、`Error()`、`Warning()`、`Info()`
+- 顶部居中显示，最多显示 3 条消息
+- 3 秒自动隐藏，带有滑动和淡入动画
+- 自动队列管理，超过 3 条时移除最旧的消息
+
+**GlobalToast 组件** (`src/BobCrm.App/Components/Shared/GlobalToast.razor`)：
+- 在 `MainLayout.razor` 中全局注册
+- 使用 `System.Timers.Timer` 实现自动隐藏
+- 支持浅色/深色主题
+
+**色彩编码**：
+- **成功**：浅绿底（`rgba(240, 249, 235, 0.95)`）+ 深绿字（`#389e0d`）+ 绿色边框（`#52c41a`）
+- **错误**：浅红底（`rgba(255, 241, 240, 0.95)`）+ 大红字（`#cf1322`）+ 红色边框（`#ff4d4f`）
+- **警告**：浅黄底（`rgba(255, 251, 230, 0.95)`）+ 深黄字（`#d48806`）+ 黄色边框（`#faad14`）
+- **信息**：浅蓝底（`rgba(230, 247, 255, 0.95)`）+ 深蓝字（`#0958d9`）+ 蓝色边框（`#1890ff`）
+
+**使用示例**（EntityDefinitionEdit.razor）：
+```csharp
+@inject BobCrm.App.Services.ToastService ToastService
+
+private async Task HandleSave()
+{
+    if (!ValidateFields())
+    {
+        ToastService.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
+        return;
+    }
+
+    try
+    {
+        await EntityDefService.UpdateAsync(Id.Value, request);
+        ToastService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
+        GoBack();
+    }
+    catch (Exception ex)
+    {
+        ToastService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+    }
+}
+```
 
 ## 8. 测试策略
 | 测试层级 | 重点 |
