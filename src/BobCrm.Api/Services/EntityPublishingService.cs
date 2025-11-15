@@ -16,6 +16,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
     private readonly ILogger<EntityPublishingService> _logger;
+    private readonly EntityMenuRegistrar _menuRegistrar;
     private readonly IDefaultTemplateService _defaultTemplateService;
 
     public EntityPublishingService(
@@ -23,6 +24,7 @@ public class EntityPublishingService : IEntityPublishingService
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
+        EntityMenuRegistrar menuRegistrar,
         ILogger<EntityPublishingService> logger,
         IDefaultTemplateService defaultTemplateService)
     {
@@ -30,6 +32,7 @@ public class EntityPublishingService : IEntityPublishingService
         _ddlGenerator = ddlGenerator;
         _ddlExecutor = ddlExecutor;
         _lockService = lockService;
+        _menuRegistrar = menuRegistrar;
         _logger = logger;
         _defaultTemplateService = defaultTemplateService;
     }
@@ -111,6 +114,23 @@ public class EntityPublishingService : IEntityPublishingService
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
 
+            result.MenuRegistration = await _menuRegistrar.RegisterAsync(entity, publishedBy);
+            if (result.MenuRegistration.Success)
+            {
+                _logger.LogInformation(
+                    "[Publish] ✓ Entity {EntityName} published and menu registered with function {FunctionCode}",
+                    entity.EntityName,
+                    result.MenuRegistration.FunctionCode);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[Publish] Entity {EntityName} published but menu registration failed: {Error}",
+                    entity.EntityName,
+                    result.MenuRegistration.ErrorMessage ?? result.MenuRegistration.Warning);
+            }
+
+            result.Success = true;
             try
             {
                 await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
@@ -229,6 +249,23 @@ public class EntityPublishingService : IEntityPublishingService
             entity.UpdatedBy = publishedBy;
             await _db.SaveChangesAsync();
 
+            result.MenuRegistration = await _menuRegistrar.RegisterAsync(entity, publishedBy);
+            if (result.MenuRegistration.Success)
+            {
+                _logger.LogInformation(
+                    "[Publish] ✓ Entity {EntityName} changes published and menu refreshed ({FunctionCode})",
+                    entity.EntityName,
+                    result.MenuRegistration.FunctionCode);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[Publish] Entity {EntityName} changes published but menu registration failed: {Error}",
+                    entity.EntityName,
+                    result.MenuRegistration.ErrorMessage ?? result.MenuRegistration.Warning);
+            }
+
+            result.Success = true;
             try
             {
                 await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
@@ -371,6 +408,7 @@ public class PublishResult
     public string? DDLScript { get; set; }
     public Guid ScriptId { get; set; }
     public ChangeAnalysis? ChangeAnalysis { get; set; }
+    public EntityMenuRegistrationResult? MenuRegistration { get; set; }
 }
 
 /// <summary>

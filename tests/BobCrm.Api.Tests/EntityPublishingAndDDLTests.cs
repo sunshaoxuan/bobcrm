@@ -1,13 +1,17 @@
+using BobCrm.Api.Base;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Linq;
+using System.Reflection;
 
 namespace BobCrm.Api.Tests;
 
@@ -22,6 +26,8 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly Mock<ILogger<DDLExecutionService>> _mockDDLLogger;
     private readonly Mock<ILogger<EntityPublishingService>> _mockPublishLogger;
     private readonly Mock<IEntityLockService> _mockLockService;
+    private readonly Mock<ILogger<EntityMenuRegistrar>> _mockMenuLogger;
+    private readonly EntityMenuRegistrar _menuRegistrar;
     private readonly Mock<IDefaultTemplateService> _mockTemplateService;
 
     public EntityPublishingAndDDLTests()
@@ -35,6 +41,8 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockDDLLogger = new Mock<ILogger<DDLExecutionService>>();
         _mockPublishLogger = new Mock<ILogger<EntityPublishingService>>();
         _mockLockService = new Mock<IEntityLockService>();
+        _mockMenuLogger = new Mock<ILogger<EntityMenuRegistrar>>();
+        _menuRegistrar = new EntityMenuRegistrar(_db, _mockMenuLogger.Object);
         _mockTemplateService = new Mock<IDefaultTemplateService>();
     }
 
@@ -43,7 +51,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -60,7 +68,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -89,7 +97,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -106,7 +114,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -342,8 +350,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object,
-            _mockTemplateService.Object);
+            _menuRegistrar,
+            _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -372,6 +380,8 @@ public class EntityPublishingAndDDLTests : IDisposable
         await _db.EntityDefinitions.AddAsync(entity);
         await _db.SaveChangesAsync();
 
+        var binding = await SeedTemplateBindingAsync(entity);
+
         // Mock DDL 执行成功
         mockDDLExecutor.Setup(x => x.TableExistsAsync(It.IsAny<string>()))
             .ReturnsAsync(false);
@@ -397,11 +407,39 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.EntityDefinitionId.Should().Be(entityId);
         result.DDLScript.Should().NotBeNullOrEmpty();
         result.ScriptId.Should().NotBe(Guid.Empty);
+        result.MenuRegistration.Should().NotBeNull();
+        result.MenuRegistration!.Success.Should().BeTrue();
+        result.MenuRegistration.FunctionCode.Should().NotBeNullOrWhiteSpace();
 
         // 验证实体状态已更新
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
         updatedEntity!.Status.Should().Be(EntityStatus.Published);
         updatedEntity.UpdatedBy.Should().Be("test-user");
+
+        var functionNode = await _db.FunctionNodes.FirstOrDefaultAsync(f => f.Code == result.MenuRegistration.FunctionCode);
+        functionNode.Should().NotBeNull();
+        functionNode!.Route.Should().Be($"/dynamic-entity/{entity.FullTypeName}");
+
+        var refreshedBinding = await _db.TemplateBindings.FindAsync(binding.Id);
+        refreshedBinding.Should().NotBeNull();
+        refreshedBinding!.RequiredFunctionCode.Should().Be(result.MenuRegistration.FunctionCode);
+
+        var nodes = await _db.FunctionNodes
+            .AsNoTracking()
+            .OrderBy(f => f.SortOrder)
+            .ToListAsync();
+
+        var buildTreeMethod = typeof(BobCrm.Api.Endpoints.AccessEndpoints)
+            .GetMethod("BuildTree", BindingFlags.NonPublic | BindingFlags.Static);
+        buildTreeMethod.Should().NotBeNull();
+
+        var tree = (List<FunctionNodeDto>)buildTreeMethod!
+            .Invoke(null, new object[] { nodes })!;
+        tree.Should().NotBeNull();
+
+        FlattenTree(tree)
+            .Any(n => string.Equals(n.Code, result.MenuRegistration.FunctionCode, StringComparison.Ordinal))
+            .Should().BeTrue("菜单 API 应包含新实体节点");
 
         // 验证调用了锁定服务
         _mockLockService.Verify(
@@ -426,8 +464,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object,
-            _mockTemplateService.Object);
+            _menuRegistrar,
+            _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -460,6 +498,8 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         await _db.EntityDefinitions.AddAsync(entity);
         await _db.SaveChangesAsync();
+
+        await SeedTemplateBindingAsync(entity);
 
         // Mock 表已存在
         mockDDLExecutor.Setup(x => x.TableExistsAsync("Products"))
@@ -495,6 +535,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.EntityDefinitionId.Should().Be(entityId);
         result.DDLScript.Should().NotBeNullOrEmpty();
         result.DDLScript.Should().Contain("ALTER TABLE");
+        result.MenuRegistration.Should().NotBeNull();
 
         // 验证实体状态已更新
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
@@ -519,8 +560,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object,
-            _mockTemplateService.Object);
+            _menuRegistrar,
+            _mockPublishLogger.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -548,9 +589,87 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.ErrorMessage.Should().Contain("already exists");
     }
 
+    [Fact]
+    public async Task MenuRegistrar_ShouldBeIdempotent()
+    {
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "Order",
+            EntityRoute = "order",
+            ApiEndpoint = "/api/orders",
+            Status = EntityStatus.Draft,
+            Source = EntitySource.Custom,
+            Category = "CRM",
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+        await SeedTemplateBindingAsync(entity);
+
+        var first = await _menuRegistrar.RegisterAsync(entity, "tester");
+        var second = await _menuRegistrar.RegisterAsync(entity, "tester");
+
+        first.Success.Should().BeTrue();
+        second.Success.Should().BeTrue();
+        first.FunctionNodeId.Should().Be(second.FunctionNodeId);
+
+        var nodes = await _db.FunctionNodes
+            .Where(f => f.Code == first.FunctionCode)
+            .ToListAsync();
+        nodes.Should().HaveCount(1);
+    }
+
     public void Dispose()
     {
         _db?.Dispose();
+    }
+
+    private static IEnumerable<FunctionNodeDto> FlattenTree(IEnumerable<FunctionNodeDto> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            if (node.Children?.Count > 0)
+            {
+                foreach (var child in FlattenTree(node.Children))
+                {
+                    yield return child;
+                }
+            }
+        }
+    }
+
+    private async Task<TemplateBinding> SeedTemplateBindingAsync(EntityDefinition entity)
+    {
+        var entityType = entity.EntityRoute ?? entity.EntityName;
+        var template = new FormTemplate
+        {
+            Name = $"{entity.EntityName} Default",
+            EntityType = entityType,
+            UserId = "__system__",
+            IsSystemDefault = true,
+            UsageType = FormTemplateUsageType.Detail,
+            LayoutJson = "{}"
+        };
+
+        var binding = new TemplateBinding
+        {
+            EntityType = entityType,
+            UsageType = FormTemplateUsageType.Detail,
+            Template = template,
+            IsSystem = true,
+            UpdatedBy = "system",
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _db.FormTemplates.AddAsync(template);
+        await _db.TemplateBindings.AddAsync(binding);
+        await _db.SaveChangesAsync();
+
+        return binding;
     }
 }
 

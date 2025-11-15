@@ -1155,7 +1155,9 @@ public static class EntityDefinitionEndpoints
 
                 ddlScript = result.DDLScript,
 
-                message = "实体发布成功"
+                message = "实体发布成功",
+
+                menuRegistration = result.MenuRegistration
 
             });
 
@@ -1221,7 +1223,9 @@ public static class EntityDefinitionEndpoints
 
                 },
 
-                message = "实体修改发布成功"
+                message = "实体修改发布成功",
+
+                menuRegistration = result.MenuRegistration
 
             });
 
