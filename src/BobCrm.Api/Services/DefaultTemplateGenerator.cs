@@ -1,225 +1,173 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Text.Json;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
 
-public interface IDefaultTemplateGenerator
+/// <summary>
+/// 根据实体字段元数据生成系统默认模板。
+/// </summary>
+public class DefaultTemplateGenerator
 {
-    DefaultTemplateResult Generate(EntityDefinition entityDefinition);
-}
-
-public sealed record DefaultTemplateResult(FormTemplate Template);
-
-public class DefaultTemplateGenerator : IDefaultTemplateGenerator
-{
-    private const string SystemUserId = "__system__";
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        PropertyNamingPolicy = null
     };
 
-    public DefaultTemplateResult Generate(EntityDefinition entityDefinition)
+    private readonly AppDbContext _db;
+    private readonly ILogger<DefaultTemplateGenerator> _logger;
+
+    public DefaultTemplateGenerator(AppDbContext db, ILogger<DefaultTemplateGenerator> logger)
     {
-        ArgumentNullException.ThrowIfNull(entityDefinition);
-
-        var layoutJson = BuildLayoutJson(entityDefinition);
-        var templateName = $"{ResolveEntityDisplayName(entityDefinition)} 默认模板";
-
-        var template = new FormTemplate
-        {
-            Name = templateName,
-            EntityType = entityDefinition.FullName,
-            UserId = SystemUserId,
-            IsUserDefault = false,
-            IsSystemDefault = true,
-            LayoutJson = layoutJson,
-            UsageType = FormTemplateUsageType.Detail,
-            Tags = new List<string> { "system", "auto-generated" },
-            Description = "Automatically generated default template.",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            IsInUse = true
-        };
-
-        return new DefaultTemplateResult(template);
+        _db = db;
+        _logger = logger;
     }
 
-    private static string BuildLayoutJson(EntityDefinition entityDefinition)
+    public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
+        EntityDefinition entity,
+        CancellationToken ct = default)
     {
-        var fields = entityDefinition.Fields
-            .Where(f => !f.IsDeleted)
-            .OrderBy(f => f.SortOrder)
-            .ThenBy(f => f.PropertyName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var items = new Dictionary<string, object?>();
-        var order = 0;
-
-        foreach (var field in fields)
+        if (entity == null)
         {
-            items[field.PropertyName] = MapFieldToNode(field, order++);
+            throw new ArgumentNullException(nameof(entity));
         }
 
-        var layout = new Dictionary<string, object?>
+        var entityType = entity.EntityRoute;
+        var fields = entity.Fields
+            .Where(f => !f.IsDeleted)
+            .OrderBy(f => f.SortOrder)
+            .ThenBy(f => f.PropertyName)
+            .ToList();
+
+        if (fields.Count == 0)
         {
-            ["version"] = 1,
-            ["mode"] = "flow",
-            ["items"] = items
+            _logger.LogWarning("[TemplateGenerator] Entity {Entity} has no fields, skipping template generation", entityType);
+            return new DefaultTemplateGenerationResult();
+        }
+
+        var result = new DefaultTemplateGenerationResult();
+        var usages = new[]
+        {
+            FormTemplateUsageType.Detail,
+            FormTemplateUsageType.Edit,
+            FormTemplateUsageType.List
         };
+
+        foreach (var usage in usages)
+        {
+            var template = await _db.FormTemplates
+                .FirstOrDefaultAsync(
+                    t => t.EntityType == entityType &&
+                         t.IsSystemDefault &&
+                         t.UsageType == usage,
+                    ct);
+
+            var layoutJson = BuildLayoutJson(fields, usage);
+
+            if (template == null)
+            {
+                template = new FormTemplate
+                {
+                    Name = $"{entity.EntityName} {usage} Template",
+                    EntityType = entityType,
+                    UserId = "__system__",
+                    IsSystemDefault = true,
+                    LayoutJson = layoutJson,
+                    UsageType = usage,
+                    Description = $"Auto generated {usage} template for {entity.EntityName}",
+                    Tags = new List<string> { "auto-generated" },
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _db.FormTemplates.Add(template);
+                result.Created.Add(template);
+            }
+            else
+            {
+                if (template.LayoutJson != layoutJson)
+                {
+                    template.LayoutJson = layoutJson;
+                    template.UpdatedAt = DateTime.UtcNow;
+                    result.Updated.Add(template);
+                }
+            }
+
+            result.Templates[usage] = template;
+        }
+
+        if (result.Created.Count > 0 || result.Updated.Count > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return result;
+    }
+
+    private static string BuildLayoutJson(IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
+    {
+        var layout = new Dictionary<string, object?>();
+        for (var i = 0; i < fields.Count; i++)
+        {
+            var field = fields[i];
+            var widgetType = ResolveWidgetType(field, usage);
+            var label = ResolveLabel(field);
+
+            layout[$"item_{i:000}"] = new Dictionary<string, object?>
+            {
+                ["type"] = widgetType,
+                ["label"] = label,
+                ["dataField"] = field.PropertyName,
+                ["order"] = i,
+                ["Width"] = usage == FormTemplateUsageType.List ? 25 : 48,
+                ["Height"] = 32,
+                ["visible"] = true,
+                ["newLine"] = i % 2 == 0
+            };
+        }
 
         return JsonSerializer.Serialize(layout, JsonOptions);
     }
 
-    private static Dictionary<string, object?> MapFieldToNode(FieldMetadata field, int order)
+    private static string ResolveWidgetType(FieldMetadata field, FormTemplateUsageType usage)
     {
-        var widgetType = DetermineWidgetType(field);
-        var sizing = DetermineSizing(widgetType);
-
-        var node = new Dictionary<string, object?>
+        if (usage == FormTemplateUsageType.List)
         {
-            ["id"] = $"fld_{Sanitize(field.PropertyName)}",
-            ["key"] = field.PropertyName,
-            ["dataField"] = field.PropertyName,
-            ["label"] = ResolveFieldLabel(field),
-            ["type"] = widgetType,
-            ["order"] = order,
-            ["w"] = sizing.LegacyColumns,
-            ["width"] = sizing.WidthPercent,
-            ["widthUnit"] = "%",
-            ["height"] = sizing.Height,
-            ["heightUnit"] = "px",
-            ["newLine"] = sizing.NewLine,
-            ["visible"] = true,
-            ["required"] = field.IsRequired
-        };
-
-        if (widgetType == "calendar")
-        {
-            var isDateOnly = string.Equals(field.DataType, FieldDataType.Date, StringComparison.OrdinalIgnoreCase);
-            node["format"] = isDateOnly ? "yyyy-MM-dd" : "yyyy-MM-dd HH:mm";
-            node["showTime"] = !isDateOnly;
-        }
-        else if (widgetType == "textarea")
-        {
-            node["minRows"] = 3;
+            return "label";
         }
 
-        if (widgetType == "select")
+        return field.DataType switch
         {
-            node["dataSource"] = new Dictionary<string, object?>
-            {
-                ["type"] = "entity",
-                ["entityId"] = field.ReferencedEntityId
-            };
-        }
-
-        return node;
-    }
-
-    private static string ResolveEntityDisplayName(EntityDefinition entityDefinition)
-    {
-        if (entityDefinition.DisplayName != null)
-        {
-            foreach (var pair in entityDefinition.DisplayName)
-            {
-                if (!string.IsNullOrWhiteSpace(pair.Value))
-                {
-                    return pair.Value!;
-                }
-            }
-        }
-
-        return entityDefinition.EntityName;
-    }
-
-    private static string ResolveFieldLabel(FieldMetadata field)
-    {
-        if (field.DisplayName != null)
-        {
-            foreach (var pair in field.DisplayName)
-            {
-                if (!string.IsNullOrWhiteSpace(pair.Value))
-                {
-                    return pair.Value!;
-                }
-            }
-        }
-
-        return field.PropertyName;
-    }
-
-    private static string DetermineWidgetType(FieldMetadata field)
-    {
-        if (field.IsEntityRef || string.Equals(field.DataType, FieldDataType.EntityRef, StringComparison.OrdinalIgnoreCase))
-        {
-            return "select";
-        }
-
-        if (string.Equals(field.DataType, FieldDataType.Boolean, StringComparison.OrdinalIgnoreCase))
-        {
-            return "checkbox";
-        }
-
-        if (string.Equals(field.DataType, FieldDataType.DateTime, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field.DataType, FieldDataType.Date, StringComparison.OrdinalIgnoreCase))
-        {
-            return "calendar";
-        }
-
-        if (string.Equals(field.DataType, FieldDataType.Decimal, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field.DataType, FieldDataType.Int32, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(field.DataType, FieldDataType.Int64, StringComparison.OrdinalIgnoreCase))
-        {
-            return "number";
-        }
-
-        if (string.Equals(field.DataType, FieldDataType.Text, StringComparison.OrdinalIgnoreCase) ||
-            (field.Length.HasValue && field.Length.Value > 200))
-        {
-            return "textarea";
-        }
-
-        return "textbox";
-    }
-
-    private static LayoutSizing DetermineSizing(string widgetType)
-    {
-        return widgetType switch
-        {
-            "textarea" => new LayoutSizing(12, 100, 120, true),
-            "checkbox" => new LayoutSizing(3, 25, 32, false),
-            _ => new LayoutSizing(6, 50, 32, false)
+            FieldDataType.Boolean => "checkbox",
+            FieldDataType.Int32 => "number",
+            FieldDataType.Int64 => "number",
+            FieldDataType.Decimal => "number",
+            FieldDataType.DateTime => "calendar",
+            FieldDataType.Date => "calendar",
+            _ => "textbox"
         };
     }
 
-    private static string Sanitize(string value)
+    private static string ResolveLabel(FieldMetadata field)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (field.DisplayName == null || field.DisplayName.Count == 0)
         {
-            return "field";
+            return field.PropertyName;
         }
 
-        var builder = new StringBuilder();
-        foreach (var ch in value)
-        {
-            if (char.IsLetterOrDigit(ch))
-            {
-                builder.Append(char.ToLowerInvariant(ch));
-            }
-            else
-            {
-                builder.Append('_');
-            }
-        }
-
-        return builder.ToString();
+        return field.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))
+            ?? field.PropertyName;
     }
+}
 
-    private readonly record struct LayoutSizing(int LegacyColumns, int WidthPercent, int Height, bool NewLine);
+public class DefaultTemplateGenerationResult
+{
+    public Dictionary<FormTemplateUsageType, FormTemplate> Templates { get; } = new();
+    public List<FormTemplate> Created { get; } = new();
+    public List<FormTemplate> Updated { get; } = new();
 }

@@ -1,14 +1,15 @@
 using BobCrm.Api.Base;
-using System;
-using System.Collections.Generic;
-using System.Threading;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Linq;
 using System.Reflection;
@@ -26,9 +27,9 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly Mock<ILogger<DDLExecutionService>> _mockDDLLogger;
     private readonly Mock<ILogger<EntityPublishingService>> _mockPublishLogger;
     private readonly Mock<IEntityLockService> _mockLockService;
-    private readonly Mock<ILogger<EntityMenuRegistrar>> _mockMenuLogger;
-    private readonly EntityMenuRegistrar _menuRegistrar;
-    private readonly Mock<IDefaultTemplateService> _mockTemplateService;
+    private readonly DefaultTemplateGenerator _templateGenerator;
+    private readonly TemplateBindingService _bindingService;
+    private readonly AccessService _accessService;
 
     public EntityPublishingAndDDLTests()
     {
@@ -41,9 +42,23 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockDDLLogger = new Mock<ILogger<DDLExecutionService>>();
         _mockPublishLogger = new Mock<ILogger<EntityPublishingService>>();
         _mockLockService = new Mock<IEntityLockService>();
-        _mockMenuLogger = new Mock<ILogger<EntityMenuRegistrar>>();
-        _menuRegistrar = new EntityMenuRegistrar(_db, _mockMenuLogger.Object);
-        _mockTemplateService = new Mock<IDefaultTemplateService>();
+
+        var templateLogger = new Mock<ILogger<DefaultTemplateGenerator>>();
+        _templateGenerator = new DefaultTemplateGenerator(_db, templateLogger.Object);
+
+        var bindingLogger = new Mock<ILogger<TemplateBindingService>>();
+        _bindingService = new TemplateBindingService(_db, bindingLogger.Object);
+
+        _accessService = new AccessService(_db, CreateUserManager(_db));
+
+        _db.RoleProfiles.Add(new RoleProfile
+        {
+            Code = "SYS.ADMIN",
+            Name = "System Administrator",
+            IsSystem = true,
+            IsEnabled = true
+        });
+        _db.SaveChanges();
     }
 
     [Fact]
@@ -51,7 +66,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -68,7 +83,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -97,7 +112,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -114,7 +129,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _menuRegistrar, _mockPublishLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -256,6 +271,9 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.DDLScript.Should().BeNullOrEmpty();
         result.ErrorMessage.Should().BeNullOrEmpty();
         result.ChangeAnalysis.Should().BeNull();
+        result.Templates.Should().BeEmpty();
+        result.TemplateBindings.Should().BeEmpty();
+        result.MenuNodes.Should().BeEmpty();
     }
 
     [Fact]
@@ -345,13 +363,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(
-            _db,
-            _ddlGenerator,
-            mockDDLExecutor.Object,
-            _mockLockService.Object,
-            _menuRegistrar,
-            _mockPublishLogger.Object);
+        var service = CreatePublishingService(mockDDLExecutor.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -407,39 +419,35 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.EntityDefinitionId.Should().Be(entityId);
         result.DDLScript.Should().NotBeNullOrEmpty();
         result.ScriptId.Should().NotBe(Guid.Empty);
-        result.MenuRegistration.Should().NotBeNull();
-        result.MenuRegistration!.Success.Should().BeTrue();
-        result.MenuRegistration.FunctionCode.Should().NotBeNullOrWhiteSpace();
+        result.Templates.Should().HaveCount(3);
+        result.TemplateBindings.Should().HaveCount(3);
+        result.MenuNodes.Should().NotBeEmpty();
+        result.TemplateBindings.Should().Contain(b => b.UsageType == FormTemplateUsageType.List && b.RequiredFunctionCode == "CRM.CORE.PRODUCT");
+        result.MenuNodes.Should().Contain(m => m.UsageType == FormTemplateUsageType.List && m.Route == "/products");
 
         // 验证实体状态已更新
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
         updatedEntity!.Status.Should().Be(EntityStatus.Published);
         updatedEntity.UpdatedBy.Should().Be("test-user");
 
-        var functionNode = await _db.FunctionNodes.FirstOrDefaultAsync(f => f.Code == result.MenuRegistration.FunctionCode);
-        functionNode.Should().NotBeNull();
-        functionNode!.Route.Should().Be($"/dynamic-entity/{entity.FullTypeName}");
+        var templates = await _db.FormTemplates
+            .Where(t => t.EntityType == entity.EntityRoute)
+            .ToListAsync();
+        templates.Should().HaveCount(3);
 
-        var refreshedBinding = await _db.TemplateBindings.FindAsync(binding.Id);
-        refreshedBinding.Should().NotBeNull();
-        refreshedBinding!.RequiredFunctionCode.Should().Be(result.MenuRegistration.FunctionCode);
+        var bindings = await _db.TemplateBindings
+            .Where(b => b.EntityType == entity.EntityRoute)
+            .ToListAsync();
+        bindings.Should().HaveCount(3);
 
         var nodes = await _db.FunctionNodes
-            .AsNoTracking()
-            .OrderBy(f => f.SortOrder)
+            .Where(n => n.Code.StartsWith("CRM.CORE.PRODUCT"))
             .ToListAsync();
+        nodes.Should().NotBeEmpty();
 
-        var buildTreeMethod = typeof(BobCrm.Api.Endpoints.AccessEndpoints)
-            .GetMethod("BuildTree", BindingFlags.NonPublic | BindingFlags.Static);
-        buildTreeMethod.Should().NotBeNull();
-
-        var tree = (List<FunctionNodeDto>)buildTreeMethod!
-            .Invoke(null, new object[] { nodes })!;
-        tree.Should().NotBeNull();
-
-        FlattenTree(tree)
-            .Any(n => string.Equals(n.Code, result.MenuRegistration.FunctionCode, StringComparison.Ordinal))
-            .Should().BeTrue("菜单 API 应包含新实体节点");
+        var rolePermissions = await _db.RoleFunctionPermissions.ToListAsync();
+        var listBinding = bindings.First(b => b.UsageType == FormTemplateUsageType.List);
+        rolePermissions.Should().Contain(r => r.TemplateBindingId == listBinding.Id);
 
         // 验证调用了锁定服务
         _mockLockService.Verify(
@@ -459,13 +467,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(
-            _db,
-            _ddlGenerator,
-            mockDDLExecutor.Object,
-            _mockLockService.Object,
-            _menuRegistrar,
-            _mockPublishLogger.Object);
+        var service = CreatePublishingService(mockDDLExecutor.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -535,19 +537,29 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.EntityDefinitionId.Should().Be(entityId);
         result.DDLScript.Should().NotBeNullOrEmpty();
         result.DDLScript.Should().Contain("ALTER TABLE");
-        result.MenuRegistration.Should().NotBeNull();
+        result.Templates.Should().NotBeEmpty();
+        result.TemplateBindings.Should().HaveCount(3);
+        result.MenuNodes.Should().NotBeEmpty();
 
         // 验证实体状态已更新
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
         updatedEntity!.Status.Should().Be(EntityStatus.Published);
         updatedEntity.UpdatedBy.Should().Be("test-user");
 
-        _mockTemplateService.Verify(
-            x => x.EnsureSystemTemplateAsync(
-                It.Is<EntityDefinition>(e => e.Id == entityId),
-                "test-user",
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        var templates = await _db.FormTemplates
+            .Where(t => t.EntityType == entity.EntityRoute)
+            .ToListAsync();
+        templates.Should().HaveCount(3);
+
+        var bindings = await _db.TemplateBindings
+            .Where(b => b.EntityType == entity.EntityRoute)
+            .ToListAsync();
+        bindings.Should().HaveCount(3);
+
+        var nodes = await _db.FunctionNodes
+            .Where(n => n.Code.StartsWith("CRM.CORE.PRODUCT"))
+            .ToListAsync();
+        nodes.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -555,13 +567,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var mockDDLExecutor = new Mock<DDLExecutionService>(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(
-            _db,
-            _ddlGenerator,
-            mockDDLExecutor.Object,
-            _mockLockService.Object,
-            _menuRegistrar,
-            _mockPublishLogger.Object);
+        var service = CreatePublishingService(mockDDLExecutor.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -627,49 +633,42 @@ public class EntityPublishingAndDDLTests : IDisposable
         _db?.Dispose();
     }
 
-    private static IEnumerable<FunctionNodeDto> FlattenTree(IEnumerable<FunctionNodeDto> nodes)
+    private EntityPublishingService CreatePublishingService(DDLExecutionService ddlExecutor)
+        => new(
+            _db,
+            _ddlGenerator,
+            ddlExecutor,
+            _mockLockService.Object,
+            _templateGenerator,
+            _bindingService,
+            _accessService,
+            _mockPublishLogger.Object);
+
+    private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)
     {
-        foreach (var node in nodes)
-        {
-            yield return node;
-            if (node.Children?.Count > 0)
-            {
-                foreach (var child in FlattenTree(node.Children))
-                {
-                    yield return child;
-                }
-            }
-        }
-    }
+        var store = new UserStore<IdentityUser>(context);
+        var options = Options.Create(new IdentityOptions());
+        var passwordHasher = new PasswordHasher<IdentityUser>();
+        var userValidators = new List<IUserValidator<IdentityUser>> { new UserValidator<IdentityUser>() };
+        var passwordValidators = new List<IPasswordValidator<IdentityUser>> { new PasswordValidator<IdentityUser>() };
+        var normalizer = new UpperInvariantLookupNormalizer();
+        var describer = new IdentityErrorDescriber();
 
-    private async Task<TemplateBinding> SeedTemplateBindingAsync(EntityDefinition entity)
-    {
-        var entityType = entity.EntityRoute ?? entity.EntityName;
-        var template = new FormTemplate
-        {
-            Name = $"{entity.EntityName} Default",
-            EntityType = entityType,
-            UserId = "__system__",
-            IsSystemDefault = true,
-            UsageType = FormTemplateUsageType.Detail,
-            LayoutJson = "{}"
-        };
+        var services = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+        var logger = services.GetRequiredService<ILogger<UserManager<IdentityUser>>>();
 
-        var binding = new TemplateBinding
-        {
-            EntityType = entityType,
-            UsageType = FormTemplateUsageType.Detail,
-            Template = template,
-            IsSystem = true,
-            UpdatedBy = "system",
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        await _db.FormTemplates.AddAsync(template);
-        await _db.TemplateBindings.AddAsync(binding);
-        await _db.SaveChangesAsync();
-
-        return binding;
+        return new UserManager<IdentityUser>(
+            store,
+            options,
+            passwordHasher,
+            userValidators,
+            passwordValidators,
+            normalizer,
+            describer,
+            services,
+            logger);
     }
 }
 
