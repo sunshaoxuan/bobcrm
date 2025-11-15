@@ -1,4 +1,6 @@
+using System;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
@@ -9,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BobCrm.Api.Tests;
 
@@ -24,7 +27,20 @@ public class AccessServiceTests
 
     private static AccessService CreateService(AppDbContext context)
     {
-        return new AccessService(context, CreateUserManager(context));
+        var multilingual = new MultilingualFieldService(context, NullLogger<MultilingualFieldService>.Instance);
+        return new AccessService(context, CreateUserManager(context), multilingual);
+    }
+
+    private static async Task EnsureLocalizationResourcesAsync(AppDbContext context)
+    {
+        if (await context.LocalizationResources.AnyAsync())
+        {
+            return;
+        }
+
+        var resources = await I18nResourceLoader.LoadResourcesAsync();
+        await context.LocalizationResources.AddRangeAsync(resources);
+        await context.SaveChangesAsync();
     }
 
     private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)
@@ -93,6 +109,7 @@ public class AccessServiceTests
     public async Task SeedSystemAdministratorAsync_ShouldCreateSystemRole()
     {
         await using var ctx = CreateContext();
+        await EnsureLocalizationResourcesAsync(ctx);
         var service = CreateService(ctx);
         await service.SeedSystemAdministratorAsync();
 
@@ -108,6 +125,7 @@ public class AccessServiceTests
     public async Task SeedSystemAdministratorAsync_ShouldAssignExistingAdminUser()
     {
         await using var ctx = CreateContext();
+        await EnsureLocalizationResourcesAsync(ctx);
         ctx.Users.Add(new IdentityUser
         {
             UserName = "admin",
@@ -348,6 +366,9 @@ public class AccessServiceTests
         child.Icon.Should().Be("team");
         child.IsMenu.Should().BeTrue();
         child.SortOrder.Should().Be(10);
+        child.DisplayNameKey.Should().BeNull();
+        child.DisplayName.Should().NotBeNull();
+        child.DisplayName!["zh"].Should().Be("Customers");
     }
 
     [Fact]
@@ -373,9 +394,68 @@ public class AccessServiceTests
     }
 
     [Fact]
+    public async Task CreateFunctionAsync_ShouldAttachTemplateBinding()
+    {
+        await using var ctx = CreateContext();
+        await EnsureLocalizationResourcesAsync(ctx);
+
+        var template = new FormTemplate
+        {
+            Name = "Customer Detail",
+            EntityType = "customer",
+            UserId = "system",
+            UsageType = FormTemplateUsageType.Detail,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        ctx.FormTemplates.Add(template);
+        await ctx.SaveChangesAsync();
+
+        var binding = new TemplateBinding
+        {
+            EntityType = "customer",
+            UsageType = FormTemplateUsageType.Detail,
+            TemplateId = template.Id,
+            IsSystem = true,
+            UpdatedBy = "seed",
+            UpdatedAt = DateTime.UtcNow
+        };
+        ctx.TemplateBindings.Add(binding);
+        await ctx.SaveChangesAsync();
+
+        var service = CreateService(ctx);
+        var node = await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "CRM.CUSTOMER.DETAIL",
+            Name = "Customer Detail",
+            TemplateBindingId = binding.Id
+        });
+
+        node.TemplateBindingId.Should().Be(binding.Id);
+    }
+
+    [Fact]
+    public async Task CreateFunctionAsync_ShouldThrowWhenTemplateBindingMissing()
+    {
+        await using var ctx = CreateContext();
+        var service = CreateService(ctx);
+
+        var act = async () => await service.CreateFunctionAsync(new CreateFunctionRequest
+        {
+            Code = "CRM.INVALID",
+            Name = "Invalid",
+            TemplateBindingId = 999
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Template binding not found.");
+    }
+
+    [Fact]
     public async Task SeedSystemAdministratorAsync_ShouldUpdateExistingSystemRole()
     {
         await using var ctx = CreateContext();
+        await EnsureLocalizationResourcesAsync(ctx);
         var service = CreateService(ctx);
 
         // First seed

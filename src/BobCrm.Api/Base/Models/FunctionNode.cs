@@ -41,4 +41,7 @@ public class FunctionNode
     public FormTemplate? Template { get; set; }
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
+
+    public int? TemplateBindingId { get; set; }
+    public TemplateBinding? TemplateBinding { get; set; }
 }

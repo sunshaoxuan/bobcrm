@@ -1146,17 +1146,32 @@ public static class EntityDefinitionEndpoints
             }
 
             return Results.Ok(new
-
             {
-
                 success = true,
-
                 scriptId = result.ScriptId,
-
                 ddlScript = result.DDLScript,
-
+                templates = result.Templates.Select(t => new
+                {
+                    usage = t.UsageType,
+                    templateId = t.TemplateId,
+                    templateName = t.TemplateName
+                }),
+                bindings = result.TemplateBindings.Select(b => new
+                {
+                    usage = b.UsageType,
+                    bindingId = b.BindingId,
+                    templateId = b.TemplateId,
+                    functionCode = b.RequiredFunctionCode
+                }),
+                menus = result.MenuNodes.Select(m => new
+                {
+                    m.Code,
+                    nodeId = m.NodeId,
+                    parentId = m.ParentId,
+                    m.Route,
+                    usage = m.UsageType
+                }),
                 message = "实体发布成功"
-
             });
 
         })
@@ -1220,6 +1235,28 @@ public static class EntityDefinitionEndpoints
                     hasDestructiveChanges = result.ChangeAnalysis?.HasDestructiveChanges ?? false
 
                 },
+
+                templates = result.Templates.Select(t => new
+                {
+                    usage = t.UsageType,
+                    templateId = t.TemplateId,
+                    templateName = t.TemplateName
+                }),
+                bindings = result.TemplateBindings.Select(b => new
+                {
+                    usage = b.UsageType,
+                    bindingId = b.BindingId,
+                    templateId = b.TemplateId,
+                    functionCode = b.RequiredFunctionCode
+                }),
+                menus = result.MenuNodes.Select(m => new
+                {
+                    m.Code,
+                    nodeId = m.NodeId,
+                    parentId = m.ParentId,
+                    m.Route,
+                    usage = m.UsageType
+                }),
 
                 message = "实体修改发布成功"
 

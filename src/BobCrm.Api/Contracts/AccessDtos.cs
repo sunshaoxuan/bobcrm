@@ -28,7 +28,27 @@ public record FunctionNodeDto
     public int? TemplateId { get; init; }
     public string? TemplateName { get; init; }
     public List<FunctionNodeDto> Children { get; init; } = new();
+    public List<FunctionTemplateOptionDto> TemplateOptions { get; init; } = new();
 }
+
+public record FunctionTemplateOptionDto
+{
+    public int BindingId { get; init; }
+    public int TemplateId { get; init; }
+    public string TemplateName { get; init; } = string.Empty;
+    public string EntityType { get; init; } = string.Empty;
+    public FormTemplateUsageType UsageType { get; init; } = FormTemplateUsageType.Detail;
+    public bool IsSystem { get; init; }
+    public bool IsDefault { get; init; }
+}
+
+public record FunctionNodeTemplateBindingDto(
+    int BindingId,
+    string EntityType,
+    FormTemplateUsageType UsageType,
+    int TemplateId,
+    string TemplateName,
+    bool IsSystem);
 
 public record CreateFunctionRequest
 {

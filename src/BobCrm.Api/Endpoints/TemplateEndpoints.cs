@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Core.DomainCommon;
@@ -5,6 +7,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -358,6 +361,129 @@ public static class TemplateEndpoints
         .WithName("GetEffectiveTemplate")
         .WithSummary("获取有效模板")
         .WithDescription("按优先级获取模板：用户默认 > 系统默认 > 第一个创建的模板");
+
+        group.MapGet("/menu-bindings", async (
+            ClaimsPrincipal user,
+            AppDbContext db,
+            ILogger<Program> logger,
+            FormTemplateUsageType? usageType,
+            CancellationToken ct) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            var resolvedUsage = usageType ?? FormTemplateUsageType.Detail;
+            var now = DateTime.UtcNow;
+
+            var accessibleFunctionIds = await db.RoleAssignments
+                .Where(a => a.UserId == uid &&
+                            (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                            (!a.ValidTo.HasValue || a.ValidTo >= now))
+                .SelectMany(a => a.Role!.Functions)
+                .Select(rf => rf.FunctionId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            if (accessibleFunctionIds.Count == 0)
+            {
+                return Results.Ok(Array.Empty<object>());
+            }
+
+            var menuNodes = await db.FunctionNodes
+                .AsNoTracking()
+                .Include(fn => fn.TemplateBinding!)
+                .ThenInclude(tb => tb.Template)
+                .Where(fn => fn.TemplateBindingId != null && accessibleFunctionIds.Contains(fn.Id))
+                .ToListAsync(ct);
+
+            var filteredNodes = menuNodes
+                .Where(fn => fn.TemplateBinding != null && fn.TemplateBinding.UsageType == resolvedUsage)
+                .OrderBy(fn => fn.SortOrder)
+                .ToList();
+
+            if (filteredNodes.Count == 0)
+            {
+                return Results.Ok(Array.Empty<object>());
+            }
+
+            var entityTypes = filteredNodes
+                .Select(fn => fn.TemplateBinding!.EntityType)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var entityTypeSet = new HashSet<string>(entityTypes, StringComparer.OrdinalIgnoreCase);
+
+            var candidateTemplates = await db.FormTemplates
+                .AsNoTracking()
+                .Where(t => t.EntityType != null &&
+                            entityTypeSet.Contains(t.EntityType!) &&
+                            (t.UserId == uid || t.IsSystemDefault))
+                .ToListAsync(ct);
+
+            var templatesByEntity = candidateTemplates
+                .GroupBy(t => t.EntityType!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            var result = new List<object>(filteredNodes.Count);
+            foreach (var node in filteredNodes)
+            {
+                var binding = node.TemplateBinding!;
+                var key = binding.EntityType;
+                templatesByEntity.TryGetValue(key, out var templateList);
+                templateList ??= new List<FormTemplate>();
+
+                if (binding.Template != null && templateList.All(t => t.Id != binding.TemplateId))
+                {
+                    templateList = new List<FormTemplate>(templateList) { binding.Template };
+                }
+
+                var templates = templateList
+                    .OrderByDescending(t => t.IsUserDefault)
+                    .ThenByDescending(t => t.IsSystemDefault)
+                    .ThenBy(t => t.Name)
+                    .Select(t => new
+                    {
+                        t.Id,
+                        t.Name,
+                        t.EntityType,
+                        t.IsUserDefault,
+                        t.IsSystemDefault,
+                        t.Description,
+                        t.CreatedAt,
+                        t.UpdatedAt,
+                        t.IsInUse
+                    })
+                    .ToList();
+
+                result.Add(new
+                {
+                    Menu = new
+                    {
+                        node.Id,
+                        node.Code,
+                        node.Name,
+                        node.DisplayNameKey,
+                        DisplayName = node.DisplayName == null
+                            ? null
+                            : new Dictionary<string, string?>(node.DisplayName, StringComparer.OrdinalIgnoreCase),
+                        node.Route,
+                        node.Icon,
+                        node.SortOrder
+                    },
+                    Binding = binding.ToDto(),
+                    Templates = templates
+                });
+            }
+
+            logger.LogDebug("[Templates] Calculated {Count} menu/template intersections for user {UserId}.", result.Count, uid);
+            return Results.Ok(result);
+        })
+        .WithName("GetMenuTemplateIntersections")
+        .WithSummary("获取菜单与模板交集")
+        .WithDescription("返回当前用户可访问的菜单节点及其模板绑定和可选模板列表。");
 
         group.MapGet("/bindings/{entityType}", async (
             string entityType,

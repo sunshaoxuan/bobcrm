@@ -1,10 +1,16 @@
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using BobCrm.Api.Base;
+using System.Collections.Generic;
+using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Services;
 using BobCrm.Api.Middleware;
+using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +29,11 @@ public static class AccessEndpoints
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            return Results.Ok(BuildTree(nodes));
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, nodes, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, templateOptions));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/manage", async ([FromServices] AppDbContext db, CancellationToken ct) =>
@@ -95,7 +105,11 @@ public static class AccessEndpoints
                 return Results.Ok(new List<FunctionNodeDto>());
             }
 
-            return Results.Ok(BuildTree(filtered));
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, filtered, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, templateOptions));
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
@@ -274,13 +288,36 @@ public static class AccessEndpoints
 
             // Update function permissions
             db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            if (request.FunctionIds?.Count > 0)
+            var templateSelections = request.FunctionPermissions?
+                .Where(fp => fp.FunctionId != Guid.Empty)
+                .GroupBy(fp => fp.FunctionId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Last().TemplateBindingId);
+
+            var finalFunctionIds = new HashSet<Guid>(request.FunctionIds ?? Enumerable.Empty<Guid>());
+            if (templateSelections != null)
             {
-                role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
+                foreach (var functionId in templateSelections.Keys)
+                {
+                    finalFunctionIds.Add(functionId);
+                }
+            }
+
+            if (finalFunctionIds.Count > 0)
+            {
+                role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
                 {
                     RoleId = roleId,
-                    FunctionId = fid
+                    FunctionId = fid,
+                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
+                        ? bindingId
+                        : null
                 }).ToList();
+            }
+            else
+            {
+                role.Functions = new List<RoleFunctionPermission>();
             }
 
             // Update data scopes
@@ -366,8 +403,13 @@ public static class AccessEndpoints
         var parentMap = nodes.ToDictionary(n => n.Id, n => n.ParentId);
 
         List<FunctionNodeDto> roots = new();
-        foreach (var node in lookup.Values)
+        foreach (var source in nodes.OrderBy(n => n.SortOrder))
         {
+            if (!lookup.TryGetValue(source.Id, out var node))
+            {
+                continue;
+            }
+
             if (node.ParentId.HasValue && lookup.TryGetValue(node.ParentId.Value, out var parent))
             {
                 if (CreatesCycle(node.Id, node.ParentId.Value, parentMap))
