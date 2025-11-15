@@ -181,22 +181,31 @@ public static class AccessEndpoints
 
             // Update function permissions
             db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            var requestedAssignments = request.FunctionPermissions;
-            if (requestedAssignments?.Count > 0)
+            var templateSelections = request.FunctionPermissions?
+                .Where(fp => fp.FunctionId != Guid.Empty)
+                .GroupBy(fp => fp.FunctionId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Last().TemplateBindingId);
+
+            var finalFunctionIds = new HashSet<Guid>(request.FunctionIds ?? Enumerable.Empty<Guid>());
+            if (templateSelections != null)
             {
-                role.Functions = requestedAssignments.Select(fp => new RoleFunctionPermission
+                foreach (var functionId in templateSelections.Keys)
                 {
-                    RoleId = roleId,
-                    FunctionId = fp.FunctionId,
-                    TemplateBindingId = fp.TemplateBindingId
-                }).ToList();
+                    finalFunctionIds.Add(functionId);
+                }
             }
-            else if (request.FunctionIds?.Count > 0)
+
+            if (finalFunctionIds.Count > 0)
             {
-                role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
+                role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
                 {
                     RoleId = roleId,
-                    FunctionId = fid
+                    FunctionId = fid,
+                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
+                        ? bindingId
+                        : null
                 }).ToList();
             }
             else
