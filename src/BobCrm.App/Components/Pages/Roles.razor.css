@@ -1,0 +1,22 @@
+.permission-node-template {
+    margin: 4px 0 0 32px;
+}
+
+.permission-node-template .role-template-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--ant-color-text-secondary);
+}
+
+.role-template-selector .role-template-dropdown {
+    min-width: 200px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--ant-color-border);
+}
+
+.role-template-selector .role-template-inherit {
+    padding: 2px 0;
+}

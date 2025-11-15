@@ -1,0 +1,826 @@
+@page "/templates/bindings"
+@rendermode RenderMode.InteractiveServer
+@using BobCrm.App.Models
+@implements IDisposable
+@inject TemplateBindingService BindingService
+@inject TemplateRuntimeClient TemplateRuntime
+@inject I18nService? I18n
+
+<PageTitle>模板绑定 - OneCRM</PageTitle>
+
+<div class="template-bindings-page">
+    <h2 class="page-title">模板绑定管理</h2>
+
+    @if (_loading)
+    {
+        <div class="loading-state">加载中...</div>
+    }
+    else if (!_hasPermission)
+    {
+        <div class="permission-denied">
+            <div class="permission-icon">🚫</div>
+            <div>
+                <div class="permission-title">没有权限访问模板绑定</div>
+                <div class="permission-hint">需要功能权限 <code>SYS.TEMPLATE.ASSIGN</code> 才能调整绑定。</div>
+            </div>
+        </div>
+    }
+    else if (_entityOptions.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🗂️</div>
+            <div>
+                <div class="empty-title">当前账号没有可绑定的模板</div>
+                <div class="empty-hint">请先在模板中心创建实体模板后再进行绑定。</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="filters">
+            <label>
+                <span>实体类型</span>
+                <select data-testid="entity-select" value="@(_selectedEntity ?? string.Empty)" @onchange="HandleEntityChanged">
+                    @foreach (var entity in _entityOptions)
+                    {
+                        <option value="@entity">@entity</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>用途</span>
+                <select data-testid="usage-select" value="@((int)_selectedUsage)" @onchange="HandleUsageChanged">
+                    @foreach (var usage in _usageOptions)
+                    {
+                        <option value="@((int)usage)">@GetUsageLabel(usage)</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <div class="scope-toggle">
+            <button type="button"
+                    class="toggle-button @( _useSystemBinding ? "active" : string.Empty )"
+                    data-testid="binding-scope-system"
+                    @onclick="() => ChangeBindingScope(true)">
+                系统绑定
+            </button>
+            <button type="button"
+                    class="toggle-button @( !_useSystemBinding ? "active" : string.Empty )"
+                    data-testid="binding-scope-user"
+                    @onclick="() => ChangeBindingScope(false)">
+                用户绑定
+            </button>
+        </div>
+
+        @if (_templatesLoading)
+        {
+            <div class="loading-state">正在加载模板...</div>
+        }
+        else if (!GetVisibleTemplates().Any())
+        {
+            <div class="empty-state subtle">
+                <div class="empty-icon">📄</div>
+                <div>
+                    <div class="empty-title">当前没有可用的模板</div>
+                    <div class="empty-hint">请切换用途或在模板中心创建对应的模板。</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="template-grid">
+                @foreach (var template in GetVisibleTemplates())
+                {
+                    var checkedAttr = _selectedTemplateId == template.Id;
+                    <label class="template-card @(checkedAttr ? "selected" : string.Empty)">
+                        <input type="radio"
+                               name="template-option"
+                               value="@template.Id"
+                               data-testid="template-option-@template.Id"
+                               checked="@checkedAttr"
+                               @onchange="() => SelectTemplate(template.Id)" />
+                        <div class="template-info">
+                            <div class="template-name">@template.Name</div>
+                            <div class="template-tags">
+                                <span class="badge usage">@GetUsageLabel(template.UsageType)</span>
+                                @if (template.IsSystemDefault)
+                                {
+                                    <span class="badge system">系统默认</span>
+                                }
+                                else if (template.IsUserDefault)
+                                {
+                                    <span class="badge user">用户默认</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(template.Description))
+                            {
+                                <div class="template-desc">@template.Description</div>
+                            }
+                            <div class="template-meta">更新于 @template.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                        </div>
+                    </label>
+                }
+            </div>
+        }
+
+        <div class="function-config">
+            <label for="function-code-input">功能编码要求（可选）</label>
+            <div class="function-row">
+                <input id="function-code-input"
+                       class="field-control"
+                       data-testid="function-code-input"
+                       value="@(_functionCode ?? string.Empty)"
+                       placeholder="填写访问该模板所需的功能编码"
+                       @oninput="HandleFunctionCodeInput" />
+                <button type="button"
+                        class="btn ghost"
+                        data-testid="apply-template-function"
+                        @onclick="ApplyTemplateFunctionCode"
+                        disabled="@(!_selectedTemplateId.HasValue)">
+                    使用模板默认
+                </button>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary"
+                    data-testid="save-binding"
+                    disabled="@(!_selectedTemplateId.HasValue || _saving)"
+                    @onclick="SaveBindingAsync">
+                @(_saving ? "保存中..." : "保存绑定")
+            </button>
+            <button class="btn secondary"
+                    data-testid="refresh-binding"
+                    disabled="@_loading"
+                    @onclick="ReloadAsync">
+                重新加载
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <div class="status-banner @(_statusSuccess ? "success" : "error")">@_statusMessage</div>
+        }
+
+        @if (_runtimeContext != null)
+        {
+            <div class="runtime-panel">
+                <div class="runtime-title">当前运行态</div>
+                <div class="runtime-item"><strong>模板：</strong>@_runtimeContext.Template.Name (@GetUsageLabel(_runtimeContext.Template.UsageType))</div>
+                <div class="runtime-item"><strong>访问级别：</strong>@(_runtimeContext.HasFullAccess ? "完全访问" : "受限")</div>
+                @if (_runtimeContext.AppliedScopes?.Count > 0)
+                {
+                    <div class="runtime-item"><strong>已应用的数据范围：</strong></div>
+                    <ul class="scope-list">
+                        @foreach (var scope in _runtimeContext.AppliedScopes)
+                        {
+                            <li>@scope</li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .template-bindings-page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 24px;
+        color: var(--text, #1f1f1f);
+    }
+
+    .page-title {
+        font-size: 26px;
+        font-weight: 600;
+        margin-bottom: 24px;
+    }
+
+    .filters {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .filters label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--muted, #666);
+    }
+
+    .filters select,
+    .field-control {
+        min-width: 220px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border, #d9d9d9);
+        font-size: 14px;
+        background: #fff;
+    }
+
+    .scope-toggle {
+        display: inline-flex;
+        border: 1px solid var(--border, #d9d9d9);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .scope-toggle .toggle-button {
+        padding: 8px 18px;
+        font-size: 14px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--muted, #666);
+        transition: background 0.2s ease;
+    }
+
+    .scope-toggle .toggle-button.active {
+        background: var(--primary, #1890ff);
+        color: #fff;
+    }
+
+    .template-grid {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .template-card {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid var(--border, #e5e5e5);
+        background: #fff;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .template-card.selected {
+        border-color: var(--primary, #1890ff);
+        box-shadow: 0 6px 18px rgba(24, 144, 255, 0.15);
+    }
+
+    .template-card input[type="radio"] {
+        margin-top: 6px;
+    }
+
+    .template-info {
+        flex: 1;
+    }
+
+    .template-name {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .template-tags {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #f0f0f0;
+        color: #555;
+    }
+
+    .badge.system {
+        background: rgba(24, 144, 255, 0.15);
+        color: #1677ff;
+    }
+
+    .badge.user {
+        background: rgba(82, 196, 26, 0.15);
+        color: #49aa19;
+    }
+
+    .badge.usage {
+        background: rgba(250, 219, 20, 0.2);
+        color: #ad6800;
+    }
+
+    .template-desc {
+        font-size: 13px;
+        color: var(--muted, #666);
+        margin-bottom: 4px;
+    }
+
+    .template-meta {
+        font-size: 12px;
+        color: var(--muted, #888);
+    }
+
+    .function-config {
+        margin: 24px 0 16px 0;
+    }
+
+    .function-config label {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+        color: var(--muted, #666);
+    }
+
+    .function-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .btn-primary {
+        background: var(--primary, #1890ff);
+        color: #fff;
+    }
+
+    .btn.secondary {
+        background: rgba(0, 0, 0, 0.04);
+        color: #333;
+    }
+
+    .btn.ghost {
+        background: rgba(0, 0, 0, 0.02);
+        color: #333;
+    }
+
+    .btn:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .actions {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .status-banner {
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .status-banner.success {
+        background: rgba(82, 196, 26, 0.16);
+        color: #389e0d;
+    }
+
+    .status-banner.error {
+        background: rgba(255, 77, 79, 0.16);
+        color: #cf1322;
+    }
+
+    .runtime-panel {
+        border: 1px solid var(--border, #e5e5e5);
+        border-radius: 12px;
+        padding: 16px;
+        background: #fafafa;
+    }
+
+    .runtime-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .runtime-item {
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .scope-list {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .loading-state,
+    .empty-state,
+    .permission-denied {
+        border: 1px dashed var(--border, #d9d9d9);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 20px;
+        background: rgba(0, 0, 0, 0.01);
+    }
+
+    .loading-state {
+        justify-content: center;
+    }
+
+    .permission-icon,
+    .empty-icon {
+        font-size: 24px;
+    }
+
+    .empty-state.subtle {
+        border-style: solid;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .empty-title,
+    .permission-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .empty-hint,
+    .permission-hint {
+        font-size: 14px;
+        color: var(--muted, #666);
+    }
+
+    @media (max-width: 720px) {
+        .filters {
+            flex-direction: column;
+        }
+
+        .filters select,
+        .field-control {
+            min-width: auto;
+            width: 100%;
+        }
+
+        .function-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+@code {
+    private readonly List<TemplateUsageType> _usageOptions = Enum.GetValues<TemplateUsageType>().ToList();
+    private readonly List<string> _entityOptions = new();
+    private List<FormTemplate> _entityTemplates = new();
+
+    private bool _loading = true;
+    private bool _templatesLoading;
+    private bool _saving;
+    private bool _hasPermission;
+    private bool _useSystemBinding = true;
+    private bool _functionCodeDirty;
+
+    private string? _selectedEntity;
+    private TemplateUsageType _selectedUsage = TemplateUsageType.Detail;
+    private int? _selectedTemplateId;
+    private string? _functionCode;
+    private string? _statusMessage;
+    private bool _statusSuccess;
+
+    private TemplateBindingDto? _currentBinding;
+    private TemplateRuntimeResponse? _runtimeContext;
+
+    private CancellationTokenSource? _loadCts;
+
+    protected override void OnInitialized()
+    {
+        if (I18n is not null)
+        {
+            I18n.OnChanged += HandleI18nChanged;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeAsync();
+        }
+    }
+
+    private async Task InitializeAsync()
+    {
+        _loading = true;
+        _statusMessage = null;
+        _statusSuccess = false;
+        await InvokeAsync(StateHasChanged);
+
+        var token = PrepareNewToken();
+        _hasPermission = await BindingService.HasAssignPermissionAsync(token);
+        if (!_hasPermission)
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var allTemplates = await BindingService.GetTemplatesAsync(entityType: null, cancellationToken: token);
+        _entityOptions.Clear();
+        foreach (var entity in allTemplates
+            .Select(t => t.EntityType)
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(e => e, StringComparer.OrdinalIgnoreCase))
+        {
+            _entityOptions.Add(entity!);
+        }
+
+        if (_entityOptions.Count > 0 && string.IsNullOrWhiteSpace(_selectedEntity))
+        {
+            _selectedEntity = _entityOptions[0];
+        }
+
+        await LoadSelectionAsync(token);
+    }
+
+    private async Task LoadSelectionAsync(CancellationToken token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_selectedEntity))
+            {
+                _entityTemplates = new List<FormTemplate>();
+                _selectedTemplateId = null;
+                _runtimeContext = null;
+                _loading = false;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            _templatesLoading = true;
+            await InvokeAsync(StateHasChanged);
+
+            _entityTemplates = (await BindingService.GetTemplatesAsync(_selectedEntity, cancellationToken: token))
+                .Where(t => string.Equals(t.EntityType, _selectedEntity, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(t => t.IsSystemDefault)
+                .ThenByDescending(t => t.UpdatedAt)
+                .ToList();
+
+            _currentBinding = await BindingService.GetBindingAsync(_selectedEntity, _selectedUsage, cancellationToken: token);
+            _useSystemBinding = _currentBinding?.IsSystem ?? true;
+
+            var visible = GetVisibleTemplates().ToList();
+            if (_currentBinding != null && visible.Any(t => t.Id == _currentBinding.TemplateId))
+            {
+                _selectedTemplateId = _currentBinding.TemplateId;
+            }
+            else if (!visible.Any() && _entityTemplates.Any())
+            {
+                _selectedTemplateId = _entityTemplates
+                    .Where(t => t.UsageType == _selectedUsage)
+                    .Select(t => t.Id)
+                    .Cast<int?>()
+                    .FirstOrDefault();
+            }
+            else
+            {
+                _selectedTemplateId = visible.FirstOrDefault()?.Id;
+            }
+
+            ResetFunctionCode(visible);
+            await LoadRuntimeContextAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored
+        }
+        catch
+        {
+            _statusMessage = "模板加载失败";
+            _statusSuccess = false;
+        }
+        finally
+        {
+            _templatesLoading = false;
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ResetFunctionCode(List<FormTemplate> visible)
+    {
+        if (_currentBinding != null)
+        {
+            _functionCode = _currentBinding.RequiredFunctionCode;
+            _functionCodeDirty = false;
+        }
+        else
+        {
+            var template = visible.FirstOrDefault(t => t.Id == _selectedTemplateId);
+            _functionCode = template?.RequiredFunctionCode;
+            _functionCodeDirty = false;
+        }
+    }
+
+    private IEnumerable<FormTemplate> GetVisibleTemplates()
+    {
+        return _entityTemplates
+            .Where(t => t.UsageType == _selectedUsage)
+            .Where(t => _useSystemBinding ? t.IsSystemDefault : !t.IsSystemDefault)
+            .OrderByDescending(t => t.UpdatedAt)
+            .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task LoadRuntimeContextAsync(CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(_selectedEntity))
+        {
+            _runtimeContext = null;
+            return;
+        }
+
+        try
+        {
+            _runtimeContext = await TemplateRuntime.GetRuntimeAsync(_selectedEntity, _selectedUsage, cancellationToken: token);
+        }
+        catch
+        {
+            _runtimeContext = null;
+        }
+    }
+
+    private CancellationToken PrepareNewToken()
+    {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        return _loadCts.Token;
+    }
+
+    private async Task SaveBindingAsync()
+    {
+        if (!_selectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_selectedEntity))
+        {
+            _statusMessage = "请选择要绑定的模板";
+            _statusSuccess = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _saving = true;
+        _statusMessage = null;
+        await InvokeAsync(StateHasChanged);
+
+        var binding = await BindingService.UpsertBindingAsync(
+            _selectedEntity,
+            _selectedUsage,
+            _selectedTemplateId.Value,
+            _useSystemBinding,
+            _functionCode);
+
+        _saving = false;
+
+        if (binding is null)
+        {
+            _statusMessage = "保存失败，请重试";
+            _statusSuccess = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _currentBinding = binding;
+        _statusMessage = "绑定已保存";
+        _statusSuccess = true;
+        _functionCode = binding.RequiredFunctionCode;
+        _functionCodeDirty = false;
+
+        var token = PrepareNewToken();
+        await LoadRuntimeContextAsync(token);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReloadAsync()
+    {
+        await InitializeAsync();
+    }
+
+    private void ChangeBindingScope(bool isSystem)
+    {
+        if (_useSystemBinding == isSystem)
+        {
+            return;
+        }
+
+        _useSystemBinding = isSystem;
+        var visible = GetVisibleTemplates().ToList();
+        if (!visible.Any(t => t.Id == _selectedTemplateId))
+        {
+            _selectedTemplateId = visible.FirstOrDefault()?.Id;
+            _functionCodeDirty = false;
+            _functionCode = visible.FirstOrDefault()?.RequiredFunctionCode;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectTemplate(int templateId)
+    {
+        if (_selectedTemplateId == templateId)
+        {
+            return;
+        }
+
+        _selectedTemplateId = templateId;
+        if (!_functionCodeDirty)
+        {
+            var template = _entityTemplates.FirstOrDefault(t => t.Id == templateId);
+            _functionCode = template?.RequiredFunctionCode;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleEntityChanged(ChangeEventArgs args)
+    {
+        _selectedEntity = args.Value?.ToString();
+        _currentBinding = null;
+        _runtimeContext = null;
+        _ = LoadSelectionAsync(PrepareNewToken());
+    }
+
+    private void HandleUsageChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var value) && Enum.IsDefined(typeof(TemplateUsageType), value))
+        {
+            _selectedUsage = (TemplateUsageType)value;
+            _currentBinding = null;
+            _runtimeContext = null;
+            _ = LoadSelectionAsync(PrepareNewToken());
+        }
+    }
+
+    private void HandleFunctionCodeInput(ChangeEventArgs args)
+    {
+        _functionCode = string.IsNullOrWhiteSpace(args.Value?.ToString()) ? null : args.Value?.ToString();
+        _functionCodeDirty = true;
+    }
+
+    private void ApplyTemplateFunctionCode()
+    {
+        if (!_selectedTemplateId.HasValue)
+        {
+            return;
+        }
+
+        var template = _entityTemplates.FirstOrDefault(t => t.Id == _selectedTemplateId);
+        _functionCode = template?.RequiredFunctionCode;
+        _functionCodeDirty = false;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string GetUsageLabel(TemplateUsageType usage) => usage switch
+    {
+        TemplateUsageType.Detail => "详情",
+        TemplateUsageType.Edit => "编辑",
+        TemplateUsageType.List => "列表",
+        TemplateUsageType.Combined => "复合",
+        _ => usage.ToString()
+    };
+
+    private void HandleI18nChanged()
+    {
+        try
+        {
+            InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        if (I18n is not null)
+        {
+            I18n.OnChanged -= HandleI18nChanged;
+        }
+
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+    }
+}
