@@ -1,3 +1,4 @@
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Contracts.DTOs;
@@ -13,6 +14,18 @@ public record FunctionNodeDto
     public bool IsMenu { get; init; }
     public int SortOrder { get; init; }
     public List<FunctionNodeDto> Children { get; init; } = new();
+    public List<FunctionTemplateOptionDto> TemplateOptions { get; init; } = new();
+}
+
+public record FunctionTemplateOptionDto
+{
+    public int BindingId { get; init; }
+    public int TemplateId { get; init; }
+    public string TemplateName { get; init; } = string.Empty;
+    public string EntityType { get; init; } = string.Empty;
+    public FormTemplateUsageType UsageType { get; init; } = FormTemplateUsageType.Detail;
+    public bool IsSystem { get; init; }
+    public bool IsDefault { get; init; }
 }
 
 public record CreateFunctionRequest

@@ -3,7 +3,17 @@ using BobCrm.App.Models;
 
 namespace BobCrm.App.Services;
 
-public class RoleService
+public interface IRoleService
+{
+    Task<List<RoleProfileDto>> GetRolesAsync(CancellationToken ct = default);
+    Task<RoleProfileDto?> GetRoleAsync(Guid id, CancellationToken ct = default);
+    Task<RoleProfileDto?> CreateRoleAsync(CreateRoleRequestDto request, CancellationToken ct = default);
+    Task<bool> UpdateRoleAsync(Guid id, UpdateRoleRequestDto request, CancellationToken ct = default);
+    Task<bool> UpdatePermissionsAsync(Guid id, UpdatePermissionsRequestDto request, CancellationToken ct = default);
+    Task<List<FunctionMenuNode>> GetFunctionTreeAsync(CancellationToken ct = default);
+}
+
+public class RoleService : IRoleService
 {
     private readonly AuthService _auth;
 
