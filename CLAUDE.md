@@ -163,6 +163,92 @@ Runtime form layout management:
 - `src/BobCrm.Api/Services/FormTemplateService.cs`
 - `src/BobCrm.App/Components/Designer/`
 
+### 7. Global Toast Notification System
+
+Unified user feedback mechanism for operations:
+
+- **Toast Service**: Centralized notification service with 4 message types
+  - `Success()`: Green background, for successful operations
+  - `Error()`: Red background, for failures and errors
+  - `Warning()`: Yellow background, for warnings
+  - `Info()`: Blue background, for informational messages
+- **Auto-hide**: Messages automatically disappear after 3 seconds
+- **Queue Management**: Maximum 3 visible messages, oldest removed first
+- **Theme Support**: Adapts to light/dark themes
+- **Animation**: Slide-down and fade-in effects
+
+**Key Files**:
+- `src/BobCrm.App/Services/ToastService.cs` - Toast service implementation
+- `src/BobCrm.App/Components/Shared/GlobalToast.razor` - Toast UI component
+- `src/BobCrm.App/Components/Shared/GlobalToast.razor.css` - Toast styling
+
+**Usage Example**:
+```csharp
+@inject ToastService ToastService
+
+private async Task HandleSave()
+{
+    try
+    {
+        await EntityDefService.UpdateAsync(Id.Value, request);
+        ToastService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
+    }
+    catch (Exception ex)
+    {
+        ToastService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+    }
+}
+```
+
+### 8. Compact Top Menu Navigation
+
+Space-efficient navigation system (v1.0):
+
+- **Design Philosophy**: Maximize content area by replacing fixed left sidebar
+- **Domain Selector**: Icon-only selector next to user profile
+- **Menu Panel**: Collapsible 4-column grid layout (max 600px width)
+- **Smart Positioning**: JavaScript-based dynamic alignment to trigger button
+- **Auto-close**: Click outside to dismiss (transparent overlay)
+- **Key Components**:
+  - `MenuButton` - Encapsulates menu button and panel
+  - `DomainSelector` - Domain switching interface
+  - `MenuPanel` - Function menu display
+  - `LayoutState` - Menu state management
+
+**Key Files**:
+- `src/BobCrm.App/Components/Layout/MenuButton.razor`
+- `src/BobCrm.App/Components/Layout/DomainSelector.razor`
+- `src/BobCrm.App/Components/Layout/MenuPanel.razor`
+- `src/BobCrm.App/Services/LayoutState.cs`
+
+**Documentation**: `docs/design/ARCH-24-紧凑型顶部菜单导航设计.md`
+
+**Status**: First version released, basic functionality complete. Future enhancements will focus on visual polish and additional features.
+
+### 9. Field Soft Delete Mechanism
+
+Data integrity and traceability for entity field metadata:
+
+- **Soft Delete Fields**:
+  - `IsDeleted`: Boolean flag, defaults to `false`
+  - `DeletedAt`: Deletion timestamp (nullable)
+  - `DeletedBy`: User ID who deleted (nullable)
+- **Deletion Rules**:
+  - **Custom fields**: Marked as deleted, metadata retained
+  - **Interface/System fields**: Must remove interface first or cannot delete
+  - Required fields automatically converted to nullable in DDL when soft deleted
+- **Query Filtering**: All field queries automatically filter `!IsDeleted`
+- **Protection Levels** (Source-based):
+  - **System fields**: Only DisplayName and SortOrder can be updated
+  - **Interface fields**: DisplayName, SortOrder, and DefaultValue can be updated
+  - **Custom fields**: Most properties can be updated
+
+**Key Files**:
+- `src/BobCrm.Api/Base/Models/FieldMetadata.cs` - Soft delete fields
+- `src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` - Field CRUD with protection
+
+**Documentation**: `docs/design/ARCH-20-实体定义管理设计.md` (Section 5.3, 6.3)
+
 ## Development Workflows
 
 ### Environment Setup
@@ -485,10 +571,14 @@ See `docs/process/PROC-02-文档同步规范.md` for detailed guidelines.
 |------|---------|
 | `src/BobCrm.App/Program.cs` | Blazor application startup |
 | `src/BobCrm.App/Components/Layout/MainLayout.razor` | Application layout |
+| `src/BobCrm.App/Components/Layout/MenuButton.razor` | Compact menu navigation |
 | `src/BobCrm.App/Components/Pages/EntityDefinitions.razor` | Entity definition management |
+| `src/BobCrm.App/Components/Pages/EntityDefinitionEdit.razor` | Entity definition editor |
 | `src/BobCrm.App/Components/Designer/FormDesigner.razor` | Form template designer |
 | `src/BobCrm.App/Components/Shared/MultilingualInput.razor` | i18n input component |
+| `src/BobCrm.App/Components/Shared/GlobalToast.razor` | Toast notification component |
 | `src/BobCrm.App/Services/LayoutState.cs` | Layout state management |
+| `src/BobCrm.App/Services/ToastService.cs` | Toast notification service |
 
 ### Configuration
 
@@ -725,6 +815,6 @@ If still unclear, ask the user for clarification rather than making assumptions.
 
 ---
 
-**Last Updated**: 2025-11-14
-**Version**: 1.0.0
+**Last Updated**: 2025-11-15
+**Version**: 1.1.0
 **Maintainer**: BobCRM Development Team
