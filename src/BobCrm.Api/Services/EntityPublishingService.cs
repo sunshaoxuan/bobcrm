@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +17,9 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
+    private readonly DefaultTemplateGenerator _templateGenerator;
+    private readonly TemplateBindingService _templateBindingService;
+    private readonly AccessService _accessService;
     private readonly ILogger<EntityPublishingService> _logger;
 
     public EntityPublishingService(
@@ -21,12 +27,18 @@ public class EntityPublishingService : IEntityPublishingService
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
+        DefaultTemplateGenerator templateGenerator,
+        TemplateBindingService templateBindingService,
+        AccessService accessService,
         ILogger<EntityPublishingService> logger)
     {
         _db = db;
         _ddlGenerator = ddlGenerator;
         _ddlExecutor = ddlExecutor;
         _lockService = lockService;
+        _templateGenerator = templateGenerator;
+        _templateBindingService = templateBindingService;
+        _accessService = accessService;
         _logger = logger;
     }
 
@@ -106,6 +118,8 @@ public class EntityPublishingService : IEntityPublishingService
 
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
+
+            await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
 
             result.Success = true;
             _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully and locked", entity.EntityName);
@@ -212,6 +226,8 @@ public class EntityPublishingService : IEntityPublishingService
             entity.UpdatedAt = DateTime.UtcNow;
             entity.UpdatedBy = publishedBy;
             await _db.SaveChangesAsync();
+
+            await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
 
             result.Success = true;
             _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully", entity.EntityName);
@@ -330,6 +346,97 @@ public class EntityPublishingService : IEntityPublishingService
 
         return string.Join("\n", scripts);
     }
+
+    private async Task GenerateTemplatesAndMenusAsync(EntityDefinition entity, string? publishedBy, PublishResult result)
+    {
+        var generatorResult = await _templateGenerator.EnsureTemplatesAsync(entity);
+
+        foreach (var template in generatorResult.Templates)
+        {
+            result.Templates.Add(new PublishedTemplateInfo(template.Key, template.Value.Id, template.Value.Name));
+        }
+
+        var bindingMap = new Dictionary<FormTemplateUsageType, TemplateBinding>();
+        var codes = BuildFunctionCodes(entity.EntityRoute);
+        var updatedBy = string.IsNullOrWhiteSpace(publishedBy) ? "system" : publishedBy!;
+
+        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.Detail, out var detailTemplate))
+        {
+            var binding = await _templateBindingService.UpsertBindingAsync(
+                entity.EntityRoute,
+                FormTemplateUsageType.Detail,
+                detailTemplate.Id,
+                isSystem: true,
+                updatedBy,
+                codes.DetailCode);
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                FormTemplateUsageType.Detail,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredFunctionCode ?? string.Empty));
+            bindingMap[FormTemplateUsageType.Detail] = binding;
+        }
+
+        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.Edit, out var editTemplate))
+        {
+            var binding = await _templateBindingService.UpsertBindingAsync(
+                entity.EntityRoute,
+                FormTemplateUsageType.Edit,
+                editTemplate.Id,
+                isSystem: true,
+                updatedBy,
+                codes.EditCode);
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                FormTemplateUsageType.Edit,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredFunctionCode ?? string.Empty));
+            bindingMap[FormTemplateUsageType.Edit] = binding;
+        }
+
+        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.List, out var listTemplate))
+        {
+            var binding = await _templateBindingService.UpsertBindingAsync(
+                entity.EntityRoute,
+                FormTemplateUsageType.List,
+                listTemplate.Id,
+                isSystem: true,
+                updatedBy,
+                codes.ListCode);
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                FormTemplateUsageType.List,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredFunctionCode ?? string.Empty));
+            bindingMap[FormTemplateUsageType.List] = binding;
+        }
+
+        if (bindingMap.Count > 0)
+        {
+            var nodes = await _accessService.EnsureEntityMenuAsync(entity, bindingMap);
+            foreach (var node in nodes)
+            {
+                result.MenuNodes.Add(new PublishedMenuInfo(
+                    node.Value.Code,
+                    node.Value.Id,
+                    node.Value.ParentId,
+                    node.Value.Route,
+                    node.Key));
+            }
+        }
+    }
+
+    private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
+    {
+        var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
+        return (
+            baseCode,
+            $"{baseCode}.DETAIL",
+            $"{baseCode}.EDIT");
+    }
 }
 
 /// <summary>
@@ -343,6 +450,9 @@ public class PublishResult
     public string? DDLScript { get; set; }
     public Guid ScriptId { get; set; }
     public ChangeAnalysis? ChangeAnalysis { get; set; }
+    public List<PublishedTemplateInfo> Templates { get; } = new();
+    public List<PublishedTemplateBindingInfo> TemplateBindings { get; } = new();
+    public List<PublishedMenuInfo> MenuNodes { get; } = new();
 }
 
 /// <summary>
@@ -356,3 +466,9 @@ public class ChangeAnalysis
     public List<string> RemovedFields { get; set; } = new();
     public bool HasDestructiveChanges { get; set; }
 }
+
+public record PublishedTemplateInfo(FormTemplateUsageType UsageType, int TemplateId, string TemplateName);
+
+public record PublishedTemplateBindingInfo(FormTemplateUsageType UsageType, int BindingId, int TemplateId, string RequiredFunctionCode);
+
+public record PublishedMenuInfo(string Code, Guid NodeId, Guid? ParentId, string? Route, FormTemplateUsageType UsageType);
