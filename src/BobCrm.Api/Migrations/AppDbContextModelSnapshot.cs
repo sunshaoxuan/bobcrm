@@ -54,6 +54,55 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("BobCrm.Api.Base.Models.AuditLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ActorId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Target")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("Category", "Action");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("BobCrm.Api.Base.CustomerAccess", b =>
                 {
                     b.Property<int>("Id")
@@ -620,6 +669,9 @@ namespace BobCrm.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Icon")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -642,12 +694,17 @@ namespace BobCrm.Api.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TemplateId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
                         .IsUnique();
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("TemplateId");
 
                     b.ToTable("FunctionNodes", (string)null);
                 });
@@ -1470,7 +1527,14 @@ namespace BobCrm.Api.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("BobCrm.Api.Base.FormTemplate", "Template")
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Parent");
+
+                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("BobCrm.Api.Base.Models.OrganizationNode", b =>
