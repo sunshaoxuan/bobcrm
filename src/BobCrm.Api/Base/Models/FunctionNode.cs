@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Base.Models;
 
@@ -18,6 +19,18 @@ public class FunctionNode
     [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 多语言显示名（jsonb）
+    /// </summary>
+    [Column(TypeName = "jsonb")]
+    public Dictionary<string, string?>? DisplayName { get; set; }
+
+    /// <summary>
+    /// 多语资源键
+    /// </summary>
+    [MaxLength(200)]
+    public string? DisplayNameKey { get; set; }
+
     [MaxLength(256)]
     public string? Route { get; set; }
 
@@ -28,4 +41,7 @@ public class FunctionNode
     public int SortOrder { get; set; } = 100;
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
+
+    public int? TemplateBindingId { get; set; }
+    public TemplateBinding? TemplateBinding { get; set; }
 }

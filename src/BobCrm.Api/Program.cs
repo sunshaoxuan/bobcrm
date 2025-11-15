@@ -183,6 +183,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.EntityDefinitionAggregateService>
 builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.Api.Services.SubEntityCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
+builder.Services.AddScoped<MultilingualFieldService>();
 builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();

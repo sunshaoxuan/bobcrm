@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Contracts.DTOs;
@@ -8,10 +9,13 @@ public record FunctionNodeDto
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public Dictionary<string, string?>? DisplayName { get; init; }
+    public string? DisplayNameKey { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
     public bool IsMenu { get; init; }
     public int SortOrder { get; init; }
+    public int? TemplateBindingId { get; init; }
     public List<FunctionNodeDto> Children { get; init; } = new();
 }
 
@@ -20,10 +24,13 @@ public record CreateFunctionRequest
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    public Dictionary<string, string?>? DisplayName { get; init; }
+    public string? DisplayNameKey { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
     public bool IsMenu { get; init; } = true;
     public int SortOrder { get; init; } = 100;
+    public int? TemplateBindingId { get; init; }
 }
 
 public record CreateRoleRequest

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base.Models;
@@ -252,10 +253,15 @@ public static class AccessEndpoints
             ParentId = n.ParentId,
             Code = n.Code,
             Name = n.Name,
+            DisplayName = n.DisplayName == null
+                ? null
+                : new Dictionary<string, string?>(n.DisplayName, StringComparer.OrdinalIgnoreCase),
+            DisplayNameKey = n.DisplayNameKey,
             Route = n.Route,
             Icon = n.Icon,
             IsMenu = n.IsMenu,
-            SortOrder = n.SortOrder
+            SortOrder = n.SortOrder,
+            TemplateBindingId = n.TemplateBindingId
         });
 
         List<FunctionNodeDto> roots = new();

@@ -101,6 +101,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 
+        b.Entity<FunctionNode>()
+            .Property(f => f.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
         b.Entity<SubEntityDefinition>()
             .Property(s => s.DisplayName)
             .HasColumnType("jsonb")
