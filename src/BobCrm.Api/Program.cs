@@ -164,6 +164,7 @@ builder.Services.AddSingleton<ILocalization, EfLocalization>();
 builder.Services.AddScoped<BobCrm.Api.Services.PostgreSQLDDLGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
 builder.Services.AddScoped<BobCrm.Api.Services.EntitySchemaAlignmentService>();
+builder.Services.AddScoped<BobCrm.Api.Services.DefaultTemplateGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IEntityPublishingService, BobCrm.Api.Services.EntityPublishingService>();
 
 // Dynamic Entity Services (代码生成与动态编译)
