@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using BobCrm.Api.Base;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Base.Models;
 
@@ -21,9 +21,16 @@ public class FunctionNode
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 节点名称的多语言文本（jsonb 存储）
+    /// 多语言显示名（jsonb）
     /// </summary>
+    [Column(TypeName = "jsonb")]
     public Dictionary<string, string?>? DisplayName { get; set; }
+
+    /// <summary>
+    /// 多语资源键
+    /// </summary>
+    [MaxLength(200)]
+    public string? DisplayNameKey { get; set; }
 
     [MaxLength(256)]
     public string? Route { get; set; }
@@ -41,4 +48,7 @@ public class FunctionNode
     public FormTemplate? Template { get; set; }
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
+
+    public int? TemplateBindingId { get; set; }
+    public TemplateBinding? TemplateBinding { get; set; }
 }

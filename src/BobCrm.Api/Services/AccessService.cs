@@ -14,6 +14,7 @@ public class AccessService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly MultilingualFieldService _multilingual;
 
     private record FunctionSeed(
         string Code,
@@ -23,15 +24,7 @@ public class AccessService
         bool IsMenu,
         int SortOrder,
         string? ParentCode,
-        Dictionary<string, string?>? DisplayName = null)
-    {
-        public Dictionary<string, string?> DisplayNameMap { get; } = DisplayName ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["zh"] = Name,
-            ["en"] = Name,
-            ["ja"] = Name
-        };
-    }
+        string? DisplayNameKey = null);
 
     private static readonly FunctionSeed[] DefaultFunctionSeeds =
     [
@@ -106,10 +99,11 @@ public class AccessService
         new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
 
-    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager)
+    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager, MultilingualFieldService multilingual)
     {
         _db = db;
         _userManager = userManager;
+        _multilingual = multilingual;
     }
 
     public async Task<FunctionNode> CreateFunctionAsync(CreateFunctionRequest request, CancellationToken ct = default)
@@ -125,46 +119,30 @@ public class AccessService
             throw new InvalidOperationException("Function code already exists.");
         }
 
-        var displayName = request.DisplayName != null
-            ? new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-        if (!string.IsNullOrWhiteSpace(request.Name))
+        TemplateBinding? binding = null;
+        if (request.TemplateBindingId.HasValue)
         {
-            displayName.TryAdd("zh", request.Name.Trim());
+            binding = await _db.TemplateBindings
+                .FirstOrDefaultAsync(b => b.Id == request.TemplateBindingId.Value, ct)
+                ?? throw new InvalidOperationException("Template binding not found.");
         }
 
-        var resolvedName = !string.IsNullOrWhiteSpace(request.Name)
-            ? request.Name.Trim()
-            : MultilingualTextHelper.Resolve(displayName, request.Code);
-
-        if (string.IsNullOrWhiteSpace(resolvedName))
-        {
-            throw new InvalidOperationException("Function name is required.");
-        }
-
-        FormTemplate? template = null;
-        if (request.TemplateId.HasValue)
-        {
-            template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
-            if (template == null)
-            {
-                throw new InvalidOperationException("Template does not exist.");
-            }
-        }
+        var fallbackDisplayName = request.DisplayName ?? MultilingualFieldService.FromSingleValue(request.Name);
+        var resolvedDisplayName = await _multilingual.ResolveAsync(request.DisplayNameKey, fallbackDisplayName, ct);
 
         var node = new FunctionNode
         {
             ParentId = request.ParentId,
             Code = request.Code.Trim(),
-            Name = resolvedName,
-            DisplayName = displayName,
-            Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim(),
+            Name = request.Name.Trim(),
+            DisplayName = resolvedDisplayName,
+            DisplayNameKey = request.DisplayNameKey?.Trim(),
+            Route = request.Route?.Trim(),
             Icon = request.Icon?.Trim(),
             IsMenu = request.IsMenu,
             SortOrder = request.SortOrder,
-            TemplateId = template?.Id,
-            Template = template
+            TemplateBindingId = request.TemplateBindingId,
+            TemplateBinding = binding
         };
 
         _db.FunctionNodes.Add(node);
@@ -782,6 +760,8 @@ public class AccessService
     private async Task SeedFunctionTreeAsync(CancellationToken ct)
     {
         var existing = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
+        var displayNameCache = new Dictionary<string, Dictionary<string, string?>?>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var seed in DefaultFunctionSeeds)
         {
             if (!existing.TryGetValue(seed.Code, out var node))
@@ -797,6 +777,9 @@ public class AccessService
             node.Icon = seed.Icon;
             node.IsMenu = seed.IsMenu;
             node.SortOrder = seed.SortOrder;
+            var displayNameKey = ResolveDisplayNameKey(seed);
+            node.DisplayNameKey = displayNameKey;
+            node.DisplayName = await ResolveSeedDisplayNameAsync(displayNameKey, seed.Name, displayNameCache, ct);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -821,6 +804,36 @@ public class AccessService
         {
             await _db.SaveChangesAsync(ct);
         }
+    }
+
+    private static string ResolveDisplayNameKey(FunctionSeed seed) =>
+        string.IsNullOrWhiteSpace(seed.DisplayNameKey)
+            ? $"MENU_{seed.Code.Replace('.', '_')}"
+            : seed.DisplayNameKey.Trim();
+
+    private async Task<Dictionary<string, string?>?> ResolveSeedDisplayNameAsync(
+        string displayNameKey,
+        string zhName,
+        Dictionary<string, Dictionary<string, string?>?> cache,
+        CancellationToken ct)
+    {
+        if (cache.TryGetValue(displayNameKey, out var cached))
+        {
+            return cached == null
+                ? null
+                : new Dictionary<string, string?>(cached, StringComparer.OrdinalIgnoreCase);
+        }
+
+        var fallback = MultilingualFieldService.FromSingleValue(zhName);
+        var resolved = await _multilingual.ResolveAsync(displayNameKey, fallback, ct);
+        Dictionary<string, string?>? snapshot = resolved == null
+            ? null
+            : new Dictionary<string, string?>(resolved, StringComparer.OrdinalIgnoreCase);
+
+        cache[displayNameKey] = snapshot;
+        return snapshot == null
+            ? null
+            : new Dictionary<string, string?>(snapshot, StringComparer.OrdinalIgnoreCase);
     }
 }
 

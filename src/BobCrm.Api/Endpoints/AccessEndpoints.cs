@@ -382,24 +382,20 @@ public static class AccessEndpoints
     {
         return new FunctionNodeDto
         {
-            Id = node.Id,
-            ParentId = node.ParentId,
-            Code = node.Code,
-            Name = node.Name,
-            DisplayName = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
-            Route = node.Route,
-            Icon = node.Icon,
-            IsMenu = node.IsMenu,
-            SortOrder = node.SortOrder,
-            TemplateId = node.TemplateId,
-            TemplateName = node.Template?.Name,
-            Children = new List<FunctionNodeDto>()
-        };
-    }
-
-    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
-    {
-        var lookup = nodes.ToDictionary(n => n.Id, n => ToDto(n));
+            Id = n.Id,
+            ParentId = n.ParentId,
+            Code = n.Code,
+            Name = n.Name,
+            DisplayName = n.DisplayName == null
+                ? null
+                : new Dictionary<string, string?>(n.DisplayName, StringComparer.OrdinalIgnoreCase),
+            DisplayNameKey = n.DisplayNameKey,
+            Route = n.Route,
+            Icon = n.Icon,
+            IsMenu = n.IsMenu,
+            SortOrder = n.SortOrder,
+            TemplateBindingId = n.TemplateBindingId
+        });
 
         List<FunctionNodeDto> roots = new();
         foreach (var source in nodes.OrderBy(n => n.SortOrder))
