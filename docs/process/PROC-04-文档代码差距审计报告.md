@@ -59,7 +59,7 @@ Body: { "theme": "...", "primaryColor": "...", "language": "..." }
 ```
 
 **实际实现**:
-- ✅ UserPreferences 模型存在 (`src/BobCrm.Api/Domain/Models/UserPreferences.cs`)
+- ✅ UserPreferences 模型存在 (`src/BobCrm.Api/Base/Models/UserPreferences.cs`)
 - ✅ GET /api/user/preferences 端点实现
 - ✅ PUT /api/user/preferences 端点实现
 - ⚠️ **API使用 `udfColor` 而非 `primaryColor`**

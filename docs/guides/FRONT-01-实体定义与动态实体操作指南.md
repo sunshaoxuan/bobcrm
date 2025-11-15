@@ -52,7 +52,7 @@
 ### 3.2 创建 / 编辑
 | 字段 | 说明 |
 | --- | --- |
-| Namespace | `BobCrm.{Domain}.{EntityName}`，生成后不可改 |
+| Namespace | `BobCrm.Base.{业务领域代码}`，生成后不可改 |
 | EntityName | PascalCase 类名，创建后不可改 |
 | DisplayName / Description | 通过 `MultilingualInput` 维护多语文本 |
 | StructureType | Single / MasterDetail / MasterDetailGrandchild |

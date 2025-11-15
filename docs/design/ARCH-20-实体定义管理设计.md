@@ -36,7 +36,7 @@
 
 ## 4. 功能概览
 ### 4.1 主实体信息
-1. **命名空间生成**：`BobCrm.{Domain}.{EntityName}`，只读展示；领域来自下拉框（CRM/SCM/FA/HR/MFM/Custom）。
+1. **命名空间生成**：`BobCrm.Base.{业务领域代码}`，只读展示；领域来自下拉框（CRM/SCM/FA/HR/MFM/Custom）。
 2. **实体名校验**：PascalCase，无空格、数字开头。
 3. **描述/图标/类别**：图标支持 AntD 图标名或 URL，类别用于左侧导航分组。
 4. **多语言显示名**：复用 `MultilingualInput`，提示文案 `LBL_CLICK_TO_EDIT_MULTILINGUAL`。

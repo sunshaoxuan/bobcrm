@@ -28,8 +28,8 @@ bobcrm/
 │   │   ├── Application/     # Application layer (queries, commands)
 │   │   ├── Contracts/       # DTOs and data contracts
 │   │   ├── Controllers/     # MVC controllers
-│   │   ├── Core/            # Core domain logic and persistence
-│   │   ├── Domain/          # Domain models and aggregates
+│   │   ├── Core/            # Core business logic and persistence
+│   │   ├── Base/            # Base models and aggregates
 │   │   ├── Endpoints/       # Minimal API endpoints
 │   │   ├── Infrastructure/  # EF configurations, database context
 │   │   ├── Middleware/      # Custom middleware
@@ -76,7 +76,7 @@ BobCRM's most distinctive feature is its runtime entity definition system:
 - **Multi-language Support**: All entity/field names use i18n resource keys
 
 **Key Files**:
-- `src/BobCrm.Api/Domain/Models/EntityDefinition.cs`
+- `src/BobCrm.Api/Base/Models/EntityDefinition.cs`
 - `src/BobCrm.Api/Services/EntityDefinitionAggregateService.cs`
 - `src/BobCrm.Api/Services/CodeGeneration/CSharpCodeGenerator.cs`
 - `src/BobCrm.Api/Services/DynamicEntityService.cs`
@@ -93,7 +93,7 @@ Handles master-detail and master-detail-grandchild relationships:
 - **Cascade Management**: Automatic handling of sub-entities
 
 **Key Files**:
-- `src/BobCrm.Api/Domain/Aggregates/`
+- `src/BobCrm.Api/Base/Aggregates/`
 - `src/BobCrm.Api/Services/Aggregates/`
 
 **Documentation**: `docs/design/ARCH-10-AggVO系统指南.md`
@@ -109,7 +109,7 @@ Entities can implement standard interfaces to gain built-in functionality:
 - **Locking**: Optimistic concurrency control
 
 **Key Files**:
-- `src/BobCrm.Api/Domain/Models/EntityInterface.cs`
+- `src/BobCrm.Api/Base/Models/EntityInterface.cs`
 - `src/BobCrm.Api/Abstractions/` (IBaseEntity, IAuditableEntity, etc.)
 
 ### 4. Multi-language (i18n) System
@@ -142,8 +142,8 @@ Hierarchical permission system:
 - **Permission Filtering**: Automatic API filtering via `FunctionPermissionFilter`
 
 **Key Files**:
-- `src/BobCrm.Api/Domain/Models/RoleProfile.cs`
-- `src/BobCrm.Api/Domain/Models/FunctionNode.cs`
+- `src/BobCrm.Api/Base/Models/RoleProfile.cs`
+- `src/BobCrm.Api/Base/Models/FunctionNode.cs`
 - `src/BobCrm.Api/Services/AccessService.cs`
 - `src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
 
@@ -159,7 +159,7 @@ Runtime form layout management:
 - **Runtime Loading**: Dynamic template rendering in frontend
 
 **Key Files**:
-- `src/BobCrm.Api/Domain/Models/FormTemplate.cs`
+- `src/BobCrm.Api/Base/Models/FormTemplate.cs`
 - `src/BobCrm.Api/Services/FormTemplateService.cs`
 - `src/BobCrm.App/Components/Designer/`
 
@@ -503,7 +503,7 @@ See `docs/process/PROC-02-文档同步规范.md` for detailed guidelines.
 
 ### Adding a New Entity Field Type
 
-1. Update `FieldDataType` enum in `Domain/Models/FieldDefinition.cs`
+1. Update `FieldDataType` enum in `Base/Models/FieldDefinition.cs`
 2. Update `CSharpCodeGenerator.MapDataTypeToCSharp()` for C# type mapping
 3. Update `DDLGenerator.MapDataTypeToSql()` for SQL type mapping
 4. Update frontend field type selector in entity definition editor

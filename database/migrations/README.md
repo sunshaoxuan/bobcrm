@@ -108,6 +108,6 @@ WHERE conname = 'FK_EntityDefinitions_EntityDefinitions_ParentEntityId';
 ## 相关文档
 
 - [AggVO系统指南](/docs/ARCH-10-AggVO系统指南.md)
-- [EntityDefinition模型](/src/BobCrm.Api/Domain/Models/EntityDefinition.cs)
+- [EntityDefinition模型](/src/BobCrm.Api/Base/Models/EntityDefinition.cs)
 - [主子表配置API](/src/BobCrm.Api/Controllers/EntityAdvancedFeaturesController.cs)
 
