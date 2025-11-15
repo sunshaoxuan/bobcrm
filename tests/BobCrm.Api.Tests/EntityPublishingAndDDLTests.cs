@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
@@ -19,6 +22,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly Mock<ILogger<DDLExecutionService>> _mockDDLLogger;
     private readonly Mock<ILogger<EntityPublishingService>> _mockPublishLogger;
     private readonly Mock<IEntityLockService> _mockLockService;
+    private readonly Mock<IDefaultTemplateService> _mockTemplateService;
 
     public EntityPublishingAndDDLTests()
     {
@@ -31,6 +35,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockDDLLogger = new Mock<ILogger<DDLExecutionService>>();
         _mockPublishLogger = new Mock<ILogger<EntityPublishingService>>();
         _mockLockService = new Mock<IEntityLockService>();
+        _mockTemplateService = new Mock<IDefaultTemplateService>();
     }
 
     [Fact]
@@ -38,7 +43,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -55,7 +60,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -84,7 +89,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
 
         var nonExistentId = Guid.NewGuid();
 
@@ -101,7 +106,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     {
         // Arrange
         var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
-        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object);
+        var service = new EntityPublishingService(_db, _ddlGenerator, ddlExecutor, _mockLockService.Object, _mockPublishLogger.Object, _mockTemplateService.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -337,7 +342,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object);
+            _mockPublishLogger.Object,
+            _mockTemplateService.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -401,6 +407,13 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockLockService.Verify(
             x => x.LockEntityAsync(entityId, It.IsAny<string>()),
             Times.Once);
+
+        _mockTemplateService.Verify(
+            x => x.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entityId),
+                "test-user",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -413,7 +426,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object);
+            _mockPublishLogger.Object,
+            _mockTemplateService.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
@@ -486,6 +500,13 @@ public class EntityPublishingAndDDLTests : IDisposable
         var updatedEntity = await _db.EntityDefinitions.FindAsync(entityId);
         updatedEntity!.Status.Should().Be(EntityStatus.Published);
         updatedEntity.UpdatedBy.Should().Be("test-user");
+
+        _mockTemplateService.Verify(
+            x => x.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entityId),
+                "test-user",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -498,7 +519,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             mockDDLExecutor.Object,
             _mockLockService.Object,
-            _mockPublishLogger.Object);
+            _mockPublishLogger.Object,
+            _mockTemplateService.Object);
 
         var entityId = Guid.NewGuid();
         var entity = new EntityDefinition
