@@ -10,17 +10,16 @@
 ## [未发布] - 进行中
 
 ### Added
-- **紧凑型顶部菜单导航设计**：创建 [ARCH-24-紧凑型顶部菜单导航设计](docs/design/ARCH-24-紧凑型顶部菜单导航设计.md) 和实施计划，规划将左侧固定导航改为顶部折叠菜单，最大化内容区域空间利用率，参考业界成熟产品设计。
-- **紧凑型菜单导航 - 阶段一（基础结构）**：完成 `DomainSelector` 和 `MenuPanel` 组件、扩展 `LayoutState` 服务、移除左侧固定导航栏，集成顶部领域切换器和折叠式菜单面板。内容区域现已占满全宽，菜单按需展开。
-- **紧凑型菜单导航 - 阶段二（交互优化）**：
-  - 创建 `MenuButton` 组件，封装菜单按钮和面板，通过 JavaScript 动态计算位置实现精确对齐
-  - 领域选择器移至右侧用户名旁边，改为仅图标显示，优化视觉层次
-  - 菜单面板改为 4 列网格布局（最大宽度 600px），提升性能和浏览体验
-  - 实现失焦自动关闭：两个菜单都添加透明覆盖层，点击外部区域自动收起
-  - 移除"返回领域菜单"按钮，简化交互流程
-  - 菜单面板覆盖层从 header 下方开始，不遮盖顶部导航栏
-- **系统实体同步增强**：`EntityDefinitionSynchronizer` 现在会自动更新现有系统实体的 `Source` 字段，确保 Customer、OrganizationNode、RoleProfile 等系统实体及其字段的 Source 标记正确为 "System"
-- **字段档案**：新增 `FieldDataTypes` / `FieldSources` 档案表、实体模型与初始化脚本，统一存储字段类型/来源（含多语描述）。实体编辑器、字段校验等位置均可直接读取档案数据，后续扩展无需修改枚举或代码。
+
+### Changed
+
+### Fixed
+
+---
+
+## [0.5.13] - 2025-11-15
+
+### Added
 - **全局Toast通知系统**：新增统一的消息通知机制，替代分散的消息提示
   - 创建 `ToastService` 全局服务，提供 Success/Error/Warning/Info 四种消息类型
   - `GlobalToast.razor` 组件，顶部居中显示，最多显示 3 条消息
@@ -29,18 +28,7 @@
   - 支持图标显示，浅色/深色主题适配
   - 集成到实体定义编辑页面，提供清晰的保存成功/失败反馈
 
-### Changed
-- **菜单定位机制**：从全局居中的 Modal 定位改为基于按钮位置的动态定位，解决菜单与触发按钮不对齐的问题
-- **领域选择器样式**：移除 transform scale 动画，改用 opacity 避免触发元素尺寸变化导致的位置跳动
-- **z-index 层级**：domain-selector (1500) > menu-panel (1001) > overlays (1000/1400)，确保正确的层叠顺序
-- **命名空间统一**：将所有相关命名空间、默认占位字符串与示例脚本更新为 `BobCrm.Base.*`，同步修复系统实体同步器、数据库初始化测试与文档示例，确保“Domain” 仅用于业务领域档案
-
 ### Fixed
-- **实体定义列表 API 契约不匹配**：修复 `/api/entity-definitions` 端点返回的 JSON 结构与前端 DTO 不匹配的问题
-  - 前端 `EntityDefinitionDto` 添加 `FieldCount` 属性
-  - API 列表端点的 `Interfaces` 字段从字符串数组改为完整对象数组（包含 Id, InterfaceType, IsEnabled）
-  - 确保 API 响应能被前端正确反序列化，系统实体（Customer、OrganizationNode、RoleProfile）现在可以在实体定义管理页面正确显示
-- **Customer 实体字段缺少 Source 标记**：为 Customer 实体的所有字段（Id, Code, Name, Version, ExtData）添加 `Source = FieldSource.System`，与 OrganizationNode 和 RoleProfile 保持一致
 - **实体字段保存失败问题**：修复实体定义编辑页面新增字段后保存消失的问题
   - 完整实现 `EntityDefinitionEndpoints.cs` 中的字段更新逻辑（原为占位代码）
   - 新增字段不再使用前端生成的临时 GUID，避免 `DbUpdateConcurrencyException`
@@ -53,6 +41,41 @@
     * 删除时标记而非物理删除，必填字段软删除后自动改为可空
     * 查询时自动过滤已删除字段
   - 修复 DDL 预览不显示新增字段的问题（字段现在正确保存到数据库）
+
+---
+
+## [0.5.12] - 2025-11-14
+
+### Added
+- **紧凑型顶部菜单导航系统**（第一版发布）：
+  - 设计文档：创建 [ARCH-24-紧凑型顶部菜单导航设计](docs/design/ARCH-24-紧凑型顶部菜单导航设计.md)，规划将左侧固定导航改为顶部折叠菜单
+  - **基础结构**：完成 `DomainSelector` 和 `MenuPanel` 组件、扩展 `LayoutState` 服务、移除左侧固定导航栏
+  - **交互优化**：
+    * 创建 `MenuButton` 组件，封装菜单按钮和面板，通过 JavaScript 动态计算位置实现精确对齐
+    * 领域选择器移至右侧用户名旁边，改为仅图标显示，优化视觉层次
+    * 菜单面板改为 4 列网格布局（最大宽度 600px），提升性能和浏览体验
+    * 实现失焦自动关闭：两个菜单都添加透明覆盖层，点击外部区域自动收起
+    * 移除"返回领域菜单"按钮，简化交互流程
+    * 菜单面板覆盖层从 header 下方开始，不遮盖顶部导航栏
+  - **特点**：内容区域占满全宽，菜单按需展开，最大化空间利用率
+  - **后续计划**：将进行美化和功能增强
+- **系统实体同步增强**：`EntityDefinitionSynchronizer` 现在会自动更新现有系统实体的 `Source` 字段，确保 Customer、OrganizationNode、RoleProfile 等系统实体及其字段的 Source 标记正确为 "System"
+- **字段档案**：新增 `FieldDataTypes` / `FieldSources` 档案表、实体模型与初始化脚本，统一存储字段类型/来源（含多语描述）。实体编辑器、字段校验等位置均可直接读取档案数据，后续扩展无需修改枚举或代码
+
+### Changed
+- **菜单定位机制**：从全局居中的 Modal 定位改为基于按钮位置的动态定位，解决菜单与触发按钮不对齐的问题
+- **领域选择器样式**：移除 transform scale 动画，改用 opacity 避免触发元素尺寸变化导致的位置跳动
+- **z-index 层级**：domain-selector (1500) > menu-panel (1001) > overlays (1000/1400)，确保正确的层叠顺序
+- **命名空间统一**：将所有相关命名空间、默认占位字符串与示例脚本更新为 `BobCrm.Base.*`，同步修复系统实体同步器、数据库初始化测试与文档示例，确保"Domain" 仅用于业务领域档案
+
+### Fixed
+- **实体定义列表 API 契约不匹配**：修复 `/api/entity-definitions` 端点返回的 JSON 结构与前端 DTO 不匹配的问题
+  - 前端 `EntityDefinitionDto` 添加 `FieldCount` 属性
+  - API 列表端点的 `Interfaces` 字段从字符串数组改为完整对象数组（包含 Id, InterfaceType, IsEnabled）
+  - 确保 API 响应能被前端正确反序列化，系统实体（Customer、OrganizationNode、RoleProfile）现在可以在实体定义管理页面正确显示
+- **Customer 实体字段缺少 Source 标记**：为 Customer 实体的所有字段（Id, Code, Name, Version, ExtData）添加 `Source = FieldSource.System`，与 OrganizationNode 和 RoleProfile 保持一致
+
+---
 
 ## [0.5.11] - 2025-11-13
 
@@ -910,5 +933,5 @@
 
 ---
 
-**维护者**：BobCRM 开发团队  
-**最后更新**：2025-11-13
+**维护者**：BobCRM 开发团队
+**最后更新**：2025-11-15
