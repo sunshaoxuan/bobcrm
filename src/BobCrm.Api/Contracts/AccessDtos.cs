@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Contracts.DTOs;
@@ -12,8 +13,18 @@ public record FunctionNodeDto
     public string? Icon { get; init; }
     public bool IsMenu { get; init; }
     public int SortOrder { get; init; }
+    public Dictionary<string, string?>? DisplayName { get; init; }
+    public List<FunctionNodeTemplateBindingDto> TemplateBindings { get; init; } = new();
     public List<FunctionNodeDto> Children { get; init; } = new();
 }
+
+public record FunctionNodeTemplateBindingDto(
+    int BindingId,
+    string EntityType,
+    FormTemplateUsageType UsageType,
+    int TemplateId,
+    string TemplateName,
+    bool IsSystem);
 
 public record CreateFunctionRequest
 {

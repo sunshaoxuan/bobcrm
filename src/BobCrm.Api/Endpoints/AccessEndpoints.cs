@@ -1,9 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
-using BobCrm.Api.Contracts.DTOs;
+using System.Security.Cryptography;
+using System.Text;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Services;
 using BobCrm.Api.Middleware;
+using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +27,9 @@ public static class AccessEndpoints
                 .AsNoTracking()
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            return Results.Ok(BuildTree(nodes));
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, nodes, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, localizedNames, bindings));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/me", async (
@@ -82,8 +90,46 @@ public static class AccessEndpoints
                 return Results.Ok(new List<FunctionNodeDto>());
             }
 
-            return Results.Ok(BuildTree(filtered));
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, filtered, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, localizedNames, bindings));
         });
+
+        group.MapGet("/functions/version", async ([FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var functionSnapshot = await db.FunctionNodes
+                .AsNoTracking()
+                .OrderBy(n => n.Id)
+                .Select(n => new
+                {
+                    n.Id,
+                    n.Code,
+                    n.Name,
+                    n.Route,
+                    n.Icon,
+                    n.IsMenu,
+                    n.SortOrder
+                })
+                .ToListAsync(ct);
+
+            var templateSnapshot = await db.TemplateBindings
+                .AsNoTracking()
+                .OrderBy(tb => tb.Id)
+                .Select(tb => new
+                {
+                    tb.Id,
+                    tb.EntityType,
+                    tb.UsageType,
+                    tb.TemplateId,
+                    tb.IsSystem,
+                    tb.RequiredFunctionCode,
+                    tb.UpdatedAt
+                })
+                .ToListAsync(ct);
+
+            var version = ComputeFunctionTreeVersion(functionSnapshot, templateSnapshot);
+            return Results.Ok(new { version });
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
@@ -244,7 +290,10 @@ public static class AccessEndpoints
         return app;
     }
 
-    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
+    private static List<FunctionNodeDto> BuildTree(
+        List<FunctionNode> nodes,
+        IReadOnlyDictionary<Guid, Dictionary<string, string?>> localizedNames,
+        IReadOnlyDictionary<string, List<FunctionNodeTemplateBindingDto>> templateBindings)
     {
         var lookup = nodes.ToDictionary(n => n.Id, n => new FunctionNodeDto
         {
@@ -255,7 +304,13 @@ public static class AccessEndpoints
             Route = n.Route,
             Icon = n.Icon,
             IsMenu = n.IsMenu,
-            SortOrder = n.SortOrder
+            SortOrder = n.SortOrder,
+            DisplayName = localizedNames.TryGetValue(n.Id, out var nameMap)
+                ? new Dictionary<string, string?>(nameMap, StringComparer.OrdinalIgnoreCase)
+                : null,
+            TemplateBindings = templateBindings.TryGetValue(n.Code, out var bindings)
+                ? bindings.Select(b => b with { }).ToList()
+                : new List<FunctionNodeTemplateBindingDto>()
         });
 
         List<FunctionNodeDto> roots = new();
@@ -271,5 +326,129 @@ public static class AccessEndpoints
             }
         }
         return roots.OrderBy(r => r.SortOrder).ToList();
+    }
+
+    private static async Task<Dictionary<Guid, Dictionary<string, string?>>> LoadFunctionNameTranslationsAsync(
+        AppDbContext db,
+        List<FunctionNode> nodes,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, Dictionary<string, string?>>(nodes.Count);
+        if (nodes.Count == 0)
+        {
+            return result;
+        }
+
+        var languages = await db.LocalizationLanguages
+            .AsNoTracking()
+            .Select(l => l.Code.ToLower())
+            .ToListAsync(ct);
+
+        if (languages.Count == 0)
+        {
+            languages = new List<string> { "ja", "en", "zh" };
+        }
+
+        var codes = nodes.Select(n => n.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidateKeys = nodes
+            .Select(n => $"MENU_{n.Code.Replace('.', '_')}" )
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var resources = await db.LocalizationResources
+            .AsNoTracking()
+            .Where(r => codes.Contains(r.Key) || candidateKeys.Contains(r.Key))
+            .ToListAsync(ct);
+
+        var resourceLookup = resources.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in nodes)
+        {
+            var map = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            LocalizationResource? resolved = null;
+            var keysToTry = new[]
+            {
+                node.Code,
+                $"MENU_{node.Code.Replace('.', '_')}"
+            };
+
+            foreach (var key in keysToTry)
+            {
+                if (resourceLookup.TryGetValue(key, out var resource))
+                {
+                    resolved = resource;
+                    break;
+                }
+            }
+
+            if (resolved != null)
+            {
+                foreach (var lang in languages)
+                {
+                    resolved.Translations.TryGetValue(lang, out var value);
+                    map[lang] = string.IsNullOrWhiteSpace(value) ? node.Name : value;
+                }
+            }
+            else
+            {
+                foreach (var lang in languages)
+                {
+                    map[lang] = node.Name;
+                }
+            }
+
+            result[node.Id] = map;
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<string, List<FunctionNodeTemplateBindingDto>>> LoadTemplateBindingsAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var bindings = await db.TemplateBindings
+            .AsNoTracking()
+            .Include(tb => tb.Template)
+            .ToListAsync(ct);
+
+        return bindings
+            .Select(tb => new
+            {
+                Code = tb.RequiredFunctionCode ?? tb.Template?.RequiredFunctionCode,
+                Binding = new FunctionNodeTemplateBindingDto(
+                    tb.Id,
+                    tb.EntityType,
+                    tb.UsageType,
+                    tb.TemplateId,
+                    tb.Template?.Name ?? string.Empty,
+                    tb.IsSystem)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Code))
+            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.Binding).OrderBy(b => b.UsageType).ThenBy(b => b.TemplateId).ToList(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ComputeFunctionTreeVersion(
+        IEnumerable<object> functionSnapshot,
+        IEnumerable<object> templateSnapshot)
+    {
+        var builder = new StringBuilder();
+
+        foreach (var entry in functionSnapshot)
+        {
+            builder.AppendLine(entry.ToString());
+        }
+
+        foreach (var entry in templateSnapshot)
+        {
+            builder.AppendLine(entry.ToString());
+        }
+
+        using var sha = SHA256.Create();
+        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(builder.ToString()));
+        return Convert.ToHexString(hash);
     }
 }

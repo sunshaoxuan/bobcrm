@@ -14,4 +14,16 @@ public class FunctionMenuNode
     public bool IsMenu { get; set; }
     public int SortOrder { get; set; }
     public List<FunctionMenuNode> Children { get; set; } = new();
+    public MultilingualTextDto? DisplayName { get; set; }
+    public List<FunctionTemplateBindingSummary> TemplateBindings { get; set; } = new();
+}
+
+public class FunctionTemplateBindingSummary
+{
+    public int BindingId { get; set; }
+    public string EntityType { get; set; } = string.Empty;
+    public TemplateUsageType UsageType { get; set; }
+    public int TemplateId { get; set; }
+    public string TemplateName { get; set; } = string.Empty;
+    public bool IsSystem { get; set; }
 }

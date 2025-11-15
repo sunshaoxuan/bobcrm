@@ -1,9 +1,15 @@
 @page "/roles"
+@using System
+@using System.Threading
+@using System.Threading.Tasks
 @using BobCrm.App.Models
 @using BobCrm.App.Services
+@using BobCrm.App.Services.Multilingual
 @inject RoleService RoleService
 @inject BobCrm.App.Services.I18nService I18n
 @inject AntDesign.IMessageService Message
+@inject IMultilingualTextResolver MultilingualResolver
+@implements IDisposable
 
 <AuthChecker>
     <PageHeader Title="@I18n.T("MENU_ROLES")" />
@@ -177,6 +183,8 @@
     private readonly Dictionary<Guid, FunctionMenuNode> _functionLookup = new();
     private readonly Dictionary<Guid, Guid?> _parentLookup = new();
     private List<FunctionMenuNode> _functionTree = new();
+    private string? _functionTreeVersion;
+    private CancellationTokenSource? _functionTreeWatcherCts;
 
     private bool _loadingRoles = true;
     private bool _savingInfo;
@@ -190,6 +198,7 @@
     {
         await LoadRolesAsync();
         await LoadFunctionTreeAsync();
+        StartFunctionTreeWatcher();
     }
 
     private async Task LoadRolesAsync()
@@ -202,9 +211,11 @@
         StateHasChanged();
     }
 
-    private async Task LoadFunctionTreeAsync()
+    private async Task LoadFunctionTreeAsync(bool force = false)
     {
-        _functionTree = await RoleService.GetFunctionTreeAsync();
+        var response = await RoleService.GetFunctionTreeAsync(force);
+        _functionTree = response.Tree;
+        _functionTreeVersion = response.Version;
         _functionLookup.Clear();
         _parentLookup.Clear();
         foreach (var node in _functionTree)
@@ -323,8 +334,22 @@
         builder.CloseComponent();
         builder.OpenElement(index++, "span");
         builder.AddAttribute(index++, "class", "permission-node-label");
-        builder.AddContent(index++, node.Name);
+        builder.AddContent(index++, GetFunctionDisplayName(node));
         builder.CloseElement();
+
+        if (node.TemplateBindings.Count > 0)
+        {
+            builder.OpenElement(index++, "span");
+            builder.AddAttribute(index++, "class", "permission-node-templates");
+            foreach (var binding in node.TemplateBindings)
+            {
+                builder.OpenElement(index++, "span");
+                builder.AddAttribute(index++, "class", $"permission-node-template-tag{(binding.IsSystem ? " system" : string.Empty)}");
+                builder.AddContent(index++, FormatTemplateBinding(binding));
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+        }
         builder.CloseElement();
 
         if (node.Children.Count > 0)
@@ -491,6 +516,66 @@
     private FunctionMenuNode? ResolveNode(Guid id)
     {
         return _functionLookup.TryGetValue(id, out var node) ? node : null;
+    }
+
+    private string GetFunctionDisplayName(FunctionMenuNode node)
+    {
+        if (node.DisplayName is { Count: > 0 })
+        {
+            return MultilingualResolver.Resolve(node.DisplayName, node.Name);
+        }
+
+        return node.Name;
+    }
+
+    private string FormatTemplateBinding(FunctionTemplateBindingSummary binding)
+    {
+        var usage = binding.UsageType.ToString();
+        return string.IsNullOrWhiteSpace(binding.TemplateName)
+            ? usage
+            : $"{usage}: {binding.TemplateName}";
+    }
+
+    private void StartFunctionTreeWatcher()
+    {
+        _functionTreeWatcherCts?.Cancel();
+        _functionTreeWatcherCts?.Dispose();
+        _functionTreeWatcherCts = new CancellationTokenSource();
+        _ = Task.Run(() => MonitorFunctionTreeAsync(_functionTreeWatcherCts.Token));
+    }
+
+    private async Task MonitorFunctionTreeAsync(CancellationToken token)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+            while (await timer.WaitForNextTickAsync(token))
+            {
+                var version = await RoleService.GetFunctionTreeVersionAsync(token);
+                if (!string.IsNullOrWhiteSpace(version) &&
+                    !string.Equals(version, _functionTreeVersion, StringComparison.Ordinal))
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        await LoadFunctionTreeAsync(force: true);
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"[Roles] Function tree watcher failed: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        _functionTreeWatcherCts?.Cancel();
+        _functionTreeWatcherCts?.Dispose();
     }
 
     private string GetRoleDisplayName(RoleProfileDto role)

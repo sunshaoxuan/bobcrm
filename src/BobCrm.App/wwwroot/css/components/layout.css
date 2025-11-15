@@ -414,6 +414,26 @@
   font-size: 14px;
 }
 
+.permission-node-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.permission-node-template-tag {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.permission-node-template-tag.system {
+  background: var(--primary-50);
+  color: var(--primary-600);
+}
+
 .permission-children {
   margin-left: 24px;
   border-left: 1px dashed var(--border-soft);
