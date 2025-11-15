@@ -111,25 +111,46 @@ public class DefaultTemplateGenerator
 
     private static string BuildLayoutJson(IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
     {
-        var layout = new Dictionary<string, object?>();
+        var items = new Dictionary<string, object?>();
+        var columns = usage == FormTemplateUsageType.List ? 4 : 2;
+        var widthPercent = 100 / Math.Max(1, columns);
+        var legacyWidth = Math.Max(1, (int)Math.Round(widthPercent / 100m * 12m));
+
         for (var i = 0; i < fields.Count; i++)
         {
             var field = fields[i];
             var widgetType = ResolveWidgetType(field, usage);
             var label = ResolveLabel(field);
 
-            layout[$"item_{i:000}"] = new Dictionary<string, object?>
+            var item = new Dictionary<string, object?>
             {
+                ["id"] = $"{field.PropertyName}_{usage.ToString().ToLowerInvariant()}",
                 ["type"] = widgetType,
                 ["label"] = label,
                 ["dataField"] = field.PropertyName,
                 ["order"] = i,
-                ["Width"] = usage == FormTemplateUsageType.List ? 25 : 48,
+                ["w"] = legacyWidth,
+                ["Width"] = widthPercent,
+                ["WidthUnit"] = "%",
                 ["Height"] = 32,
+                ["HeightUnit"] = "px",
                 ["visible"] = true,
-                ["newLine"] = i % 2 == 0
+                ["newLine"] = usage == FormTemplateUsageType.List ? false : i % columns == 0
             };
+
+            if (field.IsRequiredExplicitlySet)
+            {
+                item["required"] = field.IsRequired;
+            }
+
+            items[field.PropertyName] = item;
         }
+
+        var layout = new Dictionary<string, object?>
+        {
+            ["mode"] = usage == FormTemplateUsageType.List ? "table" : "flow",
+            ["items"] = items
+        };
 
         return JsonSerializer.Serialize(layout, JsonOptions);
     }
@@ -149,6 +170,7 @@ public class DefaultTemplateGenerator
             FieldDataType.Decimal => "number",
             FieldDataType.DateTime => "calendar",
             FieldDataType.Date => "calendar",
+            FieldDataType.EntityRef => "select",
             _ => "textbox"
         };
     }

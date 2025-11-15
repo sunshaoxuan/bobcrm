@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
@@ -435,6 +436,28 @@ public class EntityPublishingAndDDLTests : IDisposable
             .ToListAsync();
         templates.Should().HaveCount(3);
 
+        foreach (var template in templates)
+        {
+            template.LayoutJson.Should().NotBeNullOrWhiteSpace();
+            using var layoutDoc = JsonDocument.Parse(template.LayoutJson!);
+            var root = layoutDoc.RootElement;
+            root.TryGetProperty("items", out var items).Should().BeTrue();
+            items.TryGetProperty("Name", out var item).Should().BeTrue();
+            item.GetProperty("dataField").GetString().Should().Be("Name");
+        }
+
+        var detailTemplate = templates.First(t => t.UsageType == FormTemplateUsageType.Detail);
+        using (var detailDoc = JsonDocument.Parse(detailTemplate.LayoutJson!))
+        {
+            detailDoc.RootElement.GetProperty("mode").GetString().Should().Be("flow");
+        }
+
+        var listTemplate = templates.First(t => t.UsageType == FormTemplateUsageType.List);
+        using (var listDoc = JsonDocument.Parse(listTemplate.LayoutJson!))
+        {
+            listDoc.RootElement.GetProperty("mode").GetString().Should().Be("table");
+        }
+
         var bindings = await _db.TemplateBindings
             .Where(b => b.EntityType == entity.EntityRoute)
             .ToListAsync();
@@ -550,6 +573,18 @@ public class EntityPublishingAndDDLTests : IDisposable
             .Where(t => t.EntityType == entity.EntityRoute)
             .ToListAsync();
         templates.Should().HaveCount(3);
+
+        foreach (var template in templates)
+        {
+            template.LayoutJson.Should().NotBeNullOrWhiteSpace();
+            using var layoutDoc = JsonDocument.Parse(template.LayoutJson!);
+            var root = layoutDoc.RootElement;
+            root.TryGetProperty("items", out var items).Should().BeTrue();
+            items.TryGetProperty("Name", out var nameItem).Should().BeTrue();
+            nameItem.GetProperty("dataField").GetString().Should().Be("Name");
+            items.TryGetProperty("NewField", out var newFieldItem).Should().BeTrue();
+            newFieldItem.GetProperty("dataField").GetString().Should().Be("NewField");
+        }
 
         var bindings = await _db.TemplateBindings
             .Where(b => b.EntityType == entity.EntityRoute)
