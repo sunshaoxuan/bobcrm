@@ -1,7 +1,8 @@
 @page "/roles"
 @using BobCrm.App.Models
 @using BobCrm.App.Services
-@inject RoleService RoleService
+@using BobCrm.App.Components.Shared
+@inject IRoleService RoleService
 @inject BobCrm.App.Services.I18nService I18n
 @inject AntDesign.IMessageService Message
 
@@ -176,6 +177,7 @@
     private readonly HashSet<Guid> _selectedFunctions = new();
     private readonly Dictionary<Guid, FunctionMenuNode> _functionLookup = new();
     private readonly Dictionary<Guid, Guid?> _parentLookup = new();
+    private readonly Dictionary<Guid, int?> _templateSelections = new();
     private List<FunctionMenuNode> _functionTree = new();
 
     private bool _loadingRoles = true;
@@ -248,9 +250,11 @@
         };
 
         _selectedFunctions.Clear();
+        _templateSelections.Clear();
         foreach (var fn in detail.Functions)
         {
             _selectedFunctions.Add(fn.FunctionId);
+            _templateSelections[fn.FunctionId] = fn.TemplateBindingId;
         }
         StateHasChanged();
     }
@@ -293,7 +297,12 @@
         var success = await RoleService.UpdatePermissionsAsync(_selectedRole.Id, new UpdatePermissionsRequestDto
         {
             FunctionIds = _selectedFunctions.ToList(),
-            DataScopes = _selectedRole.DataScopes
+            DataScopes = _selectedRole.DataScopes,
+            FunctionPermissions = _selectedFunctions.Select(id => new FunctionPermissionSelectionDto
+            {
+                FunctionId = id,
+                TemplateBindingId = _templateSelections.TryGetValue(id, out var binding) ? binding : null
+            }).ToList()
         });
         _savingPermissions = false;
 
@@ -326,6 +335,20 @@
         builder.AddContent(index++, node.Name);
         builder.CloseElement();
         builder.CloseElement();
+
+        if (node.IsMenu)
+        {
+            builder.OpenElement(index++, "div");
+            builder.AddAttribute(index++, "class", "permission-node-template");
+            builder.OpenComponent<RoleTemplateSelector>(index++);
+            builder.AddAttribute(index++, "Node", node);
+            builder.AddAttribute(index++, "Disabled", _selectedRole?.IsSystem == true || !IsNodeChecked(node));
+            builder.AddAttribute(index++, "SelectedTemplateBindingId", GetSelectedTemplateBinding(node.Id));
+            builder.AddAttribute(index++, "InheritLabel", I18n.T("LBL_TEMPLATE_INHERIT") ?? "继承默认模板");
+            builder.AddAttribute(index++, "OnTemplateChanged", EventCallback.Factory.Create<int?>(this, value => HandleTemplateChange(node.Id, value)));
+            builder.CloseComponent();
+            builder.CloseElement();
+        }
 
         if (node.Children.Count > 0)
         {
@@ -397,6 +420,7 @@
     private void AddNodeWithDescendants(FunctionMenuNode node)
     {
         _selectedFunctions.Add(node.Id);
+        EnsureTemplateEntry(node.Id);
         foreach (var child in node.Children)
         {
             AddNodeWithDescendants(child);
@@ -406,6 +430,7 @@
     private void RemoveNodeWithDescendants(FunctionMenuNode node)
     {
         _selectedFunctions.Remove(node.Id);
+        _templateSelections.Remove(node.Id);
         foreach (var child in node.Children)
         {
             RemoveNodeWithDescendants(child);
@@ -420,6 +445,7 @@
         }
 
         _selectedFunctions.Add(parent.Value);
+        EnsureTemplateEntry(parent.Value);
         SelectAncestors(parent.Value);
     }
 
@@ -433,6 +459,7 @@
         if (!HasDescendantSelected(parent.Value))
         {
             _selectedFunctions.Remove(parent.Value);
+            _templateSelections.Remove(parent.Value);
             CleanupAncestors(parent.Value);
         }
     }
@@ -491,6 +518,34 @@
     private FunctionMenuNode? ResolveNode(Guid id)
     {
         return _functionLookup.TryGetValue(id, out var node) ? node : null;
+    }
+
+    private int? GetSelectedTemplateBinding(Guid functionId)
+    {
+        return _templateSelections.TryGetValue(functionId, out var bindingId) ? bindingId : null;
+    }
+
+    private void HandleTemplateChange(Guid functionId, int? templateBindingId)
+    {
+        if (_selectedRole?.IsSystem == true)
+        {
+            return;
+        }
+
+        if (!_selectedFunctions.Contains(functionId))
+        {
+            return;
+        }
+
+        _templateSelections[functionId] = templateBindingId;
+    }
+
+    private void EnsureTemplateEntry(Guid functionId)
+    {
+        if (!_templateSelections.ContainsKey(functionId))
+        {
+            _templateSelections[functionId] = null;
+        }
     }
 
     private string GetRoleDisplayName(RoleProfileDto role)

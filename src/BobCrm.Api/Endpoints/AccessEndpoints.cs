@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Collections.Generic;
+using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
@@ -21,7 +23,8 @@ public static class AccessEndpoints
                 .AsNoTracking()
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            return Results.Ok(BuildTree(nodes));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, templateOptions));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/me", async (
@@ -82,7 +85,8 @@ public static class AccessEndpoints
                 return Results.Ok(new List<FunctionNodeDto>());
             }
 
-            return Results.Ok(BuildTree(filtered));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, templateOptions));
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request, [FromServices] AccessService service, CancellationToken ct) =>
@@ -177,13 +181,27 @@ public static class AccessEndpoints
 
             // Update function permissions
             db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            if (request.FunctionIds?.Count > 0)
+            var requestedAssignments = request.FunctionPermissions;
+            if (requestedAssignments?.Count > 0)
+            {
+                role.Functions = requestedAssignments.Select(fp => new RoleFunctionPermission
+                {
+                    RoleId = roleId,
+                    FunctionId = fp.FunctionId,
+                    TemplateBindingId = fp.TemplateBindingId
+                }).ToList();
+            }
+            else if (request.FunctionIds?.Count > 0)
             {
                 role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
                 {
                     RoleId = roleId,
                     FunctionId = fid
                 }).ToList();
+            }
+            else
+            {
+                role.Functions = new List<RoleFunctionPermission>();
             }
 
             // Update data scopes
@@ -244,7 +262,46 @@ public static class AccessEndpoints
         return app;
     }
 
-    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
+    private static Dictionary<string, List<FunctionTemplateOptionDto>> GroupTemplateOptions(IEnumerable<TemplateBinding> bindings)
+    {
+        return bindings
+            .Select(binding => new
+            {
+                Binding = binding,
+                Code = binding.RequiredFunctionCode ?? binding.Template?.RequiredFunctionCode
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Code))
+            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g
+                    .Select(x => new FunctionTemplateOptionDto
+                    {
+                        BindingId = x.Binding.Id,
+                        TemplateId = x.Binding.TemplateId,
+                        TemplateName = x.Binding.Template?.Name ?? $"Template #{x.Binding.TemplateId}",
+                        EntityType = x.Binding.EntityType,
+                        UsageType = x.Binding.UsageType,
+                        IsSystem = x.Binding.IsSystem,
+                        IsDefault = x.Binding.Template?.IsSystemDefault ?? false
+                    })
+                    .OrderBy(o => o.TemplateName, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static async Task<Dictionary<string, List<FunctionTemplateOptionDto>>> LoadTemplateOptionsAsync(AppDbContext db, CancellationToken ct)
+    {
+        var bindings = await db.TemplateBindings
+            .AsNoTracking()
+            .Include(tb => tb.Template)
+            .Where(tb => tb.RequiredFunctionCode != null || (tb.Template != null && tb.Template.RequiredFunctionCode != null))
+            .ToListAsync(ct);
+
+        return GroupTemplateOptions(bindings);
+    }
+
+    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes, Dictionary<string, List<FunctionTemplateOptionDto>> templateOptions)
     {
         var lookup = nodes.ToDictionary(n => n.Id, n => new FunctionNodeDto
         {
@@ -255,7 +312,10 @@ public static class AccessEndpoints
             Route = n.Route,
             Icon = n.Icon,
             IsMenu = n.IsMenu,
-            SortOrder = n.SortOrder
+            SortOrder = n.SortOrder,
+            TemplateOptions = n.Code != null && templateOptions.TryGetValue(n.Code, out var options)
+                ? new List<FunctionTemplateOptionDto>(options)
+                : new List<FunctionTemplateOptionDto>()
         });
 
         List<FunctionNodeDto> roots = new();

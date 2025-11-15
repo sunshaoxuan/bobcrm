@@ -1,0 +1,78 @@
+@using System.Collections.Generic
+@using System.Globalization
+@using BobCrm.App.Models
+
+<div class="role-template-selector" data-function-id="@Node.Id" @attributes="AdditionalAttributes">
+    @if (Node.TemplateOptions.Count > 0)
+    {
+        <select class="role-template-dropdown"
+                disabled="@Disabled"
+                value="@_currentValue"
+                @onchange="HandleChange">
+            <option value="">@InheritLabel</option>
+            @foreach (var option in Node.TemplateOptions)
+            {
+                <option value="@option.BindingId">@BuildOptionLabel(option)</option>
+            }
+        </select>
+    }
+    else
+    {
+        <span class="role-template-inherit">@InheritLabel</span>
+    }
+</div>
+
+@code {
+    [Parameter] public FunctionMenuNode Node { get; set; } = new();
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public int? SelectedTemplateBindingId { get; set; }
+    [Parameter] public string InheritLabel { get; set; } = "继承默认模板";
+    [Parameter] public EventCallback<int?> OnTemplateChanged { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
+
+    private string _currentValue = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _currentValue = SelectedTemplateBindingId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private async Task HandleChange(ChangeEventArgs args)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (args.Value is string raw && !string.IsNullOrWhiteSpace(raw) && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bindingId))
+        {
+            _currentValue = bindingId.ToString(CultureInfo.InvariantCulture);
+            await OnTemplateChanged.InvokeAsync(bindingId);
+        }
+        else
+        {
+            _currentValue = string.Empty;
+            await OnTemplateChanged.InvokeAsync(null);
+        }
+    }
+
+    private static string BuildOptionLabel(FunctionTemplateOption option)
+    {
+        var segments = new List<string>();
+        if (option.IsDefault)
+        {
+            segments.Add("默认");
+        }
+        if (option.IsSystem)
+        {
+            segments.Add("系统");
+        }
+
+        if (segments.Count == 0)
+        {
+            return option.TemplateName;
+        }
+
+        return $"{option.TemplateName} ({string.Join("/", segments)})";
+    }
+}
