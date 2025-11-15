@@ -63,6 +63,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<FieldDataTypeEntry> FieldDataTypes => Set<FieldDataTypeEntry>();
     public DbSet<FieldSourceEntry> FieldSources => Set<FieldSourceEntry>();
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
+    public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
 
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
@@ -101,6 +102,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 
+        b.Entity<FunctionNode>()
+            .Property(f => f.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
         b.Entity<SubEntityDefinition>()
             .Property(s => s.DisplayName)
             .HasColumnType("jsonb")
@@ -113,6 +119,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<EntityDomain>()
             .Property(d => d.Name)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<FunctionNode>()
+            .Property(f => f.DisplayName)
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 

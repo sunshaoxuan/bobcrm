@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using FluentAssertions;
@@ -11,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Linq;
+using System.Reflection;
 
 namespace BobCrm.Api.Tests;
 
@@ -390,6 +393,8 @@ public class EntityPublishingAndDDLTests : IDisposable
         await _db.EntityDefinitions.AddAsync(entity);
         await _db.SaveChangesAsync();
 
+        var binding = await SeedTemplateBindingAsync(entity);
+
         // Mock DDL 执行成功
         mockDDLExecutor.Setup(x => x.TableExistsAsync(It.IsAny<string>()))
             .ReturnsAsync(false);
@@ -471,6 +476,13 @@ public class EntityPublishingAndDDLTests : IDisposable
         _mockLockService.Verify(
             x => x.LockEntityAsync(entityId, It.IsAny<string>()),
             Times.Once);
+
+        _mockTemplateService.Verify(
+            x => x.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entityId),
+                "test-user",
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -511,6 +523,8 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         await _db.EntityDefinitions.AddAsync(entity);
         await _db.SaveChangesAsync();
+
+        await SeedTemplateBindingAsync(entity);
 
         // Mock 表已存在
         mockDDLExecutor.Setup(x => x.TableExistsAsync("Products"))
@@ -614,6 +628,39 @@ public class EntityPublishingAndDDLTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("already exists");
+    }
+
+    [Fact]
+    public async Task MenuRegistrar_ShouldBeIdempotent()
+    {
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "Order",
+            EntityRoute = "order",
+            ApiEndpoint = "/api/orders",
+            Status = EntityStatus.Draft,
+            Source = EntitySource.Custom,
+            Category = "CRM",
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+        await SeedTemplateBindingAsync(entity);
+
+        var first = await _menuRegistrar.RegisterAsync(entity, "tester");
+        var second = await _menuRegistrar.RegisterAsync(entity, "tester");
+
+        first.Success.Should().BeTrue();
+        second.Success.Should().BeTrue();
+        first.FunctionNodeId.Should().Be(second.FunctionNodeId);
+
+        var nodes = await _db.FunctionNodes
+            .Where(f => f.Code == first.FunctionCode)
+            .ToListAsync();
+        nodes.Should().HaveCount(1);
     }
 
     public void Dispose()

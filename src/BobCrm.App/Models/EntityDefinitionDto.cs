@@ -299,6 +299,8 @@ public class PublishResponse
 
     public ChangeAnalysisDto? ChangeAnalysis { get; set; }
 
+    public MenuRegistrationDto? MenuRegistration { get; set; }
+
 }
 
 /// <summary>
@@ -314,6 +316,30 @@ public class ChangeAnalysisDto
     public Dictionary<string, int> LengthIncreases { get; set; } = new();
 
     public bool HasDestructiveChanges { get; set; }
+
+}
+
+public class MenuRegistrationDto
+
+{
+
+    public bool Success { get; set; }
+
+    public string DomainCode { get; set; } = string.Empty;
+
+    public Guid? DomainNodeId { get; set; }
+
+    public Guid? ModuleNodeId { get; set; }
+
+    public Guid? FunctionNodeId { get; set; }
+
+    public string? FunctionCode { get; set; }
+
+    public int? TemplateBindingId { get; set; }
+
+    public string? Warning { get; set; }
+
+    public string? ErrorMessage { get; set; }
 
 }
 

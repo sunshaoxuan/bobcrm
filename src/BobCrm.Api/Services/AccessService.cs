@@ -14,8 +14,17 @@ public class AccessService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly MultilingualFieldService _multilingual;
 
-    private record FunctionSeed(string Code, string Name, string? Route, string? Icon, bool IsMenu, int SortOrder, string? ParentCode);
+    private record FunctionSeed(
+        string Code,
+        string Name,
+        string? Route,
+        string? Icon,
+        bool IsMenu,
+        int SortOrder,
+        string? ParentCode,
+        string? DisplayNameKey = null);
 
     private static readonly FunctionSeed[] DefaultFunctionSeeds =
     [
@@ -25,6 +34,7 @@ public class AccessService
         new("SYS", "系统管理", null, "setting", true, 10, "APP.ROOT"),
         new("SYS.SET", "系统设置", null, "setting", true, 11, "SYS"),
         new("SYS.SET.CONFIG", "系统设置", "/settings", "setting", true, 111, "SYS.SET"),
+        new("SYS.SET.MENU", "菜单管理", "/menus", "menu", true, 112, "SYS.SET"),
         new("SYS.MSG", "邮件与消息", null, "mail", true, 12, "SYS"),
         new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
         new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
@@ -89,17 +99,18 @@ public class AccessService
         new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
 
-    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager)
+    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager, MultilingualFieldService multilingual)
     {
         _db = db;
         _userManager = userManager;
+        _multilingual = multilingual;
     }
 
     public async Task<FunctionNode> CreateFunctionAsync(CreateFunctionRequest request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name))
+        if (string.IsNullOrWhiteSpace(request.Code))
         {
-            throw new InvalidOperationException("Function code and name are required.");
+            throw new InvalidOperationException("Function code is required.");
         }
 
         var exists = await _db.FunctionNodes.AnyAsync(f => f.Code == request.Code, ct);
@@ -108,20 +119,183 @@ public class AccessService
             throw new InvalidOperationException("Function code already exists.");
         }
 
+        TemplateBinding? binding = null;
+        if (request.TemplateBindingId.HasValue)
+        {
+            binding = await _db.TemplateBindings
+                .FirstOrDefaultAsync(b => b.Id == request.TemplateBindingId.Value, ct)
+                ?? throw new InvalidOperationException("Template binding not found.");
+        }
+
+        var fallbackDisplayName = request.DisplayName ?? MultilingualFieldService.FromSingleValue(request.Name);
+        var resolvedDisplayName = await _multilingual.ResolveAsync(request.DisplayNameKey, fallbackDisplayName, ct);
+
         var node = new FunctionNode
         {
             ParentId = request.ParentId,
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
+            DisplayName = resolvedDisplayName,
+            DisplayNameKey = request.DisplayNameKey?.Trim(),
             Route = request.Route?.Trim(),
             Icon = request.Icon?.Trim(),
             IsMenu = request.IsMenu,
-            SortOrder = request.SortOrder
+            SortOrder = request.SortOrder,
+            TemplateBindingId = request.TemplateBindingId,
+            TemplateBinding = binding
         };
 
         _db.FunctionNodes.Add(node);
         await _db.SaveChangesAsync(ct);
         return node;
+    }
+
+    public async Task<FunctionNode> UpdateFunctionAsync(Guid id, UpdateFunctionRequest request, CancellationToken ct = default)
+    {
+        var node = await _db.FunctionNodes.FindAsync(new object[] { id }, ct);
+        if (node == null)
+        {
+            throw new InvalidOperationException("Function node not found.");
+        }
+
+        if (request.ParentId.HasValue)
+        {
+            if (request.ParentId.Value == id)
+            {
+                throw new InvalidOperationException("Node cannot be its own parent.");
+            }
+
+            var parentExists = await _db.FunctionNodes.AnyAsync(f => f.Id == request.ParentId.Value, ct);
+            if (!parentExists)
+            {
+                throw new InvalidOperationException("Parent node does not exist.");
+            }
+
+            node.ParentId = request.ParentId;
+        }
+        else if (request.ClearParent)
+        {
+            node.ParentId = null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            node.Name = request.Name.Trim();
+        }
+
+        if (request.DisplayName != null)
+        {
+            node.DisplayName = new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(request.Name))
+            {
+                node.Name = MultilingualTextHelper.Resolve(node.DisplayName, node.Name);
+            }
+        }
+
+        if (request.ClearRoute)
+        {
+            node.Route = null;
+        }
+        else if (request.Route != null)
+        {
+            node.Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim();
+        }
+
+        if (request.Icon != null)
+        {
+            node.Icon = string.IsNullOrWhiteSpace(request.Icon) ? null : request.Icon.Trim();
+        }
+
+        if (request.IsMenu.HasValue)
+        {
+            node.IsMenu = request.IsMenu.Value;
+        }
+
+        if (request.SortOrder.HasValue)
+        {
+            node.SortOrder = request.SortOrder.Value;
+        }
+
+        if (request.ClearTemplate)
+        {
+            node.TemplateId = null;
+            node.Template = null;
+        }
+        else if (request.TemplateId.HasValue)
+        {
+            var template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
+            if (template == null)
+            {
+                throw new InvalidOperationException("Template does not exist.");
+            }
+
+            node.TemplateId = template.Id;
+            node.Template = template;
+        }
+
+        if (node.TemplateId.HasValue && node.Template == null)
+        {
+            await _db.Entry(node).Reference(n => n.Template).LoadAsync(ct);
+        }
+        else if (!node.TemplateId.HasValue)
+        {
+            node.Template = null;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return node;
+    }
+
+    public async Task DeleteFunctionAsync(Guid id, CancellationToken ct = default)
+    {
+        var node = await _db.FunctionNodes
+            .Include(n => n.Children)
+            .FirstOrDefaultAsync(n => n.Id == id, ct);
+
+        if (node == null)
+        {
+            throw new InvalidOperationException("Function node not found.");
+        }
+
+        if (node.Children.Count > 0)
+        {
+            throw new InvalidOperationException("Cannot delete node with children.");
+        }
+
+        var referenced = await _db.RoleFunctionPermissions.AnyAsync(rf => rf.FunctionId == id, ct);
+        if (referenced)
+        {
+            throw new InvalidOperationException("Cannot delete node referenced by roles.");
+        }
+
+        _db.FunctionNodes.Remove(node);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task ReorderFunctionsAsync(IEnumerable<FunctionOrderUpdate> updates, CancellationToken ct = default)
+    {
+        var updateList = updates.ToList();
+        if (updateList.Count == 0)
+        {
+            return;
+        }
+
+        var ids = updateList.Select(u => u.Id).ToList();
+        var nodes = await _db.FunctionNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
+
+        foreach (var update in updateList)
+        {
+            var node = nodes.FirstOrDefault(n => n.Id == update.Id);
+            if (node == null)
+            {
+                throw new InvalidOperationException($"Function node {update.Id} not found.");
+            }
+
+            node.ParentId = update.ParentId;
+            node.SortOrder = update.SortOrder;
+        }
+
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task<RoleProfile> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default)
@@ -586,6 +760,8 @@ public class AccessService
     private async Task SeedFunctionTreeAsync(CancellationToken ct)
     {
         var existing = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
+        var displayNameCache = new Dictionary<string, Dictionary<string, string?>?>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var seed in DefaultFunctionSeeds)
         {
             if (!existing.TryGetValue(seed.Code, out var node))
@@ -596,10 +772,14 @@ public class AccessService
             }
 
             node.Name = seed.Name;
+            node.DisplayName = new Dictionary<string, string?>(seed.DisplayNameMap, StringComparer.OrdinalIgnoreCase);
             node.Route = seed.Route;
             node.Icon = seed.Icon;
             node.IsMenu = seed.IsMenu;
             node.SortOrder = seed.SortOrder;
+            var displayNameKey = ResolveDisplayNameKey(seed);
+            node.DisplayNameKey = displayNameKey;
+            node.DisplayName = await ResolveSeedDisplayNameAsync(displayNameKey, seed.Name, displayNameCache, ct);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -624,6 +804,36 @@ public class AccessService
         {
             await _db.SaveChangesAsync(ct);
         }
+    }
+
+    private static string ResolveDisplayNameKey(FunctionSeed seed) =>
+        string.IsNullOrWhiteSpace(seed.DisplayNameKey)
+            ? $"MENU_{seed.Code.Replace('.', '_')}"
+            : seed.DisplayNameKey.Trim();
+
+    private async Task<Dictionary<string, string?>?> ResolveSeedDisplayNameAsync(
+        string displayNameKey,
+        string zhName,
+        Dictionary<string, Dictionary<string, string?>?> cache,
+        CancellationToken ct)
+    {
+        if (cache.TryGetValue(displayNameKey, out var cached))
+        {
+            return cached == null
+                ? null
+                : new Dictionary<string, string?>(cached, StringComparer.OrdinalIgnoreCase);
+        }
+
+        var fallback = MultilingualFieldService.FromSingleValue(zhName);
+        var resolved = await _multilingual.ResolveAsync(displayNameKey, fallback, ct);
+        Dictionary<string, string?>? snapshot = resolved == null
+            ? null
+            : new Dictionary<string, string?>(resolved, StringComparer.OrdinalIgnoreCase);
+
+        cache[displayNameKey] = snapshot;
+        return snapshot == null
+            ? null
+            : new Dictionary<string, string?>(snapshot, StringComparer.OrdinalIgnoreCase);
     }
 }
 

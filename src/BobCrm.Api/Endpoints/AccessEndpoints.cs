@@ -1,9 +1,16 @@
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using BobCrm.Api.Base;
+using System.Collections.Generic;
+using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Services;
 using BobCrm.Api.Middleware;
+using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,10 +26,25 @@ public static class AccessEndpoints
         {
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
+                .Include(f => f.Template)
+                .OrderBy(f => f.SortOrder)
+                .ToListAsync(ct);
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, nodes, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, templateOptions));
+        }).RequireFunction("BAS.AUTH.ROLE.PERM");
+
+        group.MapGet("/functions/manage", async ([FromServices] AppDbContext db, CancellationToken ct) =>
+        {
+            var nodes = await db.FunctionNodes
+                .AsNoTracking()
+                .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             return Results.Ok(BuildTree(nodes));
-        }).RequireFunction("BAS.AUTH.ROLE.PERM");
+        }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/functions/me", async (
             ClaimsPrincipal user,
@@ -50,6 +72,7 @@ public static class AccessEndpoints
 
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
+                .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
 
@@ -82,14 +105,102 @@ public static class AccessEndpoints
                 return Results.Ok(new List<FunctionNodeDto>());
             }
 
-            return Results.Ok(BuildTree(filtered));
+            var localizedNames = await LoadFunctionNameTranslationsAsync(db, filtered, ct);
+            var bindings = await LoadTemplateBindingsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, templateOptions));
         });
 
-        group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request, [FromServices] AccessService service, CancellationToken ct) =>
+        group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
+            [FromServices] AccessService service,
+            [FromServices] AuditTrailService auditTrail,
+            CancellationToken ct) =>
         {
-            var node = await service.CreateFunctionAsync(request, ct);
-            return Results.Ok(node);
-        }).RequireFunction("BAS.AUTH.ROLE.PERM");
+            try
+            {
+                var node = await service.CreateFunctionAsync(request, ct);
+                await auditTrail.RecordAsync("MENU", "CREATE", $"Created function {node.Name}", node.Code, new
+                {
+                    node.Id,
+                    node.Code,
+                    node.Name,
+                    node.DisplayName,
+                    node.ParentId,
+                    node.Route,
+                    node.TemplateId,
+                    TemplateName = node.Template?.Name
+                }, ct);
+                return Results.Ok(ToDto(node));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireFunction("SYS.SET.MENU");
+
+        group.MapPut("/functions/{id:guid}", async (Guid id,
+            [FromBody] UpdateFunctionRequest request,
+            [FromServices] AccessService service,
+            [FromServices] AuditTrailService auditTrail,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                var node = await service.UpdateFunctionAsync(id, request, ct);
+                await auditTrail.RecordAsync("MENU", "UPDATE", $"Updated function {node.Name}", node.Code, new
+                {
+                    node.Id,
+                    node.Code,
+                    node.Name,
+                    node.DisplayName,
+                    node.ParentId,
+                    node.SortOrder,
+                    node.Route,
+                    node.TemplateId,
+                    TemplateName = node.Template?.Name
+                }, ct);
+                return Results.Ok(ToDto(node));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireFunction("SYS.SET.MENU");
+
+        group.MapDelete("/functions/{id:guid}", async (Guid id,
+            [FromServices] AccessService service,
+            [FromServices] AuditTrailService auditTrail,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                await service.DeleteFunctionAsync(id, ct);
+                await auditTrail.RecordAsync("MENU", "DELETE", $"Deleted function {id}", id.ToString(), null, ct);
+                return Results.NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireFunction("SYS.SET.MENU");
+
+        group.MapPost("/functions/reorder", async ([FromBody] List<FunctionOrderUpdate> updates,
+            [FromServices] AccessService service,
+            [FromServices] AuditTrailService auditTrail,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                await service.ReorderFunctionsAsync(updates, ct);
+                await auditTrail.RecordAsync("MENU", "REORDER", "Reordered menu nodes", null, updates, ct);
+                return Results.Ok();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/roles", async ([FromServices] AppDbContext db, CancellationToken ct) =>
         {
@@ -177,13 +288,36 @@ public static class AccessEndpoints
 
             // Update function permissions
             db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            if (request.FunctionIds?.Count > 0)
+            var templateSelections = request.FunctionPermissions?
+                .Where(fp => fp.FunctionId != Guid.Empty)
+                .GroupBy(fp => fp.FunctionId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Last().TemplateBindingId);
+
+            var finalFunctionIds = new HashSet<Guid>(request.FunctionIds ?? Enumerable.Empty<Guid>());
+            if (templateSelections != null)
             {
-                role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
+                foreach (var functionId in templateSelections.Keys)
+                {
+                    finalFunctionIds.Add(functionId);
+                }
+            }
+
+            if (finalFunctionIds.Count > 0)
+            {
+                role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
                 {
                     RoleId = roleId,
-                    FunctionId = fid
+                    FunctionId = fid,
+                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
+                        ? bindingId
+                        : null
                 }).ToList();
+            }
+            else
+            {
+                role.Functions = new List<RoleFunctionPermission>();
             }
 
             // Update data scopes
@@ -244,23 +378,33 @@ public static class AccessEndpoints
         return app;
     }
 
-    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
+    private static FunctionNodeDto ToDto(FunctionNode node)
     {
-        var lookup = nodes.ToDictionary(n => n.Id, n => new FunctionNodeDto
+        return new FunctionNodeDto
         {
             Id = n.Id,
             ParentId = n.ParentId,
             Code = n.Code,
             Name = n.Name,
+            DisplayName = n.DisplayName == null
+                ? null
+                : new Dictionary<string, string?>(n.DisplayName, StringComparer.OrdinalIgnoreCase),
+            DisplayNameKey = n.DisplayNameKey,
             Route = n.Route,
             Icon = n.Icon,
             IsMenu = n.IsMenu,
-            SortOrder = n.SortOrder
+            SortOrder = n.SortOrder,
+            TemplateBindingId = n.TemplateBindingId
         });
 
         List<FunctionNodeDto> roots = new();
-        foreach (var node in lookup.Values)
+        foreach (var source in nodes.OrderBy(n => n.SortOrder))
         {
+            if (!lookup.TryGetValue(source.Id, out var node))
+            {
+                continue;
+            }
+
             if (node.ParentId.HasValue && lookup.TryGetValue(node.ParentId.Value, out var parent))
             {
                 parent.Children.Add(node);
@@ -270,6 +414,140 @@ public static class AccessEndpoints
                 roots.Add(node);
             }
         }
-        return roots.OrderBy(r => r.SortOrder).ToList();
+        SortChildren(roots);
+        return roots;
+    }
+
+    private static void SortChildren(List<FunctionNodeDto> nodes)
+    {
+        nodes.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
+        foreach (var node in nodes)
+        {
+            SortChildren(node.Children);
+        }
+    }
+
+    private static async Task<Dictionary<Guid, Dictionary<string, string?>>> LoadFunctionNameTranslationsAsync(
+        AppDbContext db,
+        List<FunctionNode> nodes,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, Dictionary<string, string?>>(nodes.Count);
+        if (nodes.Count == 0)
+        {
+            return result;
+        }
+
+        var languages = await db.LocalizationLanguages
+            .AsNoTracking()
+            .Select(l => l.Code.ToLower())
+            .ToListAsync(ct);
+
+        if (languages.Count == 0)
+        {
+            languages = new List<string> { "ja", "en", "zh" };
+        }
+
+        var codes = nodes.Select(n => n.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidateKeys = nodes
+            .Select(n => $"MENU_{n.Code.Replace('.', '_')}" )
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var resources = await db.LocalizationResources
+            .AsNoTracking()
+            .Where(r => codes.Contains(r.Key) || candidateKeys.Contains(r.Key))
+            .ToListAsync(ct);
+
+        var resourceLookup = resources.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in nodes)
+        {
+            var map = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            LocalizationResource? resolved = null;
+            var keysToTry = new[]
+            {
+                node.Code,
+                $"MENU_{node.Code.Replace('.', '_')}"
+            };
+
+            foreach (var key in keysToTry)
+            {
+                if (resourceLookup.TryGetValue(key, out var resource))
+                {
+                    resolved = resource;
+                    break;
+                }
+            }
+
+            if (resolved != null)
+            {
+                foreach (var lang in languages)
+                {
+                    resolved.Translations.TryGetValue(lang, out var value);
+                    map[lang] = string.IsNullOrWhiteSpace(value) ? node.Name : value;
+                }
+            }
+            else
+            {
+                foreach (var lang in languages)
+                {
+                    map[lang] = node.Name;
+                }
+            }
+
+            result[node.Id] = map;
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<string, List<FunctionNodeTemplateBindingDto>>> LoadTemplateBindingsAsync(
+        AppDbContext db,
+        CancellationToken ct)
+    {
+        var bindings = await db.TemplateBindings
+            .AsNoTracking()
+            .Include(tb => tb.Template)
+            .ToListAsync(ct);
+
+        return bindings
+            .Select(tb => new
+            {
+                Code = tb.RequiredFunctionCode ?? tb.Template?.RequiredFunctionCode,
+                Binding = new FunctionNodeTemplateBindingDto(
+                    tb.Id,
+                    tb.EntityType,
+                    tb.UsageType,
+                    tb.TemplateId,
+                    tb.Template?.Name ?? string.Empty,
+                    tb.IsSystem)
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Code))
+            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.Binding).OrderBy(b => b.UsageType).ThenBy(b => b.TemplateId).ToList(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string ComputeFunctionTreeVersion(
+        IEnumerable<object> functionSnapshot,
+        IEnumerable<object> templateSnapshot)
+    {
+        var builder = new StringBuilder();
+
+        foreach (var entry in functionSnapshot)
+        {
+            builder.AppendLine(entry.ToString());
+        }
+
+        foreach (var entry in templateSnapshot)
+        {
+            builder.AppendLine(entry.ToString());
+        }
+
+        using var sha = SHA256.Create();
+        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(builder.ToString()));
+        return Convert.ToHexString(hash);
     }
 }

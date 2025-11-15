@@ -166,6 +166,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.DDLExecutionService>();
 builder.Services.AddScoped<BobCrm.Api.Services.EntitySchemaAlignmentService>();
 builder.Services.AddScoped<BobCrm.Api.Services.DefaultTemplateGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IEntityPublishingService, BobCrm.Api.Services.EntityPublishingService>();
+builder.Services.AddScoped<BobCrm.Api.Services.EntityMenuRegistrar>();
 
 // Dynamic Entity Services (代码生成与动态编译)
 builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
@@ -184,7 +185,9 @@ builder.Services.AddScoped<BobCrm.Api.Services.EntityDefinitionAggregateService>
 builder.Services.AddScoped<BobCrm.Api.Services.ISubEntityCodeGenerator, BobCrm.Api.Services.SubEntityCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobCrm.Api.Services.AggregateMetadataPublisher>();
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
+builder.Services.AddScoped<MultilingualFieldService>();
 builder.Services.AddScoped<AccessService>();
+builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 
