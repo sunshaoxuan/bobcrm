@@ -387,8 +387,13 @@ public static class AccessEndpoints
         });
 
         List<FunctionNodeDto> roots = new();
-        foreach (var node in lookup.Values)
+        foreach (var source in nodes.OrderBy(n => n.SortOrder))
         {
+            if (!lookup.TryGetValue(source.Id, out var node))
+            {
+                continue;
+            }
+
             if (node.ParentId.HasValue && lookup.TryGetValue(node.ParentId.Value, out var parent))
             {
                 parent.Children.Add(node);
@@ -398,6 +403,21 @@ public static class AccessEndpoints
                 roots.Add(node);
             }
         }
+
+        foreach (var node in lookup.Values)
+        {
+            if (node.Children.Count <= 1)
+            {
+                continue;
+            }
+
+            var orderedChildren = node.Children
+                .OrderBy(child => child.SortOrder)
+                .ToList();
+            node.Children.Clear();
+            node.Children.AddRange(orderedChildren);
+        }
+
         return roots.OrderBy(r => r.SortOrder).ToList();
     }
 
