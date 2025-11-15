@@ -5,6 +5,9 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using BobCrm.Api.Base;
+using System.Collections.Generic;
+using System.Linq;
+using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
@@ -30,6 +33,8 @@ public static class AccessEndpoints
             var localizedNames = await LoadFunctionNameTranslationsAsync(db, nodes, ct);
             var bindings = await LoadTemplateBindingsAsync(db, ct);
             return Results.Ok(BuildTree(nodes, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(nodes, templateOptions));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/me", async (
@@ -93,6 +98,8 @@ public static class AccessEndpoints
             var localizedNames = await LoadFunctionNameTranslationsAsync(db, filtered, ct);
             var bindings = await LoadTemplateBindingsAsync(db, ct);
             return Results.Ok(BuildTree(filtered, localizedNames, bindings));
+            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
+            return Results.Ok(BuildTree(filtered, templateOptions));
         });
 
         group.MapGet("/functions/version", async ([FromServices] AppDbContext db, CancellationToken ct) =>
@@ -223,13 +230,36 @@ public static class AccessEndpoints
 
             // Update function permissions
             db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            if (request.FunctionIds?.Count > 0)
+            var templateSelections = request.FunctionPermissions?
+                .Where(fp => fp.FunctionId != Guid.Empty)
+                .GroupBy(fp => fp.FunctionId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Last().TemplateBindingId);
+
+            var finalFunctionIds = new HashSet<Guid>(request.FunctionIds ?? Enumerable.Empty<Guid>());
+            if (templateSelections != null)
             {
-                role.Functions = request.FunctionIds.Select(fid => new RoleFunctionPermission
+                foreach (var functionId in templateSelections.Keys)
+                {
+                    finalFunctionIds.Add(functionId);
+                }
+            }
+
+            if (finalFunctionIds.Count > 0)
+            {
+                role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
                 {
                     RoleId = roleId,
-                    FunctionId = fid
+                    FunctionId = fid,
+                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
+                        ? bindingId
+                        : null
                 }).ToList();
+            }
+            else
+            {
+                role.Functions = new List<RoleFunctionPermission>();
             }
 
             // Update data scopes
@@ -294,6 +324,46 @@ public static class AccessEndpoints
         List<FunctionNode> nodes,
         IReadOnlyDictionary<Guid, Dictionary<string, string?>> localizedNames,
         IReadOnlyDictionary<string, List<FunctionNodeTemplateBindingDto>> templateBindings)
+    private static Dictionary<string, List<FunctionTemplateOptionDto>> GroupTemplateOptions(IEnumerable<TemplateBinding> bindings)
+    {
+        return bindings
+            .Select(binding => new
+            {
+                Binding = binding,
+                Code = binding.RequiredFunctionCode ?? binding.Template?.RequiredFunctionCode
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Code))
+            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g
+                    .Select(x => new FunctionTemplateOptionDto
+                    {
+                        BindingId = x.Binding.Id,
+                        TemplateId = x.Binding.TemplateId,
+                        TemplateName = x.Binding.Template?.Name ?? $"Template #{x.Binding.TemplateId}",
+                        EntityType = x.Binding.EntityType,
+                        UsageType = x.Binding.UsageType,
+                        IsSystem = x.Binding.IsSystem,
+                        IsDefault = x.Binding.Template?.IsSystemDefault ?? false
+                    })
+                    .OrderBy(o => o.TemplateName, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static async Task<Dictionary<string, List<FunctionTemplateOptionDto>>> LoadTemplateOptionsAsync(AppDbContext db, CancellationToken ct)
+    {
+        var bindings = await db.TemplateBindings
+            .AsNoTracking()
+            .Include(tb => tb.Template)
+            .Where(tb => tb.RequiredFunctionCode != null || (tb.Template != null && tb.Template.RequiredFunctionCode != null))
+            .ToListAsync(ct);
+
+        return GroupTemplateOptions(bindings);
+    }
+
+    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes, Dictionary<string, List<FunctionTemplateOptionDto>> templateOptions)
     {
         var lookup = nodes.ToDictionary(n => n.Id, n => new FunctionNodeDto
         {
@@ -311,6 +381,9 @@ public static class AccessEndpoints
             TemplateBindings = templateBindings.TryGetValue(n.Code, out var bindings)
                 ? bindings.Select(b => b with { }).ToList()
                 : new List<FunctionNodeTemplateBindingDto>()
+            TemplateOptions = n.Code != null && templateOptions.TryGetValue(n.Code, out var options)
+                ? new List<FunctionTemplateOptionDto>(options)
+                : new List<FunctionTemplateOptionDto>()
         });
 
         List<FunctionNodeDto> roots = new();

@@ -1,6 +1,7 @@
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
 
@@ -15,19 +16,25 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
     private readonly ILogger<EntityPublishingService> _logger;
+    private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly IDefaultTemplateService _defaultTemplateService;
 
     public EntityPublishingService(
         AppDbContext db,
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
-        ILogger<EntityPublishingService> logger)
+        EntityMenuRegistrar menuRegistrar,
+        ILogger<EntityPublishingService> logger,
+        IDefaultTemplateService defaultTemplateService)
     {
         _db = db;
         _ddlGenerator = ddlGenerator;
         _ddlExecutor = ddlExecutor;
         _lockService = lockService;
+        _menuRegistrar = menuRegistrar;
         _logger = logger;
+        _defaultTemplateService = defaultTemplateService;
     }
 
     /// <summary>
@@ -107,8 +114,37 @@ public class EntityPublishingService : IEntityPublishingService
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
 
+            result.MenuRegistration = await _menuRegistrar.RegisterAsync(entity, publishedBy);
+            if (result.MenuRegistration.Success)
+            {
+                _logger.LogInformation(
+                    "[Publish] ✓ Entity {EntityName} published and menu registered with function {FunctionCode}",
+                    entity.EntityName,
+                    result.MenuRegistration.FunctionCode);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[Publish] Entity {EntityName} published but menu registration failed: {Error}",
+                    entity.EntityName,
+                    result.MenuRegistration.ErrorMessage ?? result.MenuRegistration.Warning);
+            }
+
             result.Success = true;
-            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully and locked", entity.EntityName);
+            try
+            {
+                await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
+            }
+            catch (Exception templateEx)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Failed to generate default template: {templateEx.Message}";
+                _logger.LogError(templateEx, "[Publish] ✗ Failed to generate default template for {Entity}", entity.EntityName);
+                return result;
+            }
+
+            result.Success = true;
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully, locked, and default template ensured", entity.EntityName);
         }
         catch (Exception ex)
         {
@@ -213,8 +249,37 @@ public class EntityPublishingService : IEntityPublishingService
             entity.UpdatedBy = publishedBy;
             await _db.SaveChangesAsync();
 
+            result.MenuRegistration = await _menuRegistrar.RegisterAsync(entity, publishedBy);
+            if (result.MenuRegistration.Success)
+            {
+                _logger.LogInformation(
+                    "[Publish] ✓ Entity {EntityName} changes published and menu refreshed ({FunctionCode})",
+                    entity.EntityName,
+                    result.MenuRegistration.FunctionCode);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[Publish] Entity {EntityName} changes published but menu registration failed: {Error}",
+                    entity.EntityName,
+                    result.MenuRegistration.ErrorMessage ?? result.MenuRegistration.Warning);
+            }
+
             result.Success = true;
-            _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully", entity.EntityName);
+            try
+            {
+                await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
+            }
+            catch (Exception templateEx)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Failed to regenerate default template: {templateEx.Message}";
+                _logger.LogError(templateEx, "[Publish] ✗ Failed to regenerate default template for {Entity}", entity.EntityName);
+                return result;
+            }
+
+            result.Success = true;
+            _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully and default template updated", entity.EntityName);
         }
         catch (Exception ex)
         {
@@ -343,6 +408,7 @@ public class PublishResult
     public string? DDLScript { get; set; }
     public Guid ScriptId { get; set; }
     public ChangeAnalysis? ChangeAnalysis { get; set; }
+    public EntityMenuRegistrationResult? MenuRegistration { get; set; }
 }
 
 /// <summary>

@@ -79,6 +79,82 @@
             </div>
         </Card>
     }
+
+    <Modal Title="@(_isEditMode ? I18n.T("BTN_EDIT") : I18n.T("BTN_CREATE"))"
+           @bind-Visible="_modalVisible"
+           ConfirmLoading="@_saving"
+           OnOk="HandleSave"
+           OnCancel="CloseModal"
+           OkText="@I18n.T("BTN_SAVE")"
+           CancelText="@I18n.T("BTN_CANCEL")">
+        @if (!_allFields.Any())
+        {
+            <Empty Description="@I18n.T("MSG_NO_DATA")" />
+        }
+        else
+        {
+            <Form LabelColSpan="6" WrapperColSpan="18">
+                @foreach (var field in GetVisibleFields())
+                {
+                    var fieldId = GetFieldInputId(field);
+                    <FormItem Label="@GetFieldLabel(field)" Required="@field.IsRequired">
+                        @if (string.Equals(field.DataType, FieldDataType.Boolean, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <Switch Id="@fieldId"
+                                    Checked="@GetBoolValue(field.PropertyName)"
+                                    OnChange="value => SetFormValue(field.PropertyName, value)"
+                                    Disabled="@IsFieldDisabled(field)" />
+                        }
+                        else if (string.Equals(field.DataType, FieldDataType.Integer, StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(field.DataType, FieldDataType.Long, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <AntDesign.InputNumber TValue="long?"
+                                                    Id="@fieldId"
+                                                    Value="@GetLongValue(field.PropertyName)"
+                                                    ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                                    Disabled="@IsFieldDisabled(field)" />
+                        }
+                        else if (string.Equals(field.DataType, FieldDataType.Decimal, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <AntDesign.InputNumber TValue="decimal?"
+                                                    Id="@fieldId"
+                                                    Value="@GetDecimalValue(field.PropertyName)"
+                                                    ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                                    Disabled="@IsFieldDisabled(field)" />
+                        }
+                        else if (string.Equals(field.DataType, FieldDataType.DateTime, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <DatePicker Id="@fieldId"
+                                        Value="@GetDateTimeValue(field.PropertyName)"
+                                        ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                        ShowTime="true"
+                                        Disabled="@IsFieldDisabled(field)" />
+                        }
+                        else if (string.Equals(field.DataType, FieldDataType.Date, StringComparison.OrdinalIgnoreCase))
+                        {
+                            <DatePicker Id="@fieldId"
+                                        Value="@GetDateTimeValue(field.PropertyName)"
+                                        ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                        Picker="DatePickerType.Date"
+                                        Disabled="@IsFieldDisabled(field)" />
+                        }
+                        else
+                        {
+                            <Input Id="@fieldId"
+                                   Value="@GetStringValue(field.PropertyName)"
+                                   ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                   Disabled="@IsFieldDisabled(field)" />
+                        }
+
+                        @if (HasError(field))
+                        {
+                            <div class="form-item-error">@GetError(field)</div>
+                        }
+                    </FormItem>
+                }
+            </Form>
+        }
+    </Modal>
 </AuthChecker>
 
 @code {
@@ -87,15 +163,45 @@
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private IMessageService MessageService { get; set; } = default!;
 
+    private readonly Dictionary<string, object?> _formValues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _validationErrors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Dictionary<string, object>> _data = new();
+
     private bool _loading = false;
+    private bool _saving = false;
+    private bool _modalVisible;
+    private bool _isEditMode;
     private string _entityName = string.Empty;
-    private List<Dictionary<string, object>> _data = new();
     private int _total = 0;
     private int _lastI18nRenderVersion = -1;
+    private int? _editingEntityId;
+    private EntityDefinitionDto? _entityDefinition;
+    private List<FieldMetadataDto> _allFields = new();
+
+    private static readonly HashSet<string> HiddenSystemFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "IsDeleted",
+        "DeletedAt",
+        "DeletedBy"
+    };
+
+    private static readonly HashSet<string> ReadonlyFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Id",
+        "CreatedAt",
+        "CreatedBy",
+        "UpdatedAt",
+        "UpdatedBy",
+        "Version",
+        "ValidFrom",
+        "ValidTo",
+        "VersionNo"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         _entityName = FullTypeName.Split('.').LastOrDefault() ?? FullTypeName;
+        await EnsureEntityDefinitionAsync();
         await LoadData();
     }
 
@@ -106,6 +212,63 @@
             _lastI18nRenderVersion = I18nRenderVersion;
             StateHasChanged();
         }
+    }
+
+    private async Task EnsureEntityDefinitionAsync()
+    {
+        if (_entityDefinition != null)
+        {
+            return;
+        }
+
+        try
+        {
+            var definitions = await EntityDefService.GetAllAsync();
+            var target = definitions.FirstOrDefault(d =>
+                string.Equals(d.FullTypeName, FullTypeName, StringComparison.OrdinalIgnoreCase));
+
+            if (target == null)
+            {
+                MessageService.Error(I18n.T("MSG_ENTITY_NOT_FOUND_DESC"));
+                return;
+            }
+
+            var detail = await EntityDefService.GetByIdAsync(target.Id);
+            if (detail == null)
+            {
+                MessageService.Error(I18n.T("MSG_ENTITY_NOT_FOUND_DESC"));
+                return;
+            }
+
+            _entityDefinition = detail;
+            _allFields = detail.Fields
+                .OrderBy(f => f.SortOrder)
+                .Select(NormalizeField)
+                .ToList();
+
+            // 初始化审计字段默认值
+            foreach (var field in _allFields)
+            {
+                if (!_formValues.ContainsKey(field.PropertyName))
+                {
+                    _formValues[field.PropertyName] = null;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_LOAD_DATA_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private static FieldMetadataDto NormalizeField(FieldMetadataDto field)
+    {
+        if (field.DisplayName != null && field.DisplayName is not MultilingualTextDto)
+        {
+            field.DisplayName = new MultilingualTextDto(field.DisplayName);
+        }
+
+        return field;
     }
 
     private async Task LoadData()
@@ -124,7 +287,11 @@
             var response = await DynamicEntitySvc.QueryAsync(FullTypeName, request);
             if (response != null)
             {
-                _data = response.Data;
+                _data.Clear();
+                foreach (var item in response.Data)
+                {
+                    _data.Add(new Dictionary<string, object>(item, StringComparer.OrdinalIgnoreCase));
+                }
                 _total = response.Total;
             }
         }
@@ -142,7 +309,6 @@
     {
         if (!_data.Any()) return new List<string>();
 
-        // 显示前6列
         return _data.First().Keys.Take(6).ToList();
     }
 
@@ -152,6 +318,19 @@
 
         if (value is JsonElement jsonElement)
         {
+            if (jsonElement.ValueKind == JsonValueKind.Object)
+            {
+                if (jsonElement.TryGetProperty("Name", out var nameProp))
+                {
+                    return nameProp.GetString() ?? jsonElement.ToString();
+                }
+
+                if (jsonElement.TryGetProperty("Id", out var idProp))
+                {
+                    return idProp.ToString();
+                }
+            }
+
             return jsonElement.ToString();
         }
 
@@ -160,19 +339,566 @@
             return dt.ToString("yyyy-MM-dd HH:mm");
         }
 
+        if (value is DateOnly dateOnly)
+        {
+            return dateOnly.ToString("yyyy-MM-dd");
+        }
+
         return value.ToString() ?? string.Empty;
     }
 
-    private void ShowCreateModal()
+    private async Task ShowCreateModal()
     {
-        // TODO: 实现创建模态框
-        MessageService.Info(I18n.T("MSG_CREATE_FEATURE_IN_DEVELOPMENT"));
+        await EnsureEntityDefinitionAsync();
+        if (_entityDefinition == null)
+        {
+            return;
+        }
+
+        _isEditMode = false;
+        _editingEntityId = null;
+        _validationErrors.Clear();
+
+        foreach (var field in _allFields)
+        {
+            _formValues[field.PropertyName] = GetDefaultValue(field, true);
+        }
+
+        _modalVisible = true;
     }
 
-    private void ShowEditModal(Dictionary<string, object> entity)
+    private async Task ShowEditModal(Dictionary<string, object> entity)
     {
-        // TODO: 实现编辑模态框
-        MessageService.Info(I18n.T("MSG_EDIT_FEATURE_IN_DEVELOPMENT"));
+        await EnsureEntityDefinitionAsync();
+        if (_entityDefinition == null)
+        {
+            return;
+        }
+
+        _validationErrors.Clear();
+        _isEditMode = true;
+
+        if (!entity.TryGetValue("Id", out var idValue) || !TryConvertToInt(idValue, out var id))
+        {
+            MessageService.Error(I18n.T("MSG_LOAD_DATA_FAILED"));
+            return;
+        }
+
+        _editingEntityId = id;
+
+        try
+        {
+            var latest = await DynamicEntitySvc.GetByIdAsync(FullTypeName, id);
+            var source = latest ?? entity;
+
+            foreach (var field in _allFields)
+            {
+                source.TryGetValue(field.PropertyName, out var rawValue);
+                _formValues[field.PropertyName] = ConvertToFormValue(field, rawValue);
+            }
+
+            _modalVisible = true;
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_LOAD_DATA_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        var isCreate = !_isEditMode;
+
+        if (!ValidateForm(isCreate))
+        {
+            MessageService.Warning(I18n.T("ERR_VALIDATION_FAILED"));
+            return;
+        }
+
+        try
+        {
+            _saving = true;
+            var payload = BuildPayload(isCreate);
+            Dictionary<string, object>? result = null;
+
+            if (isCreate)
+            {
+                result = await DynamicEntitySvc.CreateAsync(FullTypeName, payload);
+                MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
+            }
+            else if (_editingEntityId.HasValue)
+            {
+                result = await DynamicEntitySvc.UpdateAsync(FullTypeName, _editingEntityId.Value, payload);
+                MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
+            }
+
+            if (result != null)
+            {
+                UpdateLocalData(result);
+                await LoadData();
+            }
+
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        _modalVisible = false;
+        _isEditMode = false;
+        _editingEntityId = null;
+    }
+
+    private void UpdateLocalData(Dictionary<string, object> entity)
+    {
+        if (!_data.Any())
+        {
+            _data.Add(entity);
+            return;
+        }
+
+        if (entity.TryGetValue("Id", out var idValue) && TryConvertToInt(idValue, out var id))
+        {
+            var index = _data.FindIndex(item =>
+                item.TryGetValue("Id", out var existing) && TryConvertToInt(existing, out var existingId) && existingId == id);
+
+            if (index >= 0)
+            {
+                _data[index] = entity;
+                return;
+            }
+        }
+
+        _data.Insert(0, entity);
+    }
+
+    private bool ValidateForm(bool isCreate)
+    {
+        _validationErrors.Clear();
+
+        foreach (var field in _allFields)
+        {
+            if (!field.IsRequired || IsSystemManagedField(field.PropertyName))
+            {
+                continue;
+            }
+
+            _formValues.TryGetValue(field.PropertyName, out var value);
+            if (IsValueEmpty(field, value))
+            {
+                var label = GetFieldLabel(field);
+                _validationErrors[field.PropertyName] = string.Format(I18n.T("VAL_REQUIRED"), label);
+            }
+        }
+
+        return _validationErrors.Count == 0;
+    }
+
+    private Dictionary<string, object?> BuildPayload(bool isCreate)
+    {
+        var payload = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in _allFields)
+        {
+            if (ShouldSkipField(field, isCreate))
+            {
+                continue;
+            }
+
+            _formValues.TryGetValue(field.PropertyName, out var value);
+
+            if (isCreate)
+            {
+                value ??= GetDefaultValue(field, true);
+            }
+
+            if (!isCreate && string.Equals(field.PropertyName, "UpdatedAt", StringComparison.OrdinalIgnoreCase))
+            {
+                value = DateTime.UtcNow;
+            }
+
+            if (!isCreate && string.Equals(field.PropertyName, "UpdatedBy", StringComparison.OrdinalIgnoreCase))
+            {
+                value = value is string str && !string.IsNullOrWhiteSpace(str) ? str : string.Empty;
+            }
+
+            var serialized = SerializeFieldValue(field, value, isCreate);
+
+            if (serialized != null || !field.IsRequired)
+            {
+                payload[field.PropertyName] = serialized;
+            }
+        }
+
+        return payload;
+    }
+
+    private static bool TryConvertToInt(object? value, out int result)
+    {
+        switch (value)
+        {
+            case int i:
+                result = i;
+                return true;
+            case long l when l <= int.MaxValue:
+                result = (int)l;
+                return true;
+            case JsonElement jsonElement when jsonElement.ValueKind == JsonValueKind.Number:
+                result = jsonElement.GetInt32();
+                return true;
+            case string str when int.TryParse(str, out var parsed):
+                result = parsed;
+                return true;
+            default:
+                result = 0;
+                return false;
+        }
+    }
+
+    private object? SerializeFieldValue(FieldMetadataDto field, object? value, bool isCreate)
+    {
+        if (value == null)
+        {
+            if (string.Equals(field.PropertyName, "CreatedBy", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return string.Empty;
+            }
+
+            if (string.Equals(field.PropertyName, "UpdatedBy", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+
+            if (string.Equals(field.PropertyName, "CreatedAt", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return DateTime.UtcNow;
+            }
+
+            if (string.Equals(field.PropertyName, "UpdatedAt", StringComparison.OrdinalIgnoreCase))
+            {
+                return DateTime.UtcNow;
+            }
+
+            if (string.Equals(field.PropertyName, "Version", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return 1;
+            }
+
+            if (string.Equals(field.PropertyName, "VersionNo", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return 1;
+            }
+
+            if (string.Equals(field.PropertyName, "ValidFrom", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return DateTime.UtcNow;
+            }
+
+            if (string.Equals(field.PropertyName, "IsDeleted", StringComparison.OrdinalIgnoreCase) && isCreate)
+            {
+                return false;
+            }
+
+            return null;
+        }
+
+        if (value is string stringValue && string.IsNullOrWhiteSpace(stringValue))
+        {
+            return null;
+        }
+
+        return field.DataType switch
+        {
+            FieldDataType.Integer or FieldDataType.Long => Convert.ToInt64(value),
+            FieldDataType.Decimal => Convert.ToDecimal(value),
+            FieldDataType.Boolean => value is bool boolValue ? boolValue : Convert.ToBoolean(value),
+            FieldDataType.DateTime => value is DateTime dt ? dt : DateTime.Parse(value.ToString() ?? string.Empty),
+            FieldDataType.Date => value is DateTime dateTime ? DateOnly.FromDateTime(dateTime) : value,
+            FieldDataType.Guid => value is Guid guid ? guid : Guid.Parse(value.ToString() ?? string.Empty),
+            _ when field.IsEntityRef => value is Guid guidValue ? guidValue : Guid.TryParse(value?.ToString(), out var parsedGuid) ? parsedGuid : value,
+            _ => value
+        };
+    }
+
+    private object? ConvertToFormValue(FieldMetadataDto field, object? value)
+    {
+        if (value == null)
+        {
+            return GetDefaultValue(field, false);
+        }
+
+        if (value is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+
+            if (field.DataType == FieldDataType.Boolean)
+            {
+                return element.GetBoolean();
+            }
+
+            if (field.DataType == FieldDataType.Integer || field.DataType == FieldDataType.Long)
+            {
+                return element.GetInt64();
+            }
+
+            if (field.DataType == FieldDataType.Decimal)
+            {
+                return element.GetDecimal();
+            }
+
+            if (field.DataType == FieldDataType.DateTime)
+            {
+                return element.GetDateTime();
+            }
+
+            if (field.DataType == FieldDataType.Date)
+            {
+                return element.ValueKind == JsonValueKind.String
+                    ? DateTime.Parse(element.GetString() ?? string.Empty)
+                    : DateTime.Parse(element.ToString());
+            }
+
+            if (field.IsEntityRef)
+            {
+                if (element.ValueKind == JsonValueKind.Object)
+                {
+                    if (element.TryGetProperty("Id", out var idProp))
+                    {
+                        return idProp.ValueKind switch
+                        {
+                            JsonValueKind.String => idProp.GetString(),
+                            JsonValueKind.Number => idProp.GetInt64().ToString(),
+                            _ => idProp.ToString()
+                        };
+                    }
+                }
+
+                return element.ToString();
+            }
+
+            return element.ToString();
+        }
+
+        return value;
+    }
+
+    private object? GetDefaultValue(FieldMetadataDto field, bool forCreate)
+    {
+        if (string.Equals(field.PropertyName, "CreatedAt", StringComparison.OrdinalIgnoreCase) && forCreate)
+        {
+            return DateTime.UtcNow;
+        }
+
+        if (string.Equals(field.PropertyName, "UpdatedAt", StringComparison.OrdinalIgnoreCase))
+        {
+            return DateTime.UtcNow;
+        }
+
+        if (string.Equals(field.PropertyName, "CreatedBy", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        if (string.Equals(field.PropertyName, "UpdatedBy", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        if (string.Equals(field.PropertyName, "Version", StringComparison.OrdinalIgnoreCase) && forCreate)
+        {
+            return 1;
+        }
+
+        if (string.Equals(field.PropertyName, "VersionNo", StringComparison.OrdinalIgnoreCase) && forCreate)
+        {
+            return 1;
+        }
+
+        if (string.Equals(field.PropertyName, "ValidFrom", StringComparison.OrdinalIgnoreCase) && forCreate)
+        {
+            return DateTime.UtcNow;
+        }
+
+        if (string.Equals(field.PropertyName, "IsDeleted", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return null;
+    }
+
+    private bool ShouldSkipField(FieldMetadataDto field, bool isCreate)
+    {
+        if (isCreate && string.Equals(field.PropertyName, "Id", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (HiddenSystemFields.Contains(field.PropertyName))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsSystemManagedField(string fieldName)
+    {
+        return ReadonlyFields.Contains(fieldName) || HiddenSystemFields.Contains(fieldName);
+    }
+
+    private bool IsValueEmpty(FieldMetadataDto field, object? value)
+    {
+        if (value == null)
+        {
+            return true;
+        }
+
+        if (value is string str)
+        {
+            return string.IsNullOrWhiteSpace(str);
+        }
+
+        if (field.DataType == FieldDataType.DateTime || field.DataType == FieldDataType.Date)
+        {
+            return value is not DateTime and not DateOnly;
+        }
+
+        return false;
+    }
+
+    private IEnumerable<FieldMetadataDto> GetVisibleFields()
+    {
+        foreach (var field in _allFields)
+        {
+            if (HiddenSystemFields.Contains(field.PropertyName))
+            {
+                continue;
+            }
+
+            if (!_isEditMode && string.Equals(field.PropertyName, "Id", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            yield return field;
+        }
+    }
+
+    private string GetFieldLabel(FieldMetadataDto field)
+    {
+        if (field.DisplayName != null)
+        {
+            var lang = I18n.CurrentLang ?? "ja";
+            if (field.DisplayName.TryGetValue(lang, out var localized) && !string.IsNullOrWhiteSpace(localized))
+            {
+                return localized!;
+            }
+
+            if (field.DisplayName.TryGetValue("en", out var english) && !string.IsNullOrWhiteSpace(english))
+            {
+                return english!;
+            }
+        }
+
+        return field.PropertyName;
+    }
+
+    private string GetFieldInputId(FieldMetadataDto field) => $"field-{field.PropertyName}";
+
+    private bool HasError(FieldMetadataDto field) => _validationErrors.ContainsKey(field.PropertyName);
+
+    private string? GetError(FieldMetadataDto field) => _validationErrors.TryGetValue(field.PropertyName, out var error) ? error : null;
+
+    private object? GetFormValue(string fieldName)
+    {
+        return _formValues.TryGetValue(fieldName, out var value) ? value : null;
+    }
+
+    private void SetFormValue(string fieldName, object? value)
+    {
+        _formValues[fieldName] = value;
+    }
+
+    private bool IsFieldDisabled(FieldMetadataDto field) => IsSystemManagedField(field.PropertyName);
+
+    private string? GetStringValue(string fieldName)
+    {
+        return GetFormValue(fieldName)?.ToString();
+    }
+
+    private bool GetBoolValue(string fieldName)
+    {
+        var value = GetFormValue(fieldName);
+        return value switch
+        {
+            bool b => b,
+            string s when bool.TryParse(s, out var parsed) => parsed,
+            JsonElement element when element.ValueKind == JsonValueKind.True => true,
+            JsonElement element when element.ValueKind == JsonValueKind.False => false,
+            _ => false
+        };
+    }
+
+    private long? GetLongValue(string fieldName)
+    {
+        var value = GetFormValue(fieldName);
+        return value switch
+        {
+            null => null,
+            long l => l,
+            int i => i,
+            decimal d => (long)d,
+            double dbl => (long)dbl,
+            string s when long.TryParse(s, out var parsed) => parsed,
+            JsonElement element when element.ValueKind == JsonValueKind.Number => element.GetInt64(),
+            _ => null
+        };
+    }
+
+    private decimal? GetDecimalValue(string fieldName)
+    {
+        var value = GetFormValue(fieldName);
+        return value switch
+        {
+            null => null,
+            decimal d => d,
+            double dbl => (decimal)dbl,
+            float f => (decimal)f,
+            string s when decimal.TryParse(s, out var parsed) => parsed,
+            JsonElement element when element.ValueKind == JsonValueKind.Number => element.GetDecimal(),
+            _ => null
+        };
+    }
+
+    private DateTime? GetDateTimeValue(string fieldName)
+    {
+        var value = GetFormValue(fieldName);
+        return value switch
+        {
+            null => null,
+            DateTime dt => dt,
+            DateOnly dateOnly => dateOnly.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+            string s when DateTime.TryParse(s, out var parsed) => parsed,
+            JsonElement element when element.ValueKind == JsonValueKind.String && DateTime.TryParse(element.GetString(), out var parsed) => parsed,
+            _ => null
+        };
     }
 
     private async Task HandleDelete(Dictionary<string, object> entity)
