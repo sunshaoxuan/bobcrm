@@ -422,6 +422,7 @@ public class I18nService
         ["MSG_MENU_CREATE_SUCCESS"] = new() { ["zh"] = "菜单创建成功", ["ja"] = "メニューを作成しました", ["en"] = "Menu created successfully." },
         ["MSG_MENU_SAVE_SUCCESS"] = new() { ["zh"] = "菜单已更新", ["ja"] = "メニューを更新しました", ["en"] = "Menu updated." },
         ["MSG_MENU_REORDER_FAILED"] = new() { ["zh"] = "排序操作失败，请刷新后重试", ["ja"] = "並び替えに失敗しました。再読み込みしてやり直してください。", ["en"] = "Failed to reorder menus. Refresh and try again." },
+        ["MSG_MENU_INVALID_DROP"] = new() { ["zh"] = "不能将菜单移动到自身或其子节点下", ["ja"] = "自分自身または子ノードの下には移動できません", ["en"] = "Cannot move a menu under itself or its descendants." },
         ["MSG_MENU_LOAD_FAILED"] = new() { ["zh"] = "加载菜单失败", ["ja"] = "メニューの読み込みに失敗しました", ["en"] = "Failed to load menus." },
         ["MSG_MENU_CODE_REQUIRED"] = new() { ["zh"] = "请输入唯一的菜单编码", ["ja"] = "一意のメニューコードを入力してください", ["en"] = "Menu code is required." },
 

@@ -1,5 +1,6 @@
 @page "/menus"
 @using System.Linq
+@using System.Collections.Generic
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
 @inject MenuService MenuService
@@ -363,41 +364,41 @@
             return;
         }
 
-        var originalParentId = _parentLookup.TryGetValue(dragged.Id, out var parentId) ? parentId : dragged.ParentId;
-        var originalParent = originalParentId.HasValue && _lookup.TryGetValue(originalParentId.Value, out var parentNode)
-            ? parentNode
-            : null;
+        var originalParent = GetParentNode(dragged);
+
+        var newParent = position == "into"
+            ? target
+            : GetParentNode(target);
+
+        if (WouldCreateCycle(dragged, newParent))
+        {
+            await Message.Warning(I18n.T("MSG_MENU_INVALID_DROP"));
+            _draggingNodeId = null;
+            return;
+        }
 
         RemoveFromParent(dragged, originalParent);
 
-        FunctionMenuNode? newParent;
-        List<FunctionMenuNode> siblings;
+        var siblings = newParent?.Children ?? _tree;
+        var insertIndex = siblings.Count;
 
-        if (position == "into")
+        if (position != "into")
         {
-            newParent = target;
-            siblings = target.Children;
-            siblings.Add(dragged);
-        }
-        else
-        {
-            newParent = _parentLookup.TryGetValue(target.Id, out var targetParentId) && targetParentId.HasValue
-                ? _lookup[targetParentId.Value]
-                : null;
-            siblings = newParent?.Children ?? _tree;
-            var insertIndex = siblings.FindIndex(n => n.Id == target.Id);
+            insertIndex = siblings.FindIndex(n => n.Id == target.Id);
             if (insertIndex < 0)
             {
                 insertIndex = siblings.Count;
             }
+
             if (position == "after")
             {
                 insertIndex++;
             }
+
             insertIndex = Math.Clamp(insertIndex, 0, siblings.Count);
-            siblings.Insert(insertIndex, dragged);
         }
 
+        siblings.Insert(insertIndex, dragged);
         dragged.ParentId = newParent?.Id;
 
         var updateMap = new Dictionary<Guid, MenuNodeOrderRequest>();
@@ -487,6 +488,17 @@
         StateHasChanged();
     }
 
+    private FunctionMenuNode? GetParentNode(FunctionMenuNode node)
+    {
+        if (_parentLookup.TryGetValue(node.Id, out var parentId) && parentId.HasValue &&
+            _lookup.TryGetValue(parentId.Value, out var parent))
+        {
+            return parent;
+        }
+
+        return null;
+    }
+
     private void RemoveFromParent(FunctionMenuNode node, FunctionMenuNode? parent)
     {
         if (parent == null)
@@ -512,6 +524,42 @@
                 ParentId = parent?.Id,
                 SortOrder = sibling.SortOrder
             };
+        }
+    }
+
+    private bool WouldCreateCycle(FunctionMenuNode dragged, FunctionMenuNode? newParent)
+    {
+        if (newParent is null)
+        {
+            return false;
+        }
+
+        if (newParent.Id == dragged.Id)
+        {
+            return true;
+        }
+
+        var currentId = newParent.Id;
+        var visited = new HashSet<Guid>();
+
+        while (true)
+        {
+            if (!visited.Add(currentId))
+            {
+                return true;
+            }
+
+            if (currentId == dragged.Id)
+            {
+                return true;
+            }
+
+            if (!_parentLookup.TryGetValue(currentId, out var parentId) || !parentId.HasValue)
+            {
+                return false;
+            }
+
+            currentId = parentId.Value;
         }
     }
 

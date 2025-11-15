@@ -14,9 +14,7 @@ public class FunctionNodeConfiguration : IEntityTypeConfiguration<FunctionNode>
         builder.Property(x => x.Code).IsRequired().HasMaxLength(100);
         builder.HasIndex(x => x.Code).IsUnique();
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
-        builder.Property(x => x.DisplayNameKey).HasMaxLength(200);
-        builder.Property(x => x.DisplayName)
-            .HasColumnType("jsonb");
+        builder.Property(x => x.DisplayName).HasColumnType("jsonb");
         builder.Property(x => x.Route).HasMaxLength(256);
         builder.Property(x => x.Icon).HasMaxLength(64);
 
@@ -25,9 +23,9 @@ public class FunctionNodeConfiguration : IEntityTypeConfiguration<FunctionNode>
             .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(x => x.TemplateBinding)
+        builder.HasOne(x => x.Template)
             .WithMany()
-            .HasForeignKey(x => x.TemplateBindingId)
+            .HasForeignKey(x => x.TemplateId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

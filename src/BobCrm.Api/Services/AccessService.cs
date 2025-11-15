@@ -14,7 +14,6 @@ public class AccessService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
-    private readonly MultilingualFieldService _multilingual;
 
     private record FunctionSeed(
         string Code,
@@ -24,7 +23,15 @@ public class AccessService
         bool IsMenu,
         int SortOrder,
         string? ParentCode,
-        string? DisplayNameKey = null);
+        Dictionary<string, string?>? DisplayName = null)
+    {
+        public Dictionary<string, string?> DisplayNameMap { get; } = DisplayName ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["zh"] = Name,
+            ["en"] = Name,
+            ["ja"] = Name
+        };
+    }
 
     private static readonly FunctionSeed[] DefaultFunctionSeeds =
     [
@@ -119,30 +126,46 @@ public class AccessService
             throw new InvalidOperationException("Function code already exists.");
         }
 
-        TemplateBinding? binding = null;
-        if (request.TemplateBindingId.HasValue)
+        var displayName = request.DisplayName != null
+            ? new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(request.Name))
         {
-            binding = await _db.TemplateBindings
-                .FirstOrDefaultAsync(b => b.Id == request.TemplateBindingId.Value, ct)
-                ?? throw new InvalidOperationException("Template binding not found.");
+            displayName.TryAdd("zh", request.Name.Trim());
         }
 
-        var fallbackDisplayName = request.DisplayName ?? MultilingualFieldService.FromSingleValue(request.Name);
-        var resolvedDisplayName = await _multilingual.ResolveAsync(request.DisplayNameKey, fallbackDisplayName, ct);
+        var resolvedName = !string.IsNullOrWhiteSpace(request.Name)
+            ? request.Name.Trim()
+            : MultilingualTextHelper.Resolve(displayName, request.Code);
+
+        if (string.IsNullOrWhiteSpace(resolvedName))
+        {
+            throw new InvalidOperationException("Function name is required.");
+        }
+
+        FormTemplate? template = null;
+        if (request.TemplateId.HasValue)
+        {
+            template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
+            if (template == null)
+            {
+                throw new InvalidOperationException("Template does not exist.");
+            }
+        }
 
         var node = new FunctionNode
         {
             ParentId = request.ParentId,
             Code = request.Code.Trim(),
-            Name = request.Name.Trim(),
-            DisplayName = resolvedDisplayName,
-            DisplayNameKey = request.DisplayNameKey?.Trim(),
-            Route = request.Route?.Trim(),
+            Name = resolvedName,
+            DisplayName = displayName,
+            Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim(),
             Icon = request.Icon?.Trim(),
             IsMenu = request.IsMenu,
             SortOrder = request.SortOrder,
-            TemplateBindingId = request.TemplateBindingId,
-            TemplateBinding = binding
+            TemplateId = template?.Id,
+            Template = template
         };
 
         _db.FunctionNodes.Add(node);
@@ -283,6 +306,11 @@ public class AccessService
         var ids = updateList.Select(u => u.Id).ToList();
         var nodes = await _db.FunctionNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
 
+        var parentMap = await _db.FunctionNodes
+            .AsNoTracking()
+            .Select(n => new { n.Id, n.ParentId })
+            .ToDictionaryAsync(n => n.Id, n => n.ParentId, ct);
+
         foreach (var update in updateList)
         {
             var node = nodes.FirstOrDefault(n => n.Id == update.Id);
@@ -290,6 +318,48 @@ public class AccessService
             {
                 throw new InvalidOperationException($"Function node {update.Id} not found.");
             }
+
+            if (update.ParentId.HasValue && !parentMap.ContainsKey(update.ParentId.Value))
+            {
+                throw new InvalidOperationException("Cannot move node under a non-existent parent.");
+            }
+
+            if (update.ParentId.HasValue && update.ParentId.Value == update.Id)
+            {
+                throw new InvalidOperationException("Cannot set a node as its own parent.");
+            }
+
+            if (!parentMap.ContainsKey(update.Id))
+            {
+                parentMap[update.Id] = node.ParentId;
+            }
+
+            var currentParentId = update.ParentId;
+            var visited = new HashSet<Guid>();
+
+            while (currentParentId.HasValue)
+            {
+                var currentValue = currentParentId.Value;
+
+                if (!visited.Add(currentValue))
+                {
+                    throw new InvalidOperationException("Detected a cycle in the menu hierarchy.");
+                }
+
+                if (currentValue == update.Id)
+                {
+                    throw new InvalidOperationException("Cannot move a node under its own descendant.");
+                }
+
+                if (!parentMap.TryGetValue(currentValue, out var nextParent) || !nextParent.HasValue)
+                {
+                    break;
+                }
+
+                currentParentId = nextParent;
+            }
+
+            parentMap[update.Id] = update.ParentId;
 
             node.ParentId = update.ParentId;
             node.SortOrder = update.SortOrder;

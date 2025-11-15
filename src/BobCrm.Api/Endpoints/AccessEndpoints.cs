@@ -382,20 +382,25 @@ public static class AccessEndpoints
     {
         return new FunctionNodeDto
         {
-            Id = n.Id,
-            ParentId = n.ParentId,
-            Code = n.Code,
-            Name = n.Name,
-            DisplayName = n.DisplayName == null
-                ? null
-                : new Dictionary<string, string?>(n.DisplayName, StringComparer.OrdinalIgnoreCase),
-            DisplayNameKey = n.DisplayNameKey,
-            Route = n.Route,
-            Icon = n.Icon,
-            IsMenu = n.IsMenu,
-            SortOrder = n.SortOrder,
-            TemplateBindingId = n.TemplateBindingId
-        });
+            Id = node.Id,
+            ParentId = node.ParentId,
+            Code = node.Code,
+            Name = node.Name,
+            DisplayName = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
+            Route = node.Route,
+            Icon = node.Icon,
+            IsMenu = node.IsMenu,
+            SortOrder = node.SortOrder,
+            TemplateId = node.TemplateId,
+            TemplateName = node.Template?.Name,
+            Children = new List<FunctionNodeDto>()
+        };
+    }
+
+    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
+    {
+        var lookup = nodes.ToDictionary(n => n.Id, n => ToDto(n));
+        var parentMap = nodes.ToDictionary(n => n.Id, n => n.ParentId);
 
         List<FunctionNodeDto> roots = new();
         foreach (var source in nodes.OrderBy(n => n.SortOrder))
@@ -407,6 +412,13 @@ public static class AccessEndpoints
 
             if (node.ParentId.HasValue && lookup.TryGetValue(node.ParentId.Value, out var parent))
             {
+                if (CreatesCycle(node.Id, node.ParentId.Value, parentMap))
+                {
+                    node.ParentId = null;
+                    roots.Add(node);
+                    continue;
+                }
+
                 parent.Children.Add(node);
             }
             else
@@ -418,6 +430,32 @@ public static class AccessEndpoints
         return roots;
     }
 
+    private static bool CreatesCycle(Guid childId, Guid parentId, Dictionary<Guid, Guid?> parentMap)
+    {
+        var current = parentId;
+        HashSet<Guid> visited = new() { childId };
+
+        while (true)
+        {
+            if (!visited.Add(current))
+            {
+                return true;
+            }
+
+            if (!parentMap.TryGetValue(current, out var next) || !next.HasValue)
+            {
+                return false;
+            }
+
+            if (next.Value == childId)
+            {
+                return true;
+            }
+
+            current = next.Value;
+        }
+    }
+
     private static void SortChildren(List<FunctionNodeDto> nodes)
     {
         nodes.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
@@ -425,129 +463,5 @@ public static class AccessEndpoints
         {
             SortChildren(node.Children);
         }
-    }
-
-    private static async Task<Dictionary<Guid, Dictionary<string, string?>>> LoadFunctionNameTranslationsAsync(
-        AppDbContext db,
-        List<FunctionNode> nodes,
-        CancellationToken ct)
-    {
-        var result = new Dictionary<Guid, Dictionary<string, string?>>(nodes.Count);
-        if (nodes.Count == 0)
-        {
-            return result;
-        }
-
-        var languages = await db.LocalizationLanguages
-            .AsNoTracking()
-            .Select(l => l.Code.ToLower())
-            .ToListAsync(ct);
-
-        if (languages.Count == 0)
-        {
-            languages = new List<string> { "ja", "en", "zh" };
-        }
-
-        var codes = nodes.Select(n => n.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var candidateKeys = nodes
-            .Select(n => $"MENU_{n.Code.Replace('.', '_')}" )
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var resources = await db.LocalizationResources
-            .AsNoTracking()
-            .Where(r => codes.Contains(r.Key) || candidateKeys.Contains(r.Key))
-            .ToListAsync(ct);
-
-        var resourceLookup = resources.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var node in nodes)
-        {
-            var map = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            LocalizationResource? resolved = null;
-            var keysToTry = new[]
-            {
-                node.Code,
-                $"MENU_{node.Code.Replace('.', '_')}"
-            };
-
-            foreach (var key in keysToTry)
-            {
-                if (resourceLookup.TryGetValue(key, out var resource))
-                {
-                    resolved = resource;
-                    break;
-                }
-            }
-
-            if (resolved != null)
-            {
-                foreach (var lang in languages)
-                {
-                    resolved.Translations.TryGetValue(lang, out var value);
-                    map[lang] = string.IsNullOrWhiteSpace(value) ? node.Name : value;
-                }
-            }
-            else
-            {
-                foreach (var lang in languages)
-                {
-                    map[lang] = node.Name;
-                }
-            }
-
-            result[node.Id] = map;
-        }
-
-        return result;
-    }
-
-    private static async Task<Dictionary<string, List<FunctionNodeTemplateBindingDto>>> LoadTemplateBindingsAsync(
-        AppDbContext db,
-        CancellationToken ct)
-    {
-        var bindings = await db.TemplateBindings
-            .AsNoTracking()
-            .Include(tb => tb.Template)
-            .ToListAsync(ct);
-
-        return bindings
-            .Select(tb => new
-            {
-                Code = tb.RequiredFunctionCode ?? tb.Template?.RequiredFunctionCode,
-                Binding = new FunctionNodeTemplateBindingDto(
-                    tb.Id,
-                    tb.EntityType,
-                    tb.UsageType,
-                    tb.TemplateId,
-                    tb.Template?.Name ?? string.Empty,
-                    tb.IsSystem)
-            })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Code))
-            .GroupBy(x => x.Code!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(x => x.Binding).OrderBy(b => b.UsageType).ThenBy(b => b.TemplateId).ToList(),
-                StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string ComputeFunctionTreeVersion(
-        IEnumerable<object> functionSnapshot,
-        IEnumerable<object> templateSnapshot)
-    {
-        var builder = new StringBuilder();
-
-        foreach (var entry in functionSnapshot)
-        {
-            builder.AppendLine(entry.ToString());
-        }
-
-        foreach (var entry in templateSnapshot)
-        {
-            builder.AppendLine(entry.ToString());
-        }
-
-        using var sha = SHA256.Create();
-        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(builder.ToString()));
-        return Convert.ToHexString(hash);
     }
 }

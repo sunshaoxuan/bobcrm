@@ -672,10 +672,6 @@ namespace BobCrm.Api.Migrations
                     b.Property<string>("DisplayName")
                         .HasColumnType("jsonb");
 
-                    b.Property<string>("DisplayNameKey")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<string>("Icon")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -711,7 +707,7 @@ namespace BobCrm.Api.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.HasIndex("TemplateBindingId");
+                    b.HasIndex("TemplateId");
 
                     b.ToTable("FunctionNodes", (string)null);
                 });
@@ -1534,12 +1530,10 @@ namespace BobCrm.Api.Migrations
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("BobCrm.Api.Base.Models.TemplateBinding", "TemplateBinding")
+                    b.HasOne("BobCrm.Api.Base.FormTemplate", "Template")
                         .WithMany()
-                        .HasForeignKey("TemplateBindingId")
+                        .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("TemplateBinding");
 
                     b.Navigation("Parent");
 
