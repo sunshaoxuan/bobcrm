@@ -9,10 +9,13 @@ public class FunctionMenuNode
     public Guid? ParentId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public MultilingualTextDto? DisplayName { get; set; }
     public string? Route { get; set; }
     public string? Icon { get; set; }
     public bool IsMenu { get; set; }
     public int SortOrder { get; set; }
+    public int? TemplateId { get; set; }
+    public string? TemplateName { get; set; }
     public List<FunctionMenuNode> Children { get; set; } = new();
     public MultilingualTextDto? DisplayName { get; set; }
     public List<FunctionTemplateBindingSummary> TemplateBindings { get; set; } = new();

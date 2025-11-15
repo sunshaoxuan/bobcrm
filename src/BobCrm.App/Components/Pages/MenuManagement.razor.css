@@ -1,0 +1,234 @@
+.menu-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.menu-tree-panel,
+.menu-detail-panel {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+    min-height: 480px;
+}
+
+.menu-tree-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.menu-tree-container {
+    max-height: 640px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.menu-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.menu-tree > li + li {
+    margin-top: 12px;
+}
+
+.menu-tree ul {
+    list-style: none;
+    margin: 8px 0 0 16px;
+    padding-left: 12px;
+    border-left: 1px dashed var(--border);
+}
+
+.menu-node {
+    position: relative;
+}
+
+.menu-node.selected > .menu-node-card {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(63, 124, 255, 0.08);
+}
+
+.menu-node-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-node-card:hover {
+    border-color: rgba(63, 124, 255, 0.6);
+    box-shadow: 0 0 0 2px rgba(63, 124, 255, 0.08);
+}
+
+.menu-node-card:active {
+    cursor: grabbing;
+}
+
+.menu-node-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menu-node-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.menu-node-name {
+    flex: 1;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.menu-node-code {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.menu-node-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.menu-node-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.drop-zone {
+    height: 10px;
+    border-radius: 6px;
+    margin: 4px 0;
+    background: transparent;
+    transition: background 0.2s ease;
+}
+
+.drop-zone.drop-root {
+    border: 1px dashed var(--border);
+    padding: 10px;
+    text-align: center;
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    background: rgba(63, 124, 255, 0.15);
+}
+
+.menu-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu-detail-card h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.menu-detail-card dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px 12px;
+}
+
+.menu-detail-card dt {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.menu-detail-card dd {
+    margin: 0;
+    font-weight: 500;
+}
+
+.menu-detail-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.menu-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    height: 100%;
+}
+
+.menu-loading {
+    padding: 40px;
+    text-align: center;
+}
+
+.menu-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+}
+
+.menu-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.menu-form .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.menu-form .form-field label {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.menu-form .form-inline {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.menu-form .switch-field {
+    align-items: center;
+}
+
+.menu-templates-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 1100px) {
+    .menu-layout {
+        grid-template-columns: 1fr;
+    }
+}

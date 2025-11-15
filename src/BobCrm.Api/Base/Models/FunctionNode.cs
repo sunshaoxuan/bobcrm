@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Base.Models;
 
@@ -18,6 +20,11 @@ public class FunctionNode
     [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 节点名称的多语言文本（jsonb 存储）
+    /// </summary>
+    public Dictionary<string, string?>? DisplayName { get; set; }
+
     [MaxLength(256)]
     public string? Route { get; set; }
 
@@ -26,6 +33,12 @@ public class FunctionNode
 
     public bool IsMenu { get; set; } = true;
     public int SortOrder { get; set; } = 100;
+
+    /// <summary>
+    /// 关联的模板（可选）
+    /// </summary>
+    public int? TemplateId { get; set; }
+    public FormTemplate? Template { get; set; }
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
 }
