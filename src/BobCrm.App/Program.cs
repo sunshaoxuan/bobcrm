@@ -37,6 +37,7 @@ builder.Services.AddScoped<BobCrm.App.Services.PreferencesService>();
 builder.Services.AddScoped<BobCrm.App.Services.ThemeState>();
 builder.Services.AddScoped<BobCrm.App.Services.LayoutState>();
 builder.Services.AddScoped<BobCrm.App.Services.InteractionState>();
+builder.Services.AddScoped<BobCrm.App.Services.ToastService>();
 // 动态实体系统服务
 builder.Services.AddScoped<BobCrm.App.Services.EntityDefinitionService>();
 builder.Services.AddScoped<BobCrm.App.Services.EntityDomainService>();

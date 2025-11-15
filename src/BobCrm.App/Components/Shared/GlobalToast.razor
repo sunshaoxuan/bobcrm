@@ -1,0 +1,94 @@
+@using BobCrm.App.Services
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="global-toast-container">
+    @foreach (var message in _visibleMessages)
+    {
+        <div class="@GetToastClass(message)" @key="message.Id">
+            <div class="toast-content">
+                <span class="toast-icon">@GetIcon(message.Type)</span>
+                <span class="toast-message">@message.Message</span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ToastMessage> _visibleMessages = new();
+    private readonly Dictionary<Guid, System.Timers.Timer> _timers = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnChange += OnToastChange;
+    }
+
+    private void OnToastChange()
+    {
+        var newMessages = ToastService.GetVisibleMessages();
+
+        // 为新消息创建自动隐藏定时器
+        foreach (var message in newMessages)
+        {
+            if (!_timers.ContainsKey(message.Id))
+            {
+                var timer = new System.Timers.Timer(ToastService.GetAutoHideDuration());
+                timer.Elapsed += (sender, e) =>
+                {
+                    InvokeAsync(() =>
+                    {
+                        ToastService.RemoveMessage(message.Id);
+                        if (_timers.TryGetValue(message.Id, out var t))
+                        {
+                            t.Dispose();
+                            _timers.Remove(message.Id);
+                        }
+                    });
+                };
+                timer.AutoReset = false;
+                timer.Start();
+                _timers[message.Id] = timer;
+            }
+        }
+
+        _visibleMessages = newMessages.ToList();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetToastClass(ToastMessage message)
+    {
+        var baseClass = "toast-item";
+        var typeClass = message.Type switch
+        {
+            ToastType.Success => "toast-success",
+            ToastType.Error => "toast-error",
+            ToastType.Warning => "toast-warning",
+            ToastType.Info => "toast-info",
+            _ => "toast-info"
+        };
+        return $"{baseClass} {typeClass}";
+    }
+
+    private string GetIcon(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Success => "✓",
+            ToastType.Error => "✕",
+            ToastType.Warning => "⚠",
+            ToastType.Info => "ℹ",
+            _ => "ℹ"
+        };
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnChange -= OnToastChange;
+
+        foreach (var timer in _timers.Values)
+        {
+            timer.Dispose();
+        }
+        _timers.Clear();
+    }
+}

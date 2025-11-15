@@ -1,0 +1,162 @@
+.global-toast-container {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast-item {
+    min-width: 300px;
+    max-width: 500px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.3s ease-out, fadeIn 0.3s ease-out;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast-icon {
+    font-size: 16px;
+    font-weight: bold;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.toast-message {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* 成功样式 - 浅绿底深绿字 */
+.toast-success {
+    background-color: rgba(240, 249, 235, 0.95);
+    border-left: 4px solid #52c41a;
+}
+
+.toast-success .toast-icon {
+    color: #52c41a;
+    background-color: rgba(82, 196, 26, 0.1);
+}
+
+.toast-success .toast-message {
+    color: #389e0d;
+}
+
+/* 错误样式 - 浅红底大红字 */
+.toast-error {
+    background-color: rgba(255, 241, 240, 0.95);
+    border-left: 4px solid #ff4d4f;
+}
+
+.toast-error .toast-icon {
+    color: #ff4d4f;
+    background-color: rgba(255, 77, 79, 0.1);
+}
+
+.toast-error .toast-message {
+    color: #cf1322;
+}
+
+/* 警告样式 - 浅黄底深黄字 */
+.toast-warning {
+    background-color: rgba(255, 251, 230, 0.95);
+    border-left: 4px solid #faad14;
+}
+
+.toast-warning .toast-icon {
+    color: #faad14;
+    background-color: rgba(250, 173, 20, 0.1);
+}
+
+.toast-warning .toast-message {
+    color: #d48806;
+}
+
+/* 信息样式 */
+.toast-info {
+    background-color: rgba(230, 247, 255, 0.95);
+    border-left: 4px solid #1890ff;
+}
+
+.toast-info .toast-icon {
+    color: #1890ff;
+    background-color: rgba(24, 144, 255, 0.1);
+}
+
+.toast-info .toast-message {
+    color: #0958d9;
+}
+
+/* 动画 */
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+    .toast-success {
+        background-color: rgba(22, 119, 46, 0.95);
+    }
+
+    .toast-success .toast-message {
+        color: #95de64;
+    }
+
+    .toast-error {
+        background-color: rgba(135, 20, 24, 0.95);
+    }
+
+    .toast-error .toast-message {
+        color: #ff7875;
+    }
+
+    .toast-warning {
+        background-color: rgba(135, 87, 8, 0.95);
+    }
+
+    .toast-warning .toast-message {
+        color: #ffc53d;
+    }
+
+    .toast-info {
+        background-color: rgba(7, 72, 145, 0.95);
+    }
+
+    .toast-info .toast-message {
+        color: #69c0ff;
+    }
+}
