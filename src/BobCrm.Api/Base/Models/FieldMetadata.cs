@@ -125,6 +125,22 @@ public class FieldMetadata
     public string? Source { get; set; }
 
     /// <summary>
+    /// 是否已删除（软删除标记）
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
+    /// 删除时间
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// 删除者
+    /// </summary>
+    [MaxLength(100)]
+    public string? DeletedBy { get; set; }
+
+    /// <summary>
     /// 创建时间
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

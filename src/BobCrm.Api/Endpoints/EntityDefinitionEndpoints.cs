@@ -326,7 +326,10 @@ public static class EntityDefinitionEndpoints
 
                 definition.UpdatedBy,
 
-                Fields = definition.Fields.OrderBy(f => f.SortOrder).Select(f => new
+                Fields = definition.Fields
+                    .Where(f => !f.IsDeleted)  // 过滤已删除的字段
+                    .OrderBy(f => f.SortOrder)
+                    .Select(f => new
 
                 {
 
@@ -862,9 +865,163 @@ public static class EntityDefinitionEndpoints
 
                 definition.Status = EntityStatus.Modified;
 
-            // 更新字段（简化版，实际可能需要更复杂的合并逻辑）
+            // 更新字段列表
+            if (dto.Fields != null)
+            {
+                // 获取现有字段ID集合
+                var existingFieldIds = definition.Fields.Select(f => f.Id).ToHashSet();
+                var incomingFieldIds = dto.Fields.Where(f => f.Id.HasValue).Select(f => f.Id!.Value).ToHashSet();
 
-            // 这里仅作为示例，实际应该根据Id进行更新/删除/新增
+                // 软删除不在新列表中的字段
+                var fieldsToRemove = definition.Fields.Where(f => !incomingFieldIds.Contains(f.Id) && !f.IsDeleted).ToList();
+                foreach (var field in fieldsToRemove)
+                {
+                    // System字段和Interface字段不能删除
+                    if (field.Source == FieldSource.System)
+                    {
+                        logger.LogWarning("[EntityDefinition] Cannot delete System field: {FieldName}", field.PropertyName);
+                        return Results.BadRequest(new { error = $"系统字段 {field.PropertyName} 不能删除" });
+                    }
+
+                    if (field.Source == FieldSource.Interface)
+                    {
+                        logger.LogWarning("[EntityDefinition] Cannot delete Interface field: {FieldName}", field.PropertyName);
+                        return Results.BadRequest(new { error = $"接口字段 {field.PropertyName} 不能删除，请移除相应的接口" });
+                    }
+
+                    // Custom字段：软删除（标记为已删除）
+                    logger.LogInformation("[EntityDefinition] Soft deleting field: {FieldName}", field.PropertyName);
+                    field.IsDeleted = true;
+                    field.DeletedAt = DateTime.UtcNow;
+                    field.DeletedBy = uid;
+
+                    // 如果是已发布的实体，需要生成ALTER TABLE语句将字段改为可空
+                    // 这部分逻辑在发布修改时处理
+                }
+
+                // 更新或添加字段
+                foreach (var fieldDto in dto.Fields)
+                {
+                    // 检查字段是否存在于数据库中（通过检查是否在现有字段集合中）
+                    var existingField = fieldDto.Id.HasValue
+                        ? definition.Fields.FirstOrDefault(f => f.Id == fieldDto.Id.Value)
+                        : null;
+
+                    if (existingField != null)
+                    {
+                        // 更新现有字段
+                        // System字段和Interface字段的某些属性受保护，不能修改
+                        if (existingField.Source == FieldSource.System)
+                        {
+                            // System字段只允许更新显示名和排序
+                            if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
+                            if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
+                        }
+                        else if (existingField.Source == FieldSource.Interface)
+                        {
+                            // Interface字段允许更新显示名、排序和默认值
+                            if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
+                            if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
+                            existingField.DefaultValue = fieldDto.DefaultValue;
+                        }
+                        else
+                        {
+                            // Custom字段可以更新大部分属性
+                            if (fieldDto.PropertyName != null) existingField.PropertyName = fieldDto.PropertyName;
+                            if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
+                            if (fieldDto.DataType != null) existingField.DataType = fieldDto.DataType;
+                            existingField.Length = fieldDto.Length;
+                            existingField.Precision = fieldDto.Precision;
+                            existingField.Scale = fieldDto.Scale;
+                            if (fieldDto.IsRequired.HasValue) existingField.IsRequired = fieldDto.IsRequired.Value;
+                            if (fieldDto.IsEntityRef.HasValue) existingField.IsEntityRef = fieldDto.IsEntityRef.Value;
+                            existingField.ReferencedEntityId = fieldDto.ReferencedEntityId;
+                            if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
+                            existingField.DefaultValue = fieldDto.DefaultValue;
+                            existingField.ValidationRules = fieldDto.ValidationRules;
+                        }
+
+                        // 更新时间
+                        existingField.UpdatedAt = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        // 添加新字段（不使用前端生成的ID）
+                        var newField = new FieldMetadata
+                        {
+                            // 不设置Id，让数据库自动生成
+                            PropertyName = fieldDto.PropertyName ?? string.Empty,
+                            DisplayName = fieldDto.DisplayName,
+                            DataType = fieldDto.DataType ?? FieldDataType.String,
+                            Length = fieldDto.Length,
+                            Precision = fieldDto.Precision,
+                            Scale = fieldDto.Scale,
+                            IsRequired = fieldDto.IsRequired ?? false,
+                            IsEntityRef = fieldDto.IsEntityRef ?? false,
+                            ReferencedEntityId = fieldDto.ReferencedEntityId,
+                            SortOrder = fieldDto.SortOrder ?? 0,
+                            DefaultValue = fieldDto.DefaultValue,
+                            ValidationRules = fieldDto.ValidationRules,
+                            Source = FieldSource.Custom,  // 新增字段标记为Custom
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        definition.Fields.Add(newField);
+                    }
+                }
+            }
+
+            // 更新接口列表
+            if (dto.Interfaces != null)
+            {
+                // 获取现有接口类型集合
+                var existingInterfaces = definition.Interfaces.Select(i => i.InterfaceType).ToHashSet();
+                var incomingInterfaces = dto.Interfaces.ToHashSet();
+
+                // 删除不在新列表中的接口（已经在上面锁定检查中验证过）
+                var interfacesToRemove = definition.Interfaces
+                    .Where(i => !incomingInterfaces.Contains(i.InterfaceType))
+                    .ToList();
+                foreach (var iface in interfacesToRemove)
+                {
+                    definition.Interfaces.Remove(iface);
+                }
+
+                // 添加新接口
+                var newInterfaceTypes = incomingInterfaces.Except(existingInterfaces).ToList();
+                foreach (var interfaceType in newInterfaceTypes)
+                {
+                    var newInterface = new EntityInterface
+                    {
+                        InterfaceType = interfaceType,
+                        IsEnabled = true
+                    };
+                    definition.Interfaces.Add(newInterface);
+
+                    // 根据接口类型自动添加字段
+                    var interfaceFields = InterfaceFieldMapping.GetFields(interfaceType);
+                    foreach (var ifField in interfaceFields)
+                    {
+                        // 检查字段是否已存在
+                        if (!definition.Fields.Any(f => f.PropertyName == ifField.PropertyName))
+                        {
+                            definition.Fields.Add(new FieldMetadata
+                            {
+                                PropertyName = ifField.PropertyName,
+                                DisplayName = null,
+                                DataType = ifField.DataType,
+                                Length = ifField.Length,
+                                IsRequired = ifField.IsRequired,
+                                IsEntityRef = ifField.IsEntityRef,
+                                TableName = ifField.ReferenceTable,
+                                DefaultValue = ifField.DefaultValue,
+                                SortOrder = 0,
+                                Source = FieldSource.Interface
+                            });
+                        }
+                    }
+                }
+            }
 
             await db.SaveChangesAsync();
 
