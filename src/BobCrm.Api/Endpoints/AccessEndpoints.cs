@@ -384,14 +384,16 @@ public static class AccessEndpoints
             ParentId = node.ParentId,
             Code = node.Code,
             Name = node.Name,
-            DisplayName = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
+            DisplayNameTranslations = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,
             SortOrder = node.SortOrder,
             TemplateId = node.TemplateId,
             TemplateName = node.Template?.Name,
-            Children = new List<FunctionNodeDto>()
+            Children = new List<FunctionNodeDto>(),
+            TemplateOptions = new List<FunctionTemplateOptionDto>(),
+            TemplateBindings = new List<FunctionNodeTemplateBindingDto>()
         };
     }
 

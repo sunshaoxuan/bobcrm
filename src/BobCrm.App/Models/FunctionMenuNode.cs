@@ -9,7 +9,7 @@ public class FunctionMenuNode
     public Guid? ParentId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public MultilingualTextDto? DisplayName { get; set; }
+    public MultilingualTextDto? DisplayNameTranslations { get; set; }
     public string? Route { get; set; }
     public string? Icon { get; set; }
     public bool IsMenu { get; set; }
@@ -17,7 +17,7 @@ public class FunctionMenuNode
     public int? TemplateId { get; set; }
     public string? TemplateName { get; set; }
     public List<FunctionMenuNode> Children { get; set; } = new();
-    public MultilingualTextDto? DisplayName { get; set; }
+    public List<FunctionTemplateOption> TemplateOptions { get; set; } = new();
     public List<FunctionTemplateBindingSummary> TemplateBindings { get; set; } = new();
 }
 

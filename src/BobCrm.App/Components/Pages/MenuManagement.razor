@@ -316,7 +316,7 @@
 
     private string ResolveNodeName(FunctionMenuNode node)
     {
-        return MultilingualResolver.Resolve(node.DisplayName, node.Name);
+        return MultilingualResolver.Resolve(node.DisplayNameTranslations, node.Name);
     }
 
     private string ResolveTemplateLabel(FunctionMenuNode node)
@@ -593,7 +593,7 @@
             ParentName = parentName,
             Code = node.Code,
             Name = node.Name,
-            DisplayName = node.DisplayName != null ? new MultilingualTextDto(node.DisplayName) : new MultilingualTextDto(),
+            DisplayName = node.DisplayNameTranslations != null ? new MultilingualTextDto(node.DisplayNameTranslations) : new MultilingualTextDto(),
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,

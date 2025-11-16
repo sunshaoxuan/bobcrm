@@ -88,8 +88,8 @@ public class FunctionTreeBuilderTests
         rootDto.Children.Should().HaveCount(1);
         var childDto = rootDto.Children[0];
         childDto.Code.Should().Be(child.Code);
-        childDto.DisplayName.Should().NotBeNull();
-        childDto.DisplayName!["en"].Should().Be("Products");
+        childDto.DisplayNameTranslations.Should().NotBeNull();
+        childDto.DisplayNameTranslations!["en"].Should().Be("Products");
         childDto.TemplateOptions.Should().ContainSingle(option =>
             option.BindingId == binding.Id &&
             option.IsDefault &&

@@ -548,9 +548,9 @@
 
     private string GetFunctionDisplayName(FunctionMenuNode node)
     {
-        if (node.DisplayName is { Count: > 0 })
+        if (node.DisplayNameTranslations is { Count: > 0 })
         {
-            return MultilingualResolver.Resolve(node.DisplayName, node.Name);
+            return MultilingualResolver.Resolve(node.DisplayNameTranslations, node.Name);
         }
 
         return node.Name;

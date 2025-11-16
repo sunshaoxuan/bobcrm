@@ -20,7 +20,7 @@ public record FunctionNodeDto
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
-    public MultilingualText? DisplayName { get; init; }
+    public MultilingualText? DisplayNameTranslations { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
     public bool IsMenu { get; init; }
@@ -29,6 +29,7 @@ public record FunctionNodeDto
     public string? TemplateName { get; init; }
     public List<FunctionNodeDto> Children { get; init; } = new();
     public List<FunctionTemplateOptionDto> TemplateOptions { get; init; } = new();
+    public List<FunctionNodeTemplateBindingDto> TemplateBindings { get; init; } = new();
 }
 
 public record FunctionTemplateOptionDto
