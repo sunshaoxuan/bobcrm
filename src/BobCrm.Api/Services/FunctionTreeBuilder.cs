@@ -39,11 +39,11 @@ public class FunctionTreeBuilder
         }
 
         var localizedNames = await LoadLocalizedNamesAsync(nodes, ct);
-        var templateOptions = await LoadTemplateOptionsAsync(nodes, ct);
+        var templateMetadata = await LoadTemplateMetadataAsync(nodes, ct);
 
         var dtoLookup = nodes.ToDictionary(
             n => n.Id,
-            n => CreateDto(n, localizedNames, templateOptions));
+            n => CreateDto(n, localizedNames, templateMetadata));
         var parentMap = nodes.ToDictionary(n => n.Id, n => n.ParentId);
 
         List<FunctionNodeDto> roots = new();
@@ -130,7 +130,7 @@ public class FunctionTreeBuilder
         return result;
     }
 
-    private async Task<Dictionary<Guid, List<FunctionTemplateOptionDto>>> LoadTemplateOptionsAsync(
+    private async Task<Dictionary<Guid, TemplateMetadata>> LoadTemplateMetadataAsync(
         IReadOnlyCollection<FunctionNode> nodes,
         CancellationToken ct)
     {
@@ -142,7 +142,7 @@ public class FunctionTreeBuilder
 
         if (codeSet.Count == 0)
         {
-            return new Dictionary<Guid, List<FunctionTemplateOptionDto>>();
+            return new Dictionary<Guid, TemplateMetadata>();
         }
 
         var bindings = await _db.TemplateBindings
@@ -155,7 +155,7 @@ public class FunctionTreeBuilder
             .GroupBy(b => b.RequiredFunctionCode!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        var result = new Dictionary<Guid, List<FunctionTemplateOptionDto>>();
+        var result = new Dictionary<Guid, TemplateMetadata>();
         foreach (var node in nodes)
         {
             if (!bindingMap.TryGetValue(node.Code, out var bindingList))
@@ -178,7 +178,17 @@ public class FunctionTreeBuilder
                 .ThenBy(o => o.TemplateName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            result[node.Id] = options;
+            var bindings = bindingList
+                .Select(binding => new FunctionNodeTemplateBindingDto(
+                    binding.Id,
+                    binding.EntityType,
+                    binding.UsageType,
+                    binding.TemplateId,
+                    binding.Template?.Name ?? string.Empty,
+                    binding.IsSystem))
+                .ToList();
+
+            result[node.Id] = new TemplateMetadata(options, bindings);
         }
 
         return result;
@@ -204,10 +214,10 @@ public class FunctionTreeBuilder
     private static FunctionNodeDto CreateDto(
         FunctionNode node,
         IReadOnlyDictionary<Guid, MultilingualText?> localizedNames,
-        IReadOnlyDictionary<Guid, List<FunctionTemplateOptionDto>> templateOptions)
+        IReadOnlyDictionary<Guid, TemplateMetadata> templateMetadata)
     {
         localizedNames.TryGetValue(node.Id, out var displayName);
-        templateOptions.TryGetValue(node.Id, out var options);
+        templateMetadata.TryGetValue(node.Id, out var metadata);
 
         return new FunctionNodeDto
         {
@@ -215,7 +225,7 @@ public class FunctionTreeBuilder
             ParentId = node.ParentId,
             Code = node.Code,
             Name = node.Name,
-            DisplayName = displayName,
+            DisplayNameTranslations = displayName,
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,
@@ -223,9 +233,14 @@ public class FunctionTreeBuilder
             TemplateId = node.TemplateId,
             TemplateName = node.Template?.Name,
             Children = new List<FunctionNodeDto>(),
-            TemplateOptions = options ?? new List<FunctionTemplateOptionDto>()
+            TemplateOptions = metadata?.Options ?? new List<FunctionTemplateOptionDto>(),
+            TemplateBindings = metadata?.Bindings ?? new List<FunctionNodeTemplateBindingDto>()
         };
     }
+
+    private sealed record TemplateMetadata(
+        List<FunctionTemplateOptionDto> Options,
+        List<FunctionNodeTemplateBindingDto> Bindings);
 
     private static bool CreatesCycle(Guid childId, Guid parentId, Dictionary<Guid, Guid?> parentMap)
     {

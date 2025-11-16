@@ -13,7 +13,7 @@ public interface IRoleService
     Task<RoleProfileDto?> CreateRoleAsync(CreateRoleRequestDto request, CancellationToken ct = default);
     Task<bool> UpdateRoleAsync(Guid id, UpdateRoleRequestDto request, CancellationToken ct = default);
     Task<bool> UpdatePermissionsAsync(Guid id, UpdatePermissionsRequestDto request, CancellationToken ct = default);
-    Task<List<FunctionMenuNode>> GetFunctionTreeAsync(CancellationToken ct = default);
+    Task<FunctionTreeResponse> GetFunctionTreeAsync(bool forceRefresh = false, CancellationToken ct = default);
 }
 
 public class RoleService : IRoleService
@@ -159,81 +159,40 @@ public class RoleService : IRoleService
             Icon = node.Icon,
             IsMenu = node.IsMenu,
             SortOrder = node.SortOrder,
-            DisplayName = node.DisplayName != null ? new MultilingualTextDto(node.DisplayName) : null,
-            TemplateBindings = (node.TemplateBindings ?? new List<FunctionTemplateBindingSummary>())
-                .Select(b => new FunctionTemplateBindingSummary
+            DisplayNameTranslations = node.DisplayNameTranslations != null
+                ? new MultilingualTextDto(node.DisplayNameTranslations)
+                : null,
+            TemplateOptions = (node.TemplateOptions ?? new List<FunctionTemplateOption>())
+                .Select(option => new FunctionTemplateOption
                 {
-                    BindingId = b.BindingId,
-                    EntityType = b.EntityType,
-                    UsageType = b.UsageType,
-                    TemplateId = b.TemplateId,
-                    TemplateName = b.TemplateName,
-                    IsSystem = b.IsSystem
+                    BindingId = option.BindingId,
+                    TemplateId = option.TemplateId,
+                    TemplateName = option.TemplateName,
+                    EntityType = option.EntityType,
+                    UsageType = option.UsageType,
+                    IsSystem = option.IsSystem,
+                    IsDefault = option.IsDefault
                 }).ToList(),
-            Children = CloneTree(node.Children)
-        };
-    }
-
-        }
-    }
-
-    public async Task<string?> GetFunctionTreeVersionAsync(CancellationToken ct = default)
-    {
-        return await GetFunctionTreeVersionInternalAsync(ct);
-    }
-
-    public void InvalidateFunctionTreeCache()
-    {
-        _cachedFunctionTree = new List<FunctionMenuNode>();
-        _cachedFunctionTreeVersion = null;
-    }
-
-    private async Task<string?> GetFunctionTreeVersionInternalAsync(CancellationToken ct)
-    {
-        try
-        {
-            var resp = await _auth.GetWithRefreshAsync("/api/access/functions/version");
-            if (!resp.IsSuccessStatusCode)
-            {
-                return _cachedFunctionTreeVersion;
-            }
-
-            var payload = await resp.Content.ReadFromJsonAsync<FunctionTreeVersionResponse>(cancellationToken: ct);
-            return payload?.Version ?? _cachedFunctionTreeVersion;
-        }
-        catch
-        {
-            return _cachedFunctionTreeVersion;
-        }
-    }
-
-    private static List<FunctionMenuNode> CloneTree(List<FunctionMenuNode> nodes)
-    {
-        return nodes.Select(CloneNode).ToList();
-    }
-
-    private static FunctionMenuNode CloneNode(FunctionMenuNode node)
-    {
-        return new FunctionMenuNode
-        {
-            Id = node.Id,
-            ParentId = node.ParentId,
-            Code = node.Code,
-            Name = node.Name,
-            Route = node.Route,
-            Icon = node.Icon,
-            IsMenu = node.IsMenu,
-            SortOrder = node.SortOrder,
-            DisplayName = node.DisplayName != null ? new MultilingualTextDto(node.DisplayName) : null,
-            TemplateBindings = node.TemplateBindings
-                .Select(b => new FunctionTemplateBindingSummary
+            TemplateBindings = (node.TemplateBindings ?? new List<FunctionTemplateBindingSummary>())
+                .Select(binding => new FunctionTemplateBindingSummary
                 {
-                    BindingId = b.BindingId,
-                    EntityType = b.EntityType,
-                    UsageType = b.UsageType,
-                    TemplateId = b.TemplateId,
-                    TemplateName = b.TemplateName,
-                    IsSystem = b.IsSystem
+                    BindingId = binding.BindingId,
+                    EntityType = binding.EntityType,
+                    UsageType = binding.UsageType,
+                    TemplateId = binding.TemplateId,
+                    TemplateName = binding.TemplateName,
+                    IsSystem = binding.IsSystem,
+                    TemplateOptions = (binding.TemplateOptions ?? new List<FunctionTemplateOption>())
+                        .Select(option => new FunctionTemplateOption
+                        {
+                            BindingId = option.BindingId,
+                            TemplateId = option.TemplateId,
+                            TemplateName = option.TemplateName,
+                            EntityType = option.EntityType,
+                            UsageType = option.UsageType,
+                            IsSystem = option.IsSystem,
+                            IsDefault = option.IsDefault
+                        }).ToList()
                 }).ToList(),
             Children = CloneTree(node.Children)
         };
