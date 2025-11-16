@@ -12,8 +12,8 @@ namespace BobCrm.Api.Services;
 /// </summary>
 public class DDLExecutionService
 {
-    private readonly AppDbContext _db;
-    private readonly ILogger<DDLExecutionService> _logger;
+    protected readonly AppDbContext _db;
+    protected readonly ILogger<DDLExecutionService> _logger;
 
     public DDLExecutionService(AppDbContext db, ILogger<DDLExecutionService> logger)
     {
