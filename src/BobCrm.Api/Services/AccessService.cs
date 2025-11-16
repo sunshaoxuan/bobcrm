@@ -501,6 +501,10 @@ public class AccessService
             isMenu: true,
             sortOrder: 500 + entity.Order,
             ct);
+        if (bindings.TryGetValue(FormTemplateUsageType.List, out var listBinding))
+        {
+            AttachBinding(listNode, listBinding);
+        }
         result[FormTemplateUsageType.List] = listNode;
 
         if (bindings.TryGetValue(FormTemplateUsageType.Detail, out _))
@@ -514,6 +518,10 @@ public class AccessService
                 isMenu: false,
                 sortOrder: listNode.SortOrder + 1,
                 ct);
+            if (bindings.TryGetValue(FormTemplateUsageType.Detail, out var detailBinding))
+            {
+                AttachBinding(detailNode, detailBinding);
+            }
             result[FormTemplateUsageType.Detail] = detailNode;
         }
 
@@ -528,6 +536,10 @@ public class AccessService
                 isMenu: false,
                 sortOrder: listNode.SortOrder + 2,
                 ct);
+            if (bindings.TryGetValue(FormTemplateUsageType.Edit, out var editBinding))
+            {
+                AttachBinding(editNode, editBinding);
+            }
             result[FormTemplateUsageType.Edit] = editNode;
         }
 
@@ -568,6 +580,12 @@ public class AccessService
         }
 
         return result;
+    }
+
+    private static void AttachBinding(FunctionNode node, TemplateBinding binding)
+    {
+        node.TemplateBindingId = binding.Id;
+        node.TemplateBinding = binding;
     }
 
     public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
