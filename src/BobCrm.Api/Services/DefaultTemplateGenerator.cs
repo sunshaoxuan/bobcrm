@@ -2,24 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Application.Templates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
-
-public interface IDefaultTemplateGenerator
-{
-    DefaultTemplateModelResult Generate(
-        EntityDefinition entity,
-        FormTemplateUsageType usageType = FormTemplateUsageType.Detail);
-
-    Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
-        EntityDefinition entity,
-        CancellationToken ct = default);
-}
 
 /// <summary>
 /// 根据实体字段元数据生成系统默认模板。
@@ -44,11 +36,13 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         _logger = logger;
     }
 
-    public DefaultTemplateModelResult Generate(
+    public Task<FormTemplate> GenerateAsync(
         EntityDefinition entity,
-        FormTemplateUsageType usageType = FormTemplateUsageType.Detail)
+        FormTemplateUsageType usageType = FormTemplateUsageType.Detail,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var fields = PrepareFields(entity);
         if (fields.Count == 0)
@@ -73,7 +67,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             UpdatedAt = DateTime.UtcNow
         };
 
-        return new DefaultTemplateModelResult(template);
+        return Task.FromResult(template);
     }
 
     public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
@@ -194,12 +188,19 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 ["Height"] = 32,
                 ["HeightUnit"] = "px",
                 ["visible"] = true,
-                ["newLine"] = usage == FormTemplateUsageType.List ? false : i % columns == 0
+                ["newLine"] = usage == FormTemplateUsageType.List
+                    ? false
+                    : widgetType == "textarea" || i % columns == 0
             };
 
             if (field.IsRequiredExplicitlySet)
             {
                 item["required"] = field.IsRequired;
+            }
+
+            if (usage != FormTemplateUsageType.List && field.DataType is FieldDataType.Date or FieldDataType.DateTime)
+            {
+                item["showTime"] = field.DataType == FieldDataType.DateTime;
             }
 
             items[field.PropertyName] = item;
@@ -221,6 +222,11 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             return "label";
         }
 
+        if (IsLongText(field))
+        {
+            return "textarea";
+        }
+
         return field.DataType switch
         {
             FieldDataType.Boolean => "checkbox",
@@ -232,6 +238,16 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             FieldDataType.EntityRef => "select",
             _ => "textbox"
         };
+    }
+
+    private static bool IsLongText(FieldMetadata field)
+    {
+        if (field.Length.HasValue && field.Length > 255)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static string ResolveLabel(FieldMetadata field)
@@ -246,11 +262,3 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
     }
 }
 
-public class DefaultTemplateGenerationResult
-{
-    public Dictionary<FormTemplateUsageType, FormTemplate> Templates { get; } = new();
-    public List<FormTemplate> Created { get; } = new();
-    public List<FormTemplate> Updated { get; } = new();
-}
-
-public record DefaultTemplateModelResult(FormTemplate Template);
