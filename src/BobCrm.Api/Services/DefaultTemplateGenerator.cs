@@ -6,21 +6,37 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
+
+public interface IDefaultTemplateGenerator
+{
+    DefaultTemplateModelResult Generate(
+        EntityDefinition entity,
+        FormTemplateUsageType usageType = FormTemplateUsageType.Detail);
+
+    Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
+        EntityDefinition entity,
+        CancellationToken ct = default);
+}
 
 /// <summary>
 /// 根据实体字段元数据生成系统默认模板。
 /// </summary>
-public class DefaultTemplateGenerator
+public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = null
     };
 
-    private readonly AppDbContext _db;
-    private readonly ILogger<DefaultTemplateGenerator> _logger;
+    private readonly AppDbContext? _db;
+    private readonly ILogger<DefaultTemplateGenerator>? _logger;
+
+    public DefaultTemplateGenerator()
+    {
+    }
 
     public DefaultTemplateGenerator(AppDbContext db, ILogger<DefaultTemplateGenerator> logger)
     {
@@ -28,25 +44,58 @@ public class DefaultTemplateGenerator
         _logger = logger;
     }
 
+    public DefaultTemplateModelResult Generate(
+        EntityDefinition entity,
+        FormTemplateUsageType usageType = FormTemplateUsageType.Detail)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var fields = PrepareFields(entity);
+        if (fields.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Entity '{entity.EntityName}' does not define any fields for template generation.");
+        }
+
+        var template = new FormTemplate
+        {
+            Name = $"{entity.EntityName} {usageType} Template",
+            EntityType = entity.EntityRoute,
+            UserId = "__system__",
+            IsSystemDefault = true,
+            IsUserDefault = false,
+            IsInUse = true,
+            LayoutJson = BuildLayoutJson(fields, usageType),
+            UsageType = usageType,
+            Description = $"Auto generated {usageType} template for {entity.EntityName}",
+            Tags = new List<string> { "auto-generated" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        return new DefaultTemplateModelResult(template);
+    }
+
     public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entity,
         CancellationToken ct = default)
     {
-        if (entity == null)
+        ArgumentNullException.ThrowIfNull(entity);
+
+        if (_db == null)
         {
-            throw new ArgumentNullException(nameof(entity));
+            throw new InvalidOperationException(
+                "EnsureTemplatesAsync requires DefaultTemplateGenerator to be created with AppDbContext.");
         }
 
         var entityType = entity.EntityRoute;
-        var fields = entity.Fields
-            .Where(f => !f.IsDeleted)
-            .OrderBy(f => f.SortOrder)
-            .ThenBy(f => f.PropertyName)
-            .ToList();
+        var fields = PrepareFields(entity);
 
         if (fields.Count == 0)
         {
-            _logger.LogWarning("[TemplateGenerator] Entity {Entity} has no fields, skipping template generation", entityType);
+            _logger?.LogWarning(
+                "[TemplateGenerator] Entity {Entity} has no fields, skipping template generation",
+                entityType);
             return new DefaultTemplateGenerationResult();
         }
 
@@ -107,6 +156,16 @@ public class DefaultTemplateGenerator
         }
 
         return result;
+    }
+
+    private static List<FieldMetadata> PrepareFields(EntityDefinition entity)
+    {
+        return entity.Fields?
+                   .Where(f => !f.IsDeleted)
+                   .OrderBy(f => f.SortOrder)
+                   .ThenBy(f => f.PropertyName)
+                   .ToList()
+               ?? new List<FieldMetadata>();
     }
 
     private static string BuildLayoutJson(IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
@@ -193,3 +252,5 @@ public class DefaultTemplateGenerationResult
     public List<FormTemplate> Created { get; } = new();
     public List<FormTemplate> Updated { get; } = new();
 }
+
+public record DefaultTemplateModelResult(FormTemplate Template);

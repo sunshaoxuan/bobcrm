@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
@@ -31,6 +32,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly DefaultTemplateGenerator _templateGenerator;
     private readonly TemplateBindingService _bindingService;
     private readonly AccessService _accessService;
+    private readonly Mock<IDefaultTemplateService> _defaultTemplateService;
 
     public EntityPublishingAndDDLTests()
     {
@@ -50,7 +52,17 @@ public class EntityPublishingAndDDLTests : IDisposable
         var bindingLogger = new Mock<ILogger<TemplateBindingService>>();
         _bindingService = new TemplateBindingService(_db, bindingLogger.Object);
 
-        _accessService = new AccessService(_db, CreateUserManager(_db));
+        var multilingualLogger = Mock.Of<ILogger<MultilingualFieldService>>();
+        var multilingual = new MultilingualFieldService(_db, multilingualLogger);
+        _accessService = new AccessService(_db, CreateUserManager(_db), multilingual);
+
+        _defaultTemplateService = new Mock<IDefaultTemplateService>();
+        _defaultTemplateService
+            .Setup(s => s.EnsureSystemTemplateAsync(
+                It.IsAny<EntityDefinition>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _db.RoleProfiles.Add(new RoleProfile
         {
@@ -106,6 +118,48 @@ public class EntityPublishingAndDDLTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("expected Draft");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldInvokeDefaultTemplateService()
+    {
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "Test",
+            EntityName = "Order",
+            EntityRoute = "order",
+            ApiEndpoint = "/api/orders",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "Name",
+                    DataType = FieldDataType.String,
+                    SortOrder = 0,
+                    IsRequired = true,
+                    DisplayName = new Dictionary<string, string?> { ["zh"] = "名称" }
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        var result = await service.PublishNewEntityAsync(entity.Id, "publisher");
+
+        result.Success.Should().BeTrue();
+        _defaultTemplateService.Verify(
+            s => s.EnsureSystemTemplateAsync(
+                It.Is<EntityDefinition>(e => e.Id == entity.Id),
+                "publisher",
+                It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce());
     }
 
     [Fact]
@@ -668,6 +722,37 @@ public class EntityPublishingAndDDLTests : IDisposable
         _db?.Dispose();
     }
 
+    private sealed class NoOpDDLExecutionService : DDLExecutionService
+    {
+        public NoOpDDLExecutionService(AppDbContext db, ILogger<DDLExecutionService> logger)
+            : base(db, logger)
+        {
+        }
+
+        public override Task<DDLScript> ExecuteDDLAsync(
+            Guid entityDefinitionId,
+            string scriptType,
+            string sqlScript,
+            string? createdBy = null)
+        {
+            var script = new DDLScript
+            {
+                EntityDefinitionId = entityDefinitionId,
+                ScriptType = scriptType,
+                SqlScript = sqlScript,
+                Status = DDLScriptStatus.Success,
+                CreatedBy = createdBy,
+                CreatedAt = DateTime.UtcNow,
+                ExecutedAt = DateTime.UtcNow
+            };
+
+            return Task.FromResult(script);
+        }
+
+        public override Task<bool> TableExistsAsync(string tableName)
+            => Task.FromResult(false);
+    }
+
     private EntityPublishingService CreatePublishingService(DDLExecutionService ddlExecutor)
         => new(
             _db,
@@ -677,6 +762,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             _templateGenerator,
             _bindingService,
             _accessService,
+            _defaultTemplateService.Object,
             _mockPublishLogger.Object);
 
     private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)

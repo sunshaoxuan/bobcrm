@@ -38,7 +38,7 @@ public class DefaultTemplateGeneratorTests
         result.Template.IsSystemDefault.Should().BeTrue();
         result.Template.UsageType.Should().Be(FormTemplateUsageType.Detail);
         result.Template.UserId.Should().Be("__system__");
-        result.Template.EntityType.Should().Be("Test.Contact");
+        result.Template.EntityType.Should().Be(entity.EntityRoute);
         result.Template.LayoutJson.Should().NotBeNullOrWhiteSpace();
 
         using var doc = JsonDocument.Parse(result.Template.LayoutJson!);
