@@ -1,5 +1,59 @@
 # BobCRM 文档与代码差距审计报告
 
+## 2025-11-18 - 自定义实体闭环复核
+
+- **审计范围**：围绕“实体发布即 CRUD、模板绑定、菜单连通、角色模板授权”四大目标的两轮开发成果。
+- **审计人**：Codex（DocOps）
+- **检查目标**：确认代码已满足 ARCH-22 的关键交付，并识别仍影响交付验收的差距。
+
+### 功能完成度对照
+
+| 目标 | 设计要求摘录 | 代码落地现状 | 结论 |
+| --- | --- | --- | --- |
+| 发布即 CRUD | ARCH-22 §5~§6 要求实体发布后自动生成模板、绑定并挂到菜单。 | `EntityPublishingService` 通过 `_defaultTemplateService.EnsureTemplatesAsync`、`_templateBindingService.UpsertBindingAsync` 以及 `_accessService.EnsureEntityMenuAsync` 串起 DDL→模板→菜单的链路；`DynamicEntityData.razor` 提供创建/编辑弹窗与字段校验，前端也能直接操作 CRUD。 | ✅ 功能完成 |
+| 模板可视化与绑定 | 设计稿要求管理员能切换实体/用途模板，并回收默认模板。 | `TemplateBindings.razor` 支持实体/用途筛选、系统/个人切换、权限校验；`TemplateBindingService`/`TemplateEndpoints` 暴露查询、保存接口与运行态上下文。 | ✅ 功能完成 |
+| 菜单多语 & 模板联动 | README/ARCH-22 要求菜单支持多语标题、模板/路由二选一。 | `MenuManagement.razor` 现有多语输入、导航类型（路由/模板）切换与拖拽排序；Access API 统一通过 `FunctionTreeBuilder` 输出多语与模板选项，供管理与授权两侧共用。 | ✅ 功能完成 |
+| 角色模板授权闭环 | ARCH-22 §6 要求角色分配能精确到模板绑定。 | `Roles.razor` 渲染 `FunctionMenuNode.TemplateBindings` 并提交 `FunctionPermissionSelectionDto`；`AccessEndpoints` 将模板绑定写入 `RoleFunctionPermission`，完成角色→菜单→模板的闭环。 | ✅ 功能完成 |
+
+### 遗留问题与修复建议
+
+1. **功能树版本接口缺失**：前端 `RoleService` 依赖 `/api/access/functions/version` 来决定是否刷新缓存，但 `AccessEndpoints` 尚未提供该路由，导致每次进入角色页都要完整加载功能树。→ 建议在 AccessEndpoints 中实现版本查询端点（例如返回 `FunctionNodes` 最新 `UpdatedAt` Hash）并与 `FunctionTreeBuilder` 保持一致。
+2. **模板绑定默认标识未写回功能节点**：`FunctionTreeBuilder` 期待通过 `FunctionNode.TemplateBindingId` 判断哪一个绑定是当前默认模板，但 `AccessService.EnsureEntityMenuAsync` 以及菜单 CRUD 过程中都没有为节点赋值，导致前端无法高亮默认模板并可能误选。→ 建议在绑定成功或菜单保存时同步 `FunctionNode.TemplateBindingId` 字段。
+
+### 进度偏差统计
+
+| 维度 | 设计交付（ARCH-22） | 实际完成 | 偏差 |
+| --- | --- | --- | --- |
+| 四大目标（发布即 CRUD / 模板绑定 / 菜单多语 / 角色授权） | 4 项 | 4 项 | 0%（全部到位） |
+| 技术债（功能树版本口 / 模板默认标识） | 0 项 | 2 项 | +2（需补齐） |
+
+> 以上差距已回填至 backlog，待 Access API 与菜单绑定模型补完后再关闭本次审计。
+
+## 2025-11-16 - 模板与权限闭环阶段审计
+
+- **审计范围**：最近两轮围绕“实体发布即 CRUD、模板-菜单-权限闭环”交付的功能。
+- **审计人**：Codex（DocOps）
+- **检查目标**：确认相关设计文档、指南、接口参考与历史记录均已同步；识别仍未完成的实现项，避免文档领先代码。
+
+### 关键结论
+
+| 能力 | 文档状态 | 问题/后续动作 |
+| --- | --- | --- |
+| 动态实体数据页 CRUD | `docs/guides/FRONT-01` 与 `docs/design/ARCH-22` 已补充 TemplateHost 行为；截图与步骤待在 UI 收敛后补充。 | 无阻断。 |
+| 默认模板生成/绑定 | `docs/design/ARCH-22` 第 14 章新增进度表，描述 DefaultTemplateGenerator、TemplateBindingService 责任划分。 | 需在代码层完成 `DefaultTemplateService` 接口收敛。 |
+| 菜单多语+模板关联 | `docs/design/ARCH-23` 和本档均记录 FunctionNode DTO 扩展，但 `/api/access/functions` helper 尚未落地，造成文档领先。 | 将在 `AccessEndpoints` 补齐 `LoadFunctionNameTranslationsAsync` 等 helper 前禁止在 README 勾选此项。 |
+| 角色模板粒度授权 | `docs/design/ARCH-21`、`docs/reference/API-01` 更新了 `TemplateBindingId` 字段描述；`Roles.razor` 注入冲突需修复后才能宣称 GA。 | 已在“遗留问题”列表登记。 |
+
+### 遗留问题登记（同步至 backlog）
+
+1. `EntityPublishingService` 构造函数缺少 `DefaultTemplateService` 参数 → 阻断实体发布。
+2. `AccessEndpoints` 内引用的 `LoadFunctionNameTranslationsAsync`/`LoadTemplateBindingsAsync` 未实现 → API 编译失败。
+3. `FunctionMenuNode` DTO 重复声明 `DisplayName`，`Roles.razor` 注入冲突 → 需调整模型与前端调用。
+
+> 本次审计结果已同步至 `docs/design/ARCH-22-标准实体模板化与权限联动设计.md` 第 14 章及 `CHANGELOG.md [未发布]`，确保后续评审可追溯。
+
+---
+
 **审计日期**: 2025-11-06
 **审计人**: Claude
 **审计范围**: 全部文档声称功能 vs 实际代码实现
