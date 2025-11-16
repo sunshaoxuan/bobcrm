@@ -25,6 +25,9 @@ public class FunctionNode
     /// </summary>
     public Dictionary<string, string?>? DisplayName { get; set; }
 
+    [MaxLength(200)]
+    public string? DisplayNameKey { get; set; }
+
     [MaxLength(256)]
     public string? Route { get; set; }
 
