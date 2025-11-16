@@ -1,5 +1,34 @@
 # BobCRM 文档与代码差距审计报告
 
+## 2025-11-16（晚班）- 自定义实体闭环复核
+
+- **审计范围**：围绕“实体发布即 CRUD、模板绑定、菜单连通、角色模板授权”四大目标的两轮开发成果。
+- **审计人**：Codex（DocOps）
+- **检查目标**：确认代码已满足 ARCH-22 的关键交付，并识别仍影响交付验收的差距。
+
+### 功能完成度对照
+
+| 目标 | 设计要求摘录 | 代码落地现状 | 结论 |
+| --- | --- | --- | --- |
+| 发布即 CRUD | ARCH-22 §5~§6 要求实体发布后自动生成模板、绑定并挂到菜单。 | `EntityPublishingService` 通过 `_defaultTemplateService.EnsureTemplatesAsync`、`_templateBindingService.UpsertBindingAsync` 以及 `_accessService.EnsureEntityMenuAsync` 串起 DDL→模板→菜单的链路；`DynamicEntityData.razor` 提供创建/编辑弹窗与字段校验，前端也能直接操作 CRUD。 | ✅ 功能完成 |
+| 模板可视化与绑定 | 设计稿要求管理员能切换实体/用途模板，并回收默认模板。 | `TemplateBindings.razor` 支持实体/用途筛选、系统/个人切换、权限校验；`TemplateBindingService`/`TemplateEndpoints` 暴露查询、保存接口与运行态上下文。 | ✅ 功能完成 |
+| 菜单多语 & 模板联动 | README/ARCH-22 要求菜单支持多语标题、模板/路由二选一。 | `MenuManagement.razor` 现有多语输入、导航类型（路由/模板）切换与拖拽排序；Access API 统一通过 `FunctionTreeBuilder` 输出多语与模板选项，供管理与授权两侧共用。 | ✅ 功能完成 |
+| 角色模板授权闭环 | ARCH-22 §6 要求角色分配能精确到模板绑定。 | `Roles.razor` 渲染 `FunctionMenuNode.TemplateBindings` 并提交 `FunctionPermissionSelectionDto`；`AccessEndpoints` 将模板绑定写入 `RoleFunctionPermission`，完成角色→菜单→模板的闭环。 | ✅ 功能完成 |
+
+### 遗留问题与修复建议
+
+1. **功能树版本接口缺失**：前端 `RoleService` 依赖 `/api/access/functions/version` 来决定是否刷新缓存，但 `AccessEndpoints` 尚未提供该路由，导致每次进入角色页都要完整加载功能树。→ 建议在 AccessEndpoints 中实现版本查询端点（例如返回 `FunctionNodes` 最新 `UpdatedAt` Hash）并与 `FunctionTreeBuilder` 保持一致。
+2. **模板绑定默认标识未写回功能节点**：`FunctionTreeBuilder` 期待通过 `FunctionNode.TemplateBindingId` 判断哪一个绑定是当前默认模板，但 `AccessService.EnsureEntityMenuAsync` 以及菜单 CRUD 过程中都没有为节点赋值，导致前端无法高亮默认模板并可能误选。→ 建议在绑定成功或菜单保存时同步 `FunctionNode.TemplateBindingId` 字段。
+
+### 进度偏差统计
+
+| 维度 | 设计交付（ARCH-22） | 实际完成 | 偏差 |
+| --- | --- | --- | --- |
+| 四大目标（发布即 CRUD / 模板绑定 / 菜单多语 / 角色授权） | 4 项 | 4 项 | 0%（全部到位） |
+| 技术债（功能树版本口 / 模板默认标识） | 0 项 | 2 项 | +2（需补齐） |
+
+> 以上差距已回填至 backlog，待 Access API 与菜单绑定模型补完后再关闭本次审计。
+
 ## 2025-11-16 - 模板与权限闭环阶段审计
 
 - **审计范围**：最近两轮围绕“实体发布即 CRUD、模板-菜单-权限闭环”交付的功能。
