@@ -188,6 +188,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobC
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 builder.Services.AddScoped<MultilingualFieldService>();
 builder.Services.AddScoped<AccessService>();
+builder.Services.AddScoped<FunctionTreeBuilder>();
 builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();

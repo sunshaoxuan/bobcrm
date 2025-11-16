@@ -1,11 +1,7 @@
 using System.Collections.Generic;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using BobCrm.Api.Base;
-using System.Collections.Generic;
 using System.Linq;
-using BobCrm.Api.Contracts.DTOs;
+using System.Security.Claims;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
@@ -22,33 +18,38 @@ public static class AccessEndpoints
     {
         var group = app.MapGroup("/api/access").RequireAuthorization();
 
-        group.MapGet("/functions", async ([FromServices] AppDbContext db, CancellationToken ct) =>
+        group.MapGet("/functions", async (
+            [FromServices] AppDbContext db,
+            [FromServices] FunctionTreeBuilder treeBuilder,
+            CancellationToken ct) =>
         {
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            var localizedNames = await LoadFunctionNameTranslationsAsync(db, nodes, ct);
-            var bindings = await LoadTemplateBindingsAsync(db, ct);
-            return Results.Ok(BuildTree(nodes, localizedNames, bindings));
-            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
-            return Results.Ok(BuildTree(nodes, templateOptions));
+            var tree = await treeBuilder.BuildAsync(nodes, ct);
+            return Results.Ok(tree);
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapGet("/functions/manage", async ([FromServices] AppDbContext db, CancellationToken ct) =>
+        group.MapGet("/functions/manage", async (
+            [FromServices] AppDbContext db,
+            [FromServices] FunctionTreeBuilder treeBuilder,
+            CancellationToken ct) =>
         {
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            return Results.Ok(BuildTree(nodes));
+            var tree = await treeBuilder.BuildAsync(nodes, ct);
+            return Results.Ok(tree);
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/functions/me", async (
             ClaimsPrincipal user,
             [FromServices] AppDbContext db,
+            [FromServices] FunctionTreeBuilder treeBuilder,
             CancellationToken ct) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -88,16 +89,16 @@ public static class AccessEndpoints
                 allowed.Add(rootNode.Id);
             }
 
-        foreach (var id in functionIds)
-        {
-            var current = id;
-            while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
+            foreach (var id in functionIds)
             {
-                var parentId = node.ParentId.Value;
-                allowed.Add(parentId);
-                current = parentId;
+                var current = id;
+                while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
+                {
+                    var parentId = node.ParentId.Value;
+                    allowed.Add(parentId);
+                    current = parentId;
+                }
             }
-        }
 
             var filtered = nodes.Where(n => allowed.Contains(n.Id)).ToList();
             if (filtered.Count == 0)
@@ -105,11 +106,8 @@ public static class AccessEndpoints
                 return Results.Ok(new List<FunctionNodeDto>());
             }
 
-            var localizedNames = await LoadFunctionNameTranslationsAsync(db, filtered, ct);
-            var bindings = await LoadTemplateBindingsAsync(db, ct);
-            return Results.Ok(BuildTree(filtered, localizedNames, bindings));
-            var templateOptions = await LoadTemplateOptionsAsync(db, ct);
-            return Results.Ok(BuildTree(filtered, templateOptions));
+            var tree = await treeBuilder.BuildAsync(filtered, ct);
+            return Results.Ok(tree);
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
@@ -397,71 +395,4 @@ public static class AccessEndpoints
         };
     }
 
-    private static List<FunctionNodeDto> BuildTree(List<FunctionNode> nodes)
-    {
-        var lookup = nodes.ToDictionary(n => n.Id, n => ToDto(n));
-        var parentMap = nodes.ToDictionary(n => n.Id, n => n.ParentId);
-
-        List<FunctionNodeDto> roots = new();
-        foreach (var source in nodes.OrderBy(n => n.SortOrder))
-        {
-            if (!lookup.TryGetValue(source.Id, out var node))
-            {
-                continue;
-            }
-
-            if (node.ParentId.HasValue && lookup.TryGetValue(node.ParentId.Value, out var parent))
-            {
-                if (CreatesCycle(node.Id, node.ParentId.Value, parentMap))
-                {
-                    node.ParentId = null;
-                    roots.Add(node);
-                    continue;
-                }
-
-                parent.Children.Add(node);
-            }
-            else
-            {
-                roots.Add(node);
-            }
-        }
-        SortChildren(roots);
-        return roots;
-    }
-
-    private static bool CreatesCycle(Guid childId, Guid parentId, Dictionary<Guid, Guid?> parentMap)
-    {
-        var current = parentId;
-        HashSet<Guid> visited = new() { childId };
-
-        while (true)
-        {
-            if (!visited.Add(current))
-            {
-                return true;
-            }
-
-            if (!parentMap.TryGetValue(current, out var next) || !next.HasValue)
-            {
-                return false;
-            }
-
-            if (next.Value == childId)
-            {
-                return true;
-            }
-
-            current = next.Value;
-        }
-    }
-
-    private static void SortChildren(List<FunctionNodeDto> nodes)
-    {
-        nodes.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
-        foreach (var node in nodes)
-        {
-            SortChildren(node.Children);
-        }
-    }
 }
