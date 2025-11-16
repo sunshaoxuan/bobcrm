@@ -171,6 +171,22 @@ API 规划：
 | M3 | 角色/客户页面迁移 + 权限联动验证 + 自动化测试 | 2025-11-26 |
 | M4 | 行为 DSL（Phase 1）+ 文档/指南 + FeatureFlag 灰度 | 2025-11-28 |
 
+## 14. 实施进度与文档同步（2025-11-16）
+
+| 能力 | 实现状态 | 文档同步情况 |
+| --- | --- | --- |
+| 动态实体运行宿主 | `DynamicEntityData.razor` 已具备增删改查弹窗，字段依据实体元数据动态渲染，保存路径复用 `DynamicEntityService`。 | 本档第 7、8 章“运行时渲染”章节补充了 List/Detail TemplateHost 说明，无需额外设计差异。 |
+| 默认模板与发布钩子 | `DefaultTemplateGenerator`/`DefaultTemplateService` 已生成 Detail/Edit/List 模板，发布服务调用绑定服务+菜单注册器。 | 在第 5.1 节“模板驱动策略”中新增 `SystemEntityTemplateProfile` 描述，当前实现与方案一致。 |
+| 模板绑定管理 | 模板绑定 API + Blazor 管理界面上线，支持实体/用途筛选、系统模板切换。 | 本档第 5.2、7 章对绑定模型与服务有完整描述，并与 `docs/guides/FRONT-01` 中的操作步骤保持一致。 |
+| 菜单多语与模板关联 | 新菜单管理页提供多语标题、功能/模板二选一、拖拽排序；FunctionNode DTO 已扩展 `DisplayNameTranslations` 与 `TemplateBindings`。 | 第 6 章数据模型及第 8 章导航设计均已补充多语/模板字段说明。 |
+| 角色-模板粒度权限 | 角色页面现在可对同一菜单下不同模板进行授权，`RoleFunctionPermission` 支持 `TemplateBindingId`。 | 第 6 章、10 章同步记录该字段，`docs/design/ARCH-21` 中的权限章节也已在上一轮合并时更新。 |
+
+### 文档完整性检查
+
+1. `docs/process/PROC-02-文档同步规范` 要求：新增/修改系统级能力需在设计文档与指南双处登记。本轮涉及的模板、菜单、权限更新均已同步在本档与 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md` 的“模板与权限闭环”章节。
+2. `docs/reference/API-01-接口文档.md` 的 `/api/templates/*`、`/api/access/*` 章节已在本次变更中补齐参数与示例（Commit: work@HEAD）。
+3. 尚待修复的问题（AccessEndpoints Helper、DefaultTemplateService 接口重构）已在 `docs/process/PROC-04-文档代码差距审计报告.md` 的 2025-11-16 条目记录，便于后续追踪。
+
 ---
 
 此文档将作为后续开发的依据，如需调整请在 `docs/history/CHANGELOG.md` 及本档案相应章节中更新。
