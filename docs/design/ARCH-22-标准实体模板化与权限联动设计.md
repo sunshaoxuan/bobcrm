@@ -66,6 +66,55 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
    - **详情/编辑**：继续复用 PageLoader，扩展 `UsageType` 参数决定渲染模式。  
    - **内置组件库**：为常见控件（组织树选择器、角色功能树、数据范围表）提供 Widget 定义，可由模板引用。
 
+#### 设计器控件覆盖计划
+
+为避免“模板可运行但无法复刻现有系统页面”的窘境，FormDesigner 必须引入完整的控件与属性体系，具体要求如下：
+
+1. **控件矩阵**
+   - `OrganizationTreeWidget`：支持多级节点、懒加载、节点操作按钮，提供 `DataSource = OrganizationNodes` 预设。
+   - `OrgDetailFormWidget`：封装 Code/Name/Path 等组织字段组合，可绑定实体元数据，内建校验。
+   - `DataGridWidget`（通用列表）：通用分页表格，列描述引用实体字段或数据集字段，支持排序、筛选、批量操作插槽，可绑定任意数据源（实体 API、聚合接口、自定义 SQL/视图）。
+   - `RolePermissionTreeWidget`：展示 FunctionNode 树，允许配置模板绑定提示与节点图标。
+   - `CustomerMetricBoardWidget`：多指标卡组件，绑定统计 API，保留客户列表页的 KPI 体验。
+
+2. **属性面板规范**
+   - 所有控件需暴露统一的 `DataBinding` 面板，可选择实体字段、静态枚举或 REST 数据源。
+   - 交互类属性（按钮命令、节点事件）统一通过 `ActionBinding` 描述，允许触发 FlowScript 或 API。
+   - 权限与作用域字段必须可配置（FunctionCode、DataScopeTag），以满足模板运行态的访问控制。
+
+3. **运行态契约**
+   - Widget Schema 带 `version` 字段，PageLoader/ListTemplateHost 根据版本选择渲染器或进行兼容转换。
+   - 每个控件定义 `FallbackBehavior`（占位提示 / 只读模式），在权限不足或数据缺失时保证可用性。
+   - 复杂控件默认注入 `TemplateRuntimeContext`（当前用户、组织、作用域），避免重复查询权限。
+
+4. **落地节奏**
+   - **Phase A**：补齐上述控件以覆盖组织/用户/角色/客户四个系统实体。
+   - **Phase B**：开放 Widget SDK（元数据注册 + Renderer 接口），支持业务团队扩展。
+   - **Phase C**：引入控件市场与导入导出能力，支撑更广泛的模板复用。
+
+#### 数据源与条件绑定
+
+为了支撑“同一列表控件绑定不同数据集”的需求，模板体系需要统一的数据源描述与权限钩子：
+
+1. **数据源模型**
+   - `DataSet`：描述数据来源（实体、视图、API、SQL），包含分页/排序能力及字段列表。
+   - `QueryDefinition`：允许在设计器中配置筛选条件，支持参数化（如 `@CurrentUserId`、`@CurrentOrganizationId`）。
+   - `PermissionFilter`：引用 FunctionCode 或 DataScope，运行态会自动注入访问范围。
+
+2. **设计态体验**
+   - FormDesigner 中提供“数据源选择器”，可创建/引用数据集，配置字段映射至 `DataGridWidget` 列。
+   - 条件编辑器允许输入表达式（先支持简单 AND/OR + 比较符），并可插入“上下文参数”。
+   - 预览模式可带入虚拟数据，验证列及条件配置。
+
+3. **运行态执行**
+   - TemplateRuntimeService 接口扩展：在运行上下文中附带 `DataSet` 请求，AccessService 负责注入数据范围条件。
+   - DataGridWidget 渲染前向数据源服务请求数据，支持服务端分页/排序。
+   - 条件语句必须通过参数化或表达式树编译，禁止拼接 SQL，保证安全性。
+
+4. **权限联动**
+   - 对接 RoleDataScope：当 DataGridWidget 绑定实体数据时，运行态自动附加角色数据范围。
+   - 后续版本可接入字段级权限（列隐藏/只读），由模板声明 `RequiredFields` 并在运行态校验。
+
 ### 5.2 权限联动
 1. **功能权限**：导航 / API 根据 `FunctionCode` 控制可见性与访问。模板在绑定时记录 `RequiredFunctionCode`。  
 2. **数据范围**：模板运行前调用 `AccessService.EvaluateDataScope(entity, action)`，得到组织/条件过滤，传给后端查询。  
