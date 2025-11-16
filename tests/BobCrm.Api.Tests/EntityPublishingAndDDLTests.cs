@@ -58,11 +58,12 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         _defaultTemplateService = new Mock<IDefaultTemplateService>();
         _defaultTemplateService
-            .Setup(s => s.EnsureSystemTemplateAsync(
+            .Setup(s => s.EnsureTemplatesAsync(
                 It.IsAny<EntityDefinition>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Returns<EntityDefinition, string?, CancellationToken>((entity, _, ct) =>
+                _templateGenerator.EnsureTemplatesAsync(entity, ct));
 
         _db.RoleProfiles.Add(new RoleProfile
         {
@@ -155,7 +156,7 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         result.Success.Should().BeTrue();
         _defaultTemplateService.Verify(
-            s => s.EnsureSystemTemplateAsync(
+            s => s.EnsureTemplatesAsync(
                 It.Is<EntityDefinition>(e => e.Id == entity.Id),
                 "publisher",
                 It.IsAny<CancellationToken>()),
@@ -531,8 +532,8 @@ public class EntityPublishingAndDDLTests : IDisposable
             x => x.LockEntityAsync(entityId, It.IsAny<string>()),
             Times.Once);
 
-        _mockTemplateService.Verify(
-            x => x.EnsureSystemTemplateAsync(
+        _defaultTemplateService.Verify(
+            x => x.EnsureTemplatesAsync(
                 It.Is<EntityDefinition>(e => e.Id == entityId),
                 "test-user",
                 It.IsAny<CancellationToken>()),
@@ -759,7 +760,6 @@ public class EntityPublishingAndDDLTests : IDisposable
             _ddlGenerator,
             ddlExecutor,
             _mockLockService.Object,
-            _templateGenerator,
             _bindingService,
             _accessService,
             _defaultTemplateService.Object,

@@ -18,11 +18,9 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
-    private readonly IDefaultTemplateGenerator _templateGenerator;
     private readonly TemplateBindingService _templateBindingService;
     private readonly AccessService _accessService;
     private readonly ILogger<EntityPublishingService> _logger;
-    private readonly EntityMenuRegistrar _menuRegistrar;
     private readonly IDefaultTemplateService _defaultTemplateService;
 
     public EntityPublishingService(
@@ -30,7 +28,6 @@ public class EntityPublishingService : IEntityPublishingService
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
-        IDefaultTemplateGenerator templateGenerator,
         TemplateBindingService templateBindingService,
         AccessService accessService,
         IDefaultTemplateService defaultTemplateService,
@@ -40,7 +37,6 @@ public class EntityPublishingService : IEntityPublishingService
         _ddlGenerator = ddlGenerator;
         _ddlExecutor = ddlExecutor;
         _lockService = lockService;
-        _templateGenerator = templateGenerator;
         _templateBindingService = templateBindingService;
         _accessService = accessService;
         _defaultTemplateService = defaultTemplateService;
@@ -354,8 +350,7 @@ public class EntityPublishingService : IEntityPublishingService
 
     private async Task GenerateTemplatesAndMenusAsync(EntityDefinition entity, string? publishedBy, PublishResult result)
     {
-        await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
-        var generatorResult = await _templateGenerator.EnsureTemplatesAsync(entity);
+        var generatorResult = await _defaultTemplateService.EnsureTemplatesAsync(entity, publishedBy);
 
         foreach (var template in generatorResult.Templates)
         {

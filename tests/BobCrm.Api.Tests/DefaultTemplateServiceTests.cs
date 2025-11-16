@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
@@ -14,8 +16,7 @@ namespace BobCrm.Api.Tests;
 public class DefaultTemplateServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
-    private readonly DefaultTemplateGenerator _generator = new();
-    private readonly TemplateBindingService _bindingService;
+    private readonly DefaultTemplateGenerator _generator;
     private readonly DefaultTemplateService _service;
 
     public DefaultTemplateServiceTests()
@@ -25,38 +26,33 @@ public class DefaultTemplateServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
 
-        var bindingLogger = Mock.Of<ILogger<TemplateBindingService>>();
+        var generatorLogger = Mock.Of<ILogger<DefaultTemplateGenerator>>();
         var serviceLogger = Mock.Of<ILogger<DefaultTemplateService>>();
-        _bindingService = new TemplateBindingService(_db, bindingLogger);
-        _service = new DefaultTemplateService(_db, _generator, _bindingService, serviceLogger);
+        _generator = new DefaultTemplateGenerator(_db, generatorLogger);
+        _service = new DefaultTemplateService(_db, _generator, serviceLogger);
     }
 
     [Fact]
-    public async Task EnsureSystemTemplateAsync_ShouldCreateTemplateAndBinding()
+    public async Task EnsureTemplatesAsync_ShouldCreateTemplatesForAllUsages()
     {
         var entity = CreateEntityDefinition();
 
-        await _service.EnsureSystemTemplateAsync(entity, "publisher");
+        var result = await _service.EnsureTemplatesAsync(entity, "publisher");
 
-        var template = await _db.FormTemplates.SingleAsync();
-        template.EntityType.Should().Be(entity.EntityRoute);
-        template.IsSystemDefault.Should().BeTrue();
-        template.UserId.Should().Be("__system__");
-        template.UsageType.Should().Be(FormTemplateUsageType.Detail);
-
-        var binding = await _db.TemplateBindings.SingleAsync();
-        binding.EntityType.Should().Be(entity.EntityRoute);
-        binding.IsSystem.Should().BeTrue();
-        binding.TemplateId.Should().Be(template.Id);
+        result.Templates.Should().HaveCount(3);
+        var templates = await _db.FormTemplates.ToListAsync();
+        templates.Should().HaveCount(3);
+        templates.Select(t => t.EntityType).Should().AllBeEquivalentTo(entity.EntityRoute);
+        templates.Should().OnlyContain(t => t.IsSystemDefault);
     }
 
     [Fact]
-    public async Task EnsureSystemTemplateAsync_ShouldUpdateExistingTemplate()
+    public async Task EnsureTemplatesAsync_ShouldUpdateExistingTemplates()
     {
         var entity = CreateEntityDefinition();
-        await _service.EnsureSystemTemplateAsync(entity, "publisher");
+        await _service.EnsureTemplatesAsync(entity, "publisher");
 
-        var template = await _db.FormTemplates.SingleAsync();
+        var template = await _db.FormTemplates.FirstAsync(t => t.UsageType == FormTemplateUsageType.Detail);
         template.LayoutJson.Should().Contain("Name");
 
         entity.Fields.Add(new FieldMetadata
@@ -68,11 +64,36 @@ public class DefaultTemplateServiceTests : IDisposable
             DisplayName = new Dictionary<string, string?> { ["zh"] = "更新" }
         });
 
-        await _service.EnsureSystemTemplateAsync(entity, "publisher");
+        await _service.EnsureTemplatesAsync(entity, "publisher");
 
-        var updatedTemplate = await _db.FormTemplates.SingleAsync();
+        var updatedTemplate = await _db.FormTemplates.FirstAsync(t => t.UsageType == FormTemplateUsageType.Detail);
         updatedTemplate.LayoutJson.Should().Contain("Updated");
         updatedTemplate.Id.Should().Be(template.Id);
+    }
+
+    [Fact]
+    public async Task GetDefaultTemplateAsync_ShouldReturnExistingTemplate_WhenPresent()
+    {
+        var entity = CreateEntityDefinition();
+        await _service.EnsureTemplatesAsync(entity, "publisher");
+
+        var template = await _service.GetDefaultTemplateAsync(entity, FormTemplateUsageType.Detail, "requester");
+
+        template.EntityType.Should().Be(entity.EntityRoute);
+        template.UsageType.Should().Be(FormTemplateUsageType.Detail);
+        (await _db.FormTemplates.CountAsync(t => t.UsageType == FormTemplateUsageType.Detail)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetDefaultTemplateAsync_ShouldGenerateTemplate_WhenMissing()
+    {
+        var entity = CreateEntityDefinition();
+
+        var template = await _service.GetDefaultTemplateAsync(entity, FormTemplateUsageType.Edit);
+
+        template.UsageType.Should().Be(FormTemplateUsageType.Edit);
+        template.EntityType.Should().Be(entity.EntityRoute);
+        (await _db.FormTemplates.CountAsync()).Should().Be(1);
     }
 
     public void Dispose()
