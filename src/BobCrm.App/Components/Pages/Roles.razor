@@ -5,7 +5,6 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Services
 @using BobCrm.App.Services.Multilingual
-@inject RoleService RoleService
 @using BobCrm.App.Components.Shared
 @inject IRoleService RoleService
 @inject BobCrm.App.Services.I18nService I18n
@@ -129,23 +128,26 @@
                         <div class="panel-header">
                             <h3>@I18n.T("LBL_ROLE_PERMISSIONS")</h3>
                         </div>
-                        @if (_functionTree.Count == 0)
-                        {
-                            <div class="role-placeholder">@I18n.T("TXT_ROLE_NO_FUNCTION")</div>
-                        }
-                        else
-                        {
-                            <div class="permission-tree">
-                                @foreach (var node in _functionTree)
-                                {
-                                    @RenderFunctionNode(node)
-                                }
-                            </div>
-                        }
+                        <div class="panel-body">
+                            @if (_functionTree.Count == 0)
+                            {
+                                <div class="role-placeholder">@I18n.T("TXT_ROLE_NO_FUNCTION")</div>
+                            }
+                            else
+                            {
+                                <div class="permission-tree" data-testid="permission-tree">
+                                    @foreach (var node in _functionTree)
+                                    {
+                                        @RenderFunctionNode(node)
+                                    }
+                                </div>
+                            }
+                        </div>
                         <div class="panel-actions">
                             <Button Type="@ButtonType.Primary"
                                     Loading="@_savingPermissions"
                                     Disabled="@(_functionTree.Count == 0)"
+                                    data-testid="save-permissions-button"
                                     OnClick="SavePermissions">
                                 @I18n.T("BTN_SAVE_PERMISSIONS")
                             </Button>
@@ -217,8 +219,9 @@
     private async Task LoadFunctionTreeAsync(bool force = false)
     {
         var response = await RoleService.GetFunctionTreeAsync(force);
-        _functionTree = response.Tree;
-        _functionTreeVersion = response.Version;
+        var tree = response?.Tree ?? new List<FunctionMenuNode>();
+        _functionTree = tree;
+        _functionTreeVersion = response?.Version;
         _functionLookup.Clear();
         _parentLookup.Clear();
         foreach (var node in _functionTree)
@@ -604,6 +607,8 @@
     {
         _functionTreeWatcherCts?.Cancel();
         _functionTreeWatcherCts?.Dispose();
+    }
+
     private int? GetSelectedTemplateBinding(Guid functionId)
     {
         return _templateSelections.TryGetValue(functionId, out var bindingId) ? bindingId : null;

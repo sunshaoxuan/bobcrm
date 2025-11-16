@@ -14,6 +14,8 @@ public interface IRoleService
     Task<bool> UpdateRoleAsync(Guid id, UpdateRoleRequestDto request, CancellationToken ct = default);
     Task<bool> UpdatePermissionsAsync(Guid id, UpdatePermissionsRequestDto request, CancellationToken ct = default);
     Task<FunctionTreeResponse> GetFunctionTreeAsync(bool forceRefresh = false, CancellationToken ct = default);
+    Task<string?> GetFunctionTreeVersionAsync(CancellationToken ct = default);
+    void InvalidateFunctionTreeCache();
 }
 
 public class RoleService : IRoleService

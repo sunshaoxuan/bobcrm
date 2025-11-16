@@ -1,5 +1,6 @@
 using AntDesign;
 using BobCrm.App.Components;
+using BobCrm.App.Services;
 using BobCrm.App.Services.Multilingual;
 using Microsoft.AspNetCore.Components.Server;
 
@@ -21,7 +22,7 @@ builder.Services.AddScoped<BobCrm.App.Services.OrganizationService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldActionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AccessService>();
-builder.Services.AddScoped<BobCrm.App.Services.RoleService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<BobCrm.App.Services.MenuService>();
 builder.Services.AddScoped<BobCrm.App.Services.UserService>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateRuntimeClient>();
