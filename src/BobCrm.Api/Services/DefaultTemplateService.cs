@@ -38,7 +38,7 @@ public class DefaultTemplateService : IDefaultTemplateService
 
         var result = _generator.Generate(entityDefinition);
         var templateModel = result.Template;
-        templateModel.EntityType ??= entityDefinition.FullName;
+        templateModel.EntityType ??= entityDefinition.EntityRoute;
 
         var existing = await _db.FormTemplates
             .FirstOrDefaultAsync(t => t.EntityType == templateModel.EntityType

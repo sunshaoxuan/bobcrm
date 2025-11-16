@@ -39,13 +39,13 @@ public class DefaultTemplateServiceTests : IDisposable
         await _service.EnsureSystemTemplateAsync(entity, "publisher");
 
         var template = await _db.FormTemplates.SingleAsync();
-        template.EntityType.Should().Be(entity.FullName);
+        template.EntityType.Should().Be(entity.EntityRoute);
         template.IsSystemDefault.Should().BeTrue();
         template.UserId.Should().Be("__system__");
         template.UsageType.Should().Be(FormTemplateUsageType.Detail);
 
         var binding = await _db.TemplateBindings.SingleAsync();
-        binding.EntityType.Should().Be(entity.FullName);
+        binding.EntityType.Should().Be(entity.EntityRoute);
         binding.IsSystem.Should().BeTrue();
         binding.TemplateId.Should().Be(template.Id);
     }

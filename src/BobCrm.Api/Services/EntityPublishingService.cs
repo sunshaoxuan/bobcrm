@@ -18,7 +18,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly PostgreSQLDDLGenerator _ddlGenerator;
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
-    private readonly DefaultTemplateGenerator _templateGenerator;
+    private readonly IDefaultTemplateGenerator _templateGenerator;
     private readonly TemplateBindingService _templateBindingService;
     private readonly AccessService _accessService;
     private readonly ILogger<EntityPublishingService> _logger;
@@ -30,9 +30,10 @@ public class EntityPublishingService : IEntityPublishingService
         PostgreSQLDDLGenerator ddlGenerator,
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
-        DefaultTemplateGenerator templateGenerator,
+        IDefaultTemplateGenerator templateGenerator,
         TemplateBindingService templateBindingService,
         AccessService accessService,
+        IDefaultTemplateService defaultTemplateService,
         ILogger<EntityPublishingService> logger)
     {
         _db = db;
@@ -42,8 +43,8 @@ public class EntityPublishingService : IEntityPublishingService
         _templateGenerator = templateGenerator;
         _templateBindingService = templateBindingService;
         _accessService = accessService;
-        _logger = logger;
         _defaultTemplateService = defaultTemplateService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -353,6 +354,7 @@ public class EntityPublishingService : IEntityPublishingService
 
     private async Task GenerateTemplatesAndMenusAsync(EntityDefinition entity, string? publishedBy, PublishResult result)
     {
+        await _defaultTemplateService.EnsureSystemTemplateAsync(entity, publishedBy);
         var generatorResult = await _templateGenerator.EnsureTemplatesAsync(entity);
 
         foreach (var template in generatorResult.Templates)
