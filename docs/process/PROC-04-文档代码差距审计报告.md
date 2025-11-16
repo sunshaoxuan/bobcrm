@@ -1,5 +1,30 @@
 # BobCRM 文档与代码差距审计报告
 
+## 2025-11-16 - 模板与权限闭环阶段审计
+
+- **审计范围**：最近两轮围绕“实体发布即 CRUD、模板-菜单-权限闭环”交付的功能。
+- **审计人**：Codex（DocOps）
+- **检查目标**：确认相关设计文档、指南、接口参考与历史记录均已同步；识别仍未完成的实现项，避免文档领先代码。
+
+### 关键结论
+
+| 能力 | 文档状态 | 问题/后续动作 |
+| --- | --- | --- |
+| 动态实体数据页 CRUD | `docs/guides/FRONT-01` 与 `docs/design/ARCH-22` 已补充 TemplateHost 行为；截图与步骤待在 UI 收敛后补充。 | 无阻断。 |
+| 默认模板生成/绑定 | `docs/design/ARCH-22` 第 14 章新增进度表，描述 DefaultTemplateGenerator、TemplateBindingService 责任划分。 | 需在代码层完成 `DefaultTemplateService` 接口收敛。 |
+| 菜单多语+模板关联 | `docs/design/ARCH-23` 和本档均记录 FunctionNode DTO 扩展，但 `/api/access/functions` helper 尚未落地，造成文档领先。 | 将在 `AccessEndpoints` 补齐 `LoadFunctionNameTranslationsAsync` 等 helper 前禁止在 README 勾选此项。 |
+| 角色模板粒度授权 | `docs/design/ARCH-21`、`docs/reference/API-01` 更新了 `TemplateBindingId` 字段描述；`Roles.razor` 注入冲突需修复后才能宣称 GA。 | 已在“遗留问题”列表登记。 |
+
+### 遗留问题登记（同步至 backlog）
+
+1. `EntityPublishingService` 构造函数缺少 `DefaultTemplateService` 参数 → 阻断实体发布。
+2. `AccessEndpoints` 内引用的 `LoadFunctionNameTranslationsAsync`/`LoadTemplateBindingsAsync` 未实现 → API 编译失败。
+3. `FunctionMenuNode` DTO 重复声明 `DisplayName`，`Roles.razor` 注入冲突 → 需调整模型与前端调用。
+
+> 本次审计结果已同步至 `docs/design/ARCH-22-标准实体模板化与权限联动设计.md` 第 14 章及 `CHANGELOG.md [未发布]`，确保后续评审可追溯。
+
+---
+
 **审计日期**: 2025-11-06
 **审计人**: Claude
 **审计范围**: 全部文档声称功能 vs 实际代码实现
