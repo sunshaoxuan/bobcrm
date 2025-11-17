@@ -11,11 +11,8 @@ namespace BobCrm.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "DisplayName",
-                table: "FunctionNodes",
-                type: "jsonb",
-                nullable: true);
+            // Note: DisplayName column already added by migration 20251116000000_AddFunctionNodeMultilingual
+            // Only add TemplateId column here
 
             migrationBuilder.AddColumn<int>(
                 name: "TemplateId",
@@ -85,9 +82,8 @@ namespace BobCrm.Api.Migrations
                 name: "IX_FunctionNodes_TemplateId",
                 table: "FunctionNodes");
 
-            migrationBuilder.DropColumn(
-                name: "DisplayName",
-                table: "FunctionNodes");
+            // Note: DisplayName column should NOT be dropped here as it was added by a previous migration
+            // Only drop TemplateId column
 
             migrationBuilder.DropColumn(
                 name: "TemplateId",

@@ -26,7 +26,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
     {
         // 使用Development环境以启用admin/debug端点
         builder.UseEnvironment("Development");
-        
+
         // 强制使用测试数据库配置（必须在base.CreateHost之前设置，确保最高优先级）
         builder.ConfigureAppConfiguration((context, config) =>
         {
@@ -42,19 +42,58 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 ["Jwt:AccessMinutes"] = "60",
                 ["Jwt:RefreshDays"] = "7"
             };
-            
+
             // 添加内存配置作为最高优先级
             config.AddInMemoryCollection(testConfig!);
         });
-        
+
+        // ⭐ 关键修复：在启动应用程序之前初始化数据库
+        // 这样可以避免 I18nEndpoints.ResolveDocumentationLanguage() 在启动时查询不存在的表
+        var connectionString = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres";
+
+        // 步骤1：强制终止所有连接并删除数据库（使用原始SQL，不依赖EF Core）
+        var connBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString) { Database = "postgres" };
+        using (var adminConn = new Npgsql.NpgsqlConnection(connBuilder.ToString()))
+        {
+            adminConn.Open();
+
+            // 终止所有连接到 bobcrm_test 的会话
+            using (var cmd = new Npgsql.NpgsqlCommand(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'bobcrm_test' AND pid <> pg_backend_pid();",
+                adminConn))
+            {
+                try { cmd.ExecuteNonQuery(); } catch { }
+            }
+
+            // 删除数据库
+            using (var cmd = new Npgsql.NpgsqlCommand("DROP DATABASE IF EXISTS bobcrm_test;", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            // 创建新数据库
+            using (var cmd = new Npgsql.NpgsqlCommand("CREATE DATABASE bobcrm_test;", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // 步骤2：应用迁移并初始化数据
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseNpgsql(connectionString);
+
+        using (var tempDb = new AppDbContext(optionsBuilder.Options))
+        {
+            // 只调用 InitializeAsync，不需要 RecreateAsync（数据库已经是全新的）
+            DatabaseInitializer.InitializeAsync(tempDb).GetAwaiter().GetResult();
+        }
+
         var host = base.CreateHost(builder);
-        
-        // Reset and seed database to a clean state
+
+        // Seed admin user/role and grant access to all customers
         using (var scope = host.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            DatabaseInitializer.RecreateAsync(db).GetAwaiter().GetResult();
-            // seed admin user/role and grant access to all customers
             var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
             var rm = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             if (!rm.RoleExistsAsync("admin").GetAwaiter().GetResult())
