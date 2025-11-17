@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Application.Templates;

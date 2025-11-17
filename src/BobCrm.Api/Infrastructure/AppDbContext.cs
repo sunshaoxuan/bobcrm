@@ -65,6 +65,12 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
 
+    // 数据源与权限
+    public DbSet<DataSet> DataSets => Set<DataSet>();
+    public DbSet<QueryDefinition> QueryDefinitions => Set<QueryDefinition>();
+    public DbSet<PermissionFilter> PermissionFilters => Set<PermissionFilter>();
+    public DbSet<DataSourceTypeEntry> DataSourceTypes => Set<DataSourceTypeEntry>();
+
     // 数据保护
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
 
@@ -124,6 +130,47 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<FunctionNode>()
             .Property(f => f.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        // 数据源相关模型的多语字段配置
+        b.Entity<DataSet>()
+            .Property(d => d.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<DataSet>()
+            .Property(d => d.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<QueryDefinition>()
+            .Property(q => q.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<QueryDefinition>()
+            .Property(q => q.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<PermissionFilter>()
+            .Property(p => p.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<PermissionFilter>()
+            .Property(p => p.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<DataSourceTypeEntry>()
+            .Property(d => d.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter);
+
+        b.Entity<DataSourceTypeEntry>()
+            .Property(d => d.Description)
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter);
 

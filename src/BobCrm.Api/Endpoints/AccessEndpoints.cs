@@ -384,7 +384,7 @@ public static class AccessEndpoints
             ParentId = node.ParentId,
             Code = node.Code,
             Name = node.Name,
-            DisplayNameTranslations = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
+            DisplayNameTranslations = node.DisplayName != null ? new BobCrm.Api.Contracts.DTOs.MultilingualText(node.DisplayName) : null,
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,

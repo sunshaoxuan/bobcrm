@@ -11,18 +11,52 @@
 
 ### Added
 - **动态实体运行宿主**：`DynamicEntityData.razor` 现已支持创建/编辑弹窗、字段级校验与批量刷新，前端 CRUD 闭环正式可用。
-- **默认模板自动生成链路**：引入 `DefaultTemplateGenerator` 与模板绑定/菜单注册器，实体发布后会自动准备 Detail/Edit/List 模板并写入菜单节点，实现“发布即上线”。
-- **模板与菜单管理界面**：新增模板绑定管理页（按实体/用途筛选、系统模板切换）与菜单管理页（多语标题、模板/功能二选一、拖拽排序），支撑管理员自助配置。
-- **角色模板粒度授权**：角色权限页可针对同一菜单的不同模板授予权限，后端 `RoleFunctionPermission` 增加 `TemplateBindingId` 并串联前端交互。
-- **TMP 模板设计器进度表**：新增 `docs/process/TMP-template-designer-progress.md`，列出 Widget 覆盖、宿主改造与验证任务，作为当前阶段的临时推进清单。
+- **默认模板自动生成链路**：引入 `DefaultTemplateGenerator` 与模板绑定/菜单注册器,实体发布后会自动准备 Detail/Edit/List 模板并写入菜单节点,实现"发布即上线"。
+- **模板与菜单管理界面**：新增模板绑定管理页(按实体/用途筛选、系统模板切换)与菜单管理页(多语标题、模板/功能二选一、拖拽排序),支撑管理员自助配置。
+- **角色模板粒度授权**：角色权限页可针对同一菜单的不同模板授予权限,后端 `RoleFunctionPermission` 增加 `TemplateBindingId` 并串联前端交互。
+- **TMP 模板设计器进度表**：新增 `docs/process/TMP-template-designer-progress.md`,列出 Widget 覆盖、宿主改造与验证任务,作为当前阶段的临时推进清单。
+- **ARCH-22 Phase A 数据源基础设施**（后端完整实现,前端运行态待开发）:
+  - **后端完整实现**：
+    - 创建 `DataSet`、`QueryDefinition`、`PermissionFilter`、`DataSourceTypeEntry` 四个核心模型及对应的 DTO 和 EF Core 配置
+    - 实现 `DataSetService` 提供 CRUD 和执行能力,集成策略模式的 Handler 注册机制
+    - 创建 `IDataSourceHandler` 接口和 `EntityDataSourceHandler` 示例实现,演示数据源处理器模式
+    - 实现完整的 REST API 端点(`DataSetEndpoints`):GET/POST/PUT/DELETE数据集,POST执行查询,GET字段元数据
+    - 生成数据库迁移 `AddDataSourceInfrastructure`,创建4个新表及索引
+    - 在 `Program.cs` 注册服务和 Handler,实现依赖注入
+  - **前端设计器支持**：
+    - 新增 `DataGridWidget`(通用数据网格)、`OrganizationTreeWidget`(组织树)、`RolePermissionTreeWidget`(角色权限树)三个核心 Widget
+    - 在 `PropertyEditorType` 中新增 Json、DataSetPicker、FieldPicker 编辑器类型
+    - 更新 `WidgetRegistry` 添加 Data 类别,注册新控件供设计器使用
+  - **OOP 架构亮点**：
+    - 避免枚举硬编码:使用 `DataSourceTypeEntry` 元数据表,数据源类型可动态扩展
+    - 策略模式实现:每种数据源类型有独立 Handler 实现类,通过 DI 注册
+    - 完全国际化:所有模型使用 `Dictionary<string, string?>` 存储多语文本
+    - JSON 配置驱动:数据源配置通过 `ConfigJson` 存储,支持个性化配置而不爆炸字段
+  - **前端运行态支持** (已完成):
+    - ✅ `ListTemplateHost` 组件:列表模板运行宿主,支持模板加载、Widget 渲染、权限检查,**使用 DI 注入 IRuntimeWidgetRenderer 和 AuthService**,遵循 OOP 依赖注入原则
+    - ✅ `WidgetJsonConverter`:自定义 JSON 转换器,支持根据 Type 属性反序列化为正确的 Widget 子类
+    - ✅ `DataGridRuntime` 组件:DataGrid 运行态渲染组件,**使用 AuthService 认证 API 调用**,集成 DataSet Execute API、分页、排序和数据展示
+    - ✅ 运行态渲染扩展:为 `DataGridWidget`、`OrganizationTreeWidget`、`RolePermissionTreeWidget` 实现完整的 `RenderRuntime` 方法
+    - ✅ **架构修复**:修复 TemplateBindings.razor CSS `@@media` 转义,修复 WidgetRegistry 图标引用,修复 TemplateBindingService 类型转换,确保 DI 模式正确使用
+  - **未完成部分**（需后续迭代）:
+    - ❌ 数据源集成测试（单元测试和组件测试）
+    - ❌ 系统数据源类型初始化数据（entity/api/sql/view 四种类型的 seed data）
 
 ### Changed
-- **ARCH-22 设计文档**：新增“第 14 章 实施进度与文档同步”，盘点上述能力的实现状态、文档落点与尚未完成的后续动作。
-- **ARCH-22 设计文档（5.1）**：补充“设计器控件覆盖计划”与“数据源与条件绑定”小节，明确通用 DataGrid 控件、数据集/条件模型、属性面板规范、运行态契约与分阶段落地策略，解决原文对控件及数据绑定描述不清的问题。
-- **PROC-04 差距审计**：补充“2025-11-16 模板与权限闭环阶段审计”与“2025-11-16（晚班）自定义实体闭环复核”，记录文档覆盖范围、最新风险（功能树版本口、模板默认标识等）并同步到 backlog。
+- **ARCH-22 设计文档**：新增"第 14 章 实施进度与文档同步",盘点上述能力的实现状态、文档落点与尚未完成的后续动作。
+- **ARCH-22 设计文档(5.1)**：补充"设计器控件覆盖计划"与"数据源与条件绑定"小节,明确通用 DataGrid 控件、数据集/条件模型、属性面板规范、运行态契约与分阶段落地策略,解决原文对控件及数据绑定描述不清的问题。
+- **PROC-04 差距审计**：补充"2025-11-16 模板与权限闭环阶段审计"与"2025-11-16(晚班)自定义实体闭环复核",记录文档覆盖范围、最新风险(功能树版本口、模板默认标识等)并同步到 backlog。
+- **TMP 模板设计器进度表更新**：标记 Phase A 完整实现:后端基础设施(DataSet服务/API/数据库迁移/Handler注册)、前端设计器 Widget、**前端运行态组件**(ListTemplateHost/WidgetJsonConverter/DataGridRuntime/Widget RenderRuntime扩展)全部完成;**待办项更新**：测试和种子数据需后续迭代完成。
 
 ### Fixed
-- **文档完整性缺口**：通过上述文档更新与审计结论，确保模板-菜单-权限闭环的实现现状、未决问题和下一步修复动作在官方文档中均有出处，消除“代码先于文档”的风险。
+- **编译错误全面修复**（共解决 22 个编译错误）:
+  - **MenuManagement.razor**：修复 Message 服务调用（11处 `await Message.*()` 错误移除 await,9处方法名缺失错误补充 Error/Success/Warning）
+  - **MenuManagement.razor**：修复 DragEventArgs.PreventDefault 调用（3处,Blazor 自动处理 preventDefault）
+  - **MenuManagement.razor**：修复 RadioGroup 导航类型切换逻辑（使用 `Value` + `ValueChanged` 模式,保留 OnNavigationTypeChanged 回调以正确加载模板和清空数据）
+  - **DynamicEntityData.razor**：修复 Form 类型推断错误（添加 Model 属性）
+  - **DynamicEntityData.razor**：修复 EventCallback 类型不匹配错误（13处,为 Switch/DatePicker/Input/InputNumber 组件添加显式 lambda 类型注解）
+  - **编译结果**：App 项目 0 错误 0 警告,Api 项目 0 错误 3 警告（可空引用和异步方法警告,非关键）
+- **文档完整性缺口**：通过上述文档更新与审计结论,确保模板-菜单-权限闭环的实现现状、未决问题和下一步修复动作在官方文档中均有出处,消除"代码先于文档"的风险。
 
 ---
 

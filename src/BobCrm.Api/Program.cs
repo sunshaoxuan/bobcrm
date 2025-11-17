@@ -193,6 +193,10 @@ builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 
+// Data Source Services (数据源与数据集管理)
+builder.Services.AddScoped<BobCrm.Api.Abstractions.IDataSourceHandler, BobCrm.Api.Services.DataSources.EntityDataSourceHandler>();
+builder.Services.AddScoped<DataSetService>();
+
 // Map base DbContext to AppDbContext for generic repositories/UoW
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddHttpContextAccessor();
@@ -382,6 +386,7 @@ app.MapFieldActionEndpoints();
 app.MapOrganizationEndpoints();
 app.MapAccessEndpoints();
 app.MapFileEndpoints();
+app.MapDataSetEndpoints();
 
 app.MapControllers();
 

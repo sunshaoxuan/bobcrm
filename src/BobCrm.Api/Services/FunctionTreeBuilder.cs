@@ -58,8 +58,8 @@ public class FunctionTreeBuilder
             {
                 if (CreatesCycle(dto.Id, dto.ParentId.Value, parentMap))
                 {
-                    dto.ParentId = null;
-                    roots.Add(dto);
+                    var dtoWithoutParent = dto with { ParentId = null };
+                    roots.Add(dtoWithoutParent);
                     continue;
                 }
 
@@ -178,17 +178,17 @@ public class FunctionTreeBuilder
                 .ThenBy(o => o.TemplateName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            var bindings = bindingList
-                .Select(binding => new FunctionNodeTemplateBindingDto(
-                    binding.Id,
-                    binding.EntityType,
-                    binding.UsageType,
-                    binding.TemplateId,
-                    binding.Template?.Name ?? string.Empty,
-                    binding.IsSystem))
+            var bindingDtos = bindingList
+                .Select(b => new FunctionNodeTemplateBindingDto(
+                    b.Id,
+                    b.EntityType,
+                    b.UsageType,
+                    b.TemplateId,
+                    b.Template?.Name ?? string.Empty,
+                    b.IsSystem))
                 .ToList();
 
-            result[node.Id] = new TemplateMetadata(options, bindings);
+            result[node.Id] = new TemplateMetadata(options, bindingDtos);
         }
 
         return result;

@@ -11,7 +11,8 @@ public static class WidgetRegistry
     public enum WidgetCategory
     {
         Basic,
-        Layout
+        Layout,
+        Data
     }
 
     public record WidgetDefinition(
@@ -25,6 +26,7 @@ public static class WidgetRegistry
 
     public static IReadOnlyList<WidgetDefinition> BasicWidgets { get; }
     public static IReadOnlyList<WidgetDefinition> LayoutWidgets { get; }
+    public static IReadOnlyList<WidgetDefinition> DataWidgets { get; }
 
     static WidgetRegistry()
     {
@@ -47,11 +49,17 @@ public static class WidgetRegistry
             new WidgetDefinition("frame", "LBL_FRAME", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new FrameWidget()),
             new WidgetDefinition("tabbox", "LBL_TABBOX", IconType.Outline.Appstore, WidgetCategory.Layout, () => new TabContainerWidget()),
             new WidgetDefinition("tab", "LBL_TAB", IconType.Outline.Tag, WidgetCategory.Layout, () => new TabWidget()),
+
+            // 数据控件
+            new WidgetDefinition("datagrid", "LBL_DATAGRID", IconType.Outline.Table, WidgetCategory.Data, () => new DataGridWidget()),
+            new WidgetDefinition("orgtree", "LBL_ORGTREE", IconType.Outline.Apartment, WidgetCategory.Data, () => new OrganizationTreeWidget()),
+            new WidgetDefinition("permtree", "LBL_PERMTREE", IconType.Outline.SafetyCertificate, WidgetCategory.Data, () => new RolePermissionTreeWidget()),
         };
 
         _definitions = defs.ToDictionary(d => d.Type.ToLowerInvariant());
         BasicWidgets = defs.Where(d => d.Category == WidgetCategory.Basic).ToList();
         LayoutWidgets = defs.Where(d => d.Category == WidgetCategory.Layout && d.Type != "tab").ToList(); // tab 是内部使用
+        DataWidgets = defs.Where(d => d.Category == WidgetCategory.Data).ToList();
     }
 
     public static WidgetDefinition GetDefinition(string type)

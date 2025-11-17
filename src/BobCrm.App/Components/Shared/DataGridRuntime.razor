@@ -1,0 +1,299 @@
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services
+@using System.Text.Json
+@inject AuthService Auth
+@inject ILogger<DataGridRuntime> Logger
+
+@* DataGrid Widget 运行时渲染组件 *@
+
+<div class="datagrid-runtime" style="@ContainerStyle">
+    @if (!string.IsNullOrWhiteSpace(Widget.Label))
+    {
+        <div class="datagrid-header" style="font-weight:600; margin-bottom:12px; font-size:16px;">
+            @Widget.Label
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div style="padding:24px; text-align:center;">
+            <span>Loading data...</span>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div style="padding:16px; background:#fff2f0; border:1px solid #ffccc7; border-radius:4px; color:#cf1322;">
+            <strong>Error:</strong> @_error
+        </div>
+    }
+    else if (_data != null)
+    {
+        <div class="datagrid-table" style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; @GetTableStyle()">
+                @* 表头 *@
+                <thead>
+                    <tr style="background:#fafafa;">
+                        @if (Widget.AllowMultiSelect)
+                        {
+                            <th style="width:40px; padding:12px; border:1px solid #e0e0e0; text-align:center;">
+                                <input type="checkbox" />
+                            </th>
+                        }
+                        @foreach (var column in _columns)
+                        {
+                            <th style="padding:12px; border:1px solid #e0e0e0; text-align:left; font-weight:600;">
+                                @column.Label
+                                @if (column.Sortable)
+                                {
+                                    <span style="margin-left:4px; cursor:pointer;">⇅</span>
+                                }
+                            </th>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
+                        {
+                            <th style="width:120px; padding:12px; border:1px solid #e0e0e0; text-align:center;">Actions</th>
+                        }
+                    </tr>
+                </thead>
+
+                @* 数据行 *@
+                <tbody>
+                    @if (_dataRows.Any())
+                    {
+                        @foreach (var row in _dataRows)
+                        {
+                            <tr style="background:#fff;">
+                                @if (Widget.AllowMultiSelect)
+                                {
+                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;">
+                                        <input type="checkbox" />
+                                    </td>
+                                }
+                                @foreach (var column in _columns)
+                                {
+                                    <td style="padding:12px; border:1px solid #e0e0e0;">
+                                        @GetCellValue(row, column.Field)
+                                    </td>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
+                                {
+                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;">
+                                        <button style="margin:0 4px;">Edit</button>
+                                        <button style="margin:0 4px;">Delete</button>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="@GetColumnCount()" style="padding:24px; text-align:center; color:#999;">
+                                @(Widget.EmptyTextKey ?? "No data")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* 分页 *@
+        @if (Widget.ShowPagination && _totalCount > 0)
+        {
+            <div class="datagrid-pagination" style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="color:#666;">
+                    Total: @_totalCount records
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button disabled="@(_currentPage <= 1)" @onclick="PreviousPage">Previous</button>
+                    <span>Page @_currentPage / @_totalPages</span>
+                    <button disabled="@(_currentPage >= _totalPages)" @onclick="NextPage">Next</button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public DataGridWidget Widget { get; set; } = null!;
+
+    [Parameter]
+    public string? ContainerStyle { get; set; }
+
+    private bool _isLoading = true;
+    private string? _error;
+    private JsonDocument? _data;
+    private List<DataGridColumn> _columns = new();
+    private List<JsonElement> _dataRows = new();
+    private int _currentPage = 1;
+    private int _totalCount = 0;
+    private int _totalPages = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 解析列定义
+        if (!string.IsNullOrWhiteSpace(Widget.ColumnsJson))
+        {
+            try
+            {
+                _columns = JsonSerializer.Deserialize<List<DataGridColumn>>(Widget.ColumnsJson) ?? new();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to deserialize columns");
+                _columns = new();
+            }
+        }
+
+        // 如果没有配置列,使用默认列
+        if (_columns.Count == 0)
+        {
+            _columns = new List<DataGridColumn>
+            {
+                new() { Field = "id", Label = "ID", Width = 80, Sortable = true },
+                new() { Field = "name", Label = "Name", Width = 200, Sortable = true },
+                new() { Field = "code", Label = "Code", Width = 150, Sortable = true }
+            };
+        }
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _error = null;
+            StateHasChanged();
+
+            if (!Widget.DataSetId.HasValue)
+            {
+                _error = "DataSet ID is not configured";
+                return;
+            }
+
+            // 调用 DataSet Execute API
+            var request = new
+            {
+                Page = _currentPage,
+                PageSize = Widget.PageSize,
+                SortField = Widget.DefaultSortField,
+                SortDirection = Widget.DefaultSortDirection
+            };
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            var response = await client.PostAsJsonAsync($"/api/datasets/{Widget.DataSetId.Value}/execute", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = $"Failed to load data: {response.StatusCode}";
+                return;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
+            if (result == null)
+            {
+                _error = "Response is null";
+                return;
+            }
+
+            _totalCount = result.TotalCount;
+            _totalPages = result.TotalPages;
+
+            // 解析数据
+            if (!string.IsNullOrWhiteSpace(result.DataJson))
+            {
+                _data = JsonDocument.Parse(result.DataJson);
+                if (_data.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    _dataRows = _data.RootElement.EnumerateArray().ToList();
+                }
+            }
+
+            Logger.LogInformation("Loaded {Count} rows from DataSet {Id}", _dataRows.Count, Widget.DataSetId.Value);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Exception: {ex.Message}";
+            Logger.LogError(ex, "Error loading data for DataGrid");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetCellValue(JsonElement row, string field)
+    {
+        if (row.TryGetProperty(field, out var value))
+        {
+            return value.ValueKind switch
+            {
+                JsonValueKind.String => value.GetString() ?? "",
+                JsonValueKind.Number => value.GetRawText(),
+                JsonValueKind.True => "Yes",
+                JsonValueKind.False => "No",
+                JsonValueKind.Null => "",
+                _ => value.GetRawText()
+            };
+        }
+        return "";
+    }
+
+    private string GetTableStyle()
+    {
+        var styles = new List<string>();
+        if (Widget.ShowBordered)
+        {
+            styles.Add("border:1px solid #e0e0e0");
+        }
+        return string.Join("; ", styles);
+    }
+
+    private int GetColumnCount()
+    {
+        int count = _columns.Count;
+        if (Widget.AllowMultiSelect) count++;
+        if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson)) count++;
+        return count;
+    }
+
+    private async Task PreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            await LoadDataAsync();
+        }
+    }
+
+    // 数据模型
+    private class DataGridColumn
+    {
+        public string Field { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public int Width { get; set; } = 120;
+        public bool Sortable { get; set; } = false;
+    }
+
+    private class DataSetExecutionResponse
+    {
+        public string DataJson { get; set; } = string.Empty;
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+    }
+}

@@ -14,6 +14,7 @@ public class AccessService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly MultilingualFieldService _multilingual;
 
     private record FunctionSeed(
         string Code,
@@ -23,7 +24,8 @@ public class AccessService
         bool IsMenu,
         int SortOrder,
         string? ParentCode,
-        Dictionary<string, string?>? DisplayName = null)
+        Dictionary<string, string?>? DisplayName = null,
+        string? DisplayNameKey = null)
     {
         public Dictionary<string, string?> DisplayNameMap { get; } = DisplayName ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {

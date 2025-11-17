@@ -59,7 +59,7 @@ public class EntityMenuRegistrar
             var entityNode = await EnsureEntityNodeAsync(entity, moduleNode, ct);
             var binding = await EnsureTemplateBindingAsync(entity, entityNode.Code, publishedBy, ct);
 
-            if (!_db.Database.IsInMemory())
+            if (_db.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
             {
                 await using var transaction = await _db.Database.BeginTransactionAsync(ct);
                 await _db.SaveChangesAsync(ct);

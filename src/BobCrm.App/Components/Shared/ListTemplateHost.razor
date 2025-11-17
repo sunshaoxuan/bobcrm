@@ -1,0 +1,198 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services
+@using BobCrm.App.Services.Widgets.Rendering
+@using System.Text.Json
+@inject AuthService Auth
+@inject IRuntimeWidgetRenderer Renderer
+@inject ILogger<ListTemplateHost> Logger
+
+@* 列表模板运行宿主 - 渲染 UsageType=List 的模板 *@
+
+<div class="list-template-host">
+    @if (_isLoading)
+    {
+        <div class="loading-indicator">
+            <span>Loading template...</span>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div class="error-message" style="padding:16px; background:#fff2f0; border:1px solid #ffccc7; border-radius:4px; color:#cf1322;">
+            <strong>Error:</strong> @_error
+        </div>
+    }
+    else if (_templateResponse != null)
+    {
+        <div class="template-content">
+            @* 渲染模板中的 widgets *@
+            @if (_widgets != null && _widgets.Any())
+            {
+                <div class="widgets-container" style="display:flex; flex-direction:column; gap:16px;">
+                    @foreach (var widget in _widgets)
+                    {
+                        @RenderWidget(widget)
+                    }
+                </div>
+            }
+            else
+            {
+                <div style="padding:32px; text-align:center; color:#999;">
+                    No widgets configured in this template
+                </div>
+            }
+        </div>
+
+        @* 调试信息 *@
+        @if (ShowDebugInfo)
+        {
+            <div class="debug-info" style="margin-top:16px; padding:12px; background:#f5f5f5; border:1px solid #d9d9d9; border-radius:4px; font-size:12px; font-family:monospace;">
+                <div><strong>Template:</strong> @_templateResponse.Template.Name (ID: @_templateResponse.Template.Id)</div>
+                <div><strong>Entity Type:</strong> @EntityType</div>
+                <div><strong>Applied Scopes:</strong> @string.Join(", ", _templateResponse.AppliedScopes)</div>
+                <div><strong>Full Access:</strong> @_templateResponse.HasFullAccess</div>
+                <div><strong>Widget Count:</strong> @(_widgets?.Count ?? 0)</div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 实体类型
+    /// </summary>
+    [Parameter]
+    public string EntityType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否显示调试信息
+    /// </summary>
+    [Parameter]
+    public bool ShowDebugInfo { get; set; } = false;
+
+    /// <summary>
+    /// 自定义 CSS 类
+    /// </summary>
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private bool _isLoading = true;
+    private string? _error;
+    private TemplateRuntimeResponse? _templateResponse;
+    private List<DraggableWidget>? _widgets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplateAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_isLoading)
+        {
+            await LoadTemplateAsync();
+        }
+    }
+
+    private async Task LoadTemplateAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _error = null;
+            StateHasChanged();
+
+            // 调用后端 API 获取运行时模板上下文
+            var request = new TemplateRuntimeRequest
+            {
+                UsageType = TemplateUsageType.List
+            };
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            var response = await client.PostAsJsonAsync($"/api/templates/runtime/{EntityType}", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _error = $"Failed to load template: {response.StatusCode} - {errorContent}";
+                Logger.LogError("Failed to load template for {EntityType}: {Error}", EntityType, _error);
+                return;
+            }
+
+            _templateResponse = await response.Content.ReadFromJsonAsync<TemplateRuntimeResponse>();
+
+            if (_templateResponse == null)
+            {
+                _error = "Template response is null";
+                return;
+            }
+
+            // 解析模板中的 widgets
+            if (!string.IsNullOrWhiteSpace(_templateResponse.Template.LayoutJson))
+            {
+                try
+                {
+                    _widgets = JsonSerializer.Deserialize<List<DraggableWidget>>(_templateResponse.Template.LayoutJson,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            Converters = { new WidgetJsonConverter() }
+                        });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to deserialize widgets from template {TemplateId}", _templateResponse.Template.Id);
+                    _widgets = new List<DraggableWidget>();
+                }
+            }
+            else
+            {
+                _widgets = new List<DraggableWidget>();
+            }
+
+            Logger.LogInformation("Loaded template {TemplateId} for {EntityType} with {Count} widgets",
+                _templateResponse.Template.Id, EntityType, _widgets.Count);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Exception: {ex.Message}";
+            Logger.LogError(ex, "Error loading template for {EntityType}", EntityType);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private RenderFragment RenderWidget(DraggableWidget widget)
+    {
+        return builder =>
+        {
+            // 使用 RuntimeWidgetRenderer 渲染 widget
+            var renderRequest = new RuntimeWidgetRenderRequest
+            {
+                Widget = widget,
+                Mode = RuntimeWidgetRenderMode.Browse, // List 模板默认为浏览模式
+                EventTarget = this,
+                Label = widget.Label ?? widget.Type,
+                ValueGetter = null, // List 模板中不需要单字段值获取
+                ValueSetter = null,
+                GetWidgetTextStyle = null,
+                GetWidgetBackground = null,
+                Items = null
+            };
+
+            var fragment = Renderer.Render(renderRequest);
+            fragment(builder);
+        };
+    }
+
+    /// <summary>
+    /// 刷新模板数据
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await LoadTemplateAsync();
+    }
+}
