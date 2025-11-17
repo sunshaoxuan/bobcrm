@@ -428,12 +428,12 @@
 
             if (isCreate)
             {
-                result = await DynamicEntitySvc.CreateAsync(FullTypeName, payload);
+                result = await DynamicEntitySvc.CreateAsync(FullTypeName, payload!);
                 MessageService.Success(I18n.T("MSG_CREATE_SUCCESS"));
             }
             else if (_editingEntityId.HasValue)
             {
-                result = await DynamicEntitySvc.UpdateAsync(FullTypeName, _editingEntityId.Value, payload);
+                result = await DynamicEntitySvc.UpdateAsync(FullTypeName, _editingEntityId.Value, payload!);
                 MessageService.Success(I18n.T("MSG_UPDATE_SUCCESS"));
             }
 

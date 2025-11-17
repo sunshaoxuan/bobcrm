@@ -151,7 +151,7 @@
             }
 
             Logger.LogInformation("Loaded template {TemplateId} for {EntityType} with {Count} widgets",
-                _templateResponse.Template.Id, EntityType, _widgets.Count);
+                _templateResponse!.Template.Id, EntityType, _widgets!.Count);
         }
         catch (Exception ex)
         {

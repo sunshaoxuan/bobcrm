@@ -428,10 +428,10 @@ public class AccessServiceTests
         {
             Code = "CRM.CUSTOMER.DETAIL",
             Name = "Customer Detail",
-            TemplateBindingId = binding.Id
+            TemplateId = binding.Id
         });
 
-        node.TemplateBindingId.Should().Be(binding.Id);
+        node.TemplateId.Should().Be(binding.Id);
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public class AccessServiceTests
         {
             Code = "CRM.INVALID",
             Name = "Invalid",
-            TemplateBindingId = 999
+            TemplateId = 999
         });
 
         await act.Should().ThrowAsync<InvalidOperationException>()

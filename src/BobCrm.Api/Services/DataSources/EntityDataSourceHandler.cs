@@ -25,7 +25,7 @@ public class EntityDataSourceHandler : IDataSourceHandler
 
     public string TypeCode => "entity";
 
-    public async Task<DataSourceExecutionResult> ExecuteAsync(
+    public Task<DataSourceExecutionResult> ExecuteAsync(
         DataSourceExecutionRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -54,7 +54,7 @@ public class EntityDataSourceHandler : IDataSourceHandler
 
         var dataJson = JsonSerializer.Serialize(mockData);
 
-        return new DataSourceExecutionResult
+        return Task.FromResult(new DataSourceExecutionResult
         {
             DataJson = dataJson,
             TotalCount = 0,
@@ -64,7 +64,7 @@ public class EntityDataSourceHandler : IDataSourceHandler
             AppliedScopes = new[] { "OrganizationScope" }, // TODO: 从权限过滤器获取
             ExecutionTimeMs = 10,
             IsFromCache = false
-        };
+        });
     }
 
     public Task<DataSourceValidationResult> ValidateConfigAsync(string configJson)
@@ -88,7 +88,7 @@ public class EntityDataSourceHandler : IDataSourceHandler
         }
     }
 
-    public async Task<List<DataSourceFieldMetadata>> GetFieldsAsync(
+    public Task<List<DataSourceFieldMetadata>> GetFieldsAsync(
         string configJson,
         CancellationToken cancellationToken = default)
     {
@@ -106,7 +106,7 @@ public class EntityDataSourceHandler : IDataSourceHandler
         // }).ToList();
 
         // 模拟返回(待实现)
-        return new List<DataSourceFieldMetadata>();
+        return Task.FromResult(new List<DataSourceFieldMetadata>());
     }
 
     private EntityDataSourceConfig ParseConfig(string configJson)

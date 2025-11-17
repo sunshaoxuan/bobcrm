@@ -225,33 +225,33 @@ public class OrganizationTreeWidget : DraggableWidget
         builder.AddAttribute(6, "style", "padding-left:8px;");
 
         // 根节点
-        RenderTreeNodePlaceholder(builder, 7, "Root Organization", 0);
+        RenderTreeNodePlaceholder(builder, "Root Organization", 0);
 
         // 子节点
         builder.OpenElement(8, "div");
         builder.AddAttribute(9, "style", "padding-left:16px;");
-        RenderTreeNodePlaceholder(builder, 10, "Department 1", 1);
-        RenderTreeNodePlaceholder(builder, 11, "Department 2", 1);
+        RenderTreeNodePlaceholder(builder, "Department 1", 1);
+        RenderTreeNodePlaceholder(builder, "Department 2", 1);
         builder.CloseElement();
 
         builder.CloseElement();
         builder.CloseElement();
     }
 
-    private void RenderTreeNodePlaceholder(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, int sequence, string text, int level)
+    private void RenderTreeNodePlaceholder(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, string text, int level)
     {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "style", "padding:4px 0; font-size:11px; color:#666; display:flex; align-items:center; gap:4px;");
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "padding:4px 0; font-size:11px; color:#666; display:flex; align-items:center; gap:4px;");
 
         // 图标
-        builder.OpenElement(sequence + 2, "span");
-        builder.AddAttribute(sequence + 3, "style", "color:#999;");
-        builder.AddContent(sequence + 4, level == 0 ? "📁" : "📄");
+        builder.OpenElement(2, "span");
+        builder.AddAttribute(3, "style", "color:#999;");
+        builder.AddContent(4, level == 0 ? "📁" : "📄");
         builder.CloseElement();
 
         // 文本
-        builder.OpenElement(sequence + 5, "span");
-        builder.AddContent(sequence + 6, text);
+        builder.OpenElement(5, "span");
+        builder.AddContent(6, text);
         builder.CloseElement();
 
         builder.CloseElement();

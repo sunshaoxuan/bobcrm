@@ -32,11 +32,19 @@
 - **Docs & audits**：`ARCH-22`、`PROC-04` 等文档记录 11/16 模板-权限闭环审计与风险。
 
 ### Changed
-- **ARCH-22 文档**：新增“实施进度”章节，并在 5.1 小节补充“设计器控件覆盖计划”“数据源与条件绑定”。
+- **ARCH-22 文档**：新增"实施进度"章节，并在 5.1 小节补充"设计器控件覆盖计划""数据源与条件绑定"。
 - **PROC-04 差距审计**：记录 2025-11-16 模板-权限闭环阶段审计及后续风险。
 - **TMP 进度表**：标记 Phase A 后端基础设施与运行态组件为完成，保留 FormDesigner 数据源 UI、PageLoader、种子数据及测试为待办。
 
 ### Fixed
+#### 2025-11-17
+- **全面清除编译警告**：修复 API/App 项目所有 33 个编译警告，实现零警告零错误编译状态。
+  - **CS1998 异步方法警告**（3处）：EntityDataSourceHandler.cs 移除 async，使用 Task.FromResult() 返回同步结果。
+  - **CS8620 可空引用类型警告**（15处）：AppDbContext.cs jsonConverter 调用添加 `!` 操作符（13处），DynamicEntityData.razor payload 参数添加 `!`（2处）。
+  - **CS8602 空引用警告**（1处）：ListTemplateHost.razor _widgets!.Count 添加 `!` 操作符。
+  - **ASP0006 RenderTreeBuilder 警告**（27处）：RolePermissionTreeWidget.cs（20处）与 OrganizationTreeWidget.cs（7处）将动态 sequence 参数改为硬编码整数字面量，遵循 Blazor 性能最佳实践。
+
+#### 2025-11-16
 - **MenuManagement.razor**：恢复 `RadioGroup` 回调逻辑，移除无效的 `DragEventArgs.PreventDefault()`，统一 `Message` API 调用。
 - **DynamicEntityData.razor**：为 Form 添加 `Model` 绑定并显式声明 `EventCallback` Lambda 类型，修复泛型推断问题。
 - **TemplateBindings.razor**：修复 CSS `@media` 转义、补齐 using，并通过 `AuthService` 访问模板运行态 API。

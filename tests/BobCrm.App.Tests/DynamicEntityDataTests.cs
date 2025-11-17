@@ -42,7 +42,7 @@ public class DynamicEntityDataTests : TestContext
         Services.AddScoped(sp => new EntityDefinitionService(sp.GetRequiredService<AuthService>()));
         Services.AddScoped(sp => new DynamicEntityService(sp.GetRequiredService<AuthService>()));
         Services.AddScoped(sp => new I18nService(httpClientFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJSRuntime>()));
-        Services.AddScoped<NavigationManager, TestNavigationManager>();
+        Services.AddScoped<NavigationManager, FakeNavigationManager>();
     }
 
     [Fact]
@@ -221,14 +221,14 @@ public class DynamicEntityDataTests : TestContext
             FullTypeName,
             Fields = new[]
             {
-                new { PropertyName = "Id", DataType = FieldDataType.Integer, IsRequired = true, SortOrder = 1, Source = "System" },
-                new { PropertyName = "Code", DataType = FieldDataType.String, IsRequired = true, SortOrder = 2, DisplayName = new { en = "Code" } },
-                new { PropertyName = "Name", DataType = FieldDataType.String, IsRequired = false, SortOrder = 3, DisplayName = new { en = "Name" } },
-                new { PropertyName = "CreatedAt", DataType = FieldDataType.DateTime, IsRequired = true, SortOrder = 4, Source = "Interface" },
-                new { PropertyName = "CreatedBy", DataType = FieldDataType.String, IsRequired = false, SortOrder = 5, Source = "Interface" },
-                new { PropertyName = "UpdatedAt", DataType = FieldDataType.DateTime, IsRequired = true, SortOrder = 6, Source = "Interface" },
-                new { PropertyName = "UpdatedBy", DataType = FieldDataType.String, IsRequired = false, SortOrder = 7, Source = "Interface" },
-                new { PropertyName = "Version", DataType = FieldDataType.Integer, IsRequired = true, SortOrder = 8, Source = "Interface" }
+                new { PropertyName = "Id", DataType = FieldDataType.Integer, IsRequired = true, SortOrder = 1, Source = (string?)"System", DisplayName = (object?)null },
+                new { PropertyName = "Code", DataType = FieldDataType.String, IsRequired = true, SortOrder = 2, Source = (string?)null, DisplayName = (object?)new { en = "Code" } },
+                new { PropertyName = "Name", DataType = FieldDataType.String, IsRequired = false, SortOrder = 3, Source = (string?)null, DisplayName = (object?)new { en = "Name" } },
+                new { PropertyName = "CreatedAt", DataType = FieldDataType.DateTime, IsRequired = true, SortOrder = 4, Source = (string?)"Interface", DisplayName = (object?)null },
+                new { PropertyName = "CreatedBy", DataType = FieldDataType.String, IsRequired = false, SortOrder = 5, Source = (string?)"Interface", DisplayName = (object?)null },
+                new { PropertyName = "UpdatedAt", DataType = FieldDataType.DateTime, IsRequired = true, SortOrder = 6, Source = (string?)"Interface", DisplayName = (object?)null },
+                new { PropertyName = "UpdatedBy", DataType = FieldDataType.String, IsRequired = false, SortOrder = 7, Source = (string?)"Interface", DisplayName = (object?)null },
+                new { PropertyName = "Version", DataType = FieldDataType.Integer, IsRequired = true, SortOrder = 8, Source = (string?)"Interface", DisplayName = (object?)null }
             }
         }));
     }

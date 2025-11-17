@@ -205,22 +205,22 @@ public class RolePermissionTreeWidget : DraggableWidget
         builder.AddAttribute(22, "style", "min-height:300px; max-height:500px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:2px; padding:12px; background:#fafafa;");
 
         // 示例权限节点(实际应从 /api/access/functions API 加载功能树数据)
-        RenderRuntimePermissionNode(builder, 23, "Customer Management", true, 0);
+        RenderRuntimePermissionNode(builder, "Customer Management", true, 0);
         builder.OpenElement(24, "div");
         builder.AddAttribute(25, "style", "margin-left:24px;");
-        RenderRuntimePermissionNode(builder, 26, "View Customers", true, 1);
-        RenderRuntimePermissionNode(builder, 27, "Edit Customers", false, 1);
-        RenderRuntimePermissionNode(builder, 28, "Delete Customers", false, 1);
+        RenderRuntimePermissionNode(builder, "View Customers", true, 1);
+        RenderRuntimePermissionNode(builder, "Edit Customers", false, 1);
+        RenderRuntimePermissionNode(builder, "Delete Customers", false, 1);
         builder.CloseElement();
 
-        RenderRuntimePermissionNode(builder, 29, "Organization Management", false, 0);
+        RenderRuntimePermissionNode(builder, "Organization Management", false, 0);
 
         if (ShowTemplateBindings)
         {
             builder.OpenElement(30, "div");
             builder.AddAttribute(31, "style", "margin-left:24px;");
-            RenderRuntimePermissionNode(builder, 32, "Template: Customer Detail", true, 1);
-            RenderRuntimePermissionNode(builder, 33, "Template: Customer List", true, 1);
+            RenderRuntimePermissionNode(builder, "Template: Customer Detail", true, 1);
+            RenderRuntimePermissionNode(builder, "Template: Customer List", true, 1);
             builder.CloseElement();
         }
 
@@ -243,31 +243,31 @@ public class RolePermissionTreeWidget : DraggableWidget
         builder.CloseElement(); // container
     }
 
-    private void RenderRuntimePermissionNode(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, int sequence, string text, bool isChecked, int level)
+    private void RenderRuntimePermissionNode(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, string text, bool isChecked, int level)
     {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "style", "padding:6px 8px; display:flex; align-items:center; gap:8px; border-radius:2px; hover:background:#e6f7ff;");
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "padding:6px 8px; display:flex; align-items:center; gap:8px; border-radius:2px; hover:background:#e6f7ff;");
 
         if (!ReadOnly)
         {
-            builder.OpenElement(sequence + 2, "input");
-            builder.AddAttribute(sequence + 3, "type", "checkbox");
-            builder.AddAttribute(sequence + 4, "checked", isChecked);
-            builder.AddAttribute(sequence + 5, "style", "cursor:pointer;");
+            builder.OpenElement(2, "input");
+            builder.AddAttribute(3, "type", "checkbox");
+            builder.AddAttribute(4, "checked", isChecked);
+            builder.AddAttribute(5, "style", "cursor:pointer;");
             builder.CloseElement();
         }
 
         if (ShowNodeIcons)
         {
-            builder.OpenElement(sequence + 6, "span");
-            builder.AddAttribute(sequence + 7, "style", "color:#1890ff;");
-            builder.AddContent(sequence + 8, level == 0 ? "📁" : "📄");
+            builder.OpenElement(6, "span");
+            builder.AddAttribute(7, "style", "color:#1890ff;");
+            builder.AddContent(8, level == 0 ? "📁" : "📄");
             builder.CloseElement();
         }
 
-        builder.OpenElement(sequence + 9, "span");
-        builder.AddAttribute(sequence + 10, "style", isChecked ? "font-weight:500; color:#000;" : "color:#666;");
-        builder.AddContent(sequence + 11, text);
+        builder.OpenElement(9, "span");
+        builder.AddAttribute(10, "style", isChecked ? "font-weight:500; color:#000;" : "color:#666;");
+        builder.AddContent(11, text);
         builder.CloseElement();
 
         builder.CloseElement();
@@ -291,37 +291,37 @@ public class RolePermissionTreeWidget : DraggableWidget
         builder.AddAttribute(6, "style", "padding-left:8px;");
 
         // 模拟权限节点
-        RenderPermissionNodePlaceholder(builder, 7, "Customer Management", true);
+        RenderPermissionNodePlaceholder(builder, "Customer Management", true);
         builder.OpenElement(8, "div");
         builder.AddAttribute(9, "style", "padding-left:16px;");
-        RenderPermissionNodePlaceholder(builder, 10, "View Customers", true);
-        RenderPermissionNodePlaceholder(builder, 11, "Edit Customers", false);
+        RenderPermissionNodePlaceholder(builder, "View Customers", true);
+        RenderPermissionNodePlaceholder(builder, "Edit Customers", false);
         builder.CloseElement();
 
-        RenderPermissionNodePlaceholder(builder, 12, "Organization Management", false);
+        RenderPermissionNodePlaceholder(builder, "Organization Management", false);
 
         builder.CloseElement();
         builder.CloseElement();
     }
 
-    private void RenderPermissionNodePlaceholder(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, int sequence, string text, bool checked_)
+    private void RenderPermissionNodePlaceholder(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, string text, bool checked_)
     {
-        builder.OpenElement(sequence, "div");
-        builder.AddAttribute(sequence + 1, "style", "padding:4px 0; font-size:11px; color:#666; display:flex; align-items:center; gap:4px;");
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "padding:4px 0; font-size:11px; color:#666; display:flex; align-items:center; gap:4px;");
 
         // 复选框
-        builder.OpenElement(sequence + 2, "input");
-        builder.AddAttribute(sequence + 3, "type", "checkbox");
-        builder.AddAttribute(sequence + 4, "disabled", true);
+        builder.OpenElement(2, "input");
+        builder.AddAttribute(3, "type", "checkbox");
+        builder.AddAttribute(4, "disabled", true);
         if (checked_)
         {
-            builder.AddAttribute(sequence + 5, "checked", true);
+            builder.AddAttribute(5, "checked", true);
         }
         builder.CloseElement();
 
         // 文本
-        builder.OpenElement(sequence + 6, "span");
-        builder.AddContent(sequence + 7, text);
+        builder.OpenElement(6, "span");
+        builder.AddContent(7, text);
         builder.CloseElement();
 
         builder.CloseElement();

@@ -96,22 +96,22 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<EntityDefinition>()
             .Property(e => e.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<EntityDefinition>()
             .Property(e => e.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<FieldMetadata>()
             .Property(f => f.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<FunctionNode>()
             .Property(f => f.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<SubEntityDefinition>()
             .Property(s => s.DisplayName)
@@ -121,58 +121,58 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<SubEntityDefinition>()
             .Property(s => s.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<EntityDomain>()
             .Property(d => d.Name)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<FunctionNode>()
             .Property(f => f.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         // 数据源相关模型的多语字段配置
         b.Entity<DataSet>()
             .Property(d => d.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<DataSet>()
             .Property(d => d.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<QueryDefinition>()
             .Property(q => q.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<QueryDefinition>()
             .Property(q => q.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<PermissionFilter>()
             .Property(p => p.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<PermissionFilter>()
             .Property(p => p.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<DataSourceTypeEntry>()
             .Property(d => d.DisplayName)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         b.Entity<DataSourceTypeEntry>()
             .Property(d => d.Description)
             .HasColumnType("jsonb")
-            .HasConversion(jsonConverter);
+            .HasConversion(jsonConverter!);
 
         // LocalizationResource 的 Translations 使用 jsonb 存储
         b.Entity<LocalizationResource>()

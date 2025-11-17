@@ -41,7 +41,7 @@ public class RolesPageTests : TestContext
         Services.AddLogging();
         Services.AddScoped<IMultilingualTextResolver, MultilingualTextResolver>();
         Services.AddAntDesign();
-        Services.AddScoped<NavigationManager, TestNavigationManager>();
+        Services.AddScoped<NavigationManager, FakeNavigationManager>();
         Services.AddScoped<IRoleService>(_ => _roleService);
     }
 

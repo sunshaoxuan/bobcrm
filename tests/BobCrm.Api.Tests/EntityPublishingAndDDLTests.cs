@@ -33,6 +33,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly TemplateBindingService _bindingService;
     private readonly AccessService _accessService;
     private readonly Mock<IDefaultTemplateService> _defaultTemplateService;
+    private readonly EntityMenuRegistrar _menuRegistrar;
 
     public EntityPublishingAndDDLTests()
     {
@@ -55,6 +56,9 @@ public class EntityPublishingAndDDLTests : IDisposable
         var multilingualLogger = Mock.Of<ILogger<MultilingualFieldService>>();
         var multilingual = new MultilingualFieldService(_db, multilingualLogger);
         _accessService = new AccessService(_db, CreateUserManager(_db), multilingual);
+
+        var menuRegistrarLogger = new Mock<ILogger<EntityMenuRegistrar>>();
+        _menuRegistrar = new EntityMenuRegistrar(_db, menuRegistrarLogger.Object);
 
         _defaultTemplateService = new Mock<IDefaultTemplateService>();
         _defaultTemplateService
@@ -764,6 +768,35 @@ public class EntityPublishingAndDDLTests : IDisposable
             _accessService,
             _defaultTemplateService.Object,
             _mockPublishLogger.Object);
+
+    private async Task<TemplateBinding> SeedTemplateBindingAsync(EntityDefinition entity)
+    {
+        var template = new FormTemplate
+        {
+            Name = $"{entity.EntityName} Detail",
+            EntityType = entity.EntityRoute ?? entity.EntityName.ToLowerInvariant(),
+            UserId = "system",
+            UsageType = FormTemplateUsageType.Detail,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await _db.FormTemplates.AddAsync(template);
+        await _db.SaveChangesAsync();
+
+        var binding = new TemplateBinding
+        {
+            EntityType = template.EntityType,
+            UsageType = FormTemplateUsageType.Detail,
+            TemplateId = template.Id,
+            IsSystem = true,
+            UpdatedBy = "seed",
+            UpdatedAt = DateTime.UtcNow
+        };
+        await _db.TemplateBindings.AddAsync(binding);
+        await _db.SaveChangesAsync();
+
+        return binding;
+    }
 
     private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)
     {

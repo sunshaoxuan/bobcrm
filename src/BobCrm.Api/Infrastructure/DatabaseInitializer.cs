@@ -26,6 +26,8 @@ public static class DatabaseInitializer
 
         await db.Database.MigrateAsync();
 
+        Console.WriteLine("[DatabaseInitializer] Migrations completed successfully");
+
         if (db is AppDbContext appDbContext)
 
         {
@@ -880,7 +882,79 @@ public static class DatabaseInitializer
 
     {
 
-        try { await db.Database.EnsureDeletedAsync(); } catch { }
+        var isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (isNpgsql)
+
+        {
+
+            // PostgreSQL: Force terminate connections before dropping
+
+            var connectionString = db.Database.GetConnectionString();
+
+            if (!string.IsNullOrEmpty(connectionString))
+
+            {
+
+                var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+
+                var dbName = builder.Database;
+
+                // Connect to postgres database to terminate connections
+
+                builder.Database = "postgres";
+
+                var adminConnString = builder.ToString();
+
+                using (var adminConn = new Npgsql.NpgsqlConnection(adminConnString))
+
+                {
+
+                    await adminConn.OpenAsync();
+
+                    // Terminate all connections to the target database
+
+                    using (var terminateCmd = new Npgsql.NpgsqlCommand(
+
+                        $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{dbName}' AND pid <> pg_backend_pid();",
+
+                        adminConn))
+
+                    {
+
+                        try { await terminateCmd.ExecuteNonQueryAsync(); } catch { }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        // Use EF Core's built-in method to delete the database
+
+        // This ensures proper handling of migrations history
+
+        try
+
+        {
+
+            await db.Database.EnsureDeletedAsync();
+
+        }
+
+        catch
+
+        {
+
+            // Ignore errors - database might not exist
+
+        }
+
+        // Let MigrateAsync handle creating the database and applying all migrations
+
+        // This is more reliable than manually creating the database
 
         await InitializeAsync(db);
 

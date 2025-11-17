@@ -36,7 +36,7 @@ namespace BobCrm.Api.Migrations
                 table: "EntityDomains",
                 type: "jsonb",
                 nullable: false,
-                defaultValue: "",
+                defaultValue: "{}",
                 oldClrType: typeof(string),
                 oldType: "jsonb",
                 oldNullable: true);
