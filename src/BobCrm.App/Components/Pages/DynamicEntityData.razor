@@ -93,7 +93,7 @@
         }
         else
         {
-            <Form LabelColSpan="6" WrapperColSpan="18">
+            <Form Model="@_formValues" LabelColSpan="6" WrapperColSpan="18">
                 @foreach (var field in GetVisibleFields())
                 {
                     var fieldId = GetFieldInputId(field);
@@ -102,7 +102,7 @@
                         {
                             <Switch Id="@fieldId"
                                     Checked="@GetBoolValue(field.PropertyName)"
-                                    OnChange="value => SetFormValue(field.PropertyName, value)"
+                                    OnChange="(bool value) => SetFormValue(field.PropertyName, value)"
                                     Disabled="@IsFieldDisabled(field)" />
                         }
                         else if (string.Equals(field.DataType, FieldDataType.Integer, StringComparison.OrdinalIgnoreCase)
@@ -111,7 +111,7 @@
                             <AntDesign.InputNumber TValue="long?"
                                                     Id="@fieldId"
                                                     Value="@GetLongValue(field.PropertyName)"
-                                                    ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                                    ValueChanged="(long? value) => SetFormValue(field.PropertyName, value)"
                                                     Disabled="@IsFieldDisabled(field)" />
                         }
                         else if (string.Equals(field.DataType, FieldDataType.Decimal, StringComparison.OrdinalIgnoreCase))
@@ -119,14 +119,14 @@
                             <AntDesign.InputNumber TValue="decimal?"
                                                     Id="@fieldId"
                                                     Value="@GetDecimalValue(field.PropertyName)"
-                                                    ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                                    ValueChanged="(decimal? value) => SetFormValue(field.PropertyName, value)"
                                                     Disabled="@IsFieldDisabled(field)" />
                         }
                         else if (string.Equals(field.DataType, FieldDataType.DateTime, StringComparison.OrdinalIgnoreCase))
                         {
                             <DatePicker Id="@fieldId"
                                         Value="@GetDateTimeValue(field.PropertyName)"
-                                        ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                        ValueChanged="(DateTime? value) => SetFormValue(field.PropertyName, value)"
                                         ShowTime="true"
                                         Disabled="@IsFieldDisabled(field)" />
                         }
@@ -134,7 +134,7 @@
                         {
                             <DatePicker Id="@fieldId"
                                         Value="@GetDateTimeValue(field.PropertyName)"
-                                        ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                        ValueChanged="(DateTime? value) => SetFormValue(field.PropertyName, value)"
                                         Picker="DatePickerType.Date"
                                         Disabled="@IsFieldDisabled(field)" />
                         }
@@ -142,7 +142,7 @@
                         {
                             <Input Id="@fieldId"
                                    Value="@GetStringValue(field.PropertyName)"
-                                   ValueChanged="value => SetFormValue(field.PropertyName, value)"
+                                   ValueChanged="(string value) => SetFormValue(field.PropertyName, value)"
                                    Disabled="@IsFieldDisabled(field)" />
                         }
 

@@ -1,6 +1,7 @@
 @page "/templates/bindings"
 @rendermode RenderMode.InteractiveServer
 @using BobCrm.App.Models
+@using BobCrm.App.Services
 @implements IDisposable
 @inject TemplateBindingService BindingService
 @inject TemplateRuntimeClient TemplateRuntime
@@ -460,7 +461,7 @@
         color: var(--muted, #666);
     }
 
-    @media (max-width: 720px) {
+    @@media (max-width: 720px) {
         .filters {
             flex-direction: column;
         }

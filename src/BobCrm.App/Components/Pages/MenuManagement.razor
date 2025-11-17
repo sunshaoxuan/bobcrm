@@ -2,8 +2,9 @@
 @using System.Linq
 @using System.Collections.Generic
 @using BobCrm.App.Models
+@using BobCrm.App.Services
 @using BobCrm.App.Services.Multilingual
-@inject MenuService MenuService
+@inject BobCrm.App.Services.MenuService MenuService
 @inject I18nService I18n
 @inject AntDesign.IMessageService Message
 @inject IMultilingualTextResolver MultilingualResolver
@@ -131,7 +132,7 @@
                 </div>
                 <div class="form-field">
                     <label>@I18n.T("LBL_MENU_SORT")</label>
-                    <InputNumber @bind-Value="_form.SortOrder" Min="0" Step="10" />
+                    <AntDesign.InputNumber @bind-Value="_form.SortOrder" Min="0" Step="10" />
                 </div>
                 <div class="form-field switch-field">
                     <label>@I18n.T("LBL_MENU_IS_MENU")</label>
@@ -140,10 +141,9 @@
             </div>
             <div class="form-field">
                 <label>@I18n.T("LBL_MENU_NAVIGATION_TYPE")</label>
-                <RadioGroup Value="_form.NavigationType"
-                            ValueChanged="OnNavigationTypeChanged">
-                    <RadioButton Value="route">@I18n.T("LBL_MENU_NAV_ROUTE")</RadioButton>
-                    <RadioButton Value="template">@I18n.T("LBL_MENU_NAV_TEMPLATE")</RadioButton>
+                <RadioGroup Value="_form.NavigationType" ValueChanged="async (string value) => await OnNavigationTypeChanged(value)">
+                    <Radio Value="@("route")">@I18n.T("LBL_MENU_NAV_ROUTE")</Radio>
+                    <Radio Value="@("template")">@I18n.T("LBL_MENU_NAV_TEMPLATE")</Radio>
                 </RadioGroup>
             </div>
             @if (_form.NavigationType == "route")
@@ -165,11 +165,12 @@
                     }
                     else if (_templates.Count == 0)
                     {
-                        <Alert Message="@I18n.T("TXT_MENU_TEMPLATE_EMPTY")" Type="@AlertType.Info" ShowIcon />
+                        <Alert Message="@I18n.T("TXT_MENU_TEMPLATE_EMPTY")" Type="@AlertType.Info" ShowIcon="true" />
                     }
                     else
                     {
                         <Select TItem="TemplateSummary"
+                                TItemValue="int?"
                                 TValue="int?"
                                 @bind-Value="_form.TemplateId"
                                 Placeholder="@I18n.T("LBL_MENU_TEMPLATE_SELECT")">
@@ -227,7 +228,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_MENU_LOAD_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_MENU_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -348,12 +349,12 @@
 
     private void AllowDrop(DragEventArgs e)
     {
-        e.PreventDefault();
+        // Blazor handles preventDefault automatically
     }
 
     private async Task HandleDrop(Guid targetId, string position, DragEventArgs e)
     {
-        e.PreventDefault();
+        // Blazor handles preventDefault automatically
         if (_draggingNodeId is null || _draggingNodeId == targetId)
         {
             return;
@@ -372,7 +373,7 @@
 
         if (WouldCreateCycle(dragged, newParent))
         {
-            await Message.Warning(I18n.T("MSG_MENU_INVALID_DROP"));
+            Message.Warning(I18n.T("MSG_MENU_INVALID_DROP"));
             _draggingNodeId = null;
             return;
         }
@@ -417,7 +418,7 @@
         var success = await MenuService.ReorderAsync(updateMap.Values.ToList());
         if (!success)
         {
-            await Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
+            Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
             await LoadTreeAsync(dragged.Id);
             _draggingNodeId = null;
             return;
@@ -431,7 +432,7 @@
 
     private async Task HandleRootDrop(string position, DragEventArgs e)
     {
-        e.PreventDefault();
+        // Blazor handles preventDefault automatically
         if (_draggingNodeId is null)
         {
             return;
@@ -476,7 +477,7 @@
         var success = await MenuService.ReorderAsync(updateMap.Values.ToList());
         if (!success)
         {
-            await Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
+            Message.Error(I18n.T("MSG_MENU_REORDER_FAILED"));
             await LoadTreeAsync(dragged.Id);
             _draggingNodeId = null;
             return;
@@ -625,11 +626,11 @@
         var success = await MenuService.DeleteAsync(node.Id);
         if (!success)
         {
-            await Message.Error(I18n.T("MSG_MENU_DELETE_FAILED"));
+            Message.Error(I18n.T("MSG_MENU_DELETE_FAILED"));
             return;
         }
 
-        await Message.Success(I18n.T("MSG_MENU_DELETE_SUCCESS"));
+        Message.Success(I18n.T("MSG_MENU_DELETE_SUCCESS"));
         await LoadTreeAsync(_parentLookup.TryGetValue(node.Id, out var parentId) ? parentId : null);
     }
 
@@ -642,7 +643,7 @@
 
         if (string.IsNullOrWhiteSpace(_form.Code) && _isCreating)
         {
-            await Message.Warning(I18n.T("MSG_MENU_CODE_REQUIRED"));
+            Message.Warning(I18n.T("MSG_MENU_CODE_REQUIRED"));
             return;
         }
 
@@ -668,11 +669,11 @@
                 var node = await MenuService.CreateAsync(request);
                 if (node == null)
                 {
-                    await Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
+                    Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
                     return;
                 }
 
-                await Message.Success(I18n.T("MSG_MENU_CREATE_SUCCESS"));
+                Message.Success(I18n.T("MSG_MENU_CREATE_SUCCESS"));
                 _isModalVisible = false;
                 await LoadTreeAsync(node.Id);
             }
@@ -704,11 +705,11 @@
                 var node = await MenuService.UpdateAsync(_editingNode.Id, request);
                 if (node == null)
                 {
-                    await Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
+                    Message.Error(I18n.T("MSG_MENU_SAVE_FAILED"));
                     return;
                 }
 
-                await Message.Success(I18n.T("MSG_MENU_SAVE_SUCCESS"));
+                Message.Success(I18n.T("MSG_MENU_SAVE_SUCCESS"));
                 _isModalVisible = false;
                 await LoadTreeAsync(node.Id);
             }

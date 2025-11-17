@@ -80,7 +80,7 @@ public class TemplateBindingService
             }
 
             var templates = await response.Content.ReadFromJsonAsync<List<FormTemplate>>(_jsonOptions, cancellationToken);
-            return templates ?? Array.Empty<FormTemplate>();
+            return (IReadOnlyList<FormTemplate>?)templates ?? Array.Empty<FormTemplate>();
         }
         catch (Exception ex)
         {
