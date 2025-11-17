@@ -30,7 +30,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // 强制使用测试数据库配置（必须在base.CreateHost之前设置，确保最高优先级）
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // 清除所有现有配置，确保测试配置优先
+            // ⭐ 关键修复：清除所有现有配置源，然后只添加测试配置
+            // 这样可以防止 appsettings.Development.json 中的 bobcrm 数据库配置被加载
+            config.Sources.Clear();
+
             var testConfig = new Dictionary<string, string?>
             {
                 ["Db:Provider"] = "postgres",
@@ -43,7 +46,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 ["Jwt:RefreshDays"] = "7"
             };
 
-            // 添加内存配置作为最高优先级
+            // 添加内存配置作为唯一配置源
             config.AddInMemoryCollection(testConfig!);
         });
 
@@ -51,41 +54,61 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
         // 这样可以避免 I18nEndpoints.ResolveDocumentationLanguage() 在启动时查询不存在的表
         var connectionString = "Host=localhost;Port=5432;Database=bobcrm_test;Username=postgres;Password=postgres";
 
-        // 步骤1：强制终止所有连接并删除数据库（使用原始SQL，不依赖EF Core）
+        // 步骤1：强制终止所有连接并删除/创建数据库（使用原始SQL，不依赖EF Core）
         var connBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString) { Database = "postgres" };
         using (var adminConn = new Npgsql.NpgsqlConnection(connBuilder.ToString()))
         {
             adminConn.Open();
 
-            // 终止所有连接到 bobcrm_test 的会话
+            // 处理 bobcrm_test 数据库
             using (var cmd = new Npgsql.NpgsqlCommand(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'bobcrm_test' AND pid <> pg_backend_pid();",
                 adminConn))
             {
                 try { cmd.ExecuteNonQuery(); } catch { }
             }
-
-            // 删除数据库
             using (var cmd = new Npgsql.NpgsqlCommand("DROP DATABASE IF EXISTS bobcrm_test;", adminConn))
             {
                 cmd.ExecuteNonQuery();
             }
-
-            // 创建新数据库
             using (var cmd = new Npgsql.NpgsqlCommand("CREATE DATABASE bobcrm_test;", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            // ⭐ 同时确保 bobcrm 数据库存在（防止配置加载时连接失败）
+            // 某些测试环境下可能会因为 appsettings.Development.json 而尝试连接 bobcrm
+            using (var cmd = new Npgsql.NpgsqlCommand(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'bobcrm' AND pid <> pg_backend_pid();",
+                adminConn))
+            {
+                try { cmd.ExecuteNonQuery(); } catch { }
+            }
+            using (var cmd = new Npgsql.NpgsqlCommand("DROP DATABASE IF EXISTS bobcrm;", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+            using (var cmd = new Npgsql.NpgsqlCommand("CREATE DATABASE bobcrm;", adminConn))
             {
                 cmd.ExecuteNonQuery();
             }
         }
 
-        // 步骤2：应用迁移并初始化数据
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseNpgsql(connectionString);
-
-        using (var tempDb = new AppDbContext(optionsBuilder.Options))
+        // 步骤2：应用迁移并初始化数据（两个数据库都需要初始化）
+        var testDbOptions = new DbContextOptionsBuilder<AppDbContext>();
+        testDbOptions.UseNpgsql(connectionString);
+        using (var tempDb = new AppDbContext(testDbOptions.Options))
         {
-            // 只调用 InitializeAsync，不需要 RecreateAsync（数据库已经是全新的）
+            // 初始化 bobcrm_test 数据库
             DatabaseInitializer.InitializeAsync(tempDb).GetAwaiter().GetResult();
+        }
+
+        var devDbOptions = new DbContextOptionsBuilder<AppDbContext>();
+        devDbOptions.UseNpgsql("Host=localhost;Port=5432;Database=bobcrm;Username=postgres;Password=postgres");
+        using (var devDb = new AppDbContext(devDbOptions.Options))
+        {
+            // 初始化 bobcrm 数据库（防止某些测试意外连接到它）
+            DatabaseInitializer.InitializeAsync(devDb).GetAwaiter().GetResult();
         }
 
         var host = base.CreateHost(builder);
