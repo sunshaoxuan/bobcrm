@@ -38,6 +38,12 @@
 
 ### Fixed
 #### 2025-11-17
+- **测试基础设施修复**：彻底解决测试初始化和数据库迁移问题。
+  - **TestWebAppFactory.cs**：在应用启动前强制重建测试数据库（使用原始SQL终止连接、删除并重建数据库），解决 I18nEndpoints 启动时查询 SystemSettings 表失败的问题。
+  - **Migration重建**：删除所有11个冲突的旧migrations（存在DisplayName列重复定义等问题），创建全新的 InitialCreate migration，提供干净的迁移基线。
+  - **测试编译修复**：修复 TestNavigationManager → FakeNavigationManager（2处），TemplateBindingId → TemplateId 属性名（2处），匿名数组类型推断错误（1处），缺失 using/方法/字段（4处）。
+  - **测试结果**：编译 0 errors 0 warnings，测试通过率 62.3%（218/350），migration冲突完全消除。
+
 - **全面清除编译警告**：修复 API/App 项目所有 33 个编译警告，实现零警告零错误编译状态。
   - **CS1998 异步方法警告**（3处）：EntityDataSourceHandler.cs 移除 async，使用 Task.FromResult() 返回同步结果。
   - **CS8620 可空引用类型警告**（15处）：AppDbContext.cs jsonConverter 调用添加 `!` 操作符（13处），DynamicEntityData.razor payload 参数添加 `!`（2处）。
