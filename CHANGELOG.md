@@ -10,53 +10,38 @@
 ## [未发布] - 进行中
 
 ### Added
-- **动态实体运行宿主**：`DynamicEntityData.razor` 现已支持创建/编辑弹窗、字段级校验与批量刷新，前端 CRUD 闭环正式可用。
-- **默认模板自动生成链路**：引入 `DefaultTemplateGenerator` 与模板绑定/菜单注册器,实体发布后会自动准备 Detail/Edit/List 模板并写入菜单节点,实现"发布即上线"。
-- **模板与菜单管理界面**：新增模板绑定管理页(按实体/用途筛选、系统模板切换)与菜单管理页(多语标题、模板/功能二选一、拖拽排序),支撑管理员自助配置。
-- **角色模板粒度授权**：角色权限页可针对同一菜单的不同模板授予权限,后端 `RoleFunctionPermission` 增加 `TemplateBindingId` 并串联前端交互。
-- **TMP 模板设计器进度表**：新增 `docs/process/TMP-template-designer-progress.md`,列出 Widget 覆盖、宿主改造与验证任务,作为当前阶段的临时推进清单。
-- **ARCH-22 Phase A 数据源基础设施**（后端完整实现,前端运行态待开发）:
-  - **后端完整实现**：
-    - 创建 `DataSet`、`QueryDefinition`、`PermissionFilter`、`DataSourceTypeEntry` 四个核心模型及对应的 DTO 和 EF Core 配置
-    - 实现 `DataSetService` 提供 CRUD 和执行能力,集成策略模式的 Handler 注册机制
-    - 创建 `IDataSourceHandler` 接口和 `EntityDataSourceHandler` 示例实现,演示数据源处理器模式
-    - 实现完整的 REST API 端点(`DataSetEndpoints`):GET/POST/PUT/DELETE数据集,POST执行查询,GET字段元数据
-    - 生成数据库迁移 `AddDataSourceInfrastructure`,创建4个新表及索引
-    - 在 `Program.cs` 注册服务和 Handler,实现依赖注入
-  - **前端设计器支持**：
-    - 新增 `DataGridWidget`(通用数据网格)、`OrganizationTreeWidget`(组织树)、`RolePermissionTreeWidget`(角色权限树)三个核心 Widget
-    - 在 `PropertyEditorType` 中新增 Json、DataSetPicker、FieldPicker 编辑器类型
-    - 更新 `WidgetRegistry` 添加 Data 类别,注册新控件供设计器使用
-  - **OOP 架构亮点**：
-    - 避免枚举硬编码:使用 `DataSourceTypeEntry` 元数据表,数据源类型可动态扩展
-    - 策略模式实现:每种数据源类型有独立 Handler 实现类,通过 DI 注册
-    - 完全国际化:所有模型使用 `Dictionary<string, string?>` 存储多语文本
-    - JSON 配置驱动:数据源配置通过 `ConfigJson` 存储,支持个性化配置而不爆炸字段
-  - **前端运行态支持** (已完成):
-    - ✅ `ListTemplateHost` 组件:列表模板运行宿主,支持模板加载、Widget 渲染、权限检查,**使用 DI 注入 IRuntimeWidgetRenderer 和 AuthService**,遵循 OOP 依赖注入原则
-    - ✅ `WidgetJsonConverter`:自定义 JSON 转换器,支持根据 Type 属性反序列化为正确的 Widget 子类
-    - ✅ `DataGridRuntime` 组件:DataGrid 运行态渲染组件,**使用 AuthService 认证 API 调用**,集成 DataSet Execute API、分页、排序和数据展示
-    - ✅ 运行态渲染扩展:为 `DataGridWidget`、`OrganizationTreeWidget`、`RolePermissionTreeWidget` 实现完整的 `RenderRuntime` 方法
-    - ✅ **架构修复**:修复 TemplateBindings.razor CSS `@@media` 转义,修复 WidgetRegistry 图标引用,修复 TemplateBindingService 类型转换,确保 DI 模式正确使用
-  - **未完成部分**（需后续迭代）:
-    - ❌ 数据源集成测试（单元测试和组件测试）
-    - ❌ 系统数据源类型初始化数据（entity/api/sql/view 四种类型的 seed data）
+#### 2025-11-17
+- **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成“发布即上线”的闭环。
+- **Template & menu management UI**：模板中心支持绑定切换；菜单管理支持多语标题、模板/功能双模式指派及拖拽排序。
+- **Role-level template authorization**：`RoleFunctionPermission` 现可记录 `TemplateBindingId`，角色可在同一菜单下授权不同模板。
+- **Dynamic entity host enhancements**：`DynamicEntityData.razor` 引入弹窗式创建/编辑、字段级校验与批量刷新。
+- **Template designer progress tracker**：新增 `docs/process/TMP-template-designer-progress.md`，追踪阶段性交付与待办。
+- **ARCH-22 Phase A – Data source infrastructure**：
+  - 后端：落地 `DataSet` / `QueryDefinition` / `PermissionFilter` / `DataSourceTypeEntry` 模型与 DTO，新增 `DataSetService`、`DataSetEndpoints`、`IDataSourceHandler` 策略体系以及 `AddDataSourceInfrastructure` 迁移。
+  - 前端：实现 `DataGridWidget`、`OrganizationTreeWidget`、`RolePermissionTreeWidget`、`WidgetJsonConverter`、`ListTemplateHost`、`DataGridRuntime`，并扩展 `PropertyEditorType` 与 `WidgetRegistry` 的 Data 类别。
+  - 运行态：所有模板/数据集 API 调用改用 `AuthService` 获取带凭据的 HttpClient，确保鉴权链路一致。
+
+#### 2025-11-16
+- **Template binding management page**：新增 `/templates/bindings` 页面，支持实体/用途筛选、系统/个人绑定切换与权限提示。
+- **Menu management APIs**：暴露菜单 CRUD、排序、模板绑定端点，并在 UI 中展示模板元数据与导航模式选择。
+- **Entity publish template pipeline**：`EntityPublishingService` 集成 `DefaultTemplateService` 与 `EntityMenuRegistrar`，发布时自动生成模板及菜单节点。
+- **DefaultTemplateGenerator & service**：实现 `IDefaultTemplateGenerator` 与 `DefaultTemplateService`，统一生成/持久化 Detail/Edit/List 模板。
+- **Function tree builder**：新增 `FunctionTreeBuilder` 服务与多语/模板字段扩展，使角色与菜单 API 可返回模板配置信息。
+- **Role permission template support**：`UpdatePermissionsRequest` 与 Role API/页面现可提交模板绑定 ID。
+- **Dynamic entity CRUD modal**：`DynamicEntityData.razor` 增加页面内模态框创建/编辑能力。
+- **Docs & audits**：`ARCH-22`、`PROC-04` 等文档记录 11/16 模板-权限闭环审计与风险。
 
 ### Changed
-- **ARCH-22 设计文档**：新增"第 14 章 实施进度与文档同步",盘点上述能力的实现状态、文档落点与尚未完成的后续动作。
-- **ARCH-22 设计文档(5.1)**：补充"设计器控件覆盖计划"与"数据源与条件绑定"小节,明确通用 DataGrid 控件、数据集/条件模型、属性面板规范、运行态契约与分阶段落地策略,解决原文对控件及数据绑定描述不清的问题。
-- **PROC-04 差距审计**：补充"2025-11-16 模板与权限闭环阶段审计"与"2025-11-16(晚班)自定义实体闭环复核",记录文档覆盖范围、最新风险(功能树版本口、模板默认标识等)并同步到 backlog。
-- **TMP 模板设计器进度表更新**：标记 Phase A 完整实现:后端基础设施(DataSet服务/API/数据库迁移/Handler注册)、前端设计器 Widget、**前端运行态组件**(ListTemplateHost/WidgetJsonConverter/DataGridRuntime/Widget RenderRuntime扩展)全部完成;**待办项更新**：测试和种子数据需后续迭代完成。
+- **ARCH-22 文档**：新增“实施进度”章节，并在 5.1 小节补充“设计器控件覆盖计划”“数据源与条件绑定”。
+- **PROC-04 差距审计**：记录 2025-11-16 模板-权限闭环阶段审计及后续风险。
+- **TMP 进度表**：标记 Phase A 后端基础设施与运行态组件为完成，保留 FormDesigner 数据源 UI、PageLoader、种子数据及测试为待办。
 
 ### Fixed
-- **编译错误全面修复**（共解决 22 个编译错误）:
-  - **MenuManagement.razor**：修复 Message 服务调用（11处 `await Message.*()` 错误移除 await,9处方法名缺失错误补充 Error/Success/Warning）
-  - **MenuManagement.razor**：修复 DragEventArgs.PreventDefault 调用（3处,Blazor 自动处理 preventDefault）
-  - **MenuManagement.razor**：修复 RadioGroup 导航类型切换逻辑（使用 `Value` + `ValueChanged` 模式,保留 OnNavigationTypeChanged 回调以正确加载模板和清空数据）
-  - **DynamicEntityData.razor**：修复 Form 类型推断错误（添加 Model 属性）
-  - **DynamicEntityData.razor**：修复 EventCallback 类型不匹配错误（13处,为 Switch/DatePicker/Input/InputNumber 组件添加显式 lambda 类型注解）
-  - **编译结果**：App 项目 0 错误 0 警告,Api 项目 0 错误 3 警告（可空引用和异步方法警告,非关键）
-- **文档完整性缺口**：通过上述文档更新与审计结论,确保模板-菜单-权限闭环的实现现状、未决问题和下一步修复动作在官方文档中均有出处,消除"代码先于文档"的风险。
+- **MenuManagement.razor**：恢复 `RadioGroup` 回调逻辑，移除无效的 `DragEventArgs.PreventDefault()`，统一 `Message` API 调用。
+- **DynamicEntityData.razor**：为 Form 添加 `Model` 绑定并显式声明 `EventCallback` Lambda 类型，修复泛型推断问题。
+- **TemplateBindings.razor**：修复 CSS `@media` 转义、补齐 using，并通过 `AuthService` 访问模板运行态 API。
+- **TemplateBindingService**：统一返回 `IReadOnlyList<FormTemplate>`，消除 `??` 操作符类型不匹配。
+- **运行态组件认证**：`ListTemplateHost` 与 `DataGridRuntime` 改用 `AuthService` 获取认证 HttpClient，确保模板/数据集 API 均能鉴权。
 
 ---
 
@@ -977,4 +962,4 @@
 ---
 
 **维护者**：BobCRM 开发团队
-**最后更新**：2025-11-15
+**最后更新**：2025-11-17
