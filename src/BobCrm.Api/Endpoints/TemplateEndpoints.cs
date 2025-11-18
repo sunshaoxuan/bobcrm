@@ -4,6 +4,7 @@ using System.Security.Claims;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
@@ -416,6 +417,17 @@ public static class TemplateEndpoints
 
             var entityTypeSet = new HashSet<string>(entityTypes, StringComparer.OrdinalIgnoreCase);
 
+            var entityMetadata = await db.EntityDefinitions
+                .AsNoTracking()
+                .Where(ed => ed.EntityRoute != null && entityTypeSet.Contains(ed.EntityRoute))
+                .ToDictionaryAsync(
+                    ed => ed.EntityRoute!,
+                    ed => new EntityMenuMetadata(
+                        ResolveDisplayName(ed),
+                        ResolveRoute(ed)),
+                    StringComparer.OrdinalIgnoreCase,
+                    ct);
+
             var candidateTemplates = await db.FormTemplates
                 .AsNoTracking()
                 .Where(t => t.EntityType != null &&
@@ -458,24 +470,32 @@ public static class TemplateEndpoints
                     })
                     .ToList();
 
-                result.Add(new
+                entityMetadata.TryGetValue(binding.EntityType, out var metadata);
+                var displayName = metadata?.DisplayName ?? node.Name;
+                var resolvedRoute = metadata?.Route ?? node.Route;
+
+                var menuPayload = new
                 {
-                    Menu = new
-                    {
-                        node.Id,
-                        node.Code,
-                        node.Name,
-                        node.DisplayNameKey,
-                        DisplayName = node.DisplayName == null
-                            ? null
-                            : new Dictionary<string, string?>(node.DisplayName, StringComparer.OrdinalIgnoreCase),
-                        node.Route,
-                        node.Icon,
-                        node.SortOrder
-                    },
-                    Binding = binding.ToDto(),
-                    Templates = templates
-                });
+                    node.Id,
+                    Code = NormalizeMenuCode(node.Code),
+                    Name = displayName,
+                    node.DisplayNameKey,
+                    DisplayName = node.DisplayName == null
+                        ? null
+                        : new Dictionary<string, string?>(node.DisplayName, StringComparer.OrdinalIgnoreCase),
+                    Route = resolvedRoute,
+                    node.Icon,
+                    node.SortOrder
+                };
+
+                var entry = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Menu"] = menuPayload,
+                    ["Binding"] = binding.ToDto(),
+                    ["Templates"] = templates
+                };
+
+                result.Add(entry);
             }
 
             logger.LogDebug("[Templates] Calculated {Count} menu/template intersections for user {UserId}.", result.Count, uid);
@@ -551,6 +571,54 @@ public static class TemplateEndpoints
 
         return app;
     }
+
+    private static string NormalizeMenuCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return string.Empty;
+        }
+
+        if (code.EndsWith(".DETAIL", StringComparison.OrdinalIgnoreCase) ||
+            code.EndsWith(".EDIT", StringComparison.OrdinalIgnoreCase))
+        {
+            var index = code.LastIndexOf('.');
+            return index > 0 ? code[..index] : code;
+        }
+
+        return code;
+    }
+
+    private static string ResolveDisplayName(EntityDefinition definition)
+    {
+        if (definition.DisplayName != null)
+        {
+            var value = definition.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value!;
+            }
+        }
+
+        return definition.EntityName;
+    }
+
+    private static string? ResolveRoute(EntityDefinition definition)
+    {
+        if (string.IsNullOrWhiteSpace(definition.ApiEndpoint))
+        {
+            return null;
+        }
+
+        var route = definition.ApiEndpoint;
+        if (route.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+            route = route[4..];
+        }
+        return route;
+    }
+
+    private sealed record EntityMenuMetadata(string DisplayName, string? Route);
 }
 
 // 请求DTO

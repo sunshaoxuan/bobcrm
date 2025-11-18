@@ -146,13 +146,26 @@ public class AccessService
             throw new InvalidOperationException("Function name is required.");
         }
 
+        TemplateBinding? templateBinding = null;
         FormTemplate? template = null;
         if (request.TemplateId.HasValue)
         {
-            template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
-            if (template == null)
+            templateBinding = await _db.TemplateBindings
+                .Include(b => b.Template)
+                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
+
+            if (templateBinding != null)
             {
-                throw new InvalidOperationException("Template does not exist.");
+                template = templateBinding.Template
+                    ?? await _db.FormTemplates.FindAsync(new object[] { templateBinding.TemplateId }, ct);
+            }
+            else
+            {
+                template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
+                if (template == null)
+                {
+                    throw new InvalidOperationException("Template binding not found.");
+                }
             }
         }
 
@@ -167,7 +180,9 @@ public class AccessService
             IsMenu = request.IsMenu,
             SortOrder = request.SortOrder,
             TemplateId = template?.Id,
-            Template = template
+            Template = template,
+            TemplateBindingId = templateBinding?.Id,
+            TemplateBinding = templateBinding
         };
 
         _db.FunctionNodes.Add(node);
@@ -245,17 +260,34 @@ public class AccessService
         {
             node.TemplateId = null;
             node.Template = null;
+            node.TemplateBindingId = null;
+            node.TemplateBinding = null;
         }
         else if (request.TemplateId.HasValue)
         {
-            var template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
-            if (template == null)
+            TemplateBinding? templateBinding = await _db.TemplateBindings
+                .Include(b => b.Template)
+                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
+
+            FormTemplate? template;
+            if (templateBinding != null)
             {
-                throw new InvalidOperationException("Template does not exist.");
+                template = templateBinding.Template
+                    ?? await _db.FormTemplates.FindAsync(new object[] { templateBinding.TemplateId }, ct);
+            }
+            else
+            {
+                template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
+                if (template == null)
+                {
+                    throw new InvalidOperationException("Template binding not found.");
+                }
             }
 
-            node.TemplateId = template.Id;
+            node.TemplateId = template?.Id;
             node.Template = template;
+            node.TemplateBindingId = templateBinding?.Id;
+            node.TemplateBinding = templateBinding;
         }
 
         if (node.TemplateId.HasValue && node.Template == null)
@@ -265,6 +297,15 @@ public class AccessService
         else if (!node.TemplateId.HasValue)
         {
             node.Template = null;
+        }
+
+        if (node.TemplateBindingId.HasValue && node.TemplateBinding == null)
+        {
+            await _db.Entry(node).Reference(n => n.TemplateBinding).LoadAsync(ct);
+        }
+        else if (!node.TemplateBindingId.HasValue)
+        {
+            node.TemplateBinding = null;
         }
 
         await _db.SaveChangesAsync(ct);

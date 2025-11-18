@@ -208,13 +208,13 @@ public static class AccessEndpoints
                 .Include(r => r.DataScopes)
                 .OrderBy(r => r.Code)
                 .ToListAsync(ct);
-            return Results.Ok(roles);
+            return Results.Ok(roles.Select(ToRoleDto).ToList());
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPost("/roles", async ([FromBody] CreateRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var role = await service.CreateRoleAsync(request, ct);
-            return Results.Ok(role);
+            return Results.Ok(ToRoleDto(role));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
@@ -229,7 +229,7 @@ public static class AccessEndpoints
             if (role == null)
                 return Results.NotFound(new { error = "Role not found" });
 
-            return Results.Ok(role);
+            return Results.Ok(ToRoleDto(role));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] AppDbContext db, CancellationToken ct) =>
@@ -249,7 +249,9 @@ public static class AccessEndpoints
                 role.IsEnabled = request.IsEnabled.Value;
 
             await db.SaveChangesAsync(ct);
-            return Results.Ok(role);
+            await db.Entry(role).Collection(r => r.Functions).LoadAsync(ct);
+            await db.Entry(role).Collection(r => r.DataScopes).LoadAsync(ct);
+            return Results.Ok(ToRoleDto(role));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, CancellationToken ct) =>
@@ -374,6 +376,39 @@ public static class AccessEndpoints
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
+    }
+
+    private static RoleProfileDto ToRoleDto(RoleProfile role)
+    {
+        return new RoleProfileDto
+        {
+            Id = role.Id,
+            OrganizationId = role.OrganizationId,
+            Code = role.Code,
+            Name = role.Name,
+            Description = role.Description,
+            IsSystem = role.IsSystem,
+            IsEnabled = role.IsEnabled,
+            CreatedAt = role.CreatedAt,
+            UpdatedAt = role.UpdatedAt,
+            Functions = (role.Functions ?? new List<RoleFunctionPermission>())
+                .Select(f => new RoleFunctionDto
+                {
+                    RoleId = f.RoleId,
+                    FunctionId = f.FunctionId,
+                    TemplateBindingId = f.TemplateBindingId
+                })
+                .ToList(),
+            DataScopes = (role.DataScopes ?? new List<RoleDataScope>())
+                .Select(ds => new RoleDataScopeDto
+                {
+                    Id = ds.Id,
+                    EntityName = ds.EntityName,
+                    ScopeType = ds.ScopeType,
+                    FilterExpression = ds.FilterExpression
+                })
+                .ToList()
+        };
     }
 
     private static FunctionNodeDto ToDto(FunctionNode node)

@@ -172,15 +172,21 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         for (var i = 0; i < fields.Count; i++)
         {
             var field = fields[i];
+            var propertyName = field.PropertyName?.Trim();
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                continue;
+            }
+
             var widgetType = ResolveWidgetType(field, usage);
             var label = ResolveLabel(field);
 
             var item = new Dictionary<string, object?>
             {
-                ["id"] = $"{field.PropertyName}_{usage.ToString().ToLowerInvariant()}",
+                ["id"] = $"{propertyName}_{usage.ToString().ToLowerInvariant()}",
                 ["type"] = widgetType,
                 ["label"] = label,
-                ["dataField"] = field.PropertyName,
+                ["dataField"] = propertyName,
                 ["order"] = i,
                 ["w"] = legacyWidth,
                 ["Width"] = widthPercent,
@@ -193,9 +199,12 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     : widgetType == "textarea" || i % columns == 0
             };
 
-            if (field.IsRequiredExplicitlySet)
+            var isRequired = field.IsRequiredExplicitlySet
+                ? field.IsRequired
+                : field.IsRequired;
+            if (usage != FormTemplateUsageType.List)
             {
-                item["required"] = field.IsRequired;
+                item["required"] = isRequired;
             }
 
             if (usage != FormTemplateUsageType.List && field.DataType is FieldDataType.Date or FieldDataType.DateTime)
@@ -203,7 +212,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 item["showTime"] = field.DataType == FieldDataType.DateTime;
             }
 
-            items[field.PropertyName] = item;
+            items[propertyName] = item;
         }
 
         var layout = new Dictionary<string, object?>

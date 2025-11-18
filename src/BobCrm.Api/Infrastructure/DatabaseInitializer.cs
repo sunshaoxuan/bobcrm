@@ -28,6 +28,8 @@ public static class DatabaseInitializer
 
         Console.WriteLine("[DatabaseInitializer] Migrations completed successfully");
 
+        await EnsureTrigramExtensionAsync(db);
+
         if (db is AppDbContext appDbContext)
 
         {
@@ -860,13 +862,13 @@ public static class DatabaseInitializer
 
             {
 
-                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON \"FieldValues\" USING GIN (\"Value\");");
+                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fieldvalues_value_gin ON \"FieldValues\" USING GIN (\"Value\" gin_trgm_ops);");
 
-                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON \"FieldDefinitions\" USING GIN (\"Tags\");");
+                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_tags_gin ON \"FieldDefinitions\" USING GIN (\"Tags\" gin_trgm_ops);");
 
-                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON \"FieldDefinitions\" USING GIN (\"Actions\");");
+                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fielddefinitions_actions_gin ON \"FieldDefinitions\" USING GIN (\"Actions\" gin_trgm_ops);");
 
-                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON \"UserLayouts\" USING GIN (\"LayoutJson\");");
+                await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_userlayouts_layoutjson_gin ON \"UserLayouts\" USING GIN (\"LayoutJson\" gin_trgm_ops);");
 
                 await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS idx_fieldvalues_customer_field ON \"FieldValues\" (\"CustomerId\", \"FieldDefinitionId\");");
 
@@ -876,6 +878,22 @@ public static class DatabaseInitializer
 
         }
 
+    }
+
+    private static async Task EnsureTrigramExtensionAsync(DbContext db)
+    {
+        if (!db.Database.IsNpgsql())
+        {
+            return;
+        }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+        }
+        catch
+        {
+        }
     }
 
     public static async Task RecreateAsync(DbContext db)
