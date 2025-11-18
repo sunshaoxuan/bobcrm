@@ -123,8 +123,10 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var entityName = $"Workflow{Guid.NewGuid():N}".Substring(0, 8);
-        var entityRoute = $"wf_{Guid.NewGuid():N}".Substring(0, 8).ToLowerInvariant();
+
+        var guidPart = Guid.NewGuid().ToString("N").Substring(0, 8);
+        var entityName = $"Workflow{guidPart}";
+        var entityRoute = $"wf_{guidPart}".ToLowerInvariant();
 
         var entity = new EntityDefinition
         {
@@ -135,6 +137,7 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
             DisplayName = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
             {
                 ["zh"] = "运行态菜单",
+                ["ja"] = "ランタイムメニュー",
                 ["en"] = "Runtime Menu"
             },
             Description = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -222,11 +225,8 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
     private static readonly SemaphoreSlim HostSemaphore = new(1, 1);
     private bool _lockHeld;
 
-    protected override IHost CreateHost(IHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        HostSemaphore.Wait();
-        _lockHeld = true;
-
         builder.UseEnvironment("Development");
 
         // 强制使用测试数据库配置
@@ -248,6 +248,18 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
 
             config.AddInMemoryCollection(testConfig!);
         });
+
+        // Register TestFriendlyDDLExecutionService to fake DDL execution
+        builder.ConfigureServices(services =>
+        {
+            services.AddScoped<DDLExecutionService, TestFriendlyDDLExecutionService>();
+        });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        HostSemaphore.Wait();
+        _lockHeld = true;
 
         // 在启动应用程序之前初始化数据库
         var connectionString = DefaultConnectionString;

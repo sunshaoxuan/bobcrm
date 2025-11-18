@@ -1,15 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Select-Object -First 5)",
-      "Bash(Select-String -Pattern \"(テストの合計数|Total tests|成功|Passed|失敗|Failed|スキップ|Skipped)\")",
-      "Bash(Select-Object -Last 5)",
-      "Bash(docker ps:*)",
       "Bash(Select-String -Pattern \"(SystemSettings|relation|does not exist|42P01|Exception|Error)\" -Context 2,2)",
-      "Bash(Select-Object -First 30)",
-      "Bash(/tmp/single_test.log)",
-      "Bash(tee:*)",
-      "Bash(docker exec:*)"
+      "Bash(git commit:*)",
+      "Bash(Select-String -Pattern \"(Failed|失敗)\" -Context 2,2)"
     ],
     "deny": [],
     "ask": []
