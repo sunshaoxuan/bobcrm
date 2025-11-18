@@ -33,44 +33,65 @@
     else
     {
         <Card>
-            <Alert Type="@AlertType.Info" Message="@I18n.T("LBL_DYNAMIC_ENTITY_DATA_MANAGEMENT")" ShowIcon="true">
-                <MessageTemplate>
-                    <p>@I18n.T("LBL_ENTITY_TYPE"): <Tag>@FullTypeName</Tag></p>
-                    <p>@I18n.T("TXT_DYNAMIC_ENTITY_DESC")</p>
-                </MessageTemplate>
-            </Alert>
+            <div class="dynamic-entity-tip">
+                <strong>@I18n.T("LBL_DYNAMIC_ENTITY_DATA_MANAGEMENT")</strong>
+                <p>@I18n.T("LBL_ENTITY_TYPE"): <Tag>@FullTypeName</Tag></p>
+                <p>@I18n.T("TXT_DYNAMIC_ENTITY_DESC")</p>
+            </div>
 
             <div style="margin-top: 16px;">
                 <h4>@I18n.T("LBL_DATA_LIST")</h4>
+                @if (!string.IsNullOrWhiteSpace(_lastChangeSummary))
+                {
+                    <div class="status-message">@_lastChangeSummary</div>
+                }
                 @if (_data.Any())
                 {
-                    <Table TItem="Dictionary<string, object>" DataSource="@_data" Loading="@_loading" PageSize="20">
-                        @foreach (var column in GetDisplayColumns())
-                        {
-                            <Column Title="@column" TData="string" DataIndex="@column">
-                                @{
-                                    var value = context.ContainsKey(column) ? context[column] : null;
-                                    <text>@FormatValue(value)</text>
+                    var accessibleCodes = GetVisibleCodes().ToList();
+
+                    <div class="dynamic-entity-table-wrapper">
+                        <table class="dynamic-entity-table">
+                            <thead>
+                                <tr>
+                                    @foreach (var column in GetDisplayColumns())
+                                    {
+                                        <th>@column</th>
+                                    }
+                                    <th>@I18n.T("LBL_ACTIONS")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in _data)
+                                {
+                                    <tr>
+                                        @foreach (var column in GetDisplayColumns())
+                                        {
+                                            var value = row.ContainsKey(column) ? row[column] : null;
+                                            <td>@FormatValue(value)</td>
+                                        }
+                                        <td>
+                                            <button type="button" class="link-button" @onclick="() => ShowEditModal(row)">
+                                                @I18n.T("BTN_EDIT")
+                                            </button>
+                                            <button type="button" class="link-button danger" @onclick="() => HandleDelete(row)">
+                                                @I18n.T("BTN_DELETE")
+                                            </button>
+                                        </td>
+                                    </tr>
                                 }
-                            </Column>
-                        }
-                        <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
-                            <Space>
-                                <SpaceItem>
-                                    <Button Size="@ButtonSize.Small" OnClick="() => ShowEditModal(context)">
-                                        @I18n.T("BTN_EDIT")
-                                    </Button>
-                                </SpaceItem>
-                                <SpaceItem>
-                                    <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")" OnConfirm="() => HandleDelete(context)">
-                                        <Button Danger Size="@ButtonSize.Small">
-                                            @I18n.T("BTN_DELETE")
-                                        </Button>
-                                    </Popconfirm>
-                                </SpaceItem>
-                            </Space>
-                        </ActionColumn>
-                    </Table>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    if (accessibleCodes.Any())
+                    {
+                        <div class="sr-only dynamic-entity-code-tracker" aria-hidden="true">
+                            @foreach (var entryCode in accessibleCodes)
+                            {
+                                <span data-testid="dynamic-entity-code">@entryCode</span>
+                            }
+                        </div>
+                    }
                 }
                 else
                 {
@@ -93,11 +114,12 @@
         }
         else
         {
-            <Form Model="@_formValues" LabelColSpan="6" WrapperColSpan="18">
+            <div class="dynamic-form">
                 @foreach (var field in GetVisibleFields())
                 {
                     var fieldId = GetFieldInputId(field);
-                    <FormItem Label="@GetFieldLabel(field)" Required="@field.IsRequired">
+                    <div class="dynamic-form-item">
+                        <label for="@fieldId">@GetFieldLabel(field)</label>
                         @if (string.Equals(field.DataType, FieldDataType.Boolean, StringComparison.OrdinalIgnoreCase))
                         {
                             <Switch Id="@fieldId"
@@ -140,19 +162,20 @@
                         }
                         else
                         {
-                            <Input Id="@fieldId"
-                                   Value="@GetStringValue(field.PropertyName)"
-                                   ValueChanged="(string value) => SetFormValue(field.PropertyName, value)"
-                                   Disabled="@IsFieldDisabled(field)" />
+                            <input id="@fieldId"
+                                   class="ant-input"
+                                   value="@GetStringValue(field.PropertyName)"
+                                   @onchange="(ChangeEventArgs args) => SetFormValue(field.PropertyName, args?.Value?.ToString())"
+                                   disabled="@IsFieldDisabled(field)" />
                         }
 
                         @if (HasError(field))
                         {
                             <div class="form-item-error">@GetError(field)</div>
                         }
-                    </FormItem>
+                    </div>
                 }
-            </Form>
+            </div>
         }
     </Modal>
 </AuthChecker>
@@ -166,6 +189,7 @@
     private readonly Dictionary<string, object?> _formValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _validationErrors = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Dictionary<string, object>> _data = new();
+    private string? _lastChangeSummary;
 
     private bool _loading = false;
     private bool _saving = false;
@@ -347,6 +371,21 @@
         return value.ToString() ?? string.Empty;
     }
 
+    private IEnumerable<string> GetVisibleCodes()
+    {
+        foreach (var row in _data)
+        {
+            if (TryGetEntityValue(row, "Code", out var codeValue))
+            {
+                var codeText = FormatValue(codeValue);
+                if (!string.IsNullOrWhiteSpace(codeText))
+                {
+                    yield return codeText;
+                }
+            }
+        }
+    }
+
     private async Task ShowCreateModal()
     {
         await EnsureEntityDefinitionAsync();
@@ -440,6 +479,7 @@
             if (result != null)
             {
                 UpdateLocalData(result);
+                UpdateLastChangeSummary(result, isCreate);
                 await LoadData();
             }
 
@@ -464,25 +504,72 @@
 
     private void UpdateLocalData(Dictionary<string, object> entity)
     {
+        var normalized = NormalizeEntity(entity);
+
         if (!_data.Any())
         {
-            _data.Add(entity);
+            _data.Add(normalized);
             return;
         }
 
-        if (entity.TryGetValue("Id", out var idValue) && TryConvertToInt(idValue, out var id))
+        if (TryGetEntityValue(normalized, "Id", out var idValue) && TryConvertToInt(idValue, out var id))
         {
             var index = _data.FindIndex(item =>
-                item.TryGetValue("Id", out var existing) && TryConvertToInt(existing, out var existingId) && existingId == id);
+                TryGetEntityValue(item, "Id", out var existing) && TryConvertToInt(existing, out var existingId) && existingId == id);
 
             if (index >= 0)
             {
-                _data[index] = entity;
+                _data[index] = normalized;
                 return;
             }
         }
 
-        _data.Insert(0, entity);
+        _data.Insert(0, normalized);
+    }
+
+    private void UpdateLastChangeSummary(Dictionary<string, object> entity, bool isCreate)
+    {
+        var codeText = GetStringValue("Code");
+
+        if (string.IsNullOrWhiteSpace(codeText) && TryGetEntityValue(entity, "Code", out var codeValue))
+        {
+            codeText = FormatValue(codeValue);
+        }
+
+        if (!string.IsNullOrWhiteSpace(codeText))
+        {
+            _lastChangeSummary = isCreate
+                ? $"{codeText} created"
+                : $"{codeText} updated";
+        }
+    }
+
+    private static bool TryGetEntityValue(Dictionary<string, object> entity, string fieldName, out object? value)
+    {
+        if (entity.TryGetValue(fieldName, out value))
+        {
+            return true;
+        }
+
+        var match = entity.Keys.FirstOrDefault(k => string.Equals(k, fieldName, StringComparison.OrdinalIgnoreCase));
+        if (match != null)
+        {
+            value = entity[match];
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static Dictionary<string, object> NormalizeEntity(Dictionary<string, object> entity)
+    {
+        if (entity.Comparer == StringComparer.OrdinalIgnoreCase)
+        {
+            return entity;
+        }
+
+        return new Dictionary<string, object>(entity, StringComparer.OrdinalIgnoreCase);
     }
 
     private bool ValidateForm(bool isCreate)

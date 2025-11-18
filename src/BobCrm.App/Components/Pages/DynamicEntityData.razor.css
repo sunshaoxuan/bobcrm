@@ -1,0 +1,63 @@
+.dynamic-entity-table-wrapper {
+    overflow-x: auto;
+}
+
+.dynamic-entity-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.dynamic-entity-table th,
+.dynamic-entity-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+}
+
+.dynamic-entity-table th {
+    background: #fafafa;
+    font-weight: 600;
+}
+
+.link-button {
+    border: none;
+    background: none;
+    color: var(--ant-color-primary, #1677ff);
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+.link-button.danger {
+    color: var(--ant-color-error, #ff4d4f);
+}
+
+.dynamic-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dynamic-form-item label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.status-message {
+    margin: 8px 0;
+    color: #52c41a;
+    font-weight: 600;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
