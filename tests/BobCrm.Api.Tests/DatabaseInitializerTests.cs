@@ -76,6 +76,48 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
+    public async Task RecreateAsync_Drops_And_Recreates_Database_With_All_Data()
+    {
+        var databaseName = $"dbinit_{Guid.NewGuid():N}";
+
+        // 先创建数据库
+        await CreateDatabaseAsync(databaseName);
+
+        await using var db = CreateIsolatedContext(databaseName);
+        try
+        {
+            // 使用 RecreateAsync 来重建数据库（完整的 drop + create + migrate 流程）
+            await DatabaseInitializer.RecreateAsync(db);
+            await DatabaseInitializer.InitializeAsync(db);
+
+            var customersExist = await db.Set<Customer>().AnyAsync();
+            Assert.True(customersExist, "应该有初始客户数据");
+
+            var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
+            Assert.True(fieldsExist, "应该有字段定义");
+
+            var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
+            Assert.True(langsExist, "应该有语言配置");
+
+            var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
+            Assert.True(resourcesExist, "应该有多语言资源");
+
+            var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
+            Assert.True(entitiesExist, "应该有实体定义");
+
+            var defaultLayout = await db.Set<UserLayout>()
+                .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
+            Assert.NotNull(defaultLayout);
+            Assert.False(string.IsNullOrWhiteSpace(defaultLayout!.LayoutJson));
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+            await DropDatabaseAsync(databaseName);
+        }
+    }
+
+    [Fact]
     public async Task Initialize_Creates_All_Required_Tables_And_Data()
     {
         var databaseName = $"dbinit_{Guid.NewGuid():N}";

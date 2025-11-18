@@ -45,11 +45,15 @@
     - 添加 SemaphoreSlim 锁机制，防止并发测试冲突。
   - **DatabaseInitializerTests 改进**：
     - 新增 CreateDatabaseAsync() 辅助方法，在 RecreateAsync() 前显式创建数据库。
+    - **新增 RecreateAsync 测试覆盖**：添加专门测试验证数据库重建逻辑（drop + create + migrate）。
     - 测试前后自动清理，确保数据库不残留。
   - **超时与僵尸进程处理**：
     - 新增 `scripts/run-tests-with-timeout.ps1`，提供10分钟超时保护、自动清理 testhost 进程、详细日志输出。
     - 支持按目标运行（solution/api/app），并传递正确的退出码给 CI/CD。
-  - **测试验证**：DatabaseInitializerTests 全部通过，AggVOSystemTests 依赖修复后的 TestWebAppFactory 无需修改。
+  - **测试验证**：
+    - DatabaseInitializerTests: 7/7 通过（包含新的 RecreateAsync 测试） ✓
+    - AggVOSystemTests: 9/9 通过 ✓
+    - SystemSettings 表正确创建，无"relation does not exist"错误 ✓
 
 #### 2025-11-17
 - **测试基础设施修复**：彻底解决测试初始化和数据库迁移问题。
