@@ -90,25 +90,8 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
             await DatabaseInitializer.RecreateAsync(db);
             await DatabaseInitializer.InitializeAsync(db);
 
-            var customersExist = await db.Set<Customer>().AnyAsync();
-            Assert.True(customersExist, "应该有初始客户数据");
-
-            var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
-            Assert.True(fieldsExist, "应该有字段定义");
-
-            var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
-            Assert.True(langsExist, "应该有语言配置");
-
-            var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
-            Assert.True(resourcesExist, "应该有多语言资源");
-
-            var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
-            Assert.True(entitiesExist, "应该有实体定义");
-
-            var defaultLayout = await db.Set<UserLayout>()
-                .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
-            Assert.NotNull(defaultLayout);
-            Assert.False(string.IsNullOrWhiteSpace(defaultLayout!.LayoutJson));
+            // 验证所有必需的表和数据都已创建
+            await AssertDatabaseIsFullyInitializedAsync(db);
         }
         finally
         {
@@ -130,31 +113,40 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         {
             await DatabaseInitializer.InitializeAsync(db);
 
-            var customersExist = await db.Set<Customer>().AnyAsync();
-            Assert.True(customersExist, "应该有初始客户数据");
-
-            var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
-            Assert.True(fieldsExist, "应该有字段定义");
-
-            var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
-            Assert.True(langsExist, "应该有语言配置");
-
-            var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
-            Assert.True(resourcesExist, "应该有多语言资源");
-
-            var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
-            Assert.True(entitiesExist, "应该有实体定义");
-
-            var defaultLayout = await db.Set<UserLayout>()
-                .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
-            Assert.NotNull(defaultLayout);
-            Assert.False(string.IsNullOrWhiteSpace(defaultLayout!.LayoutJson));
+            // 验证所有必需的表和数据都已创建
+            await AssertDatabaseIsFullyInitializedAsync(db);
         }
         finally
         {
             await db.Database.CloseConnectionAsync();
             await DropDatabaseAsync(databaseName);
         }
+    }
+
+    /// <summary>
+    /// 验证数据库已完全初始化，包含所有必需的表和种子数据
+    /// </summary>
+    private static async Task AssertDatabaseIsFullyInitializedAsync(AppDbContext db)
+    {
+        var customersExist = await db.Set<Customer>().AnyAsync();
+        Assert.True(customersExist, "应该有初始客户数据");
+
+        var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
+        Assert.True(fieldsExist, "应该有字段定义");
+
+        var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
+        Assert.True(langsExist, "应该有语言配置");
+
+        var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
+        Assert.True(resourcesExist, "应该有多语言资源");
+
+        var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
+        Assert.True(entitiesExist, "应该有实体定义");
+
+        var defaultLayout = await db.Set<UserLayout>()
+            .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
+        Assert.NotNull(defaultLayout);
+        Assert.False(string.IsNullOrWhiteSpace(defaultLayout!.LayoutJson));
     }
 
     [Fact]
