@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace BobCrm.Api.Tests;
 
@@ -40,8 +42,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         using var manageDoc = JsonDocument.Parse(await manageResponse.Content.ReadAsStringAsync());
         Assert.True(TryFindFunctionNode(manageDoc.RootElement, "CRM.CORE.ACCOUNTS", out var accountsNode));
         var translations = accountsNode.GetProperty("displayNameTranslations");
-        Assert.Equal("Accounts", translations.GetProperty("en").GetString());
-        Assert.Equal("アカウント", translations.GetProperty("ja").GetString());
+        Assert.Equal("Customer Accounts", translations.GetProperty("en").GetString());
+        Assert.Equal("顧客マスタ", translations.GetProperty("ja").GetString());
 
         var entity = await SeedDraftEntityAsync();
 
@@ -208,51 +210,151 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
 public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
 {
-    private readonly string _databaseName = $"MenuWorkflow_{Guid.NewGuid():N}";
-    private readonly InMemoryDatabaseRoot _databaseRoot = new();
+    private readonly string _serverConnectionString =
+        "Host=localhost;Port=5432;Username=postgres;Password=postgres";
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseEnvironment("Development");
-        builder.ConfigureAppConfiguration((context, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Db:SkipInit"] = "true"
-            });
-        });
+    private readonly string _databaseName = $"bobcrm_test_{Guid.NewGuid():N}";
 
-        builder.ConfigureServices(services =>
-        {
-            var descriptors = services
-                .Where(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>))
-                .ToList();
-            foreach (var descriptor in descriptors)
-            {
-                services.Remove(descriptor);
-            }
+    public string ServerConnectionString => _serverConnectionString;
+    public string DefaultDatabaseName => _databaseName;
+    public string DefaultConnectionString => $"{_serverConnectionString};Database={_databaseName}";
 
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseInMemoryDatabase(_databaseName, _databaseRoot);
-            });
-
-            services.AddScoped<DDLExecutionService, TestFriendlyDDLExecutionService>();
-        });
-    }
+    private static readonly SemaphoreSlim HostSemaphore = new(1, 1);
+    private bool _lockHeld;
 
     protected override IHost CreateHost(IHostBuilder builder)
     {
-        var host = base.CreateHost(builder);
-        using var scope = host.Services.CreateScope();
-        var scopedProvider = scope.ServiceProvider;
-        var db = scopedProvider.GetRequiredService<AppDbContext>();
-        db.Database.EnsureDeleted();
-        db.Database.EnsureCreated();
-        SeedLocalizationAsync(db).GetAwaiter().GetResult();
-        var accessService = scopedProvider.GetRequiredService<AccessService>();
-        accessService.SeedSystemAdministratorAsync().GetAwaiter().GetResult();
+        HostSemaphore.Wait();
+        _lockHeld = true;
+
+        builder.UseEnvironment("Development");
+
+        // 强制使用测试数据库配置
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            config.Sources.Clear();
+
+            var testConfig = new Dictionary<string, string?>
+            {
+                ["Db:Provider"] = "postgres",
+                ["ConnectionStrings:Default"] = DefaultConnectionString,
+                ["Db:SkipInit"] = "true",
+                ["Jwt:Key"] = "dev-secret-change-in-prod-1234567890",
+                ["Jwt:Issuer"] = "BobCrm",
+                ["Jwt:Audience"] = "BobCrmUsers",
+                ["Jwt:AccessMinutes"] = "60",
+                ["Jwt:RefreshDays"] = "7"
+            };
+
+            config.AddInMemoryCollection(testConfig!);
+        });
+
+        // 在启动应用程序之前初始化数据库
+        var connectionString = DefaultConnectionString;
+
+        // 步骤1：强制终止所有连接并删除/创建数据库
+        var connBuilder = new NpgsqlConnectionStringBuilder(connectionString) { Database = "postgres" };
+        using (var adminConn = new NpgsqlConnection(connBuilder.ToString()))
+        {
+            adminConn.Open();
+
+            using (var cmd = new NpgsqlCommand(
+                $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{_databaseName}' AND pid <> pg_backend_pid();",
+                adminConn))
+            {
+                try { cmd.ExecuteNonQuery(); } catch { }
+            }
+            using (var cmd = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\";", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+            using (var cmd = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\";", adminConn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // 步骤2：应用迁移并初始化数据
+        var testDbOptions = new DbContextOptionsBuilder<AppDbContext>();
+        testDbOptions.UseNpgsql(connectionString);
+        using (var tempDb = new AppDbContext(testDbOptions.Options))
+        {
+            DatabaseInitializer.InitializeAsync(tempDb).GetAwaiter().GetResult();
+        }
+
+        IHost host;
+        try
+        {
+            host = base.CreateHost(builder);
+        }
+        catch
+        {
+            ReleaseHostLock();
+            throw;
+        }
+
+        // Seed additional test-specific data
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            // Seed MENU_CRM_CORE_ACCOUNTS localization
+            SeedLocalizationAsync(db).GetAwaiter().GetResult();
+
+            var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
+            accessService.SeedSystemAdministratorAsync().GetAwaiter().GetResult();
+        }
+
         return host;
+    }
+
+    private void ReleaseHostLock()
+    {
+        if (_lockHeld)
+        {
+            HostSemaphore.Release();
+            _lockHeld = false;
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        try
+        {
+            DropDatabase();
+        }
+        finally
+        {
+            ReleaseHostLock();
+        }
+    }
+
+    private void DropDatabase()
+    {
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder(ServerConnectionString)
+            {
+                Database = "postgres"
+            };
+
+            using var adminConn = new NpgsqlConnection(builder.ConnectionString);
+            adminConn.Open();
+
+            using (var terminate = new NpgsqlCommand(
+                       $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{_databaseName}' AND pid <> pg_backend_pid();",
+                       adminConn))
+            {
+                try { terminate.ExecuteNonQuery(); } catch { }
+            }
+
+            using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\";", adminConn);
+            drop.ExecuteNonQuery();
+        }
+        catch
+        {
+        }
     }
 
     private static async Task SeedLocalizationAsync(AppDbContext db)
@@ -267,8 +369,8 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
                 Translations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["zh"] = "客户主档",
-                    ["en"] = "Accounts",
-                    ["ja"] = "アカウント"
+                    ["en"] = "Customer Accounts",
+                    ["ja"] = "顧客マスタ"
                 }
             };
             db.LocalizationResources.Add(resource);
@@ -276,8 +378,8 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
         else
         {
             resource.Translations["zh"] = "客户主档";
-            resource.Translations["en"] = "Accounts";
-            resource.Translations["ja"] = "アカウント";
+            resource.Translations["en"] = "Customer Accounts";
+            resource.Translations["ja"] = "顧客マスタ";
         }
 
         await db.SaveChangesAsync();

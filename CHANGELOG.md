@@ -37,6 +37,20 @@
 - **TMP 进度表**：标记 Phase A 后端基础设施与运行态组件为完成，保留 FormDesigner 数据源 UI、PageLoader、种子数据及测试为待办。
 
 ### Fixed
+#### 2025-11-18
+- **测试基础设施全面增强**：统一测试数据库策略，解决僵尸进程和数据库隔离问题。
+  - **TestWebAppFactory & MenuWorkflowAppFactory 对齐**：
+    - MenuWorkflowAppFactory 从 InMemory 数据库切换到 Postgres，使用随机数据库名（`bobcrm_test_{guid}`）确保完全隔离。
+    - 两个 Factory 现采用相同策略：CreateHost 前创建数据库→应用迁移→Dispose 时删除数据库。
+    - 添加 SemaphoreSlim 锁机制，防止并发测试冲突。
+  - **DatabaseInitializerTests 改进**：
+    - 新增 CreateDatabaseAsync() 辅助方法，在 RecreateAsync() 前显式创建数据库。
+    - 测试前后自动清理，确保数据库不残留。
+  - **超时与僵尸进程处理**：
+    - 新增 `scripts/run-tests-with-timeout.ps1`，提供10分钟超时保护、自动清理 testhost 进程、详细日志输出。
+    - 支持按目标运行（solution/api/app），并传递正确的退出码给 CI/CD。
+  - **测试验证**：DatabaseInitializerTests 全部通过，AggVOSystemTests 依赖修复后的 TestWebAppFactory 无需修改。
+
 #### 2025-11-17
 - **测试基础设施修复**：彻底解决测试初始化和数据库迁移问题。
   - **TestWebAppFactory.cs**：在应用启动前强制重建测试数据库（使用原始SQL终止连接、删除并重建数据库），解决 I18nEndpoints 启动时查询 SystemSettings 表失败的问题。

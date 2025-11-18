@@ -79,10 +79,13 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
     public async Task Initialize_Creates_All_Required_Tables_And_Data()
     {
         var databaseName = $"dbinit_{Guid.NewGuid():N}";
+
+        // 先创建数据库
+        await CreateDatabaseAsync(databaseName);
+
         await using var db = CreateIsolatedContext(databaseName);
         try
         {
-            await DatabaseInitializer.RecreateAsync(db);
             await DatabaseInitializer.InitializeAsync(db);
 
             var customersExist = await db.Set<Customer>().AnyAsync();
@@ -118,9 +121,11 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         var existingKey = "MENU_PROFILE";
         var databaseName = $"dbinit_{Guid.NewGuid():N}";
 
+        // 先创建数据库
+        await CreateDatabaseAsync(databaseName);
+
         await using (var db = CreateIsolatedContext(databaseName))
         {
-            await DatabaseInitializer.RecreateAsync(db);
             await DatabaseInitializer.InitializeAsync(db);
         }
 
@@ -183,6 +188,32 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         return new AppDbContext(options);
     }
 
+    private async Task CreateDatabaseAsync(string databaseName)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        {
+            Database = "postgres"
+        };
+
+        await using var conn = new NpgsqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+
+        // 先终止所有连接
+        await using var terminate = new NpgsqlCommand(
+            $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @db AND pid <> pg_backend_pid();",
+            conn);
+        terminate.Parameters.AddWithValue("db", databaseName);
+        try { await terminate.ExecuteNonQueryAsync(); } catch { }
+
+        // 删除旧数据库（如果存在）
+        await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{databaseName}\";", conn);
+        await drop.ExecuteNonQueryAsync();
+
+        // 创建新数据库
+        await using var create = new NpgsqlCommand($"CREATE DATABASE \"{databaseName}\";", conn);
+        await create.ExecuteNonQueryAsync();
+    }
+
     private async Task DropDatabaseAsync(string databaseName)
     {
         var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
@@ -197,7 +228,7 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
             $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @db AND pid <> pg_backend_pid();",
             conn);
         terminate.Parameters.AddWithValue("db", databaseName);
-        await terminate.ExecuteNonQueryAsync();
+        try { await terminate.ExecuteNonQueryAsync(); } catch { }
 
         await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{databaseName}\";", conn);
         await drop.ExecuteNonQueryAsync();
