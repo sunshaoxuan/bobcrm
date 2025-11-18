@@ -48,7 +48,7 @@ bobcrm/
 │       └── wwwroot/         # Static files
 │
 ├── tests/
-│   └── BobCrm.Api.Tests/   # API integration tests (41 test files)
+│   └── BobCrm.Api.Tests/   # API integration tests (50+ test files, 350+ test cases)
 │
 ├── docs/                    # Comprehensive documentation
 │   ├── design/             # Architecture and product design
@@ -249,6 +249,88 @@ Data integrity and traceability for entity field metadata:
 
 **Documentation**: `docs/design/ARCH-20-实体定义管理设计.md` (Section 5.3, 6.3)
 
+### 10. Template & Menu Management System
+
+Comprehensive template lifecycle and menu integration:
+
+- **Default Template Automation**: Entity publishing automatically generates Detail/Edit/List templates and registers menu nodes
+  - Templates created via `DefaultTemplateService` using `IDefaultTemplateGenerator`
+  - Menu nodes auto-registered via `EntityMenuRegistrar`
+  - "Publish and go live" workflow achieved
+- **Template Binding Management**: `/templates/bindings` page for managing entity-template associations
+  - System vs. personal binding modes
+  - Entity/usage type filtering
+  - Permission-aware UI
+- **Menu Management**: Full CRUD for menu structure with template integration
+  - Multi-language titles via i18n resource keys
+  - Template/function dual-mode assignment
+  - Drag-and-drop sorting
+  - Navigation mode selection (page/modal/drawer)
+- **Role-Level Template Authorization**: `RoleFunctionPermission` now tracks `TemplateBindingId`
+  - Same menu can authorize different templates per role
+  - Fine-grained access control at template level
+- **Dynamic Entity Host Enhancements**: Modal-based create/edit in `DynamicEntityData.razor`
+  - Field-level validation
+  - Batch refresh support
+  - Integrated with template system
+
+**Key Files**:
+- `src/BobCrm.Api/Services/DefaultTemplateService.cs` - Template generation
+- `src/BobCrm.Api/Services/EntityMenuRegistrar.cs` - Menu auto-registration
+- `src/BobCrm.Api/Services/FunctionTreeBuilder.cs` - Function tree with template metadata
+- `src/BobCrm.Api/Endpoints/TemplateBindingEndpoints.cs` - Binding management API
+- `src/BobCrm.App/Components/Pages/TemplateBindings.razor` - Binding management UI
+- `src/BobCrm.App/Components/Pages/MenuManagement.razor` - Menu management UI
+
+**Documentation**: `docs/design/ARCH-22-标准实体模板化与权限联动设计.md`
+
+### 11. Data Source Infrastructure (ARCH-22 Phase A)
+
+Backend and frontend infrastructure for data-driven widgets:
+
+- **Backend Models**:
+  - `DataSet` - Data source definitions (entity/API/SQL/view)
+  - `QueryDefinition` - Query parameter specifications
+  - `PermissionFilter` - Row-level security rules
+  - `DataSourceTypeEntry` - Metadata table for extensible data source types
+- **Service Layer**:
+  - `IDataSourceHandler` - Strategy pattern for data source handling
+  - `EntityDataSourceHandler` - Example implementation for entity data sources
+  - `DataSetService` - Full CRUD and Execute operations
+  - Dependency injection and registration in `Program.cs`
+- **API Endpoints**: `DataSetEndpoints` - RESTful API for data set management
+- **Frontend Widgets**:
+  - `DataGridWidget` - Universal data grid with pagination, sorting, filtering
+  - `OrganizationTreeWidget` - Organization tree with search and node icons
+  - `RolePermissionTreeWidget` - Permission tree with cascading selection and template binding display
+  - Extended `PropertyEditorType` enum (Json, DataSetPicker, FieldPicker)
+  - `WidgetRegistry` updated with Data category
+- **Runtime Components**:
+  - `ListTemplateHost.razor` - List template rendering host with DI-injected services
+  - `WidgetJsonConverter` - Custom JSON converter for polymorphic widget deserialization
+  - `DataGridRuntime.razor` - DataGrid runtime rendering with authenticated API calls
+  - All components use `AuthService` for authenticated HTTP clients
+- **OOP Best Practices**:
+  - Strategy pattern for extensible data source handlers
+  - Dependency injection throughout (no direct `new` instantiation)
+  - Metadata-driven design (no hardcoded enumerations)
+  - Multi-language support via `Dictionary<string, string?>` for all text fields
+
+**Key Files**:
+- `src/BobCrm.Api/Base/Models/DataSet.cs`, `QueryDefinition.cs`, `PermissionFilter.cs`
+- `src/BobCrm.Api/Services/DataSetService.cs`
+- `src/BobCrm.Api/Abstractions/IDataSourceHandler.cs`
+- `src/BobCrm.Api/Services/DataSources/EntityDataSourceHandler.cs`
+- `src/BobCrm.App/Models/Widgets/DataGridWidget.cs`
+- `src/BobCrm.App/Components/Shared/ListTemplateHost.razor`
+- `src/BobCrm.App/Components/Shared/DataGridRuntime.razor`
+
+**Documentation**:
+- `docs/design/ARCH-22-标准实体模板化与权限联动设计.md`
+- `docs/process/TMP-template-designer-progress.md` - Implementation progress tracker
+
+**Status**: Phase A (Backend infrastructure + Runtime components) complete. FormDesigner UI, PageLoader extensions, seed data, and comprehensive tests pending.
+
 ## Development Workflows
 
 ### Environment Setup
@@ -307,6 +389,24 @@ dotnet test /p:CollectCoverage=true /p:CoverageDirectory=../../coverage-report
 # Run specific test
 dotnet test --filter "FullyQualifiedName~EntityDefinitionTests"
 ```
+
+**Current Test Status** (as of 2025-11-18):
+- **Total Tests**: 350+ test cases across 50+ test files
+- **Pass Rate**: 62.3% (218 passing)
+- **Test Infrastructure**: Fully rebuilt with clean migration baseline
+- **Key Test Suites**:
+  - EntityDefinitionTests - Dynamic entity system
+  - TemplateBindingTests - Template management
+  - AccessTests - RBAC and permissions
+  - UserManagementTests - User CRUD and role assignment
+  - DatabaseInitializerTests - Database initialization logic
+
+**Recent Test Infrastructure Improvements** (2025-11-17):
+- Completely rebuilt migrations from scratch (clean baseline)
+- Fixed `TestWebAppFactory` to force database rebuild before tests
+- Resolved all compilation errors (0 errors, 0 warnings)
+- Fixed I18nEndpoints startup issues
+- Eliminated migration conflicts completely
 
 See `docs/guides/TEST-01-测试指南.md` for comprehensive testing guide.
 
@@ -564,6 +664,12 @@ See `docs/process/PROC-02-文档同步规范.md` for detailed guidelines.
 | `src/BobCrm.Api/Services/DynamicEntityService.cs` | Dynamic entity CRUD |
 | `src/BobCrm.Api/Services/AccessService.cs` | Permission checking |
 | `src/BobCrm.Api/Middleware/JwtMiddleware.cs` | JWT authentication |
+| `src/BobCrm.Api/Services/DefaultTemplateService.cs` | Default template generation |
+| `src/BobCrm.Api/Services/EntityMenuRegistrar.cs` | Menu auto-registration |
+| `src/BobCrm.Api/Services/FunctionTreeBuilder.cs` | Function tree with templates |
+| `src/BobCrm.Api/Services/DataSetService.cs` | Data source management |
+| `src/BobCrm.Api/Base/Models/DataSet.cs` | Data source model |
+| `src/BobCrm.Api/Abstractions/IDataSourceHandler.cs` | Data source handler interface |
 
 ### Frontend Core
 
@@ -579,6 +685,10 @@ See `docs/process/PROC-02-文档同步规范.md` for detailed guidelines.
 | `src/BobCrm.App/Components/Shared/GlobalToast.razor` | Toast notification component |
 | `src/BobCrm.App/Services/LayoutState.cs` | Layout state management |
 | `src/BobCrm.App/Services/ToastService.cs` | Toast notification service |
+| `src/BobCrm.App/Components/Shared/ListTemplateHost.razor` | List template rendering host |
+| `src/BobCrm.App/Components/Shared/DataGridRuntime.razor` | Data grid runtime component |
+| `src/BobCrm.App/Components/Pages/TemplateBindings.razor` | Template binding management |
+| `src/BobCrm.App/Components/Pages/MenuManagement.razor` | Menu management UI |
 
 ### Configuration
 
@@ -626,6 +736,74 @@ See `docs/process/PROC-02-文档同步规范.md` for detailed guidelines.
 4. Run SQL script if adding to database: `add-missing-i18n-resources.sql`
 5. Reference: `UPDATE-I18N-RESOURCES.md`
 
+### Creating Default Templates for an Entity
+
+1. Ensure entity is published via `/api/entity-definitions/{id}/publish`
+2. Default templates (Detail/Edit/List) are automatically generated
+3. Menu nodes are auto-registered under appropriate domain
+4. To customize:
+   - Navigate to `/templates` page
+   - Find the system default template
+   - Click "Edit" to open in FormDesigner
+   - Modify layout and save as new template
+   - Set as user default or system default (if admin)
+
+### Managing Template Bindings
+
+1. Navigate to `/templates/bindings` page
+2. Filter by entity type and usage type (Detail/Edit/List)
+3. Switch between system and personal bindings
+4. Select template from dropdown to bind
+5. Save changes - affects all users (system) or just you (personal)
+
+### Adding Menu Items with Templates
+
+1. Navigate to menu management (requires `BAS.AUTH.MENU.MANAGE` permission)
+2. Select parent domain node
+3. Click "Add Menu Item"
+4. Fill in multi-language title (use i18n resource key)
+5. Choose navigation mode:
+   - **Template Mode**: Select template binding (auto-opens template)
+   - **Function Mode**: Select function code (navigates to custom page)
+6. Set sort order and save
+7. Configure role permissions in Role Management page
+
+### Adding a Data Source
+
+1. Create `DataSet` model in database:
+   ```csharp
+   var dataSet = new DataSet {
+       Code = "customer_list",
+       NameKey = "DS_CUSTOMER_LIST",
+       DescriptionKey = "DS_CUSTOMER_LIST_DESC",
+       DataSourceType = "entity", // or "api", "sql", "view"
+       Configuration = JsonSerializer.Serialize(new {
+           entityType = "Customer",
+           fields = new[] { "Id", "Code", "Name", "Email" }
+       })
+   };
+   ```
+2. Implement `IDataSourceHandler` if using custom data source type
+3. Register handler in `Program.cs` DI container
+4. Use in widgets via `DataSetId` property
+
+### Creating Custom Widgets
+
+1. Create widget model class inheriting from `DraggableWidget`:
+   ```csharp
+   public class MyCustomWidget : DraggableWidget {
+       public override string Type => "my-custom";
+       protected override string GetDefaultCodePrefix() => "mycustom";
+       public override List<PropertyMetadata> GetPropertyMetadata() { /* ... */ }
+       public override void RenderRuntime(RuntimeRenderContext context) { /* ... */ }
+       public override void RenderDesign(DesignRenderContext context) { /* ... */ }
+   }
+   ```
+2. Register in `WidgetRegistry.cs`
+3. Create runtime renderer component if complex UI needed
+4. Add to FormDesigner palette
+5. Add property editor support in PropertyEditor.razor
+
 ### Troubleshooting
 
 **Database Connection Issues**:
@@ -662,6 +840,30 @@ dotnet ef migrations remove --project src/BobCrm.Api
 # Regenerate
 dotnet ef migrations add <NewName> --project src/BobCrm.Api
 ```
+
+**Template Not Loading**:
+- Check template binding exists for entity type and usage type
+- Verify user has permission to access the template's function code
+- Check browser console for API errors
+- Ensure `AuthService` is providing valid tokens
+
+**Menu Items Not Showing**:
+- Verify user's role has permission for the menu's function code
+- Check `FunctionNode` exists and is not archived
+- Ensure template binding is set if using template mode
+- Verify multi-language resource keys exist for menu title
+
+**Data Grid Not Rendering**:
+- Ensure `DataSet` configuration is valid JSON
+- Verify data source handler is registered in DI container
+- Check API endpoint returns data in expected format
+- Ensure component is using `AuthService` for HTTP client
+
+**Test Failures After Migration**:
+- Clear bin/obj folders: `rm -rf **/bin **/obj`
+- Rebuild migrations from scratch if conflicts persist
+- Check `TestWebAppFactory` is properly rebuilding test database
+- Verify i18n resources are initialized before tests run
 
 ## Key Architectural Decisions
 
@@ -792,14 +994,39 @@ Follow [Keep a Changelog](https://keepachangelog.com/) format.
 ## Quick Start for AI Assistants
 
 1. **Read this entire document** to understand architecture and conventions
-2. **Check `CHANGELOG.md`** to see recent changes and project direction
+2. **Check `CHANGELOG.md`** to see recent changes and project direction (latest: v0.5.13+, 2025-11-17)
 3. **Review relevant design docs** in `docs/design/` for the feature area
-4. **Run tests** before making changes: `dotnet test`
-5. **Follow naming conventions** and code organization patterns
-6. **Update documentation** when modifying features
-7. **Test in development environment** before committing
-8. **Create meaningful commits** following git guidelines
-9. **Ensure PR requirements** are met before finalizing
+4. **Understand recent major changes**:
+   - Template & Menu Management System (sections 10) - completed 2025-11-16/17
+   - Data Source Infrastructure (section 11) - Phase A completed 2025-11-17
+   - Test infrastructure completely rebuilt with clean migrations
+   - Zero compilation warnings/errors achieved across entire codebase
+5. **Run tests** before making changes: `dotnet test`
+6. **Follow naming conventions** and code organization patterns
+7. **Update documentation** when modifying features
+8. **Test in development environment** before committing
+9. **Create meaningful commits** following git guidelines
+10. **Ensure PR requirements** are met before finalizing
+
+### Key Recent Architectural Changes
+
+**Template System Evolution** (2025-11-16/17):
+- Templates now auto-generated on entity publish
+- Menu integration with template bindings
+- Role-level template authorization
+- "Publish and go live" workflow achieved
+
+**Data-Driven Widget Infrastructure** (2025-11-17):
+- `DataSet` model for flexible data sources
+- Strategy pattern for data source handlers
+- Runtime widgets with authentication integration
+- OOP best practices: DI, no hardcoded enums, metadata-driven
+
+**Testing Infrastructure** (2025-11-17):
+- All migrations rebuilt from scratch
+- Test database force-rebuild mechanism
+- 350+ test cases, 62.3% passing
+- Zero compilation warnings achieved
 
 ## Questions or Clarifications?
 
@@ -815,6 +1042,6 @@ If still unclear, ask the user for clarification rather than making assumptions.
 
 ---
 
-**Last Updated**: 2025-11-15
-**Version**: 1.1.0
+**Last Updated**: 2025-11-18
+**Version**: 1.2.0
 **Maintainer**: BobCRM Development Team
