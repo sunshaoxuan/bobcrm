@@ -431,7 +431,8 @@ public class AccessServiceTests
             TemplateId = binding.Id
         });
 
-        node.TemplateId.Should().Be(binding.Id);
+        node.TemplateBindingId.Should().Be(binding.Id);
+        node.TemplateId.Should().Be(template.Id);
     }
 
     [Fact]

@@ -27,7 +27,7 @@ public class DefaultTemplateGeneratorTests
                 CreateField("Name", FieldDataType.String, required: true, sortOrder: 0, displayName: "姓名"),
                 CreateField("BirthDate", FieldDataType.Date, required: false, sortOrder: 1, displayName: "生日"),
                 CreateField("IsActive", FieldDataType.Boolean, required: false, sortOrder: 2, displayName: "启用"),
-                CreateField("Notes", FieldDataType.Text, required: false, sortOrder: 3, displayName: "备注"),
+                CreateField("Notes", FieldDataType.Text, required: false, sortOrder: 3, displayName: "备注", length: 500),
                 CreateField("Credit", FieldDataType.Decimal, required: false, sortOrder: 4, displayName: "授信"),
                 CreateField("Owner", FieldDataType.EntityRef, required: false, sortOrder: 5, displayName: "负责人", entityRef: true)
             }
@@ -69,7 +69,7 @@ public class DefaultTemplateGeneratorTests
             Fields = new List<FieldMetadata>
             {
                 CreateField("Title", FieldDataType.String, required: true, sortOrder: 0, displayName: "标题"),
-                CreateField("Description", FieldDataType.Text, required: false, sortOrder: 1, displayName: "描述")
+                CreateField("Description", FieldDataType.Text, required: false, sortOrder: 1, displayName: "描述", length: 500)
             }
         };
 
@@ -121,7 +121,8 @@ public class DefaultTemplateGeneratorTests
         bool required,
         int sortOrder,
         string displayName,
-        bool entityRef = false)
+        bool entityRef = false,
+        int? length = null)
     {
         return new FieldMetadata
         {
@@ -132,7 +133,7 @@ public class DefaultTemplateGeneratorTests
             DisplayName = new Dictionary<string, string?> { ["zh"] = displayName },
             IsEntityRef = entityRef,
             ReferencedEntityId = entityRef ? Guid.NewGuid() : null,
-            Length = dataType == FieldDataType.Text ? 500 : null
+            Length = length
         };
     }
 }

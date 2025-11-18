@@ -4,6 +4,7 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace BobCrm.Api.Tests;
 
@@ -13,7 +14,11 @@ namespace BobCrm.Api.Tests;
 public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
-    public DatabaseInitializerTests(TestWebAppFactory factory) => _factory = factory;
+    public DatabaseInitializerTests(TestWebAppFactory factory)
+    {
+        _factory = factory;
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+    }
 
     [Fact]
     public async Task AutoRegister_Customer_Entity_Exists_After_Initialization()
@@ -73,90 +78,128 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
     [Fact]
     public async Task Initialize_Creates_All_Required_Tables_And_Data()
     {
-        // 这个测试验证：完整的初始化流程
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
-        // 验证所有必要的数据都已初始化
-        
-        // 1. Customers
-        var customersExist = await db.Set<Customer>().AnyAsync();
-        Assert.True(customersExist, "应该有初始客户数据");
-        
-        // 2. FieldDefinitions
-        var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
-        Assert.True(fieldsExist, "应该有字段定义");
-        
-        // 3. LocalizationLanguages
-        var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
-        Assert.True(langsExist, "应该有语言配置");
-        
-        // 4. LocalizationResources
-        var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
-        Assert.True(resourcesExist, "应该有多语言资源");
+        var databaseName = $"dbinit_{Guid.NewGuid():N}";
+        await using var db = CreateIsolatedContext(databaseName);
+        try
+        {
+            await DatabaseInitializer.RecreateAsync(db);
+            await DatabaseInitializer.InitializeAsync(db);
 
-        // 5. EntityDefinitions
-        var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
-        Assert.True(entitiesExist, "应该有实体定义");
+            var customersExist = await db.Set<Customer>().AnyAsync();
+            Assert.True(customersExist, "应该有初始客户数据");
 
-        // 6. UserLayouts (default template)
-        var defaultLayout = await db.Set<UserLayout>()
-            .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
-        Assert.NotNull(defaultLayout);
-        Assert.False(string.IsNullOrWhiteSpace(defaultLayout.LayoutJson));
+            var fieldsExist = await db.Set<FieldDefinition>().AnyAsync();
+            Assert.True(fieldsExist, "应该有字段定义");
+
+            var langsExist = await db.Set<LocalizationLanguage>().AnyAsync();
+            Assert.True(langsExist, "应该有语言配置");
+
+            var resourcesExist = await db.Set<LocalizationResource>().AnyAsync();
+            Assert.True(resourcesExist, "应该有多语言资源");
+
+            var entitiesExist = await db.Set<EntityDefinition>().AnyAsync();
+            Assert.True(entitiesExist, "应该有实体定义");
+
+            var defaultLayout = await db.Set<UserLayout>()
+                .FirstOrDefaultAsync(UserLayoutScope.ForUser("__default__", 0));
+            Assert.NotNull(defaultLayout);
+            Assert.False(string.IsNullOrWhiteSpace(defaultLayout!.LayoutJson));
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+            await DropDatabaseAsync(databaseName);
+        }
     }
 
     [Fact]
     public async Task Initialize_Ensure_Method_Adds_Missing_Keys()
     {
-        // 这个测试验证：Ensure方法添加缺失键值的逻辑
         var existingKey = "MENU_PROFILE";
+        var databaseName = $"dbinit_{Guid.NewGuid():N}";
 
-        // 第一步：删除测试资源（使用独立的 scope）
-        using (var scope = _factory.Services.CreateScope())
+        await using (var db = CreateIsolatedContext(databaseName))
         {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            var existing = await db.Set<LocalizationResource>()
-                .FirstOrDefaultAsync(r => r.Key == existingKey);
-
-            if (existing != null)
-            {
-                db.Set<LocalizationResource>().Remove(existing);
-                await db.SaveChangesAsync();
-            }
-        }
-
-        // 第二步：验证资源不存在（使用新的 scope）
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            var deleted = await db.Set<LocalizationResource>()
-                .FirstOrDefaultAsync(r => r.Key == existingKey);
-            Assert.Null(deleted);
-        }
-
-        // 第三步：重新初始化（使用新的 scope，应该通过Ensure添加缺失的键）
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await DatabaseInitializer.RecreateAsync(db);
             await DatabaseInitializer.InitializeAsync(db);
         }
 
-        // 第四步：验证资源已被添加（使用新的 scope）
-        using (var scope = _factory.Services.CreateScope())
+        try
         {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using (var db = CreateIsolatedContext(databaseName))
+            {
+                var existing = await db.Set<LocalizationResource>()
+                    .FirstOrDefaultAsync(r => r.Key == existingKey);
 
-            var added = await db.Set<LocalizationResource>()
-                .FirstOrDefaultAsync(r => r.Key == existingKey);
+                if (existing != null)
+                {
+                    db.Set<LocalizationResource>().Remove(existing);
+                    await db.SaveChangesAsync();
+                }
+            }
 
-            Assert.NotNull(added);
-            Assert.Equal("个人中心", added.Translations["zh"]);
-            Assert.Equal("プロフィール", added.Translations["ja"]);
-            Assert.Equal("Profile", added.Translations["en"]);
+            using (var db = CreateIsolatedContext(databaseName))
+            {
+                var deleted = await db.Set<LocalizationResource>()
+                    .FirstOrDefaultAsync(r => r.Key == existingKey);
+                Assert.Null(deleted);
+            }
+
+            using (var db = CreateIsolatedContext(databaseName))
+            {
+                await DatabaseInitializer.InitializeAsync(db);
+            }
+
+            using (var db = CreateIsolatedContext(databaseName))
+            {
+                var added = await db.Set<LocalizationResource>()
+                    .FirstOrDefaultAsync(r => r.Key == existingKey);
+
+                Assert.NotNull(added);
+                Assert.Equal("个人中心", added!.Translations["zh"]);
+                Assert.Equal("プロフィール", added.Translations["ja"]);
+                Assert.Equal("Profile", added.Translations["en"]);
+            }
+        }
+        finally
+        {
+            using var cleanup = CreateIsolatedContext(databaseName);
+            await cleanup.Database.CloseConnectionAsync();
+            await DropDatabaseAsync(databaseName);
         }
     }
-}
 
+    private AppDbContext CreateIsolatedContext(string databaseName)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        {
+            Database = databaseName
+        };
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(builder.ConnectionString, npg => npg.MigrationsHistoryTable("__EFMigrationsHistory", "public"))
+            .Options;
+
+        return new AppDbContext(options);
+    }
+
+    private async Task DropDatabaseAsync(string databaseName)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        {
+            Database = "postgres"
+        };
+
+        await using var conn = new NpgsqlConnection(builder.ConnectionString);
+        await conn.OpenAsync();
+
+        await using var terminate = new NpgsqlCommand(
+            $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @db AND pid <> pg_backend_pid();",
+            conn);
+        terminate.Parameters.AddWithValue("db", databaseName);
+        await terminate.ExecuteNonQueryAsync();
+
+        await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{databaseName}\";", conn);
+        await drop.ExecuteNonQueryAsync();
+    }
+}
