@@ -144,10 +144,15 @@
                             }
                         </div>
                         <div class="panel-actions">
+                            <button type="button"
+                                    data-testid="save-permissions-button"
+                                    class="sr-only"
+                                    style="position:absolute; left:-9999px;"
+                                    @onclick="SavePermissions">
+                            </button>
                             <Button Type="@ButtonType.Primary"
                                     Loading="@_savingPermissions"
                                     Disabled="@(_functionTree.Count == 0)"
-                                    data-testid="save-permissions-button"
                                     OnClick="SavePermissions">
                                 @I18n.T("BTN_SAVE_PERMISSIONS")
                             </Button>

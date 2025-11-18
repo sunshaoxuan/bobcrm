@@ -3,9 +3,10 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Services
 @implements IDisposable
+@using Microsoft.Extensions.DependencyInjection
 @inject TemplateBindingService BindingService
 @inject TemplateRuntimeClient TemplateRuntime
-@inject I18nService? I18n
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>模板绑定 - OneCRM</PageTitle>
 
@@ -507,11 +508,14 @@
 
     private CancellationTokenSource? _loadCts;
 
+    private I18nService? _i18n;
+
     protected override void OnInitialized()
     {
-        if (I18n is not null)
+        _i18n ??= ServiceProvider.GetService<I18nService>();
+        if (_i18n is not null)
         {
-            I18n.OnChanged += HandleI18nChanged;
+            _i18n.OnChanged += HandleI18nChanged;
         }
     }
 
@@ -584,25 +588,23 @@
             _currentBinding = await BindingService.GetBindingAsync(_selectedEntity, _selectedUsage, cancellationToken: token);
             _useSystemBinding = _currentBinding?.IsSystem ?? true;
 
-            var visible = GetVisibleTemplates().ToList();
-            if (_currentBinding != null && visible.Any(t => t.Id == _currentBinding.TemplateId))
+            var allVisible = GetVisibleTemplates().ToList();
+            var scopedTemplates = GetTemplatesForScope(_useSystemBinding).ToList();
+
+            if (_currentBinding != null && allVisible.Any(t => t.Id == _currentBinding.TemplateId))
             {
                 _selectedTemplateId = _currentBinding.TemplateId;
             }
-            else if (!visible.Any() && _entityTemplates.Any())
+            else if (scopedTemplates.Any())
             {
-                _selectedTemplateId = _entityTemplates
-                    .Where(t => t.UsageType == _selectedUsage)
-                    .Select(t => t.Id)
-                    .Cast<int?>()
-                    .FirstOrDefault();
+                _selectedTemplateId = scopedTemplates.First().Id;
             }
             else
             {
-                _selectedTemplateId = visible.FirstOrDefault()?.Id;
+                _selectedTemplateId = allVisible.FirstOrDefault()?.Id;
             }
 
-            ResetFunctionCode(visible);
+            ResetFunctionCode(allVisible);
             await LoadRuntimeContextAsync(token);
         }
         catch (OperationCanceledException)
@@ -641,9 +643,15 @@
     {
         return _entityTemplates
             .Where(t => t.UsageType == _selectedUsage)
-            .Where(t => _useSystemBinding ? t.IsSystemDefault : !t.IsSystemDefault)
-            .OrderByDescending(t => t.UpdatedAt)
+            .OrderByDescending(t => t.IsSystemDefault)
+            .ThenByDescending(t => t.UpdatedAt)
             .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<FormTemplate> GetTemplatesForScope(bool isSystemScope)
+    {
+        return GetVisibleTemplates()
+            .Where(t => isSystemScope ? t.IsSystemDefault : !t.IsSystemDefault);
     }
 
     private async Task LoadRuntimeContextAsync(CancellationToken token)
@@ -728,12 +736,13 @@
         }
 
         _useSystemBinding = isSystem;
-        var visible = GetVisibleTemplates().ToList();
-        if (!visible.Any(t => t.Id == _selectedTemplateId))
+        var scopedTemplates = GetTemplatesForScope(_useSystemBinding).ToList();
+        if (!scopedTemplates.Any(t => t.Id == _selectedTemplateId))
         {
-            _selectedTemplateId = visible.FirstOrDefault()?.Id;
+            var fallback = scopedTemplates.FirstOrDefault() ?? GetVisibleTemplates().FirstOrDefault();
+            _selectedTemplateId = fallback?.Id;
             _functionCodeDirty = false;
-            _functionCode = visible.FirstOrDefault()?.RequiredFunctionCode;
+            _functionCode = fallback?.RequiredFunctionCode;
         }
 
         _ = InvokeAsync(StateHasChanged);
@@ -816,9 +825,9 @@
 
     public void Dispose()
     {
-        if (I18n is not null)
+        if (_i18n is not null)
         {
-            I18n.OnChanged -= HandleI18nChanged;
+            _i18n.OnChanged -= HandleI18nChanged;
         }
 
         _loadCts?.Cancel();

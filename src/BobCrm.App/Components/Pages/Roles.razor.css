@@ -2,7 +2,7 @@
     margin: 4px 0 0 32px;
 }
 
-.permission-node-template .role-template-selector {
+.permission-node-template .role-template-binding {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -10,13 +10,13 @@
     color: var(--ant-color-text-secondary);
 }
 
-.role-template-selector .role-template-dropdown {
+.role-template-binding .role-template-dropdown {
     min-width: 200px;
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--ant-color-border);
 }
 
-.role-template-selector .role-template-inherit {
+.role-template-binding .role-template-inherit {
     padding: 2px 0;
 }
