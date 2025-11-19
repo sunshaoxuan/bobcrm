@@ -1,0 +1,174 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject BobCrm.App.Services.ToastService Toast
+
+@*
+    EnumSelector - 枚举选择器组件
+    动态加载枚举选项的下拉选择器
+*@
+
+@if (_isLoading)
+{
+    <p>加载中...</p>
+}
+else if (_error != null)
+{
+    <p style="color: red;">@_error</p>
+}
+else if (MultiSelect)
+{
+    <select multiple @onchange="HandleMultiChange" style="width: 100%; padding: 8px;">
+        @foreach (var option in _options)
+        {
+            <option value="@option.Value" selected="@(_selectedValues?.Contains(option.Value) ?? false)">
+                @GetDisplayName(option)
+            </option>
+        }
+    </select>
+}
+else
+{
+    <select @bind="@_selectedValue" @bind:after="HandleSingleChange" style="width: 100%; padding: 8px;">
+        <option value="">@Placeholder</option>
+        @foreach (var option in _options)
+        {
+            <option value="@option.Value">
+                @GetDisplayName(option)
+            </option>
+        }
+    </select>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string EnumCode { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public IEnumerable<string>? Values { get; set; }
+
+    [Parameter]
+    public EventCallback<IEnumerable<string>?> ValuesChanged { get; set; }
+
+    [Parameter]
+    public bool MultiSelect { get; set; } = false;
+
+    [Parameter]
+    public string Placeholder { get; set; } = "请选择...";
+
+    [Parameter]
+    public string CurrentLanguage { get; set; } = "zh";
+
+    private bool _isLoading = true;
+    private string? _error;
+    private List<EnumOptionDto> _options = new();
+    private string? _selectedValue;
+    private IEnumerable<string>? _selectedValues;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOptionsAsync();
+        _selectedValue = Value;
+        _selectedValues = Values;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (MultiSelect && Values != null)
+        {
+            _selectedValues = Values;
+        }
+        else if (!MultiSelect && Value != null)
+        {
+            _selectedValue = Value;
+        }
+    }
+
+    private async Task LoadOptionsAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await Http.GetAsync($"/api/enums/by-code/{EnumCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var enumDef = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+                if (enumDef != null)
+                {
+                    _options = enumDef.Options
+                        .Where(o => o.IsEnabled)
+                        .OrderBy(o => o.SortOrder)
+                        .ToList();
+                }
+            }
+            else
+            {
+                _error = $"无法加载枚举 '{EnumCode}'";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"加载枚举选项时出错: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetDisplayName(EnumOptionDto option)
+    {
+        if (option.DisplayName.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrEmpty(name))
+        {
+            return name;
+        }
+        
+        return option.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? option.Value;
+    }
+
+    private async Task HandleSingleChange()
+    {
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(_selectedValue);
+        }
+    }
+
+    private async Task HandleMultiChange(ChangeEventArgs e)
+    {
+        if (e.Value is string[] values)
+        {
+            _selectedValues = values;
+            if (ValuesChanged.HasDelegate)
+            {
+                await ValuesChanged.InvokeAsync(values);
+            }
+        }
+    }
+
+    private class EnumDefinitionDto
+    {
+        public Guid Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public List<EnumOptionDto> Options { get; set; } = new();
+    }
+
+    private class EnumOptionDto
+    {
+        public Guid Id { get; set; }
+        public string Value { get; set; } = string.Empty;
+        public Dictionary<string, string?> DisplayName { get; set; } = new();
+        public int SortOrder { get; set; }
+        public bool IsEnabled { get; set; }
+        public string? ColorTag { get; set; }
+        public string? Icon { get; set; }
+    }
+}
