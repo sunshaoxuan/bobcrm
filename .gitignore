@@ -173,3 +173,5 @@ debug_*.txt
 # Generated code files
 generated/
 
+full_status.txt
+status.txt
