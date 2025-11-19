@@ -379,6 +379,21 @@ public static class TemplateEndpoints
             var resolvedUsage = usageType ?? FormTemplateUsageType.Detail;
             var now = DateTime.UtcNow;
 
+            // Get system default language for display name resolution
+            string systemLanguage;
+            try
+            {
+                systemLanguage = await db.SystemSettings
+                    .AsNoTracking()
+                    .Select(s => s.DefaultLanguage)
+                    .FirstOrDefaultAsync(ct) ?? "zh";
+            }
+            catch
+            {
+                // If SystemSettings table doesn't exist yet (during initialization), default to Chinese
+                systemLanguage = "zh";
+            }
+
             var accessibleFunctionIds = await db.RoleAssignments
                 .Where(a => a.UserId == uid &&
                             (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
@@ -423,7 +438,7 @@ public static class TemplateEndpoints
                 .ToDictionaryAsync(
                     ed => ed.EntityRoute!,
                     ed => new EntityMenuMetadata(
-                        ResolveDisplayName(ed),
+                        ResolveDisplayName(ed, systemLanguage),
                         ResolveRoute(ed)),
                     StringComparer.OrdinalIgnoreCase,
                     ct);
@@ -589,14 +604,22 @@ public static class TemplateEndpoints
         return code;
     }
 
-    private static string ResolveDisplayName(EntityDefinition definition)
+    private static string ResolveDisplayName(EntityDefinition definition, string preferredLanguage)
     {
         if (definition.DisplayName != null)
         {
-            var value = definition.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-            if (!string.IsNullOrWhiteSpace(value))
+            // Try preferred language first
+            if (definition.DisplayName.TryGetValue(preferredLanguage, out var preferredValue) &&
+                !string.IsNullOrWhiteSpace(preferredValue))
             {
-                return value!;
+                return preferredValue!;
+            }
+
+            // Fall back to first available translation
+            var fallbackValue = definition.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(fallbackValue))
+            {
+                return fallbackValue!;
             }
         }
 

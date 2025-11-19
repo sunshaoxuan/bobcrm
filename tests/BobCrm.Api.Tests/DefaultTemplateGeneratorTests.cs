@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BobCrm.Api.Base;
@@ -44,17 +45,31 @@ public class DefaultTemplateGeneratorTests
 
         using var doc = JsonDocument.Parse(template.LayoutJson!);
         var root = doc.RootElement;
-        root.GetProperty("mode").GetString().Should().Be("flow");
-        var items = root.GetProperty("items");
 
-        items.GetProperty("Name").GetProperty("type").GetString().Should().Be("textbox");
-        items.GetProperty("BirthDate").GetProperty("type").GetString().Should().Be("calendar");
-        items.GetProperty("BirthDate").GetProperty("showTime").GetBoolean().Should().BeFalse();
-        items.GetProperty("IsActive").GetProperty("type").GetString().Should().Be("checkbox");
-        items.GetProperty("Notes").GetProperty("type").GetString().Should().Be("textarea");
-        items.GetProperty("Notes").GetProperty("newLine").GetBoolean().Should().BeTrue();
-        items.GetProperty("Credit").GetProperty("type").GetString().Should().Be("number");
-        items.GetProperty("Owner").GetProperty("type").GetString().Should().Be("select");
+        // New format: array of widgets
+        root.ValueKind.Should().Be(JsonValueKind.Array);
+        var widgets = root.EnumerateArray().ToList();
+        widgets.Count.Should().Be(entity.Fields.Count);
+
+        // Find widgets by dataField property
+        var nameWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Name");
+        nameWidget.GetProperty("type").GetString().Should().Be("text");
+        nameWidget.GetProperty("required").GetBoolean().Should().BeTrue();
+
+        var birthDateWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "BirthDate");
+        birthDateWidget.GetProperty("type").GetString().Should().Be("date");
+
+        var isActiveWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "IsActive");
+        isActiveWidget.GetProperty("type").GetString().Should().Be("checkbox");
+
+        var notesWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Notes");
+        notesWidget.GetProperty("type").GetString().Should().Be("textarea");
+
+        var creditWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Credit");
+        creditWidget.GetProperty("type").GetString().Should().Be("number");
+
+        var ownerWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Owner");
+        ownerWidget.GetProperty("type").GetString().Should().Be("select");
     }
 
     [Fact]
@@ -75,10 +90,17 @@ public class DefaultTemplateGeneratorTests
 
         var template = await _generator.GenerateAsync(entity);
         using var doc = JsonDocument.Parse(template.LayoutJson!);
-        var items = doc.RootElement.GetProperty("items");
+        var root = doc.RootElement;
 
-        items.GetProperty("Title").GetProperty("required").GetBoolean().Should().BeTrue();
-        items.GetProperty("Description").GetProperty("required").GetBoolean().Should().BeFalse();
+        // New format: array of widgets
+        root.ValueKind.Should().Be(JsonValueKind.Array);
+        var widgets = root.EnumerateArray().ToList();
+
+        var titleWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Title");
+        titleWidget.GetProperty("required").GetBoolean().Should().BeTrue();
+
+        var descWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Description");
+        descWidget.GetProperty("required").GetBoolean().Should().BeFalse();
     }
 
     [Fact]
@@ -104,15 +126,21 @@ public class DefaultTemplateGeneratorTests
         template.UsageType.Should().Be(FormTemplateUsageType.List);
         using var doc = JsonDocument.Parse(template.LayoutJson!);
         var root = doc.RootElement;
-        root.GetProperty("mode").GetString().Should().Be("table");
-        var items = root.GetProperty("items");
 
-        foreach (var field in entity.Fields)
-        {
-            var item = items.GetProperty(field.PropertyName);
-            item.GetProperty("type").GetString().Should().Be("label");
-            item.GetProperty("newLine").GetBoolean().Should().BeFalse();
-        }
+        // New format: array of widgets, should contain one datagrid widget for List usage
+        root.ValueKind.Should().Be(JsonValueKind.Array);
+        root.GetArrayLength().Should().Be(1);
+
+        var dataGrid = root[0];
+        dataGrid.GetProperty("type").GetString().Should().Be("datagrid");
+        dataGrid.GetProperty("entityType").GetString().Should().Be("order");
+        dataGrid.GetProperty("showPagination").GetBoolean().Should().BeTrue();
+
+        // Verify columns are included
+        var columnsJson = dataGrid.GetProperty("columnsJson").GetString();
+        columnsJson.Should().NotBeNullOrEmpty();
+        var columns = JsonDocument.Parse(columnsJson!);
+        columns.RootElement.GetArrayLength().Should().Be(entity.Fields.Count);
     }
 
     private static FieldMetadata CreateField(

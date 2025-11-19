@@ -56,6 +56,33 @@ public class FormTemplate
     /// <summary>最后更新时间</summary>
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    // ========== Master-Detail Pattern Support ==========
+    
+    /// <summary>
+    /// 布局模式 - 定义列表和详情的排列方式
+    /// 仅对 List 类型的模板有效
+    /// </summary>
+    public LayoutMode LayoutMode { get; set; } = LayoutMode.ListOnly;
+    
+    /// <summary>
+    /// 详情显示模式 - 定义详情如何展示
+    /// 仅对 List 类型的模板有效（用于配置从列表到详情的导航方式）
+    /// </summary>
+    public DetailDisplayMode DetailDisplayMode { get; set; } = DetailDisplayMode.Page;
+    
+    /// <summary>
+    /// 详情页面路由模板 - 用于 Page 模式
+    /// 例如: "/customer/{id}" 或 "/customer/edit/{id}"
+    /// 仅当 DetailDisplayMode = Page 时有效
+    /// </summary>
+    public string? DetailRoute { get; set; }
+    
+    /// <summary>
+    /// 模态框大小 - 用于 Modal 模式
+    /// 仅当 DetailDisplayMode = Modal 时有效
+    /// </summary>
+    public ModalSize? ModalSize { get; set; }
+
     /// <summary>
     /// 是否正在被使用
     /// 用于判断模板是否可以删除
