@@ -1,0 +1,206 @@
+@page "/enums"
+@rendermode RenderMode.InteractiveServer
+@inject BobCrm.App.Services.EnumDefinitionService EnumService
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.ToastService ToastService
+@inject NavigationManager Nav
+@using BobCrm.Api.Contracts.DTOs
+@using System.Linq
+
+<AuthChecker>
+    <div class="collection-shell">
+        <CollectionHeader Title="@I18n.T("LBL_ENUM_DEFINITION")"
+                          Subtitle="管理系统枚举定义"
+                          Eyebrow="@I18n.T("LBL_COLLECTION")">
+            <Actions>
+                <Button Type="@ButtonType.Default" OnClick="LoadData" Icon="@IconType.Outline.Reload">
+                    @I18n.T("BTN_REFRESH")
+                </Button>
+                <Button Type="@ButtonType.Primary" OnClick="NavigateToCreate" Icon="@IconType.Outline.Plus">
+                    @I18n.T("BTN_NEW_ENUM")
+                </Button>
+            </Actions>
+            <Filters>
+                <div class="collection-search">
+                    <Input Placeholder="@I18n.T("LBL_SEARCH")"
+                           PrefixIcon="@IconType.Outline.Search"
+                           AllowClear
+                           @bind-Value="_search"
+                           Class="field-control" />
+                </div>
+                <Select TItemValue="bool?" TItem="string" @bind-Value="_isEnabledFilter" Style="min-width:160px">
+                    <SelectOption Value="@((bool?)null)">全部状态</SelectOption>
+                    <SelectOption Value="@((bool?)true)">已启用</SelectOption>
+                    <SelectOption Value="@((bool?)false)">已禁用</SelectOption>
+                </Select>
+            </Filters>
+        </CollectionHeader>
+
+        @if (_loading)
+        {
+            <div style="text-align: center; padding: 50px;">
+                <Spin Size="@SpinSize.Large" />
+            </div>
+        }
+        else
+        {
+            <Card>
+                <Table TItem="EnumDefinitionDto"
+                       DataSource="@FilteredEnums()"
+                       Bordered
+                       Size="@TableSize.Small">
+                    <Column Title="@I18n.T("LBL_ENUM_CODE")" TData="string" Width="200px">
+                        <strong>@context.Code</strong>
+                    </Column>
+                    <Column Title="显示名称" TData="string">
+                        @GetDisplayName(context.DisplayName)
+                    </Column>
+                    <Column Title="@I18n.T("LBL_ENUM_OPTIONS")" TData="int" Width="120px" Align="ColumnAlign.Center">
+                        <Tag>@context.Options.Count 个选项</Tag>
+                    </Column>
+                    <Column Title="状态" TData="bool" Width="100px" Align="ColumnAlign.Center">
+                        @if (context.IsEnabled)
+                        {
+                            <Tag Color="@PresetColor.Green.ToString()">已启用</Tag>
+                        }
+                        else
+                        {
+                            <Tag Color="@PresetColor.Red.ToString()">已禁用</Tag>
+                        }
+                    </Column>
+                    <Column Title="@I18n.T("LBL_ACTIONS")" TData="string" Width="250px" Fixed="right">
+                        <Space Size="@("small")">
+                            <SpaceItem>
+                                <Button Size="@ButtonSize.Small"
+                                        Icon="@IconType.Outline.Eye"
+                                        OnClick="() => ViewEnum(context.Id)"
+                                        Title="查看">
+                                    查看
+                                </Button>
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Button Size="@ButtonSize.Small"
+                                        Icon="@IconType.Outline.Edit"
+                                        OnClick="() => NavigateToEdit(context.Id)"
+                                        Title="@I18n.T("BTN_EDIT")">
+                                    @I18n.T("BTN_EDIT")
+                                </Button>
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE_ENUM")"
+                                            OnConfirm="() => HandleDelete(context.Id)"
+                                            OkText="@I18n.T("BTN_DELETE")"
+                                            CancelText="@I18n.T("BTN_CANCEL")">
+                                    <Button Size="@ButtonSize.Small"
+                                            Danger
+                                            Icon="@IconType.Outline.Delete"
+                                            Title="@I18n.T("BTN_DELETE")">
+                                        @I18n.T("BTN_DELETE")
+                                    </Button>
+                                </Popconfirm>
+                            </SpaceItem>
+                        </Space>
+                    </Column>
+                </Table>
+            </Card>
+        }
+    </div>
+</AuthChecker>
+
+@code {
+    private bool _loading = false;
+    private List<EnumDefinitionDto> _enums = new();
+    private string _search = string.Empty;
+    private bool? _isEnabledFilter = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            _enums = await EnumService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"{I18n.T("MSG_ENUM_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private IEnumerable<EnumDefinitionDto> FilteredEnums()
+    {
+        var query = _enums.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            query = query.Where(e =>
+                e.Code.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (e.DisplayName != null && e.DisplayName.Values.Any(v =>
+                    v != null && v.Contains(_search, StringComparison.OrdinalIgnoreCase))));
+        }
+
+        if (_isEnabledFilter.HasValue)
+        {
+            query = query.Where(e => e.IsEnabled == _isEnabledFilter.Value);
+        }
+
+        return query.OrderBy(e => e.Code);
+    }
+
+    private string GetDisplayName(Dictionary<string, string> displayName)
+    {
+        if (displayName == null || displayName.Count == 0)
+            return "-";
+
+        if (displayName.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrEmpty(name))
+            return name;
+
+        return displayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? "-";
+    }
+
+    private void NavigateToCreate()
+    {
+        Nav.NavigateTo("/enums/create");
+    }
+
+    private void NavigateToEdit(Guid id)
+    {
+        Nav.NavigateTo($"/enums/edit/{id}");
+    }
+
+    private void ViewEnum(Guid id)
+    {
+        // TODO: 实现查看枚举详情
+        ToastService.Info("查看功能待实现");
+    }
+
+    private async Task HandleDelete(Guid id)
+    {
+        try
+        {
+            await EnumService.DeleteAsync(id);
+            ToastService.Success(I18n.T("MSG_ENUM_DELETE_SUCCESS"));
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // 检查是否是引用完整性错误
+            if (ex.Message.Contains("in use") || ex.Message.Contains("使用中"))
+            {
+                ToastService.Error(I18n.T("MSG_ENUM_IN_USE"));
+            }
+            else
+            {
+                ToastService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
+            }
+        }
+    }
+}

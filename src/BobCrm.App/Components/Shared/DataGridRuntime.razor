@@ -3,6 +3,7 @@
 @using System.Text.Json
 @inject AuthService Auth
 @inject BobCrm.App.Services.EnumDefinitionService EnumService
+@inject BobCrm.App.Services.I18nService I18n
 @inject ILogger<DataGridRuntime> Logger
 
 @* DataGrid Widget 运行时渲染组件 *@
@@ -332,7 +333,7 @@
                 var values = JsonSerializer.Deserialize<List<string>>(value);
                 if (values != null)
                 {
-                    var labels = values.Select(v => enumDef.Options.FirstOrDefault(o => o.Value == v)?.DisplayName.GetValueOrDefault("en") ?? v); // TODO: Use current lang
+                    var labels = values.Select(v => enumDef.Options.FirstOrDefault(o => o.Value == v)?.DisplayName.GetValueOrDefault(I18n.CurrentLang) ?? v);
                     return string.Join(", ", labels);
                 }
             }
@@ -343,8 +344,7 @@
         }
 
         var option = enumDef.Options.FirstOrDefault(o => o.Value == value);
-        // TODO: Inject I18nService to get current language
-        return option?.DisplayName.GetValueOrDefault("en") ?? value; 
+        return option?.DisplayName.GetValueOrDefault(I18n.CurrentLang) ?? value; 
     }
 
     private string GetTableStyle()

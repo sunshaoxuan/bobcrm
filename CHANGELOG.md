@@ -4,7 +4,32 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
-- **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成“发布即上线”的闭环。
+
+---
+
+## [未发布] - 进行中
+
+### Added
+#### 2025-11-19
+- **枚举系统前后端UI集成完成**：为动态枚举系统添加完整的前端管理界面
+  - **前端常量与i18n资源**：
+    - 添加 `FieldDataType.Enum` 常量到前端模型
+    - 新增 18 个枚举相关的多语言资源键（LBL_ENUM_DEFINITION、BTN_NEW_ENUM、MSG_ENUM_CREATE_SUCCESS 等）
+  - **枚举管理页面**：
+    - `EnumDefinitions.razor`：枚举列表管理页面，支持搜索、状态筛选、查看、编辑、删除功能
+    - `EnumDefinitionEdit.razor`：枚举创建/编辑页面，支持多语言显示名、枚举选项管理、颜色标签配置
+    - 实现行内编辑枚举选项，支持添加、编辑、删除操作
+  - **数据展示优化**：
+    - `DataGridRuntime.razor` 改进枚举值显示，使用当前语言而非硬编码英文
+    - 支持单选和多选枚举值的正确解析与展示
+  - **删除保护**：枚举删除时检查引用完整性，防止删除正在被字段使用的枚举
+
+### Changed
+- **DataGridRuntime.razor**：注入 `I18nService`，枚举显示名从硬编码 "en" 改为使用 `I18n.CurrentLang`
+
+---
+
+- **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成"发布即上线"的闭环。
 - **Template & menu management UI**：模板中心支持绑定切换；菜单管理支持多语标题、模板/功能双模式指派及拖拽排序。
 - **Role-level template authorization**：`RoleFunctionPermission` 现可记录 `TemplateBindingId`，角色可在同一菜单下授权不同模板。
 - **Dynamic entity host enhancements**：`DynamicEntityData.razor` 引入弹窗式创建/编辑、字段级校验与批量刷新。
