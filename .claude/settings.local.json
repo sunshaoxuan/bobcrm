@@ -3,7 +3,11 @@
     "allow": [
       "Bash(Select-String -Pattern \"(SystemSettings|relation|does not exist|42P01|Exception|Error)\" -Context 2,2)",
       "Bash(git commit:*)",
-      "Bash(Select-String -Pattern \"(Failed|失敗)\" -Context 2,2)"
+      "Bash(Select-String -Pattern \"(Failed|失敗)\" -Context 2,2)",
+      "Bash(git rm:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

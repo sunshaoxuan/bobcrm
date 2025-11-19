@@ -10,6 +10,10 @@
 ## [未发布] - 进行中
 
 ### Added
+#### 2025-11-19
+- **Frontend Infrastructure**: 引入 `tokens.css`，定义符合 "Calm Design Language" 的 CSS 变量（颜色、排版、间距、阴影），支持 Light/Dark 主题切换。
+- **App CSS Update**: `app.css` 引入 `tokens.css` 并应用基础样式。
+
 #### 2025-11-17
 - **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成“发布即上线”的闭环。
 - **Template & menu management UI**：模板中心支持绑定切换；菜单管理支持多语标题、模板/功能双模式指派及拖拽排序。

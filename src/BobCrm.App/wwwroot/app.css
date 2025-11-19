@@ -1,3 +1,14 @@
+@import 'css/tokens.css';
+
+/* Apply Base Styles from Tokens */
+body {
+    background-color: var(--bg-base);
+    color: var(--neutral-900);
+    font-family: var(--font-family);
+    font-size: var(--text-body-size);
+    line-height: var(--text-body-height);
+}
+
 h1:focus {
     outline: none;
 }
@@ -20,9 +31,9 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
@@ -52,10 +63,12 @@ h1:focus {
 /* 调整大小手柄 - 增强命中区域 */
 .resize-handle {
     position: absolute;
-    right: -8px; /* 向右扩展命中区域 */
+    right: -8px;
+    /* 向右扩展命中区域 */
     top: 0;
     bottom: 0;
-    width: 16px; /* 增加到16px以提升易用性 */
+    width: 16px;
+    /* 增加到16px以提升易用性 */
     cursor: ew-resize;
     background: transparent;
     z-index: 10;
@@ -67,7 +80,7 @@ h1:focus {
 }
 
 /* 手柄内的可视指示器 */
-.resize-handle > div {
+.resize-handle>div {
     width: 4px;
     height: 32px;
     background: var(--designer-handle-color, #1890ff);
@@ -81,13 +94,13 @@ h1:focus {
 }
 
 /* 鼠标悬停时，可视指示器变宽以提供更好的反馈 */
-.resize-handle:hover > div {
+.resize-handle:hover>div {
     width: 6px;
     height: 40px;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
-.resize-handle:active > div {
+.resize-handle:active>div {
     width: 6px;
     background: var(--primary, #1890ff);
 }
@@ -133,7 +146,7 @@ h1:focus {
 }
 
 /* 拖拽中禁用子元素的 pointer-events */
-body.is-dragging .layout-widget > * {
+body.is-dragging .layout-widget>* {
     pointer-events: none !important;
 }
 
@@ -142,7 +155,8 @@ body.is-dragging .layout-widget > * {
     display: flex;
     flex-wrap: wrap;
     align-content: flex-start;
-    align-items: flex-start; /* 保证同行不同高时不被拉伸 */
+    align-items: flex-start;
+    /* 保证同行不同高时不被拉伸 */
     background: #fff;
     border-radius: 8px;
     padding: 12px;
@@ -189,25 +203,25 @@ body.is-dragging .layout-widget > * {
 }
 
 /* 拖拽时禁用容器内子控件内层内容的 pointer-events，确保命中外壳用于计算插入位置 */
-body.is-dragging .container-child-widget > * {
+body.is-dragging .container-child-widget>* {
     pointer-events: none !important;
 }
 
 /* 拖拽时：frame-drop-zone必须保持可接收事件（提高特异性避免被覆盖）*/
 body.is-dragging .frame-drop-zone,
-body.is-dragging .container-child-wrapper > .frame-drop-zone {
+body.is-dragging .container-child-wrapper>.frame-drop-zone {
     pointer-events: auto !important;
 }
 
 /* 拖拽时：frame-drop-zone内部的子控件wrapper保持可接收事件 */
-body.is-dragging .frame-drop-zone > .container-child-widget,
-body.is-dragging .frame-drop-zone > .container-child-wrapper {
+body.is-dragging .frame-drop-zone>.container-child-widget,
+body.is-dragging .frame-drop-zone>.container-child-wrapper {
     pointer-events: auto !important;
 }
 
 /* 拖拽时：控件wrapper内部的内容禁用pointer-events，但不包括frame-drop-zone */
-body.is-dragging .frame-drop-zone > .container-child-widget > *:not(.frame-drop-zone),
-body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop-zone) {
+body.is-dragging .frame-drop-zone>.container-child-widget>*:not(.frame-drop-zone),
+body.is-dragging .frame-drop-zone>.container-child-wrapper>*:not(.frame-drop-zone) {
     pointer-events: none !important;
 }
 
@@ -251,6 +265,7 @@ body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop
     -moz-user-select: none;
     -ms-user-select: none;
 }
+
 /* =============================
    Entity Definition editor styles
    ============================= */
@@ -281,7 +296,7 @@ body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop
     background: transparent;
 }
 
-.entity-section-card .ant-collapse > .ant-collapse-item {
+.entity-section-card .ant-collapse>.ant-collapse-item {
     border: none;
 }
 
@@ -382,6 +397,7 @@ body.is-dragging .frame-drop-zone > .container-child-wrapper > *:not(.frame-drop
 .field-editor-table .field-required {
     text-align: center;
 }
+
 .entity-section-toggle {
     display: flex;
     align-items: center;
