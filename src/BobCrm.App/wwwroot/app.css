@@ -1,26 +1,3 @@
-@import 'css/tokens.css';
-
-/* Apply Base Styles from Tokens */
-body {
-    background-color: var(--bg-base);
-    color: var(--neutral-900);
-    font-family: var(--font-family);
-    font-size: var(--text-body-size);
-    line-height: var(--text-body-height);
-}
-
-h1:focus {
-    outline: none;
-}
-
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
-}
-
-.invalid {
-    outline: 1px solid #e50000;
-}
-
 .validation-message {
     color: #e50000;
 }

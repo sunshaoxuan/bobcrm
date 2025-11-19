@@ -1,0 +1,295 @@
+/* ==========================================================================
+   Component Overrides - Calm Design Language
+   Overrides Ant Design Blazor styles to match UI-01 specs.
+   ========================================================================== */
+
+/* --- Buttons --- */
+.ant-btn {
+    border-radius: var(--radius-pill);
+    box-shadow: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.ant-btn-primary {
+    background: var(--primary-600);
+    border-color: var(--primary-600);
+    box-shadow: var(--shadow-raised);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+    background: var(--primary-500);
+    border-color: var(--primary-500);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(115, 159, 214, 0.3);
+}
+
+.ant-btn-primary:active {
+    background: var(--primary-600);
+    transform: translateY(0);
+    box-shadow: var(--shadow-pressed);
+}
+
+.ant-btn-default {
+    background: var(--bg-surface);
+    border-color: var(--neutral-300);
+    color: var(--neutral-700);
+    backdrop-filter: var(--blur-surface);
+}
+
+.ant-btn-default:hover {
+    color: var(--primary-600);
+    border-color: var(--primary-500);
+    background: #fff;
+}
+
+/* --- Inputs --- */
+.ant-input,
+.ant-input-affix-wrapper {
+    border-radius: var(--radius-soft);
+    border-color: var(--neutral-300);
+    background: var(--bg-surface);
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover {
+    border-color: var(--primary-500);
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+    border-color: var(--primary-600);
+    box-shadow: var(--focus-ring);
+    background: #fff;
+}
+
+/* --- Cards --- */
+.ant-card {
+    border-radius: var(--radius-card);
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: var(--shadow-raised);
+    backdrop-filter: var(--blur-surface);
+}
+
+.ant-card-bordered {
+    border: 1px solid var(--neutral-300);
+}
+
+.ant-card-head {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    padding: 0 24px;
+    min-height: 56px;
+}
+
+.ant-card-head-title {
+    font-size: var(--text-title-size);
+    font-weight: var(--text-title-weight);
+    color: var(--neutral-900);
+}
+
+/* --- Tables --- */
+.ant-table {
+    background: transparent;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
+    overflow: hidden;
+}
+
+.ant-table-container {
+    border-radius: var(--radius-card);
+}
+
+.ant-table-thead>tr>th {
+    background: var(--bg-elevated);
+    color: var(--neutral-700);
+    font-weight: 600;
+    border-bottom: 1px solid var(--neutral-300);
+}
+
+.ant-table-tbody>tr>td {
+    background: rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    transition: background 0.2s;
+}
+
+.ant-table-tbody>tr:hover>td {
+    background: var(--primary-100) !important;
+}
+
+/* --- Modals --- */
+.ant-modal-content {
+    border-radius: var(--radius-card);
+    background: var(--bg-elevated);
+    backdrop-filter: var(--blur-elevated);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.ant-modal-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.ant-modal-title {
+    font-size: var(--text-title-size);
+    font-weight: 600;
+}
+
+/* --- Tags --- */
+.ant-tag {
+    border-radius: 6px;
+    border: none;
+    padding: 0 8px;
+    font-weight: 500;
+}
+
+/* --- Dark Mode Adaptations --- */
+@media (prefers-color-scheme: dark) {
+    .ant-btn-default {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--neutral-500);
+    }
+
+    .ant-btn-default:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--neutral-900);
+    }
+
+    .ant-input,
+    .ant-input-affix-wrapper {
+        background: rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: var(--neutral-900);
+    }
+
+    .ant-input:focus,
+    .ant-input-focused {
+        background: rgba(0, 0, 0, 0.4);
+    }
+
+    .ant-card {
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ant-table-thead>tr>th {
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ant-table-tbody>tr>td {
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ant-table-tbody>tr:hover>td {
+        background: rgba(115, 159, 214, 0.15) !important;
+    }
+
+    .ant-modal-content {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* --- Toast (GlobalToast) --- */
+.global-toast-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast-item {
+    pointer-events: auto;
+    min-width: 320px;
+    max-width: 480px;
+    padding: 12px 16px;
+    border-radius: var(--radius-card);
+    background: var(--bg-elevated);
+    backdrop-filter: var(--blur-elevated);
+    box-shadow: var(--shadow-raised);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    animation: toast-slide-in 0.3s cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast-icon {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-message {
+    font-size: var(--text-body-size);
+    font-weight: 500;
+    color: var(--neutral-900);
+}
+
+.toast-success {
+    border-left: 4px solid var(--semantic-success-600);
+}
+
+.toast-success .toast-icon {
+    color: var(--semantic-success-600);
+}
+
+.toast-error {
+    border-left: 4px solid var(--semantic-danger-600);
+}
+
+.toast-error .toast-icon {
+    color: var(--semantic-danger-600);
+}
+
+.toast-warning {
+    border-left: 4px solid var(--semantic-warning-600);
+}
+
+.toast-warning .toast-icon {
+    color: var(--semantic-warning-600);
+}
+
+.toast-info {
+    border-left: 4px solid var(--semantic-info-600);
+}
+
+.toast-info .toast-icon {
+    color: var(--semantic-info-600);
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .toast-item {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
