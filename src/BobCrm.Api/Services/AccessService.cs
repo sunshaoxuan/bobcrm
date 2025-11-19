@@ -14,6 +14,7 @@ public class AccessService
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly MultilingualFieldService _multilingual;
 
     private record FunctionSeed(
@@ -108,10 +109,11 @@ public class AccessService
         new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
 
-    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager, MultilingualFieldService multilingual)
+    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, MultilingualFieldService multilingual)
     {
         _db = db;
         _userManager = userManager;
+        _roleManager = roleManager;
         _multilingual = multilingual;
     }
 
@@ -861,6 +863,12 @@ public class AccessService
 
     private async Task EnsureDefaultAdminUserAsync()
     {
+        // Ensure admin role exists
+        if (!await _roleManager.RoleExistsAsync("admin"))
+        {
+            await _roleManager.CreateAsync(new IdentityRole("admin"));
+        }
+
         var adminUser = await _userManager.FindByNameAsync("admin");
         if (adminUser != null)
         {
@@ -869,6 +877,12 @@ public class AccessService
                 adminUser.Email = "admin@local";
                 adminUser.EmailConfirmed = true;
                 await _userManager.UpdateAsync(adminUser);
+            }
+
+            // Ensure admin user has admin role
+            if (!await _userManager.IsInRoleAsync(adminUser, "admin"))
+            {
+                await _userManager.AddToRoleAsync(adminUser, "admin");
             }
             return;
         }
@@ -886,6 +900,9 @@ public class AccessService
             var message = string.Join("; ", result.Errors.Select(e => e.Description));
             throw new InvalidOperationException($"Failed to create default administrator: {message}");
         }
+
+        // Assign admin role to admin user
+        await _userManager.AddToRoleAsync(adminUser, "admin");
     }
 
     private async Task SeedFunctionTreeAsync(CancellationToken ct)

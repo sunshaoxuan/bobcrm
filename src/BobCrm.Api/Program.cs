@@ -23,7 +23,12 @@ using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Middleware;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var resetDatabaseOnly = args.Any(a => string.Equals(a, "--reset-db", StringComparison.OrdinalIgnoreCase));
+var filteredArgs = resetDatabaseOnly
+    ? args.Where(a => !string.Equals(a, "--reset-db", StringComparison.OrdinalIgnoreCase)).ToArray()
+    : args;
+
+var builder = WebApplication.CreateBuilder(filteredArgs);
 
 // 配置日志到文件 - 存储在项目根目录的logs文件夹
 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -208,6 +213,7 @@ builder.Services.AddScoped<ICustomerQueries, CustomerQueries>();
 builder.Services.AddScoped<IFieldQueries, FieldQueries>();
 builder.Services.AddScoped<ILayoutQueries, LayoutQueries>();
 builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<EnumDefinitionService>();
 
 // CORS (dev friendly; tighten in production)
 builder.Services.AddCors(options =>
@@ -244,127 +250,108 @@ app.UseCors();
 
 var skipDbInit = builder.Configuration.GetValue<bool>("Db:SkipInit");
 
-if (!skipDbInit)
-
+using (var scope = app.Services.CreateScope())
 {
-
-    using var scope = app.Services.CreateScope();
-
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    await DatabaseInitializer.InitializeAsync(db);
-
-    // ✅ 对齐所有已发布的动态实体的表结构
-    var schemaAlignmentService = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Services.EntitySchemaAlignmentService>();
-    await schemaAlignmentService.AlignAllPublishedEntitiesAsync();
-
-    // Upgrade login i18n resources to latest copy (idempotent)
-
-    try
-
+    if (resetDatabaseOnly)
     {
+        app.Logger.LogInformation("Reset-db flag detected, dropping and recreating database...");
+        await DatabaseInitializer.RecreateAsync(db);
+        app.Logger.LogInformation("Database reset completed.");
+        return;
+    }
 
-        void Upsert(string key, string zh, string ja, string en)
+    if (!skipDbInit)
+    {
+        await DatabaseInitializer.InitializeAsync(db);
 
+        // ✅ 对齐所有已发布的动态实体的表结构
+        var schemaAlignmentService = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Services.EntitySchemaAlignmentService>();
+        await schemaAlignmentService.AlignAllPublishedEntitiesAsync();
+
+        // Upgrade login i18n resources to latest copy (idempotent)
+        try
         {
-
-            var set = db.Set<LocalizationResource>();
-
-            var r = set.FirstOrDefault(x => x.Key == key);
-
-            var translations = new Dictionary<string, string>
+            void Upsert(string key, string zh, string ja, string en)
             {
-                ["zh"] = zh,
-                ["ja"] = ja,
-                ["en"] = en
-            };
-            if (r is null) set.Add(new LocalizationResource { Key = key, Translations = translations });
+                var set = db.Set<LocalizationResource>();
+                var r = set.FirstOrDefault(x => x.Key == key);
+                var translations = new Dictionary<string, string>
+                {
+                    ["zh"] = zh,
+                    ["ja"] = ja,
+                    ["en"] = en
+                };
 
-            else { r.Translations = translations; }
+                if (r is null)
+                {
+                    set.Add(new LocalizationResource { Key = key, Translations = translations });
+                }
+                else
+                {
+                    r.Translations = translations;
+                }
+            }
 
+            // Short hero copy to avoid wrapping in JA/EN
+            Upsert("TXT_AUTH_HERO_TITLE", "智能连接 · 体验合一", "インテリジェントにつながり、体験をひとつに", "Smart links, unified experience");
+            Upsert("TXT_AUTH_HERO_SUBTITLE", "在一个平台洞察、协作、成长，让客户关系更高效。", "ひとつのプラットフォームで洞察・協働・成長を実現し、顧客関係をしなやかに。", "One platform for insight, collaboration, and growth.");
+            Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
+            Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
+            Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
+            Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
+            Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
+            Upsert("LBL_SECURE", "智能 · 稳定 · 开放", "スマート・堅牢・オープン", "Smart · Resilient · Open");
+            Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
+
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
         }
 
+        // Sync system entities (IBizEntity implementations) to EntityDefinition table
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
+        var templateService = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Services.IDefaultTemplateService>();
+        var synchronizer = new EntityDefinitionSynchronizer(db, logger, templateService);
+        await synchronizer.SyncSystemEntitiesAsync();
 
+        // Sync internationalization resources (add missing i18n keys to database)
+        try
+        {
+            var i18nLogger = scope.ServiceProvider.GetRequiredService<ILogger<I18nResourceSynchronizer>>();
+            var i18nSynchronizer = new I18nResourceSynchronizer(db, i18nLogger);
+            await i18nSynchronizer.SyncResourcesAsync();
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Init] Failed to sync i18n resources");
+        }
 
-        // Short hero copy to avoid wrapping in JA/EN
+        try
+        {
+            var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
+            await accessService.SeedSystemAdministratorAsync();
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex, "[Init] Failed to seed access control defaults");
+        }
 
-        Upsert("TXT_AUTH_HERO_TITLE", "智能连接 · 体验合一", "インテリジェントにつながり、体験をひとつに", "Smart links, unified experience");
-
-        Upsert("TXT_AUTH_HERO_SUBTITLE", "在一个平台洞察、协作、成长，让客户关系更高效。", "ひとつのプラットフォームで洞察・協働・成長を実現し、顧客関係をしなやかに。", "One platform for insight, collaboration, and growth.");
-
-        Upsert("TXT_AUTH_HERO_POINT1", "统一视图 — 打通客户、项目与数据的全局视角", "統一ビュー — 顧客・プロジェクト・データを横断する全体視点", "Unified view — A global perspective across customers, projects, and data");
-
-        Upsert("TXT_AUTH_HERO_POINT2", "智能协作 — 实时共享信息，让决策更快一步", "スマートな協働 — 情報を即時共有し、意思決定を一歩先へ", "Intelligent collaboration — Share in real time and decide faster");
-
-        Upsert("TXT_AUTH_HERO_POINT3", "体验一致 — 无论何处登录，体验始终如一", "一貫した体験 — どこからログインしても変わらない体験", "Consistent experience — The same experience wherever you sign in");
-
-        Upsert("TXT_AUTH_HERO_POINT4", "多语言支持 — 为全球团队打造无边界协作空间", "多言語対応 — グローバルチームのための境界のない協働空間", "Multilingual support — A boundaryless workspace for global teams");
-
-        Upsert("TXT_AUTH_TAGLINE", "让关系更智能，让协作更自然。", "関係をもっとスマートに、協働をもっと自然に。", "Make relationships smarter, collaboration more natural.");
-
-        Upsert("LBL_SECURE", "智能 · 稳定 · 开放", "スマート・堅牢・オープン", "Smart · Resilient · Open");
-
-        Upsert("LBL_WELCOME_BACK", "欢迎回来", "おかえりなさい", "Welcome back");
-
-        await db.SaveChangesAsync();
-
+        if (app.Environment.IsDevelopment())
+        {
+            try
+            {
+                await TestDataSeeder.SeedTestDataAsync(db);
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "[Init] Failed to seed test data");
+            }
+        }
     }
-
-    catch (Exception ex)
-
-    {
-
-        app.Logger.LogWarning(ex, "i18n login hero upgrade skipped due to error");
-
-    }
-
-
-
-    // Sync system entities (IBizEntity implementations) to EntityDefinition table
-
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
-
-    var synchronizer = new EntityDefinitionSynchronizer(db, logger);
-
-    await synchronizer.SyncSystemEntitiesAsync();
-
-
-    // Sync internationalization resources (add missing i18n keys to database)
-    try
-    {
-        var i18nLogger = scope.ServiceProvider.GetRequiredService<ILogger<I18nResourceSynchronizer>>();
-        var i18nSynchronizer = new I18nResourceSynchronizer(db, i18nLogger);
-        await i18nSynchronizer.SyncResourcesAsync();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "[Init] Failed to sync i18n resources");
-    }
-
-    try
-    {
-        var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
-        await accessService.SeedSystemAdministratorAsync();
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "[Init] Failed to seed access control defaults");
-    }
-
-    // Seed test data (development only)
-
-    try
-    {
-        await TestDataSeeder.SeedTestDataAsync(db);
-    }
-    catch (Exception ex)
-
-    {
-
-        app.Logger.LogError(ex, "[Init] Failed to seed test data");
-
-    }
-
 }
 
 // ========================================
@@ -387,6 +374,7 @@ app.MapOrganizationEndpoints();
 app.MapAccessEndpoints();
 app.MapFileEndpoints();
 app.MapDataSetEndpoints();
+app.MapEnumDefinitionEndpoints();
 
 app.MapControllers();
 
@@ -400,4 +388,5 @@ app.Run();
 
 // Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
+
 

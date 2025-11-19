@@ -59,7 +59,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             IsSystemDefault = true,
             IsUserDefault = false,
             IsInUse = true,
-            LayoutJson = BuildLayoutJson(fields, usageType),
+            LayoutJson = BuildLayoutJson(entity, fields, usageType),
             UsageType = usageType,
             Description = $"Auto generated {usageType} template for {entity.EntityName}",
             Tags = new List<string> { "auto-generated" },
@@ -110,7 +110,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                          t.UsageType == usage,
                     ct);
 
-            var layoutJson = BuildLayoutJson(fields, usage);
+            var layoutJson = BuildLayoutJson(entity, fields, usage);
 
             if (template == null)
             {
@@ -162,79 +162,79 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                ?? new List<FieldMetadata>();
     }
 
-    private static string BuildLayoutJson(IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
+    private static string BuildLayoutJson(EntityDefinition entity, IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
     {
-        var items = new Dictionary<string, object?>();
-        var columns = usage == FormTemplateUsageType.List ? 4 : 2;
-        var widthPercent = 100 / Math.Max(1, columns);
-        var legacyWidth = Math.Max(1, (int)Math.Round(widthPercent / 100m * 12m));
+        var widgets = new List<Dictionary<string, object?>>();
 
-        for (var i = 0; i < fields.Count; i++)
+        if (usage == FormTemplateUsageType.List)
         {
-            var field = fields[i];
-            var propertyName = field.PropertyName?.Trim();
-            if (string.IsNullOrWhiteSpace(propertyName))
+            // For List, we create a single DataGridWidget
+            var columns = fields.Select(f => new
             {
-                continue;
-            }
+                field = f.PropertyName?.ToLowerInvariant(),
+                label = ResolveLabel(f),
+                width = 150,
+                sortable = true
+            }).ToList();
 
-            var widgetType = ResolveWidgetType(field, usage);
-            var label = ResolveLabel(field);
-
-            var item = new Dictionary<string, object?>
+            var dataGrid = new Dictionary<string, object?>
             {
-                ["id"] = $"{propertyName}_{usage.ToString().ToLowerInvariant()}",
-                ["type"] = widgetType,
-                ["label"] = label,
-                ["dataField"] = propertyName,
-                ["order"] = i,
-                ["w"] = legacyWidth,
-                ["Width"] = widthPercent,
-                ["WidthUnit"] = "%",
-                ["Height"] = 32,
-                ["HeightUnit"] = "px",
-                ["visible"] = true,
-                ["newLine"] = usage == FormTemplateUsageType.List
-                    ? false
-                    : widgetType == "textarea" || i % columns == 0
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = "datagrid",
+                ["label"] = $"{entity.DisplayName?.Values.FirstOrDefault() ?? entity.EntityName} List",
+                ["entityType"] = entity.EntityRoute,
+                ["apiEndpoint"] = entity.ApiEndpoint ?? $"/api/{entity.EntityRoute}s", // Simple pluralization fallback
+                ["columnsJson"] = JsonSerializer.Serialize(columns, JsonOptions),
+                ["showPagination"] = true,
+                ["pageSize"] = 20,
+                ["allowMultiSelect"] = true,
+                ["showSearch"] = true,
+                ["showRefreshButton"] = true,
+                ["showBordered"] = false
             };
-
-            var isRequired = field.IsRequiredExplicitlySet
-                ? field.IsRequired
-                : field.IsRequired;
-            if (usage != FormTemplateUsageType.List)
+            widgets.Add(dataGrid);
+        }
+        else
+        {
+            // For Detail/Edit, we create a list of field widgets
+            foreach (var field in fields)
             {
-                item["required"] = isRequired;
-            }
+                var propertyName = field.PropertyName?.Trim();
+                if (string.IsNullOrWhiteSpace(propertyName)) continue;
 
-            if (usage != FormTemplateUsageType.List && field.DataType is FieldDataType.Date or FieldDataType.DateTime)
-            {
-                item["showTime"] = field.DataType == FieldDataType.DateTime;
-            }
+                var widgetType = ResolveWidgetType(field, usage);
+                var label = ResolveLabel(field);
 
-            items[propertyName] = item;
+                var widget = new Dictionary<string, object?>
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = widgetType,
+                    ["label"] = label,
+                    ["dataField"] = propertyName,
+                    ["required"] = field.IsRequired,
+                    ["w"] = 6, // Half width (12 grid system)
+                    ["visible"] = true
+                };
+
+                // Add enum-specific metadata
+                if (field.DataType == FieldDataType.Enum && field.EnumDefinitionId.HasValue)
+                {
+                    widget["enumDefinitionId"] = field.EnumDefinitionId.Value.ToString();
+                    widget["isMultiSelect"] = field.IsMultiSelect;
+                }
+                
+                widgets.Add(widget);
+            }
         }
 
-        var layout = new Dictionary<string, object?>
-        {
-            ["mode"] = usage == FormTemplateUsageType.List ? "table" : "flow",
-            ["items"] = items
-        };
-
-        return JsonSerializer.Serialize(layout, JsonOptions);
+        return JsonSerializer.Serialize(widgets, JsonOptions);
     }
 
     private static string ResolveWidgetType(FieldMetadata field, FormTemplateUsageType usage)
     {
-        if (usage == FormTemplateUsageType.List)
-        {
-            return "label";
-        }
+        if (usage == FormTemplateUsageType.List) return "label"; // Not used for DataGrid columns directly
 
-        if (IsLongText(field))
-        {
-            return "textarea";
-        }
+        if (IsLongText(field)) return "textarea";
 
         return field.DataType switch
         {
@@ -242,32 +242,27 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             FieldDataType.Int32 => "number",
             FieldDataType.Int64 => "number",
             FieldDataType.Decimal => "number",
-            FieldDataType.DateTime => "calendar",
-            FieldDataType.Date => "calendar",
+            FieldDataType.DateTime => "date", // Changed from calendar to date for widget type consistency
+            FieldDataType.Date => "date",
             FieldDataType.EntityRef => "select",
-            _ => "textbox"
+            FieldDataType.Enum => "enumselector", // Dynamic enum selector
+            _ => "text" // Changed from textbox to text
         };
     }
 
     private static bool IsLongText(FieldMetadata field)
     {
-        if (field.Length.HasValue && field.Length > 255)
-        {
-            return true;
-        }
-
-        return false;
+        return field.Length.HasValue && field.Length > 255;
     }
 
     private static string ResolveLabel(FieldMetadata field)
     {
         if (field.DisplayName == null || field.DisplayName.Count == 0)
         {
-            return field.PropertyName;
+            return field.PropertyName ?? "";
         }
 
         return field.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))
-            ?? field.PropertyName;
+            ?? field.PropertyName ?? "";
     }
 }
-
