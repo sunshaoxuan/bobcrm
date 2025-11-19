@@ -170,6 +170,26 @@ public class FieldMetadata
     /// </summary>
     public EntityDefinition? ReferencedEntity { get; set; }
 
+    // ========== Enum Support (Dynamic Enum System) ==========
+    
+    /// <summary>
+    /// 引用的枚举定义ID
+    /// 当 DataType = "Enum" 时必填
+    /// </summary>
+    public Guid? EnumDefinitionId { get; set; }
+    
+    /// <summary>
+    /// 是否允许多选（枚举字段专用）
+    /// true: 存储为JSON数组 ["VAL1", "VAL2"]
+    /// false: 存储为单个值 "VAL1"
+    /// </summary>
+    public bool IsMultiSelect { get; set; } = false;
+    
+    /// <summary>
+    /// 引用的枚举定义（导航属性）
+    /// </summary>
+    public EnumDefinition? EnumDefinition { get; set; }
+
     /// <summary>
     /// 所属子实体（导航属性）
     /// </summary>
@@ -190,6 +210,7 @@ public static class FieldDataType
     public const string Boolean = "Boolean";
     public const string Guid = "Guid";
     public const string EntityRef = "EntityRef";  // 子实体引用
+    public const string Enum = "Enum";  // 动态枚举类型
 
     // 别名常量，用于代码中更直观的引用
     public const string Integer = Int32;

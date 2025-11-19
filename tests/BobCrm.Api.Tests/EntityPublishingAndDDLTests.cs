@@ -55,7 +55,7 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         var multilingualLogger = Mock.Of<ILogger<MultilingualFieldService>>();
         var multilingual = new MultilingualFieldService(_db, multilingualLogger);
-        _accessService = new AccessService(_db, CreateUserManager(_db), multilingual);
+        _accessService = new AccessService(_db, CreateUserManager(_db), CreateRoleManager(_db), multilingual);
 
         var menuRegistrarLogger = new Mock<ILogger<EntityMenuRegistrar>>();
         _menuRegistrar = new EntityMenuRegistrar(_db, menuRegistrarLogger.Object);
@@ -497,24 +497,23 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         foreach (var template in templates)
         {
-            template.LayoutJson.Should().NotBeNullOrWhiteSpace();
-            using var layoutDoc = JsonDocument.Parse(template.LayoutJson!);
-            var root = layoutDoc.RootElement;
-            root.TryGetProperty("items", out var items).Should().BeTrue();
-            items.TryGetProperty("Name", out var item).Should().BeTrue();
-            item.GetProperty("dataField").GetString().Should().Be("Name");
+            AssertTemplateContainsField(template, "Name");
         }
 
         var detailTemplate = templates.First(t => t.UsageType == FormTemplateUsageType.Detail);
         using (var detailDoc = JsonDocument.Parse(detailTemplate.LayoutJson!))
         {
-            detailDoc.RootElement.GetProperty("mode").GetString().Should().Be("flow");
+            detailDoc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            detailDoc.RootElement.GetArrayLength().Should().BeGreaterThan(0);
         }
 
         var listTemplate = templates.First(t => t.UsageType == FormTemplateUsageType.List);
         using (var listDoc = JsonDocument.Parse(listTemplate.LayoutJson!))
         {
-            listDoc.RootElement.GetProperty("mode").GetString().Should().Be("table");
+            listDoc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            listDoc.RootElement.EnumerateArray()
+                .Any(e => e.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "datagrid")
+                .Should().BeTrue();
         }
 
         var bindings = await _db.TemplateBindings
@@ -635,18 +634,12 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         foreach (var template in templates)
         {
-            template.LayoutJson.Should().NotBeNullOrWhiteSpace();
-            using var layoutDoc = JsonDocument.Parse(template.LayoutJson!);
-            var root = layoutDoc.RootElement;
-            root.TryGetProperty("items", out var items).Should().BeTrue();
-            items.TryGetProperty("Name", out var nameItem).Should().BeTrue();
-            nameItem.GetProperty("dataField").GetString().Should().Be("Name");
+            AssertTemplateContainsField(template, "Name");
 
             // Only system-generated templates should have NewField (user template was created before field was added)
             if (template.IsSystemDefault)
             {
-                items.TryGetProperty("NewField", out var newFieldItem).Should().BeTrue();
-                newFieldItem.GetProperty("dataField").GetString().Should().Be("NewField");
+                AssertTemplateContainsField(template, "NewField");
             }
         }
 
@@ -782,7 +775,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             EntityType = entity.EntityRoute ?? entity.EntityName.ToLowerInvariant(),
             UserId = "system",
             UsageType = FormTemplateUsageType.Detail,
-            LayoutJson = "{\"mode\":\"flow\",\"items\":{\"Name\":{\"id\":\"Name_detail\",\"type\":\"textbox\",\"label\":\"Name\",\"dataField\":\"Name\",\"order\":0,\"w\":6}}}",
+            LayoutJson = "[{\"id\":\"Name_detail\",\"type\":\"text\",\"label\":\"Name\",\"dataField\":\"Name\",\"required\":false,\"w\":6}]",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -829,6 +822,57 @@ public class EntityPublishingAndDDLTests : IDisposable
             describer,
             services,
             logger);
+    }
+
+    private static RoleManager<IdentityRole> CreateRoleManager(AppDbContext context)
+    {
+        var store = new RoleStore<IdentityRole>(context);
+        var roleValidators = new List<IRoleValidator<IdentityRole>> { new RoleValidator<IdentityRole>() };
+        var normalizer = new UpperInvariantLookupNormalizer();
+        var describer = new IdentityErrorDescriber();
+
+        var services = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+        var logger = services.GetRequiredService<ILogger<RoleManager<IdentityRole>>>();
+
+        return new RoleManager<IdentityRole>(store, roleValidators, normalizer, describer, logger);
+    }
+
+    private static void AssertTemplateContainsField(FormTemplate template, string fieldName)
+    {
+        template.LayoutJson.Should().NotBeNullOrWhiteSpace();
+        using var layoutDoc = JsonDocument.Parse(template.LayoutJson!);
+        var root = layoutDoc.RootElement;
+        root.ValueKind.Should().Be(JsonValueKind.Array);
+
+        if (template.UsageType == FormTemplateUsageType.List)
+        {
+            var datagrid = root.EnumerateArray()
+                .FirstOrDefault(e => e.TryGetProperty("type", out var typeProp) && typeProp.GetString() == "datagrid");
+
+            datagrid.ValueKind.Should().NotBe(JsonValueKind.Undefined, "list templates should include a datagrid widget");
+
+            var columnsJson = datagrid.GetProperty("columnsJson").GetString();
+            columnsJson.Should().NotBeNullOrWhiteSpace();
+            using var columnsDoc = JsonDocument.Parse(columnsJson!);
+            var targetField = fieldName.ToLowerInvariant();
+
+            columnsDoc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
+            columnsDoc.RootElement.EnumerateArray()
+                .Any(col =>
+                    col.TryGetProperty("field", out var fieldProp) &&
+                    string.Equals(fieldProp.GetString(), targetField, StringComparison.OrdinalIgnoreCase))
+                .Should().BeTrue($"list template should include column '{fieldName}'");
+        }
+        else
+        {
+            root.EnumerateArray()
+                .Any(widget =>
+                    widget.TryGetProperty("dataField", out var dataField) &&
+                    string.Equals(dataField.GetString(), fieldName, StringComparison.OrdinalIgnoreCase))
+                .Should().BeTrue($"template should include field '{fieldName}'");
+        }
     }
 }
 

@@ -28,7 +28,7 @@ public class AccessServiceTests
     private static AccessService CreateService(AppDbContext context)
     {
         var multilingual = new MultilingualFieldService(context, NullLogger<MultilingualFieldService>.Instance);
-        return new AccessService(context, CreateUserManager(context), multilingual);
+        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual);
     }
 
     private static async Task EnsureLocalizationResourcesAsync(AppDbContext context)
@@ -59,6 +59,21 @@ public class AccessServiceTests
         var logger = services.GetRequiredService<ILogger<UserManager<IdentityUser>>>();
 
         return new UserManager<IdentityUser>(store, options, passwordHasher, userValidators, passwordValidators, normalizer, describer, services, logger);
+    }
+
+    private static RoleManager<IdentityRole> CreateRoleManager(AppDbContext context)
+    {
+        var store = new RoleStore<IdentityRole>(context);
+        var roleValidators = new List<IRoleValidator<IdentityRole>> { new RoleValidator<IdentityRole>() };
+        var normalizer = new UpperInvariantLookupNormalizer();
+        var describer = new IdentityErrorDescriber();
+
+        var services = new ServiceCollection()
+            .AddLogging()
+            .BuildServiceProvider();
+        var logger = services.GetRequiredService<ILogger<RoleManager<IdentityRole>>>();
+
+        return new RoleManager<IdentityRole>(store, roleValidators, normalizer, describer, logger);
     }
 
     [Fact]

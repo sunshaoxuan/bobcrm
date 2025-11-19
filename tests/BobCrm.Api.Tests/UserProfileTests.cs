@@ -47,9 +47,7 @@ public class UserProfileTests : IClassFixture<TestWebAppFactory>
         // 验证admin用户的信息
         Assert.Equal("admin", userName.GetString());
         Assert.Equal("admin@local", email.GetString());
-        // Note: API currently returns "User" for all users including admin
-        // This may need investigation of role assignment in DatabaseInitializer
-        Assert.Equal("User", role.GetString());
+        Assert.Equal("admin", role.GetString());
     }
 
     [Fact]

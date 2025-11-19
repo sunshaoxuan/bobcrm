@@ -105,10 +105,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var menuInfo = workflowEntry.GetProperty("Menu");
         Assert.Equal($"CRM.CORE.{entity.EntityRoute.ToUpperInvariant()}", menuInfo.GetProperty("code").GetString());
-        // API returns menu name based on system default language or Accept-Language header
-        // With Postgres initialization, default language is "ja", but entity has "zh", "ja", "en"
-        // API falls back to English when default language translation exists but user has no language preference
-        Assert.Equal(entity.DisplayName!["en"], menuInfo.GetProperty("name").GetString());
+        // API returns menu name based on system default language (ja)
+        Assert.Equal(entity.DisplayName!["ja"], menuInfo.GetProperty("name").GetString());
         var expectedRoute = entity.ApiEndpoint.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
             ? entity.ApiEndpoint[4..]
             : entity.ApiEndpoint.TrimStart('/');

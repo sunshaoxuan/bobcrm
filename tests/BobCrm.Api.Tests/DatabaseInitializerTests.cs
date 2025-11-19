@@ -208,6 +208,106 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
         }
     }
 
+    [Fact]
+    public async Task Initialize_Removes_Runtime_Workflow_Entities()
+    {
+        var databaseName = $"dbinit_{Guid.NewGuid():N}";
+        await CreateDatabaseAsync(databaseName);
+
+        try
+        {
+            var workflowRoute = $"workflow_{Guid.NewGuid():N}";
+            var workflowName = $"Workflow{Guid.NewGuid():N}";
+
+            await using (var db = CreateIsolatedContext(databaseName))
+            {
+                await DatabaseInitializer.InitializeAsync(db);
+
+                var runtimeEntity = new EntityDefinition
+                {
+                    Namespace = "BobCrm.Dynamic",
+                    EntityName = workflowName,
+                    EntityRoute = workflowRoute,
+                    Source = EntitySource.Custom,
+                    Status = EntityStatus.Published,
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        ["zh"] = "Runtime Workflow",
+                        ["en"] = "Runtime Workflow"
+                    },
+                    Fields = new List<FieldMetadata>(),
+                    Interfaces = new List<EntityInterface>(),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.EntityDefinitions.Add(runtimeEntity);
+                await db.SaveChangesAsync();
+
+                var template = new FormTemplate
+                {
+                    Name = "Workflow Detail",
+                    EntityType = workflowRoute,
+                    UserId = "__system__",
+                    UsageType = FormTemplateUsageType.Detail,
+                    LayoutJson = "[]",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.FormTemplates.Add(template);
+                await db.SaveChangesAsync();
+
+                var binding = new TemplateBinding
+                {
+                    EntityType = workflowRoute,
+                    UsageType = FormTemplateUsageType.Detail,
+                    TemplateId = template.Id,
+                    IsSystem = true,
+                    UpdatedBy = "tests",
+                    UpdatedAt = DateTime.UtcNow
+                };
+                db.TemplateBindings.Add(binding);
+                await db.SaveChangesAsync();
+
+                var menuNode = new FunctionNode
+                {
+                    Code = $"CRM.CORE.{workflowRoute.ToUpperInvariant()}",
+                    Name = "Workflow Menu",
+                    Route = $"/{workflowRoute}",
+                    TemplateId = template.Id,
+                    TemplateBindingId = binding.Id,
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        ["zh"] = "临时菜单",
+                        ["en"] = "Temporary Menu"
+                    }
+                };
+                db.FunctionNodes.Add(menuNode);
+                await db.SaveChangesAsync();
+            }
+
+            // Run initialization again to trigger cleanup
+            await using (var db = CreateIsolatedContext(databaseName))
+            {
+                await DatabaseInitializer.InitializeAsync(db);
+            }
+
+            await using (var db = CreateIsolatedContext(databaseName))
+            {
+                Assert.False(await db.EntityDefinitions.AnyAsync(ed => ed.Namespace == "BobCrm.Dynamic"));
+                Assert.False(await db.FormTemplates.AnyAsync(t => t.EntityType == workflowRoute));
+                Assert.False(await db.TemplateBindings.AnyAsync(b => b.EntityType == workflowRoute));
+                var codes = await db.FunctionNodes.AsNoTracking().Select(fn => fn.Code).ToListAsync();
+                Assert.DoesNotContain(codes, code => !string.IsNullOrEmpty(code) && code!.Contains(workflowRoute, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        finally
+        {
+            using var cleanup = CreateIsolatedContext(databaseName);
+            await cleanup.Database.CloseConnectionAsync();
+            await DropDatabaseAsync(databaseName);
+        }
+    }
+
     private AppDbContext CreateIsolatedContext(string databaseName)
     {
         var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
