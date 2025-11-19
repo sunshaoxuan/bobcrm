@@ -168,51 +168,83 @@
             _error = null;
             StateHasChanged();
 
-            if (!Widget.DataSetId.HasValue)
-            {
-                _error = "DataSet ID is not configured";
-                return;
-            }
-
-            // 调用 DataSet Execute API
-            var request = new
-            {
-                Page = _currentPage,
-                PageSize = Widget.PageSize,
-                SortField = Widget.DefaultSortField,
-                SortDirection = Widget.DefaultSortDirection
-            };
-
             var client = await Auth.CreateClientWithAuthAsync();
-            var response = await client.PostAsJsonAsync($"/api/datasets/{Widget.DataSetId.Value}/execute", request);
 
-            if (!response.IsSuccessStatusCode)
+            if (Widget.DataSetId.HasValue)
             {
-                _error = $"Failed to load data: {response.StatusCode}";
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
-            if (result == null)
-            {
-                _error = "Response is null";
-                return;
-            }
-
-            _totalCount = result.TotalCount;
-            _totalPages = result.TotalPages;
-
-            // 解析数据
-            if (!string.IsNullOrWhiteSpace(result.DataJson))
-            {
-                _data = JsonDocument.Parse(result.DataJson);
-                if (_data.RootElement.ValueKind == JsonValueKind.Array)
+                // Mode 1: DataSet Execution (POST)
+                var request = new
                 {
+                    Page = _currentPage,
+                    PageSize = Widget.PageSize,
+                    SortField = Widget.DefaultSortField,
+                    SortDirection = Widget.DefaultSortDirection
+                };
+
+                var response = await client.PostAsJsonAsync($"/api/datasets/{Widget.DataSetId.Value}/execute", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _error = $"Failed to load data: {response.StatusCode}";
+                    return;
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
+                ProcessDataSetResult(result);
+            }
+            else if (!string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
+            {
+                // Mode 2: Direct Entity API (GET)
+                // Try to append query parameters
+                var url = Widget.ApiEndpoint;
+                if (url.Contains("?")) url += "&"; else url += "?";
+                url += $"page={_currentPage}&pageSize={Widget.PageSize}";
+                
+                if (!string.IsNullOrWhiteSpace(Widget.DefaultSortField))
+                {
+                    url += $"&sort={Widget.DefaultSortField}&dir={Widget.DefaultSortDirection}";
+                }
+
+                var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _error = $"Failed to load data: {response.StatusCode}";
+                    return;
+                }
+
+                // Try to parse as Paged Result first
+                try 
+                {
+                    var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
+                    if (result != null && result.DataJson != null)
+                    {
+                        ProcessDataSetResult(result);
+                        return;
+                    }
+                }
+                catch {}
+
+                // Fallback: Parse as Array (Client-side paging or full list)
+                var content = await response.Content.ReadAsStringAsync();
+                var doc = JsonDocument.Parse(content);
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    _data = doc;
                     _dataRows = _data.RootElement.EnumerateArray().ToList();
+                    _totalCount = _dataRows.Count;
+                    _totalPages = 1; // Assume full list for now
+                    
+                    // TODO: Implement client-side paging if needed
+                }
+                else
+                {
+                     _error = "Unexpected API response format";
                 }
             }
-
-            Logger.LogInformation("Loaded {Count} rows from DataSet {Id}", _dataRows.Count, Widget.DataSetId.Value);
+            else
+            {
+                _error = "Neither DataSetId nor ApiEndpoint is configured";
+            }
         }
         catch (Exception ex)
         {
@@ -224,6 +256,29 @@
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private void ProcessDataSetResult(DataSetExecutionResponse? result)
+    {
+        if (result == null)
+        {
+            _error = "Response is null";
+            return;
+        }
+
+        _totalCount = result.TotalCount;
+        _totalPages = result.TotalPages;
+
+        if (!string.IsNullOrWhiteSpace(result.DataJson))
+        {
+            _data = JsonDocument.Parse(result.DataJson);
+            if (_data.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                _dataRows = _data.RootElement.EnumerateArray().ToList();
+            }
+        }
+        
+        Logger.LogInformation("Loaded {Count} rows", _dataRows.Count);
     }
 
     private string GetCellValue(JsonElement row, string field)
