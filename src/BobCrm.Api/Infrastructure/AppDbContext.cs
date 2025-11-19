@@ -65,6 +65,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
 
+    // 动态枚举系统
+    public DbSet<EnumDefinition> EnumDefinitions => Set<EnumDefinition>();
+    public DbSet<EnumOption> EnumOptions => Set<EnumOption>();
+
     // 数据源与权限
     public DbSet<DataSet> DataSets => Set<DataSet>();
     public DbSet<QueryDefinition> QueryDefinitions => Set<QueryDefinition>();
@@ -171,6 +175,27 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<DataSourceTypeEntry>()
             .Property(d => d.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter!);
+
+        // 动态枚举系统多语言字段配置
+        b.Entity<EnumDefinition>()
+            .Property(e => e.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter!);
+
+        b.Entity<EnumDefinition>()
+            .Property(e => e.Description)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter!);
+
+        b.Entity<EnumOption>()
+            .Property(e => e.DisplayName)
+            .HasColumnType("jsonb")
+            .HasConversion(jsonConverter!);
+
+        b.Entity<EnumOption>()
+            .Property(e => e.Description)
             .HasColumnType("jsonb")
             .HasConversion(jsonConverter!);
 
@@ -362,6 +387,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasForeignKey(fm => fm.SubEntityDefinitionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // 配置枚举引用（FieldMetadata -> EnumDefinition）
+        b.Entity<FieldMetadata>()
+            .HasOne(fm => fm.EnumDefinition)
+            .WithMany()
+            .HasForeignKey(fm => fm.EnumDefinitionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.Entity<FieldMetadata>()
+            .HasIndex(fm => fm.EnumDefinitionId);
+
         // EntityInterface 配置
         b.Entity<EntityInterface>()
             .HasIndex(ei => new { ei.EntityDefinitionId, ei.InterfaceType })
@@ -384,6 +419,33 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             .HasOne(ds => ds.EntityDefinition)
             .WithMany(ed => ed.DDLScripts)
             .HasForeignKey(ds => ds.EntityDefinitionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // 动态枚举系统配置
+        b.Entity<EnumDefinition>()
+            .HasIndex(ed => ed.Code)
+            .IsUnique();
+
+        b.Entity<EnumDefinition>()
+            .HasIndex(ed => ed.IsSystem);
+
+        b.Entity<EnumDefinition>()
+            .HasIndex(ed => ed.IsEnabled);
+
+        b.Entity<EnumOption>()
+            .HasIndex(eo => eo.EnumDefinitionId);
+
+        b.Entity<EnumOption>()
+            .HasIndex(eo => new { eo.EnumDefinitionId, eo.Value })
+            .IsUnique();
+
+        b.Entity<EnumOption>()
+            .HasIndex(eo => new { eo.EnumDefinitionId, eo.SortOrder });
+
+        b.Entity<EnumOption>()
+            .HasOne(eo => eo.EnumDefinition)
+            .WithMany(ed => ed.Options)
+            .HasForeignKey(eo => eo.EnumDefinitionId)
             .OnDelete(DeleteBehavior.Cascade);
 
     }

@@ -34,9 +34,14 @@ public static class DatabaseInitializer
 
         {
 
-            var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance);
+            var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance, null);
 
             await synchronizer.SyncSystemEntitiesAsync();
+
+            // 初始化系统枚举
+            var enumSeeder = new BobCrm.Api.Services.EnumSeeder(appDbContext);
+            await enumSeeder.EnsureSystemEnumsAsync();
+            Console.WriteLine("[DatabaseInitializer] System enums initialized successfully");
 
             await CleanupSampleEntityDefinitionsAsync(appDbContext);
 
@@ -1014,37 +1019,245 @@ public static class DatabaseInitializer
 
     };
 
+
+
+    private const string RuntimeWorkflowNamespace = "BobCrm.Dynamic";
+
+
+
+
+
     private static async Task CleanupSampleEntityDefinitionsAsync(AppDbContext db)
+
+
 
     {
 
+
+
         var sampleEntities = await db.EntityDefinitions
+
+
 
             .Where(ed =>
 
+
+
                 ed.Source == EntitySource.Custom &&
+
+
 
                 (DeprecatedSampleNamespaces.Contains(ed.Namespace) ||
 
+
+
                  DeprecatedSampleEntityNames.Contains(ed.EntityName)))
+
+
 
             .ToListAsync();
 
-        if (!sampleEntities.Any())
+
+
+        var workflowEntities = await db.EntityDefinitions
+
+
+
+            .Where(ed =>
+
+
+
+                ed.Source == EntitySource.Custom &&
+
+
+
+                ed.Namespace == RuntimeWorkflowNamespace &&
+
+
+
+                ed.EntityName != null &&
+
+                EF.Functions.ILike(ed.EntityName, "Workflow%"))
+
+
+
+            .ToListAsync();
+
+
+
+        if (workflowEntities.Any())
+
+
 
         {
 
-            return;
+
+
+            var entityRoutes = workflowEntities
+
+
+
+                .Select(e => e.EntityRoute)
+
+
+
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+
+
+
+                .Select(r => r!)
+
+
+
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+
+
+            if (entityRoutes.Count > 0)
+
+
+
+            {
+
+
+
+                var bindings = await db.TemplateBindings
+
+                    .Where(b => b.EntityType != null && entityRoutes.Contains(b.EntityType))
+
+
+                    .ToListAsync();
+
+
+
+                if (bindings.Count > 0)
+
+
+
+                {
+
+
+
+                    db.TemplateBindings.RemoveRange(bindings);
+
+
+
+                }
+
+
+
+                var templates = await db.FormTemplates
+
+                    .Where(t => t.EntityType != null && entityRoutes.Contains(t.EntityType))
+
+
+                    .ToListAsync();
+
+
+
+                if (templates.Count > 0)
+
+
+
+                {
+
+
+
+                    db.FormTemplates.RemoveRange(templates);
+
+
+
+                }
+
+
+
+                var workflowFunctionNodes = await db.FunctionNodes
+
+                    .Where(fn =>
+                        fn.TemplateBindingId != null &&
+                        fn.TemplateBinding != null &&
+                        entityRoutes.Contains(fn.TemplateBinding.EntityType))
+
+                    .ToListAsync();
+
+                if (workflowFunctionNodes.Count > 0)
+
+                {
+
+                    var nodeIds = workflowFunctionNodes.Select(fn => fn.Id).ToList();
+
+                    var permissions = await db.RoleFunctionPermissions
+
+                        .Where(p => nodeIds.Contains(p.FunctionId))
+
+                        .ToListAsync();
+
+                    if (permissions.Count > 0)
+
+                    {
+
+                        db.RoleFunctionPermissions.RemoveRange(permissions);
+
+                    }
+
+                    db.FunctionNodes.RemoveRange(workflowFunctionNodes);
+
+                }
+
+
+            }
+
+
 
         }
 
-        db.EntityDefinitions.RemoveRange(sampleEntities);
+
+
+        var entitiesToRemove = sampleEntities
+
+
+
+            .Concat(workflowEntities)
+
+
+
+            .DistinctBy(e => e.Id)
+
+
+
+            .ToList();
+
+
+
+        if (!entitiesToRemove.Any())
+
+
+
+        {
+
+
+
+            return;
+
+
+
+        }
+
+
+
+        db.EntityDefinitions.RemoveRange(entitiesToRemove);
+
+
 
         await db.SaveChangesAsync();
 
+
+
     }
 
-    private static async Task CleanupTestUsersAsync(AppDbContext db)
+
+
+        private static async Task CleanupTestUsersAsync(AppDbContext db)
 
     {
 
