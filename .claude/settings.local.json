@@ -7,7 +7,16 @@
       "Bash(git rm:*)",
       "Bash(dotnet test:*)",
       "Bash(dotnet build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git revert:*)",
+      "Bash(git reset:*)",
+      "Bash(pwsh -Command:*)",
+      "Bash(Select-String -Pattern \"失敗|成功\")",
+      "Bash(Select-Object -Last 1)",
+      "Bash(dotnet ef migrations list:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(Out-String -Stream)",
+      "Bash(Select-Object -Last 80)"
     ],
     "deny": [],
     "ask": []
