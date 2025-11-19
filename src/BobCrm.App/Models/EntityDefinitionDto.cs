@@ -106,6 +106,10 @@ public class FieldMetadataDto
     public string? DefaultValue { get; set; }
 
     public string? ValidationRules { get; set; }
+    
+    public Guid? EnumDefinitionId { get; set; }
+    
+    public bool IsMultiSelect { get; set; }
 
     public string? Source { get; set; }
 

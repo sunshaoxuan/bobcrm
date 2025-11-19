@@ -71,6 +71,16 @@ public class FieldViewModel
     public string? ValidationRules { get; set; }
 
     /// <summary>
+    /// 枚举定义ID（当DataType=Enum时）
+    /// </summary>
+    public Guid? EnumDefinitionId { get; set; }
+
+    /// <summary>
+    /// 是否多选（当DataType=Enum时）
+    /// </summary>
+    public bool IsMultiSelect { get; set; }
+
+    /// <summary>
     /// 是否处于编辑状态
     /// </summary>
     public bool IsEditing { get; set; }
@@ -105,6 +115,8 @@ public class FieldViewModel
             Description = this.Description,
             SortOrder = this.SortOrder,
             ValidationRules = this.ValidationRules,
+            EnumDefinitionId = this.EnumDefinitionId,
+            IsMultiSelect = this.IsMultiSelect,
             IsEditing = this.IsEditing,
             ValidationError = this.ValidationError
         };
@@ -171,6 +183,15 @@ public class FieldViewModel
             if (Precision.HasValue && Scale.HasValue && Scale.Value > Precision.Value)
             {
                 ValidationError = "小数位数不能大于精度";
+                return false;
+            }
+        }
+
+        if (DataType == "Enum")
+        {
+            if (!EnumDefinitionId.HasValue || EnumDefinitionId.Value == Guid.Empty)
+            {
+                ValidationError = "请选择枚举定义";
                 return false;
             }
         }

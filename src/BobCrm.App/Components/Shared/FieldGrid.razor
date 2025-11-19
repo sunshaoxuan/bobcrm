@@ -1,4 +1,5 @@
 @using BobCrm.App.Models
+@using BobCrm.Api.Contracts.DTOs
 @using BobCrm.App.Services.Multilingual
 @inject IMultilingualTextResolver MultilingualTextResolver
 
@@ -50,6 +51,7 @@
                         <SelectOption Value="@("Date")">Date</SelectOption>
                         <SelectOption Value="@("Boolean")">Boolean</SelectOption>
                         <SelectOption Value="@("Guid")">Guid</SelectOption>
+                        <SelectOption Value="@("Enum")">Enum</SelectOption>
                     </Select>
                 }
                 else
@@ -69,6 +71,32 @@
                 else if (!field.IsEditing)
                 {
                     <Text>@(field.Length?.ToString() ?? "-")</Text>
+                }
+            </Column>
+
+            <Column Title="枚举配置" TData="string" Width="200px">
+                @if (field.IsEditing && field.DataType == "Enum")
+                {
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <Select TItem="EnumDefinitionDto"
+                                TItemValue="Guid?"
+                                DataSource="@EnumDefinitions"
+                                @bind-Value="@field.EnumDefinitionId"
+                                LabelName="@nameof(EnumDefinitionDto.Code)"
+                                ValueName="@nameof(EnumDefinitionDto.Id)"
+                                Placeholder="选择枚举"
+                                Style="width: 140px;" />
+                        <Checkbox @bind-Value="@field.IsMultiSelect">多选</Checkbox>
+                    </div>
+                }
+                else if (!field.IsEditing && field.DataType == "Enum")
+                {
+                    var enumDef = EnumDefinitions.FirstOrDefault(e => e.Id == field.EnumDefinitionId);
+                    <Text>@(enumDef?.Code ?? "-") @(field.IsMultiSelect ? "(多选)" : "")</Text>
+                }
+                else
+                {
+                    <Text>-</Text>
                 }
             </Column>
 
@@ -167,6 +195,7 @@
 
 @code {
     [Parameter, EditorRequired] public List<FieldViewModel> Fields { get; set; } = new();
+    [Parameter] public List<EnumDefinitionDto> EnumDefinitions { get; set; } = new();
     [Parameter] public EventCallback<FieldViewModel> OnFieldChanged { get; set; }
     [Parameter] public EventCallback<FieldViewModel> OnFieldAdded { get; set; }
     [Parameter] public EventCallback<Guid> OnFieldRemoved { get; set; }
@@ -294,6 +323,16 @@
         {
             field.Precision = null;
             field.Scale = null;
+        }
+        if (field.DataType != "Decimal")
+        {
+            field.Precision = null;
+            field.Scale = null;
+        }
+        if (field.DataType != "Enum")
+        {
+            field.EnumDefinitionId = null;
+            field.IsMultiSelect = false;
         }
         StateHasChanged();
     }

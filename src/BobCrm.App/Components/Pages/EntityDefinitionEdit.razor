@@ -3,6 +3,7 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.EntityDefinitionService EntityDefService
 @inject BobCrm.App.Services.EntityDomainService DomainService
+@inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.ToastService ToastService
 @inject NavigationManager Nav
@@ -12,6 +13,7 @@
 @using System.Net.Http.Json
 @using System.Linq
 @using AntDesign
+@using BobCrm.Api.Contracts.DTOs
 @inject IMultilingualTextResolver MultilingualResolver
 @inject BobCrm.App.Services.AuthService Auth
 
@@ -375,6 +377,7 @@
     private readonly Dictionary<string, Dictionary<string, string>> _resourceCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _interfaceFieldOwnership = new(StringComparer.OrdinalIgnoreCase);
     private List<EntityDomainDto> _domainOptions = new();
+    private List<EnumDefinitionDto> _enumDefinitions = new();
 
     private async Task EnsureLanguagesAsync()
     {
@@ -453,6 +456,18 @@
         {
             _domainOptions.Clear();
             MessageService.Error($"{I18n.T("MSG_DOMAIN_LOAD_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private async Task LoadEnumDefinitionsAsync()
+    {
+        try
+        {
+            _enumDefinitions = await EnumService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EntityDefinitionEdit] Failed to load enum definitions: {ex.Message}");
         }
     }
 
@@ -581,6 +596,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDomainsAsync();
+        await LoadEnumDefinitionsAsync();
         await EnsureLanguagesAsync();
         await EnsureLocalizationResourcesAsync();
         EnsureInterfaceTemplatesInitialized();
@@ -645,7 +661,9 @@
                         SortOrder = f.SortOrder,
                         DefaultValue = f.DefaultValue,
                         ValidationRules = f.ValidationRules,
-                        Source = f.Source ?? FieldSource.Custom
+                        Source = f.Source ?? FieldSource.Custom,
+                        EnumDefinitionId = f.EnumDefinitionId,
+                        IsMultiSelect = f.IsMultiSelect
                     }).ToList()
                 };
 
@@ -1117,7 +1135,9 @@
             SortOrder = field.SortOrder,
             DefaultValue = field.DefaultValue,
             ValidationRules = field.ValidationRules,
-            Source = field.Source
+            Source = field.Source,
+            EnumDefinitionId = field.EnumDefinitionId,
+            IsMultiSelect = field.IsMultiSelect
         }).ToList();
     }
 

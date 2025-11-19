@@ -2,6 +2,7 @@
 @using BobCrm.App.Services
 @using System.Text.Json
 @inject AuthService Auth
+@inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject ILogger<DataGridRuntime> Logger
 
 @* DataGrid Widget 运行时渲染组件 *@
@@ -129,9 +130,20 @@
     private int _currentPage = 1;
     private int _totalCount = 0;
     private int _totalPages = 0;
+    private List<BobCrm.Api.Contracts.DTOs.EnumDefinitionDto> _enumDefinitions = new();
 
     protected override async Task OnInitializedAsync()
     {
+        // 加载枚举定义
+        try
+        {
+            _enumDefinitions = await EnumService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load enum definitions");
+        }
+
         // 解析列定义
         if (!string.IsNullOrWhiteSpace(Widget.ColumnsJson))
         {
@@ -285,7 +297,7 @@
     {
         if (row.TryGetProperty(field, out var value))
         {
-            return value.ValueKind switch
+            var rawValue = value.ValueKind switch
             {
                 JsonValueKind.String => value.GetString() ?? "",
                 JsonValueKind.Number => value.GetRawText(),
@@ -294,8 +306,45 @@
                 JsonValueKind.Null => "",
                 _ => value.GetRawText()
             };
+
+            // 尝试查找列定义
+            var column = _columns.FirstOrDefault(c => c.Field == field);
+            if (column != null && column.EnumDefinitionId.HasValue)
+            {
+                return GetEnumLabel(column.EnumDefinitionId.Value, rawValue, column.IsMultiSelect);
+            }
+
+            return rawValue;
         }
         return "";
+    }
+
+    private string GetEnumLabel(Guid enumId, string value, bool isMultiSelect)
+    {
+        var enumDef = _enumDefinitions.FirstOrDefault(e => e.Id == enumId);
+        if (enumDef == null) return value;
+
+        if (isMultiSelect)
+        {
+            // 解析 JSON 数组
+            try
+            {
+                var values = JsonSerializer.Deserialize<List<string>>(value);
+                if (values != null)
+                {
+                    var labels = values.Select(v => enumDef.Options.FirstOrDefault(o => o.Value == v)?.DisplayName.GetValueOrDefault("en") ?? v); // TODO: Use current lang
+                    return string.Join(", ", labels);
+                }
+            }
+            catch
+            {
+                // 解析失败，可能是单个值或格式错误
+            }
+        }
+
+        var option = enumDef.Options.FirstOrDefault(o => o.Value == value);
+        // TODO: Inject I18nService to get current language
+        return option?.DisplayName.GetValueOrDefault("en") ?? value; 
     }
 
     private string GetTableStyle()
@@ -341,6 +390,8 @@
         public string Label { get; set; } = string.Empty;
         public int Width { get; set; } = 120;
         public bool Sortable { get; set; } = false;
+        public Guid? EnumDefinitionId { get; set; }
+        public bool IsMultiSelect { get; set; }
     }
 
     private class DataSetExecutionResponse

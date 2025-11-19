@@ -4,19 +4,6 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
-
----
-
-## [未发布] - 进行中
-
-### Added
-#### 2025-11-19
-- **Frontend Infrastructure**: 引入 `tokens.css`，定义符合 "Calm Design Language" 的 CSS 变量（颜色、排版、间距、阴影），支持 Light/Dark 主题切换。
-- **App CSS Update**: `app.css` 引入 `tokens.css` 并应用基础样式。
-- **Core Component Styles**: 创建 `components.css`，覆盖 Ant Design 组件样式（Button, Input, Card, Table, Modal）以匹配 Calm 设计语言。
-- **Layout & Feedback Styles**: 在 `app.css` 中实现 App Shell 和 Navigation 样式，在 `components.css` 中实现 Global Toast 样式。
-
-#### 2025-11-17
 - **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成“发布即上线”的闭环。
 - **Template & menu management UI**：模板中心支持绑定切换；菜单管理支持多语标题、模板/功能双模式指派及拖拽排序。
 - **Role-level template authorization**：`RoleFunctionPermission` 现可记录 `TemplateBindingId`，角色可在同一菜单下授权不同模板。
