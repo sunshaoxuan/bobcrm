@@ -17,6 +17,8 @@
 - [ARCH-22-标准实体模板化与权限联动设计](design/ARCH-22-标准实体模板化与权限联动设计.md)
 - [ARCH-23-功能体系规划](design/ARCH-23-功能体系规划.md)
 - [ARCH-24-紧凑型顶部菜单导航设计](design/ARCH-24-紧凑型顶部菜单导航设计.md)
+- [ARCH-25-通用主从模式设计](design/ARCH-25-通用主从模式设计.md)
+- [ARCH-26-动态枚举系统设计](design/ARCH-26-动态枚举系统设计.md)
 - [PROD-01-客户信息管理系统设计文档（含 docx）](design/PROD-01-客户信息管理系统设计文档.md)
 - [PROD-02-客户系统开发任务与接口文档](design/PROD-02-客户系统开发任务与接口文档.md)
 - [UI-01-UIUE设计说明书](design/UI-01-UIUE设计说明书.md)
@@ -35,13 +37,23 @@
 - [TEST-01-测试指南](guides/TEST-01-测试指南.md)
 - [TEST-02-测试覆盖率报告](guides/TEST-02-测试覆盖率报告.md)
 - [TEST-03-实体发布与对齐测试覆盖报告](guides/TEST-03-实体发布与对齐测试覆盖报告.md)
+- [TEST-04-菜单工作流集成测试覆盖](guides/TEST-04-菜单工作流集成测试覆盖.md)
 
 ## 3. 参考（reference/）
 - [API-01-接口文档](reference/API-01-接口文档.md)
+- [API-02-API契约测试覆盖率报告](reference/API-02-API契约测试覆盖率报告.md)
+- [API-03-端点分析说明](reference/API-03-端点分析说明.md)
+- [API-04-端点目录](reference/API-04-端点目录.md)
+- [API-05-端点风险与改进建议](reference/API-05-端点风险与改进建议.md)
+- [API-06-端点摘要表](reference/API-06-端点摘要表.md)
 
 ## 4. 变更与差距记录（history/）
 - [UI-00-阶段0-差距报告](history/UI-00-阶段0-差距报告.md)
+- [UI-05-Phase3范围调整分析](history/UI-05-Phase3范围调整分析.md)
+- [GAP-01-架构与功能差距记录](history/GAP-01-架构与功能差距记录.md)
 - [OPS-02-容器问题-修复历史](history/OPS-02-容器问题-修复历史.md)
+- [PROJ-01-项目现状分析报告](history/PROJ-01-项目现状分析报告.md)
+- [TMP-01-模板设计器进度跟踪](history/TMP-01-模板设计器进度跟踪.md)
 
 ## 5. 流程与规范（process/）
 - 本页：`PROC-00-文档索引.md`
@@ -50,6 +62,7 @@
 - [PROC-03-代码评审与改进清单](process/PROC-03-代码评审与改进清单.md)
 - [PROC-04-文档代码差距审计报告](process/PROC-04-文档代码差距审计报告.md)
 - [PROC-05-多语言功能代码评审](process/PROC-05-多语言功能代码评审.md)
+- [ARCH-24-紧凑型顶部菜单导航-实施计划](process/ARCH-24-紧凑型顶部菜单导航-实施计划.md)
 
 ## 6. 示例（examples/）
 - [EX-01-订单管理示例](examples/EX-01-订单管理示例.md)
