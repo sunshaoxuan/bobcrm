@@ -13,8 +13,7 @@
 #### 2025-11-19
 - **Frontend Infrastructure**: 引入 `tokens.css`，定义符合 "Calm Design Language" 的 CSS 变量（颜色、排版、间距、阴影），支持 Light/Dark 主题切换。
 - **App CSS Update**: `app.css` 引入 `tokens.css` 并应用基础样式。
-- **Core Component Styles**: Implement core component styles (Button, Input, Card, Table, Modal, Tag) and Layout/Feedback styles.
-- **Auth Pages Refactor**: Refactor Authentication Pages (Login, Register, Activate) to use Calm Design Language and new tokens.
+- **Core Component Styles**: 创建 `components.css`，覆盖 Ant Design 组件样式（Button, Input, Card, Table, Modal）以匹配 Calm 设计语言。
 - **Layout & Feedback Styles**: 在 `app.css` 中实现 App Shell 和 Navigation 样式，在 `components.css` 中实现 Global Toast 样式。
 
 #### 2025-11-17
