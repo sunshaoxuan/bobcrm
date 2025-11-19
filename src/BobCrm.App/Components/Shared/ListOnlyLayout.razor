@@ -1,0 +1,48 @@
+@using BobCrm.App.Components.Shared
+@using BobCrm.App.Models
+@inject NavigationManager Navigation
+
+@*
+    ListOnlyLayout - 仅列表布局
+    
+    全页显示列表，详情通过独立页面展示
+    适用场景：数据量大，需要独立详情页面
+*@
+
+<div class="list-only-layout">
+    <ListTemplateHost EntityType="@EntityType" />
+    
+    @* TODO: 添加行级操作支持和详情导航 *@
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string EntityType { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ListTemplate { get; set; }
+
+    [Parameter]
+    public string? DetailTemplate { get; set; }
+
+    [Parameter]
+    public string? EditTemplate { get; set; }
+
+    [Parameter]
+    public DetailDisplayMode DetailDisplayMode { get; set; } = DetailDisplayMode.Page;
+
+    [Parameter]
+    public string? DetailRoute { get; set; }
+
+    [Parameter]
+    public ModalSize? ModalSize { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnRecordSaved { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordDeleted { get; set; }
+}

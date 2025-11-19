@@ -1,0 +1,105 @@
+@using BobCrm.App.Components.Shared
+@using BobCrm.App.Models
+@inject NavigationManager Navigation
+
+@*
+    EntityWorkspace - 统一的实体工作区组件
+    
+    实现通用主从模式（Universal Master-Detail Pattern）
+    根据 LayoutMode 自动选择合适的布局容器
+*@
+
+<div class="entity-workspace" data-entity-type="@EntityType">
+    @if (LayoutMode == LayoutMode.LeftRightSplit)
+    {
+        <LeftRightSplitLayout EntityType="@EntityType"
+                              ListTemplate="@ListTemplate"
+                              DetailTemplate="@DetailTemplate"
+                              EditTemplate="@EditTemplate"
+                              OnRecordSelected="HandleRecordSelected"
+                              OnRecordSaved="HandleRecordSaved"
+                              OnRecordDeleted="HandleRecordDeleted" />
+    }
+    else if (LayoutMode == LayoutMode.TopBottomSplit)
+    {
+        <TopBottomSplitLayout EntityType="@EntityType"
+                             ListTemplate="@ListTemplate"
+                             DetailTemplate="@DetailTemplate"
+                             EditTemplate="@EditTemplate"
+                             OnRecordSelected="HandleRecordSelected"
+                             OnRecordSaved="HandleRecordSaved"
+                             OnRecordDeleted="HandleRecordDeleted" />
+    }
+    else
+    {
+        <ListOnlyLayout EntityType="@EntityType"
+                       ListTemplate="@ListTemplate"
+                       DetailTemplate="@DetailTemplate"
+                       EditTemplate="@EditTemplate"
+                       DetailDisplayMode="@DetailDisplayMode"
+                       DetailRoute="@DetailRoute"
+                       ModalSize="@ModalSize"
+                       OnRecordSelected="HandleRecordSelected"
+                       OnRecordSaved="HandleRecordSaved"
+                       OnRecordDeleted="HandleRecordDeleted" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string EntityType { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public LayoutMode LayoutMode { get; set; } = LayoutMode.ListOnly;
+
+    [Parameter, EditorRequired]
+    public DetailDisplayMode DetailDisplayMode { get; set; } = DetailDisplayMode.Page;
+
+    [Parameter]
+    public string? ListTemplate { get; set; }
+
+    [Parameter]
+    public string? DetailTemplate { get; set; }
+
+    [Parameter]
+    public string? EditTemplate { get; set; }
+
+    [Parameter]
+    public string? DetailRoute { get; set; }
+
+    [Parameter]
+    public ModalSize? ModalSize { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnRecordSaved { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordDeleted { get; set; }
+
+    private async Task HandleRecordSelected(string recordId)
+    {
+        if (OnRecordSelected.HasDelegate)
+        {
+            await OnRecordSelected.InvokeAsync(recordId);
+        }
+    }
+
+    private async Task HandleRecordSaved()
+    {
+        if (OnRecordSaved.HasDelegate)
+        {
+            await OnRecordSaved.InvokeAsync();
+        }
+    }
+
+    private async Task HandleRecordDeleted(string recordId)
+    {
+        if (OnRecordDeleted.HasDelegate)
+        {
+            await OnRecordDeleted.InvokeAsync(recordId);
+        }
+    }
+}

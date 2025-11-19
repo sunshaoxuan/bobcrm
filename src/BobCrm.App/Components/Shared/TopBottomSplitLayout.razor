@@ -1,0 +1,86 @@
+@using BobCrm.App.Components.Shared
+
+@*
+    TopBottomSplitLayout - 上列表下明细布局
+    
+    上方：完整列表表格（所有配置的显示字段）
+    下方：详情表单（选中行时显示）
+    适用场景：数据量较大，需要完整列表信息
+*@
+
+<div class="top-bottom-split-layout">
+    <div class="split-list">
+        <ListTemplateHost EntityType="@EntityType" />
+    </div>
+
+    <div class="split-detail">
+        @if (!string.IsNullOrEmpty(_selectedRecordId))
+        {
+            <div class="detail-placeholder">
+                <p>已选择记录: @_selectedRecordId</p>
+                <p>TODO: 添加详情编辑表单</p>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <p>请从上方列表选择一项查看详情</p>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+.top-bottom-split-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--spacing-md);
+}
+
+.split-list {
+    flex: 1;
+    min-height: 300px;
+    overflow-y: auto;
+}
+
+.split-detail {
+    flex: 1;
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+.empty-state, .detail-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public string EntityType { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ListTemplate { get; set; }
+
+    [Parameter]
+    public string? DetailTemplate { get; set; }
+
+    [Parameter]
+    public string? EditTemplate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnRecordSaved { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRecordDeleted { get; set; }
+
+    private string? _selectedRecordId;
+}
