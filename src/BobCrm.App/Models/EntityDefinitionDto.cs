@@ -429,6 +429,8 @@ public static class FieldDataType
 
     public const string Guid = "Guid";
 
+    public const string Enum = "Enum";
+
 }
 
 /// <summary>

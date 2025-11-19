@@ -888,5 +888,24 @@
   "MENU_COLLAB_FILE": { "zh": "文件管理", "ja": "ファイル管理", "en": "File Management" },
   "MENU_COLLAB_FILE_ATTACH": { "zh": "附件管理", "ja": "添付ファイル管理", "en": "Attachment Management" },
   "MENU_COLLAB_FILE_COMMENT": { "zh": "评论历史", "ja": "コメント履歴", "en": "Comment History" },
-  "MSG_ERROR": { "zh": "错误", "ja": "エラー", "en": "Error" }
+  "MSG_ERROR": { "zh": "错误", "ja": "エラー", "en": "Error" },
+  
+  "LBL_ENUM_DEFINITION": { "zh": "枚举定义", "ja": "列挙定義", "en": "Enum Definition" },
+  "LBL_CREATE_ENUM": { "zh": "创建枚举", "ja": "列挙作成", "en": "Create Enum" },
+  "LBL_EDIT_ENUM": { "zh": "编辑枚举", "ja": "列挙編集", "en": "Edit Enum" },
+  "LBL_ENUM_CODE": { "zh": "枚举代码", "ja": "列挙コード", "en": "Enum Code" },
+  "LBL_ENUM_OPTIONS": { "zh": "枚举选项", "ja": "列挙オプション", "en": "Enum Options" },
+  "LBL_OPTION_VALUE": { "zh": "选项值", "ja": "オプション値", "en": "Option Value" },
+  "LBL_COLOR_TAG": { "zh": "颜色标签", "ja": "カラータグ", "en": "Color Tag" },
+  "BTN_NEW_ENUM": { "zh": "新建枚举", "ja": "列挙新規作成", "en": "New Enum" },
+  "BTN_ADD_OPTION": { "zh": "添加选项", "ja": "オプション追加", "en": "Add Option" },
+  "MSG_ENUM_CODE_REQUIRED": { "zh": "枚举代码不能为空", "ja": "列挙コードは必須です", "en": "Enum code is required" },
+  "MSG_ENUM_OPTIONS_REQUIRED": { "zh": "至少需要一个枚举选项", "ja": "少なくとも1つのオプションが必要です", "en": "At least one enum option is required" },
+  "MSG_ENUM_CREATE_SUCCESS": { "zh": "枚举创建成功", "ja": "列挙を作成しました", "en": "Enum created successfully" },
+  "MSG_ENUM_UPDATE_SUCCESS": { "zh": "枚举更新成功", "ja": "列挙を更新しました", "en": "Enum updated successfully" },
+  "MSG_ENUM_DELETE_SUCCESS": { "zh": "枚举删除成功", "ja": "列挙を削除しました", "en": "Enum deleted successfully" },
+  "MSG_OPTION_VALUE_REQUIRED": { "zh": "选项值不能为空", "ja": "オプション値は必須です", "en": "Option value is required" },
+  "TXT_ENUM_CODE_HINT": { "zh": "用于引用的唯一标识，如: customer_type", "ja": "参照用の一意識別子、例: customer_type", "en": "Unique identifier for reference, e.g.: customer_type" },
+  "MENU_ENUM_MANAGEMENT": { "zh": "枚举管理", "ja": "列挙管理", "en": "Enum Management" }
 }
+

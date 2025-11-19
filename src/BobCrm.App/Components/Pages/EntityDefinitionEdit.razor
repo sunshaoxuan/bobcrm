@@ -204,6 +204,7 @@
                                 <th>@I18n.T("LBL_PROPERTY_NAME")</th>
                                 <th>@I18n.T("LBL_DISPLAY_NAME")</th>
                                 <th>@I18n.T("LBL_DATA_TYPE")</th>
+                                <th>@I18n.T("LBL_ENUM_DEFINITION")</th>
                                 <th>@I18n.T("LBL_LENGTH")</th>
                                 <th>@I18n.T("LBL_PRECISION")</th>
                                 <th>@I18n.T("LBL_SCALE")</th>
@@ -250,8 +251,34 @@
                                                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date"><ChildContent Context="opt">Date</ChildContent></SelectOption>
                                                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text"><ChildContent Context="opt">Text</ChildContent></SelectOption>
                                                     <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid"><ChildContent Context="opt">Guid</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Enum" Label="Enum"><ChildContent Context="opt">Enum</ChildContent></SelectOption>
                                                 </SelectOptions>
                                             </Select>
+                                        </td>
+                                        <td>
+                                            @if (field.DataType == FieldDataType.Enum)
+                                            {
+                                                <Select TItemValue="Guid?" TItem="string"
+                                                        Value="field.EnumDefinitionId"
+                                                        ValueChanged="value => field.EnumDefinitionId = value"
+                                                        Disabled="@isProtected"
+                                                        Style="width: 200px;"
+                                                        Placeholder="@I18n.T("LBL_SELECT")">
+                                                    <SelectOptions>
+                                                        @foreach (var enumDef in _enumDefinitions.Where(e => e.IsEnabled))
+                                                        {
+                                                            var displayName = GetEnumDisplayName(enumDef);
+                                                            <SelectOption TItemValue="Guid?" TItem="string" Value="@enumDef.Id" Label="@displayName">
+                                                                <ChildContent Context="opt">@displayName</ChildContent>
+                                                            </SelectOption>
+                                                        }
+                                                    </SelectOptions>
+                                                </Select>
+                                            }
+                                            else
+                                            {
+                                                <span>-</span>
+                                            }
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Length"
@@ -1322,6 +1349,15 @@
         }
 
         return I18n!.T("LBL_SOURCE_CUSTOM");
+    }
+
+    private string GetEnumDisplayName(EnumDefinitionDto enumDef)
+    {
+        if (enumDef.DisplayName.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrEmpty(name))
+        {
+            return name;
+        }
+        return enumDef.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? enumDef.Code;
     }
 
     private string? GetInterfaceFieldLabel(string? propertyName)
