@@ -48,9 +48,7 @@ Write-Host ""
 Write-Host "说明：" -ForegroundColor Yellow
 Write-Host "  - 测试数据库（bobcrm_test）已清理" -ForegroundColor White
 Write-Host "  - 开发数据库（bobcrm）未受影响" -ForegroundColor White
-Write-Host "  - 如需重建开发数据库，请手动运行：" -ForegroundColor White
-Write-Host "    docker exec bobcrm-postgres psql -U postgres -c 'DROP DATABASE IF EXISTS bobcrm'" -ForegroundColor Gray
-Write-Host "    docker exec bobcrm-postgres psql -U postgres -c 'CREATE DATABASE bobcrm'" -ForegroundColor Gray
-Write-Host "    pwsh scripts/dev.ps1 -Action restart" -ForegroundColor Gray
+Write-Host "  - 如需重建开发数据库，请执行：" -ForegroundColor White
+Write-Host "    pwsh scripts/reset-database.ps1 [-DropTestDatabases]" -ForegroundColor Gray
 Write-Host ""
 
