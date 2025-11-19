@@ -493,7 +493,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         var templates = await _db.FormTemplates
             .Where(t => t.EntityType == entity.EntityRoute)
             .ToListAsync();
-        templates.Should().HaveCount(3);
+        templates.Should().HaveCount(4); // Detail (user), Detail (auto), Edit (auto), List (auto)
 
         foreach (var template in templates)
         {
@@ -631,7 +631,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         var templates = await _db.FormTemplates
             .Where(t => t.EntityType == entity.EntityRoute)
             .ToListAsync();
-        templates.Should().HaveCount(3);
+        templates.Should().HaveCount(4); // Detail (user), Detail (auto), Edit (auto), List (auto)
 
         foreach (var template in templates)
         {
@@ -641,8 +641,13 @@ public class EntityPublishingAndDDLTests : IDisposable
             root.TryGetProperty("items", out var items).Should().BeTrue();
             items.TryGetProperty("Name", out var nameItem).Should().BeTrue();
             nameItem.GetProperty("dataField").GetString().Should().Be("Name");
-            items.TryGetProperty("NewField", out var newFieldItem).Should().BeTrue();
-            newFieldItem.GetProperty("dataField").GetString().Should().Be("NewField");
+
+            // Only system-generated templates should have NewField (user template was created before field was added)
+            if (template.IsSystemDefault)
+            {
+                items.TryGetProperty("NewField", out var newFieldItem).Should().BeTrue();
+                newFieldItem.GetProperty("dataField").GetString().Should().Be("NewField");
+            }
         }
 
         var bindings = await _db.TemplateBindings
@@ -777,6 +782,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             EntityType = entity.EntityRoute ?? entity.EntityName.ToLowerInvariant(),
             UserId = "system",
             UsageType = FormTemplateUsageType.Detail,
+            LayoutJson = "{\"mode\":\"flow\",\"items\":{\"Name\":{\"id\":\"Name_detail\",\"type\":\"textbox\",\"label\":\"Name\",\"dataField\":\"Name\",\"order\":0,\"w\":6}}}",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
