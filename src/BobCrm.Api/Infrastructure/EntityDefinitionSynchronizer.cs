@@ -13,11 +13,16 @@ public class EntityDefinitionSynchronizer
 {
     private readonly AppDbContext _db;
     private readonly ILogger<EntityDefinitionSynchronizer> _logger;
+    private readonly BobCrm.Api.Services.IDefaultTemplateService? _templateService;
 
-    public EntityDefinitionSynchronizer(AppDbContext db, ILogger<EntityDefinitionSynchronizer> logger)
+    public EntityDefinitionSynchronizer(
+        AppDbContext db, 
+        ILogger<EntityDefinitionSynchronizer> logger,
+        BobCrm.Api.Services.IDefaultTemplateService? templateService = null)
     {
         _db = db;
         _logger = logger;
+        _templateService = templateService;
     }
 
     /// <summary>
@@ -30,32 +35,30 @@ public class EntityDefinitionSynchronizer
         try
         {
             // 扫描所有实现IBizEntity的类
-            var bizEntityTypes = ScanBizEntityTypes();
-            _logger.LogInformation("[EntitySync] Found {Count} IBizEntity implementations", bizEntityTypes.Count);
+            var entityTypes = ScanBizEntityTypes();
+            _logger.LogInformation("[EntitySync] Found {Count} IBizEntity types to sync", entityTypes.Count);
 
-            var syncedCount = 0;
-            var skippedCount = 0;
-
-            foreach (var entityType in bizEntityTypes)
+            int syncedCount = 0;
+            foreach (var entityType in entityTypes)
             {
-                try
+                var synced = await SyncEntityAsync(entityType);
+                if (synced)
                 {
-                    var result = await SyncEntityAsync(entityType);
-                    if (result)
-                        syncedCount++;
-                    else
-                        skippedCount++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[EntitySync] Failed to sync entity: {TypeName}", entityType.Name);
+                    syncedCount++;
                 }
             }
 
-            await _db.SaveChangesAsync();
+            if (syncedCount > 0)
+            {
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("[EntitySync] Successfully synced {Count} system entities", syncedCount);
+            }
+            else
+            {
+                _logger.LogInformation("[EntitySync] All system entities already up to date");
+            }
 
-            _logger.LogInformation("[EntitySync] ========== Synchronization completed: {Synced} synced, {Skipped} skipped ==========",
-                syncedCount, skippedCount);
+            _logger.LogInformation("[EntitySync] ========== System entity synchronization completed ==========");
         }
         catch (Exception ex)
         {

@@ -188,6 +188,12 @@ namespace BobCrm.Api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<int>("DetailDisplayMode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DetailRoute")
+                        .HasColumnType("text");
+
                     b.Property<string>("EntityType")
                         .HasColumnType("text");
 
@@ -202,6 +208,12 @@ namespace BobCrm.Api.Migrations
 
                     b.Property<string>("LayoutJson")
                         .HasColumnType("text");
+
+                    b.Property<int>("LayoutMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ModalSize")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -672,6 +684,103 @@ namespace BobCrm.Api.Migrations
                     b.ToTable("EntityInterfaces");
                 });
 
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EnumDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("IsEnabled");
+
+                    b.HasIndex("IsSystem");
+
+                    b.ToTable("EnumDefinitions");
+                });
+
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EnumOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ColorTag")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("EnumDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EnumDefinitionId");
+
+                    b.HasIndex("EnumDefinitionId", "SortOrder");
+
+                    b.HasIndex("EnumDefinitionId", "Value")
+                        .IsUnique();
+
+                    b.ToTable("EnumOptions");
+                });
+
             modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
                 {
                     b.Property<Guid>("Id")
@@ -703,10 +812,16 @@ namespace BobCrm.Api.Migrations
                     b.Property<Guid>("EntityDefinitionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("EnumDefinitionId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsEntityRef")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMultiSelect")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsRequired")
@@ -755,6 +870,8 @@ namespace BobCrm.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EntityDefinitionId");
+
+                    b.HasIndex("EnumDefinitionId");
 
                     b.HasIndex("ParentFieldId");
 
@@ -1851,6 +1968,17 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("EntityDefinition");
                 });
 
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EnumOption", b =>
+                {
+                    b.HasOne("BobCrm.Api.Base.Models.EnumDefinition", "EnumDefinition")
+                        .WithMany("Options")
+                        .HasForeignKey("EnumDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EnumDefinition");
+                });
+
             modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
                 {
                     b.HasOne("BobCrm.Api.Base.Models.EntityDefinition", "EntityDefinition")
@@ -1858,6 +1986,11 @@ namespace BobCrm.Api.Migrations
                         .HasForeignKey("EntityDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("BobCrm.Api.Base.Models.EnumDefinition", "EnumDefinition")
+                        .WithMany()
+                        .HasForeignKey("EnumDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BobCrm.Api.Base.Models.FieldMetadata", "ParentField")
                         .WithMany("ChildFields")
@@ -1875,6 +2008,8 @@ namespace BobCrm.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("EntityDefinition");
+
+                    b.Navigation("EnumDefinition");
 
                     b.Navigation("ParentField");
 
@@ -2044,6 +2179,11 @@ namespace BobCrm.Api.Migrations
                     b.Navigation("Fields");
 
                     b.Navigation("Interfaces");
+                });
+
+            modelBuilder.Entity("BobCrm.Api.Base.Models.EnumDefinition", b =>
+                {
+                    b.Navigation("Options");
                 });
 
             modelBuilder.Entity("BobCrm.Api.Base.Models.FieldMetadata", b =>
