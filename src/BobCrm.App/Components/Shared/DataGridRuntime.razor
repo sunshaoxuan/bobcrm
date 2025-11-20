@@ -4,6 +4,7 @@
 @inject AuthService Auth
 @inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
 @inject ILogger<DataGridRuntime> Logger
 
 @* DataGrid Widget 运行时渲染组件 *@
@@ -64,10 +65,10 @@
                     {
                         @foreach (var row in _dataRows)
                         {
-                            <tr style="background:#fff;">
+                            <tr style="background:#fff; cursor:pointer;" @onclick="@(() => HandleRowClick(row))">
                                 @if (Widget.AllowMultiSelect)
                                 {
-                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;">
+                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;" @onclick:stopPropagation="true">
                                         <input type="checkbox" />
                                     </td>
                                 }
@@ -79,9 +80,16 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
                                 {
-                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;">
-                                        <button style="margin:0 4px;">Edit</button>
-                                        <button style="margin:0 4px;">Delete</button>
+                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;" @onclick:stopPropagation="true">
+                                        @foreach (var action in _rowActions)
+                                        {
+                                            <button 
+                                                style="margin:0 4px; padding:4px 8px; cursor:pointer;"
+                                                @onclick="@(() => HandleRowAction(action, row))"
+                                                title="@action.Label">
+                                                @action.Label
+                                            </button>
+                                        }
                                     </td>
                                 }
                             </tr>
@@ -132,6 +140,8 @@
     private int _totalCount = 0;
     private int _totalPages = 0;
     private List<BobCrm.Api.Contracts.DTOs.EnumDefinitionDto> _enumDefinitions = new();
+    private List<RowAction> _rowActions = new();
+    private string? _entityType;
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,6 +178,32 @@
                 new() { Field = "name", Label = "Name", Width = 200, Sortable = true },
                 new() { Field = "code", Label = "Code", Width = 150, Sortable = true }
             };
+        }
+
+        // 解析行操作定义
+        if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
+        {
+            try
+            {
+                _rowActions = JsonSerializer.Deserialize<List<RowAction>>(Widget.RowActionsJson) ?? new();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to deserialize row actions");
+                _rowActions = new();
+            }
+        }
+
+        // 确定实体类型（从EntityType或ApiEndpoint推断）
+        _entityType = Widget.EntityType;
+        if (string.IsNullOrWhiteSpace(_entityType) && !string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
+        {
+            // 从ApiEndpoint推断：/api/customers -> customer
+            var match = System.Text.RegularExpressions.Regex.Match(Widget.ApiEndpoint, @"\/api\/([^\/\?]+)");
+            if (match.Success)
+            {
+                _entityType = match.Groups[1].Value.TrimEnd('s'); // 简单复数处理
+            }
         }
 
         await LoadDataAsync();
@@ -208,8 +244,24 @@
             else if (!string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
             {
                 // Mode 2: Direct Entity API (GET)
-                // Try to append query parameters
+                // 确保ApiEndpoint正确映射到实体API
                 var url = Widget.ApiEndpoint;
+                
+                // 如果ApiEndpoint是相对路径，确保以/api/开头
+                if (!url.StartsWith("http") && !url.StartsWith("/api/"))
+                {
+                    // 从EntityType推断API端点
+                    if (!string.IsNullOrWhiteSpace(Widget.EntityType))
+                    {
+                        url = $"/api/{Widget.EntityType}s";
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_entityType))
+                    {
+                        url = $"/api/{_entityType}s";
+                    }
+                }
+                
+                // Try to append query parameters
                 if (url.Contains("?")) url += "&"; else url += "?";
                 url += $"page={_currentPage}&pageSize={Widget.PageSize}";
                 
@@ -383,7 +435,88 @@
         }
     }
 
+    private void HandleRowClick(JsonElement row)
+    {
+        // 获取行的ID（尝试多个可能的字段名）
+        var id = GetRowId(row);
+        if (id == null) return;
+
+        // 导航到详情页
+        var entityType = _entityType ?? Widget.EntityType ?? "customer";
+        Nav.NavigateTo($"/{entityType}/{id}");
+    }
+
+    private async Task HandleRowAction(RowAction action, JsonElement row)
+    {
+        var id = GetRowId(row);
+        if (id == null) return;
+
+        var entityType = _entityType ?? Widget.EntityType ?? "customer";
+
+        switch (action.Action?.ToLowerInvariant())
+        {
+            case "edit":
+                Nav.NavigateTo($"/{entityType}/{id}");
+                break;
+            case "delete":
+                await HandleDeleteAsync(id, entityType);
+                break;
+            default:
+                Logger.LogWarning("Unknown row action: {Action}", action.Action);
+                break;
+        }
+    }
+
+    private string? GetRowId(JsonElement row)
+    {
+        // 尝试多个可能的ID字段名
+        var idFields = new[] { "id", "Id", "ID", "customerId", "CustomerId" };
+        foreach (var field in idFields)
+        {
+            if (row.TryGetProperty(field, out var idValue))
+            {
+                return idValue.ValueKind switch
+                {
+                    JsonValueKind.String => idValue.GetString(),
+                    JsonValueKind.Number => idValue.GetRawText(),
+                    _ => idValue.GetRawText()
+                };
+            }
+        }
+        return null;
+    }
+
+    private async Task HandleDeleteAsync(string id, string entityType)
+    {
+        try
+        {
+            var client = await Auth.CreateClientWithAuthAsync();
+            var response = await client.DeleteAsync($"/api/{entityType}s/{id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // 刷新数据
+                await LoadDataAsync();
+            }
+            else
+            {
+                Logger.LogError("Failed to delete {EntityType} {Id}: {StatusCode}", entityType, id, response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting {EntityType} {Id}", entityType, id);
+        }
+    }
+
     // 数据模型
+    private class RowAction
+    {
+        public string Action { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public string? Icon { get; set; }
+    }
+
     private class DataGridColumn
     {
         public string Field { get; set; } = string.Empty;
