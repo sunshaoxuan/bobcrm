@@ -46,7 +46,7 @@ public class RoleProfile : IBizEntity
             Namespace = type.Namespace ?? "BobCrm.Api.Base.Models",
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.RoleProfile",
-            EntityRoute = "roles",
+            EntityRoute = "role",
             DisplayName = new Dictionary<string, string?>
             {
                 { "ja", "ロール" },
