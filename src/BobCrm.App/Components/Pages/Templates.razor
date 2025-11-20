@@ -11,15 +11,45 @@
 <div style="max-width:1200px; margin:0 auto; padding:24px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
         <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">模板管理</h2>
-        <div style="display:flex; gap:12px; align-items:center">
-            <select @onchange="OnGroupByChanged" class="field-control" style="width:200px" value="@groupBy">
-                <option value="none">平铺列表</option>
-                <option value="entity">按实体分组</option>
-            </select>
-            <button @onclick="CreateNewTemplate" class="btn btn-primary">
-                ➕ 新建模板
+        <button @onclick="CreateNewTemplate" class="btn btn-primary">
+            ➕ 新建模板
+        </button>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="panel" style="margin-bottom:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <select @onchange="OnFilterChanged" name="usageType" class="field-control" style="width:150px" value="@filterUsageType">
+            <option value="">全部用途</option>
+            <option value="List">列表</option>
+            <option value="Detail">详情</option>
+            <option value="Edit">编辑</option>
+        </select>
+
+        <select @onchange="OnFilterChanged" name="templateType" class="field-control" style="width:150px" value="@filterTemplateType">
+            <option value="">全部类型</option>
+            <option value="system">系统模板</option>
+            <option value="user">用户模板</option>
+        </select>
+
+        <input type="text"
+               placeholder="搜索模板名称..."
+               class="field-control"
+               style="flex:1; min-width:200px"
+               @bind="searchKeyword"
+               @bind:event="oninput"
+               @onkeyup="OnSearchChanged" />
+
+        <select @onchange="OnGroupByChanged" class="field-control" style="width:150px" value="@groupBy">
+            <option value="none">平铺列表</option>
+            <option value="entity">按实体分组</option>
+        </select>
+
+        @if (HasActiveFilters())
+        {
+            <button @onclick="ClearFilters" class="btn btn-ghost btn-sm">
+                清除筛选
             </button>
-        </div>
+        }
     </div>
 
     @if (loading)
@@ -183,6 +213,11 @@
     private string? error = null;
     private string groupBy = "none";
 
+    // 筛选器
+    private string filterUsageType = "";
+    private string filterTemplateType = "";
+    private string searchKeyword = "";
+
     private List<FormTemplate>? flatTemplates;
     private List<TemplateGroupByEntity>? groupedTemplates;
 
@@ -216,9 +251,26 @@
                 return;
             }
 
-            var url = groupBy == "entity"
-                ? "/api/templates?groupBy=entity"
-                : "/api/templates";
+            // 构建 URL 参数
+            var queryParams = new List<string>();
+            if (!string.IsNullOrWhiteSpace(filterUsageType))
+            {
+                queryParams.Add($"usageType={filterUsageType}");
+            }
+            if (!string.IsNullOrWhiteSpace(filterTemplateType))
+            {
+                queryParams.Add($"templateType={filterTemplateType}");
+            }
+            if (groupBy == "entity")
+            {
+                queryParams.Add("groupBy=entity");
+            }
+
+            var url = "/api/templates";
+            if (queryParams.Any())
+            {
+                url += "?" + string.Join("&", queryParams);
+            }
 
             var resp = await Auth.GetWithRefreshAsync(url);
 
@@ -228,16 +280,40 @@
 
                 if (groupBy == "entity")
                 {
-                    groupedTemplates = System.Text.Json.JsonSerializer.Deserialize<List<TemplateGroupByEntity>>(
+                    var rawGroups = System.Text.Json.JsonSerializer.Deserialize<List<TemplateGroupByEntity>>(
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 应用客户端搜索过滤
+                    if (!string.IsNullOrWhiteSpace(searchKeyword) && rawGroups != null)
+                    {
+                        groupedTemplates = rawGroups.Select(g => new TemplateGroupByEntity
+                        {
+                            EntityType = g.EntityType,
+                            Templates = g.Templates.Where(t => t.Name != null && t.Name.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)).ToList()
+                        }).Where(g => g.Templates.Any()).ToList();
+                    }
+                    else
+                    {
+                        groupedTemplates = rawGroups;
+                    }
                     flatTemplates = null;
                 }
                 else
                 {
-                    flatTemplates = System.Text.Json.JsonSerializer.Deserialize<List<FormTemplate>>(
+                    var rawTemplates = System.Text.Json.JsonSerializer.Deserialize<List<FormTemplate>>(
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 应用客户端搜索过滤
+                    if (!string.IsNullOrWhiteSpace(searchKeyword) && rawTemplates != null)
+                    {
+                        flatTemplates = rawTemplates.Where(t => t.Name != null && t.Name.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    else
+                    {
+                        flatTemplates = rawTemplates;
+                    }
                     groupedTemplates = null;
                 }
             }
@@ -264,6 +340,43 @@
         await LoadTemplates();
     }
 
+    private async void OnFilterChanged(ChangeEventArgs e)
+    {
+        var target = e.Value?.ToString() ?? "";
+        var name = ((Microsoft.AspNetCore.Components.Forms.InputBase<string>)e).AdditionalAttributes?["name"]?.ToString();
+
+        if (name == "usageType")
+        {
+            filterUsageType = target;
+        }
+        else if (name == "templateType")
+        {
+            filterTemplateType = target;
+        }
+
+        await LoadTemplates();
+    }
+
+    private async Task OnSearchChanged(KeyboardEventArgs e)
+    {
+        await LoadTemplates();
+    }
+
+    private async Task ClearFilters()
+    {
+        filterUsageType = "";
+        filterTemplateType = "";
+        searchKeyword = "";
+        await LoadTemplates();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrWhiteSpace(filterUsageType) ||
+               !string.IsNullOrWhiteSpace(filterTemplateType) ||
+               !string.IsNullOrWhiteSpace(searchKeyword);
+    }
+
     private void CreateNewTemplate()
     {
         // 导航到设计器创建新模板
@@ -273,6 +386,77 @@
     private void EditTemplate(int templateId)
     {
         Nav.NavigateTo($"/designer/{templateId}");
+    }
+
+    private async Task CopyTemplate(int templateId)
+    {
+        try
+        {
+            var template = FindTemplate(templateId);
+            if (template == null) return;
+
+            var newName = await JS.InvokeAsync<string>("prompt", $"请输入新模板名称:", $"{template.Name} (副本)");
+            if (string.IsNullOrWhiteSpace(newName)) return;
+
+            var payload = new
+            {
+                name = newName,
+                entityType = template.EntityType,
+                usageType = template.UsageType,
+                description = $"从 '{template.Name}' 复制"
+            };
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.PostAsJsonAsync($"/api/templates/{templateId}/copy", payload);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage("模板已复制", true);
+                await LoadTemplates();
+            }
+            else
+            {
+                var errorMsg = await resp.Content.ReadAsStringAsync();
+                ShowMessage($"复制失败: {errorMsg}", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Copy error: {ex.Message}");
+            ShowMessage($"复制失败: {ex.Message}", false);
+        }
+    }
+
+    private async Task ApplyTemplate(int templateId)
+    {
+        try
+        {
+            var template = FindTemplate(templateId);
+            if (template == null) return;
+
+            var confirm = await JS.InvokeAsync<bool>("confirm",
+                $"确定要将 '{template.Name}' 设置为默认模板吗？\n这将替换当前的默认模板。");
+            if (!confirm) return;
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.PutAsync($"/api/templates/{templateId}/apply", null);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage("模板已应用为默认模板", true);
+                await LoadTemplates();
+            }
+            else
+            {
+                var errorMsg = await resp.Content.ReadAsStringAsync();
+                ShowMessage($"应用失败: {errorMsg}", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Templates] Apply error: {ex.Message}");
+            ShowMessage($"应用失败: {ex.Message}", false);
+        }
     }
 
     private async Task SetAsDefault(int templateId)
@@ -357,7 +541,7 @@
         {
             builder.OpenElement(9, "span");
             builder.AddAttribute(10, "class", "badge badge-default");
-            builder.AddContent(11, "用户默认");
+            builder.AddContent(11, "✓ 用户默认");
             builder.CloseElement();
         }
 
@@ -365,15 +549,21 @@
         {
             builder.OpenElement(12, "span");
             builder.AddAttribute(13, "class", "badge badge-info");
-            builder.AddContent(14, "系统默认");
+            builder.AddContent(14, "🔒 系统模板");
             builder.CloseElement();
         }
 
+        // 用途标签
+        builder.OpenElement(15, "span");
+        builder.AddAttribute(16, "class", GetUsageBadgeClass(template.UsageType));
+        builder.AddContent(17, GetUsageDisplayName(template.UsageType));
+        builder.CloseElement();
+
         if (!string.IsNullOrWhiteSpace(template.EntityType))
         {
-        builder.OpenElement(15, "span");
-        builder.AddAttribute(16, "class", "badge badge-success");
-            builder.AddContent(17, GetEntityDisplayName(template.EntityType));
+            builder.OpenElement(18, "span");
+            builder.AddAttribute(19, "class", "badge badge-success");
+            builder.AddContent(20, GetEntityDisplayName(template.EntityType));
             builder.CloseElement();
         }
 
@@ -400,30 +590,40 @@
         builder.OpenElement(24, "div");
         builder.AddAttribute(25, "class", "template-actions");
 
-        // 编辑按钮
-        builder.OpenElement(26, "button");
-        builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
-        builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
-        builder.AddContent(29, "编辑");
+        // 编辑按钮（系统模板不可编辑）
+        if (!template.IsSystemDefault)
+        {
+            builder.OpenElement(26, "button");
+            builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
+            builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
+            builder.AddContent(29, "✏️ 编辑");
+            builder.CloseElement();
+        }
+
+        // 复制按钮
+        builder.OpenElement(30, "button");
+        builder.AddAttribute(31, "class", "btn btn-ghost btn-sm");
+        builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => CopyTemplate(template.Id)));
+        builder.AddContent(33, "📋 复制");
         builder.CloseElement();
 
-        // 设为默认按钮
+        // 应用按钮（设为默认）
         if (!template.IsUserDefault && !string.IsNullOrWhiteSpace(template.EntityType))
         {
-            builder.OpenElement(30, "button");
-            builder.AddAttribute(31, "class", "btn btn-ghost btn-sm");
-            builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => SetAsDefault(template.Id)));
-            builder.AddContent(33, "设为默认");
+            builder.OpenElement(34, "button");
+            builder.AddAttribute(35, "class", "btn btn-ghost btn-sm");
+            builder.AddAttribute(36, "onclick", EventCallback.Factory.Create(this, () => ApplyTemplate(template.Id)));
+            builder.AddContent(37, "✓ 应用");
             builder.CloseElement();
         }
 
         // 删除按钮
         var canDelete = !template.IsUserDefault && !template.IsSystemDefault && !template.IsInUse;
-        builder.OpenElement(34, "button");
-        builder.AddAttribute(35, "class", "btn btn-ghost btn-sm");
-        builder.AddAttribute(36, "disabled", !canDelete);
-        builder.AddAttribute(37, "onclick", EventCallback.Factory.Create(this, () => DeleteTemplate(template.Id)));
-        builder.AddContent(38, "删除");
+        builder.OpenElement(38, "button");
+        builder.AddAttribute(39, "class", "btn btn-ghost btn-sm");
+        builder.AddAttribute(40, "disabled", !canDelete);
+        builder.AddAttribute(41, "onclick", EventCallback.Factory.Create(this, () => DeleteTemplate(template.Id)));
+        builder.AddContent(42, "🗑️ 删除");
         builder.CloseElement();
 
         builder.CloseElement(); // template-actions
@@ -459,6 +659,28 @@
             "order" => "订单",
             null or "" => "未分类",
             _ => entityType
+        };
+    }
+
+    private string GetUsageDisplayName(BobCrm.App.Models.FormTemplateUsageType usageType)
+    {
+        return usageType switch
+        {
+            BobCrm.App.Models.FormTemplateUsageType.List => "列表",
+            BobCrm.App.Models.FormTemplateUsageType.Detail => "详情",
+            BobCrm.App.Models.FormTemplateUsageType.Edit => "编辑",
+            _ => usageType.ToString()
+        };
+    }
+
+    private string GetUsageBadgeClass(BobCrm.App.Models.FormTemplateUsageType usageType)
+    {
+        return usageType switch
+        {
+            BobCrm.App.Models.FormTemplateUsageType.List => "badge badge-primary",
+            BobCrm.App.Models.FormTemplateUsageType.Detail => "badge badge-success",
+            BobCrm.App.Models.FormTemplateUsageType.Edit => "badge badge-warning",
+            _ => "badge"
         };
     }
 

@@ -24,20 +24,23 @@ public static class TemplateEndpoints
             .WithOpenApi()
             .RequireAuthorization();
 
-        // 获取用户的所有模板
+        // 获取用户的所有模板（包括系统模板）
         group.MapGet("", async (
             ClaimsPrincipal user,
             IRepository<FormTemplate> repo,
             ILogger<Program> logger,
             string? entityType,
+            string? usageType,
+            string? templateType,
             string? groupBy) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 
-            logger.LogDebug("[Templates] Retrieving templates for user {UserId}, entityType: {EntityType}, groupBy: {GroupBy}",
-                uid, entityType ?? "all", groupBy ?? "none");
+            logger.LogDebug("[Templates] Retrieving templates for user {UserId}, entityType: {EntityType}, usageType: {UsageType}, templateType: {TemplateType}",
+                uid, entityType ?? "all", usageType ?? "all", templateType ?? "all");
 
-            var query = repo.Query(t => t.UserId == uid);
+            // Query both user templates and system templates
+            var query = repo.Query(t => t.UserId == uid || t.IsSystemDefault);
 
             // 按实体类型过滤
             if (!string.IsNullOrWhiteSpace(entityType))
@@ -45,7 +48,28 @@ public static class TemplateEndpoints
                 query = query.Where(t => t.EntityType == entityType);
             }
 
-            var templates = await Task.FromResult(query.OrderByDescending(t => t.IsUserDefault)
+            // 按用途过滤
+            if (!string.IsNullOrWhiteSpace(usageType) && Enum.TryParse<FormTemplateUsageType>(usageType, true, out var parsedUsageType))
+            {
+                query = query.Where(t => t.UsageType == parsedUsageType);
+            }
+
+            // 按模板类型过滤（system/user）
+            if (!string.IsNullOrWhiteSpace(templateType))
+            {
+                if (templateType.Equals("system", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(t => t.IsSystemDefault);
+                }
+                else if (templateType.Equals("user", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(t => t.UserId == uid && !t.IsSystemDefault);
+                }
+            }
+
+            var templates = await Task.FromResult(query
+                .OrderByDescending(t => t.IsSystemDefault)
+                .ThenByDescending(t => t.IsUserDefault)
                 .ThenByDescending(t => t.UpdatedAt)
                 .ToList());
 
@@ -309,6 +333,182 @@ public static class TemplateEndpoints
         .WithName("DeleteTemplate")
         .WithSummary("删除模板")
         .WithDescription("删除模板（系统默认、用户默认和正在使用的模板不允许删除）");
+
+        // 复制模板
+        group.MapPost("/{id:int}/copy", async (
+            int id,
+            ClaimsPrincipal user,
+            IRepository<FormTemplate> repo,
+            IUnitOfWork uow,
+            CopyTemplateRequest req,
+            ILogger<Program> logger) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+            // 查找源模板（可以是系统模板或用户模板）
+            var sourceTemplate = await Task.FromResult(
+                repo.Query(t => t.Id == id && (t.UserId == uid || t.IsSystemDefault))
+                    .FirstOrDefault());
+
+            if (sourceTemplate == null)
+            {
+                logger.LogWarning("[Templates] Template {TemplateId} not found for copying by user {UserId}", id, uid);
+                return Results.NotFound(new { error = "模板不存在" });
+            }
+
+            logger.LogInformation("[Templates] Copying template {TemplateId} for user {UserId}, new name: {Name}",
+                id, uid, req.Name);
+
+            // 创建新模板（深拷贝）
+            var newTemplate = new FormTemplate
+            {
+                Name = req.Name ?? $"{sourceTemplate.Name} (Copy)",
+                EntityType = req.EntityType ?? sourceTemplate.EntityType,
+                UserId = uid,
+                IsUserDefault = false, // 复制的模板默认不是用户默认模板
+                IsSystemDefault = false, // 用户创建的模板不能是系统模板
+                LayoutJson = sourceTemplate.LayoutJson,
+                UsageType = req.UsageType ?? sourceTemplate.UsageType,
+                Description = req.Description ?? $"从 '{sourceTemplate.Name}' 复制",
+                Tags = sourceTemplate.Tags != null ? new List<string>(sourceTemplate.Tags) : null,
+                RequiredFunctionCode = sourceTemplate.RequiredFunctionCode,
+                LayoutMode = sourceTemplate.LayoutMode,
+                DetailDisplayMode = sourceTemplate.DetailDisplayMode,
+                DetailRoute = sourceTemplate.DetailRoute,
+                ModalSize = sourceTemplate.ModalSize,
+                Version = 1, // 新模板版本从 1 开始
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsInUse = false
+            };
+
+            await repo.AddAsync(newTemplate);
+            await uow.SaveChangesAsync();
+
+            logger.LogInformation("[Templates] Template copied successfully, new ID: {TemplateId}", newTemplate.Id);
+
+            return Results.Created($"/api/templates/{newTemplate.Id}", newTemplate);
+        })
+        .WithName("CopyTemplate")
+        .WithSummary("复制模板")
+        .WithDescription("从现有模板创建副本（可以从系统模板或用户模板复制）");
+
+        // 应用模板（设置为用户默认模板）
+        group.MapPut("/{id:int}/apply", async (
+            int id,
+            ClaimsPrincipal user,
+            IRepository<FormTemplate> repo,
+            IUnitOfWork uow,
+            ILogger<Program> logger) =>
+        {
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+            // 查找要应用的模板
+            var template = await Task.FromResult(
+                repo.Query(t => t.Id == id && (t.UserId == uid || t.IsSystemDefault))
+                    .FirstOrDefault());
+
+            if (template == null)
+            {
+                logger.LogWarning("[Templates] Template {TemplateId} not found for applying by user {UserId}", id, uid);
+                return Results.NotFound(new { error = "模板不存在" });
+            }
+
+            if (string.IsNullOrWhiteSpace(template.EntityType))
+            {
+                logger.LogWarning("[Templates] Cannot apply template {TemplateId} without EntityType", id);
+                return Results.BadRequest(new { error = "模板缺少实体类型，无法应用" });
+            }
+
+            logger.LogInformation("[Templates] Applying template {TemplateId} for user {UserId}, entity: {EntityType}",
+                id, uid, template.EntityType);
+
+            // 如果是系统模板，需要先复制一份给用户
+            if (template.IsSystemDefault)
+            {
+                // 检查用户是否已经有这个模板的副本
+                var existingCopy = await Task.FromResult(
+                    repo.Query(t => t.UserId == uid &&
+                                   t.EntityType == template.EntityType &&
+                                   t.UsageType == template.UsageType &&
+                                   t.Name == template.Name)
+                        .FirstOrDefault());
+
+                if (existingCopy != null)
+                {
+                    // 使用现有副本
+                    template = existingCopy;
+                }
+                else
+                {
+                    // 创建新副本
+                    var copy = new FormTemplate
+                    {
+                        Name = template.Name,
+                        EntityType = template.EntityType,
+                        UserId = uid,
+                        IsUserDefault = false,
+                        IsSystemDefault = false,
+                        LayoutJson = template.LayoutJson,
+                        UsageType = template.UsageType,
+                        Description = $"从系统模板 '{template.Name}' 复制",
+                        Tags = template.Tags != null ? new List<string>(template.Tags) : null,
+                        RequiredFunctionCode = template.RequiredFunctionCode,
+                        LayoutMode = template.LayoutMode,
+                        DetailDisplayMode = template.DetailDisplayMode,
+                        DetailRoute = template.DetailRoute,
+                        ModalSize = template.ModalSize,
+                        Version = 1,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsInUse = false
+                    };
+
+                    await repo.AddAsync(copy);
+                    template = copy;
+                }
+            }
+
+            // 取消同一实体类型和用途下的其他用户默认模板
+            var existingDefaults = repo.Query(t => t.UserId == uid &&
+                t.EntityType == template.EntityType &&
+                t.UsageType == template.UsageType &&
+                t.IsUserDefault &&
+                t.Id != template.Id).ToList();
+
+            foreach (var existing in existingDefaults)
+            {
+                existing.IsUserDefault = false;
+                repo.Update(existing);
+                logger.LogDebug("[Templates] Cleared user default flag from template {TemplateId}", existing.Id);
+            }
+
+            // 设置为用户默认模板
+            template.IsUserDefault = true;
+            template.UpdatedAt = DateTime.UtcNow;
+            repo.Update(template);
+
+            await uow.SaveChangesAsync();
+
+            logger.LogInformation("[Templates] Template {TemplateId} applied successfully as user default", template.Id);
+
+            return Results.Ok(new
+            {
+                message = "模板已应用为默认模板",
+                template = new
+                {
+                    template.Id,
+                    template.Name,
+                    template.EntityType,
+                    template.UsageType,
+                    template.IsUserDefault,
+                    template.IsSystemDefault
+                }
+            });
+        })
+        .WithName("ApplyTemplate")
+        .WithSummary("应用模板")
+        .WithDescription("将模板设置为用户默认模板（如果是系统模板，会先创建副本）");
 
         // 获取有效模板（用于PageLoader）
         group.MapGet("/effective/{entityType}", async (
@@ -657,4 +857,10 @@ public record UpdateTemplateRequest(
     string? EntityType,
     bool? IsUserDefault,
     string? LayoutJson,
+    string? Description);
+
+public record CopyTemplateRequest(
+    string? Name,
+    string? EntityType,
+    FormTemplateUsageType? UsageType,
     string? Description);
