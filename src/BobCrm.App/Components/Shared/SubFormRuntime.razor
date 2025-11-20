@@ -1,0 +1,330 @@
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services
+@using System.Text.Json
+@inject AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
+@inject NavigationManager Nav
+@inject ILogger<SubFormRuntime> Logger
+
+@* SubForm Widget 运行时渲染组件 - 主从表单 *@
+
+<div class="subform-runtime" style="@ContainerStyle">
+    @if (!string.IsNullOrWhiteSpace(Widget.Title) && Widget.ShowTitle)
+    {
+        <div class="subform-header" style="font-weight:600; margin-bottom:12px; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
+            <span>@I18n.T(Widget.Title)</span>
+            @if (Widget.ShowToolbar && Widget.AllowAdd)
+            {
+                <button
+                    class="btn-add"
+                    style="padding:4px 12px; cursor:pointer; background:#1890ff; color:#fff; border:none; border-radius:4px;"
+                    @onclick="HandleAddItem"
+                    disabled="@(_isLoading || IsMaxItemsReached())">
+                    + @I18n.T("BTN_ADD")
+                </button>
+            }
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div style="padding:24px; text-align:center; color:#999;">
+            <span>@I18n.T("MSG_LOADING")</span>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div style="padding:16px; background:#fff2f0; border:1px solid #ffccc7; border-radius:4px; color:#cf1322;">
+            <strong>@I18n.T("LBL_ERROR"):</strong> @_error
+        </div>
+    }
+    else
+    {
+        @if (Widget.DisplayMode == "table")
+        {
+            @* 表格模式 *@
+            <div class="subform-table" style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; border:1px solid #e0e0e0;">
+                    <thead>
+                        <tr style="background:#fafafa;">
+                            @foreach (var field in _fields)
+                            {
+                                <th style="padding:8px; border:1px solid #e0e0e0; text-align:left; font-weight:600; font-size:12px;">
+                                    @field.Label
+                                </th>
+                            }
+                            <th style="width:120px; padding:8px; border:1px solid #e0e0e0; text-align:center;">
+                                @I18n.T("LBL_ACTIONS")
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_items.Any())
+                        {
+                            @foreach (var item in _items)
+                            {
+                                <tr style="background:#fff;">
+                                    @foreach (var field in _fields)
+                                    {
+                                        <td style="padding:8px; border:1px solid #e0e0e0; font-size:12px;">
+                                            @GetFieldValue(item, field.Name)
+                                        </td>
+                                    }
+                                    <td style="padding:8px; border:1px solid #e0e0e0; text-align:center;">
+                                        @if (Widget.AllowEdit)
+                                        {
+                                            <button
+                                                style="margin:0 4px; padding:2px 8px; cursor:pointer; background:#fff; border:1px solid #d9d9d9; border-radius:2px;"
+                                                @onclick="() => HandleEditItem(item)">
+                                                @I18n.T("BTN_EDIT")
+                                            </button>
+                                        }
+                                        @if (Widget.AllowDelete)
+                                        {
+                                            <button
+                                                style="margin:0 4px; padding:2px 8px; cursor:pointer; background:#fff; border:1px solid #ff4d4f; color:#ff4d4f; border-radius:2px;"
+                                                @onclick="() => HandleDeleteItem(item)">
+                                                @I18n.T("BTN_DELETE")
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="@(_fields.Count + 1)" style="padding:24px; text-align:center; color:#999;">
+                                    @I18n.T("MSG_NO_DATA")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            @* 卡片模式 *@
+            <div class="subform-cards" style="display:flex; flex-direction:column; gap:8px;">
+                @if (_items.Any())
+                {
+                    @foreach (var item in _items)
+                    {
+                        <div class="subform-card" style="padding:12px; background:#fff; border:1px solid #e0e0e0; border-radius:4px;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px;">
+                                @foreach (var field in _fields)
+                                {
+                                    <div>
+                                        <div style="font-size:11px; color:#999; margin-bottom:4px;">@field.Label</div>
+                                        <div style="font-size:12px;">@GetFieldValue(item, field.Name)</div>
+                                    </div>
+                                }
+                            </div>
+                            <div style="margin-top:8px; text-align:right; border-top:1px solid #f0f0f0; padding-top:8px;">
+                                @if (Widget.AllowEdit)
+                                {
+                                    <button
+                                        style="margin:0 4px; padding:2px 8px; cursor:pointer; background:#fff; border:1px solid #d9d9d9; border-radius:2px;"
+                                        @onclick="() => HandleEditItem(item)">
+                                        @I18n.T("BTN_EDIT")
+                                    </button>
+                                }
+                                @if (Widget.AllowDelete)
+                                {
+                                    <button
+                                        style="margin:0 4px; padding:2px 8px; cursor:pointer; background:#fff; border:1px solid #ff4d4f; color:#ff4d4f; border-radius:2px;"
+                                        @onclick="() => HandleDeleteItem(item)">
+                                        @I18n.T("BTN_DELETE")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="padding:24px; text-align:center; color:#999; background:#fafafa; border-radius:4px;">
+                        @I18n.T("MSG_NO_DATA")
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public SubFormWidget Widget { get; set; } = null!;
+
+    [Parameter]
+    public string? ContainerStyle { get; set; }
+
+    [Parameter]
+    public string? MasterEntityId { get; set; }
+
+    private bool _isLoading = false;
+    private string? _error;
+    private List<Dictionary<string, object?>> _items = new();
+    private List<SubFormField> _fields = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 初始化字段定义（实际应该从实体定义中获取）
+        // 这里使用模拟数据
+        _fields = new List<SubFormField>
+        {
+            new() { Name = "id", Label = "ID" },
+            new() { Name = "name", Label = I18n.T("LBL_NAME") },
+            new() { Name = "description", Label = I18n.T("LBL_DESCRIPTION") }
+        };
+
+        if (!string.IsNullOrWhiteSpace(MasterEntityId))
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(MasterEntityId) && !_isLoading)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Widget.RelatedEntityType) || string.IsNullOrWhiteSpace(MasterEntityId))
+        {
+            return;
+        }
+
+        try
+        {
+            _isLoading = true;
+            _error = null;
+            StateHasChanged();
+
+            var client = await Auth.CreateClientWithAuthAsync();
+
+            // 构建查询 URL（根据外键字段查询）
+            var url = $"/api/{Widget.RelatedEntityType}s?{Widget.ForeignKeyField}={MasterEntityId}";
+
+            var response = await client.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+            {
+                _error = $"Failed to load data: {response.StatusCode}";
+                return;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(content);
+
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                _items = doc.RootElement.EnumerateArray()
+                    .Select(element => JsonElementToDictionary(element))
+                    .ToList();
+            }
+            else
+            {
+                _error = "Unexpected API response format";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Exception: {ex.Message}";
+            Logger.LogError(ex, "Error loading sub-form data");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Dictionary<string, object?> JsonElementToDictionary(JsonElement element)
+    {
+        var dict = new Dictionary<string, object?>();
+        foreach (var property in element.EnumerateObject())
+        {
+            dict[property.Name] = property.Value.ValueKind switch
+            {
+                JsonValueKind.String => property.Value.GetString(),
+                JsonValueKind.Number => property.Value.GetRawText(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => property.Value.GetRawText()
+            };
+        }
+        return dict;
+    }
+
+    private string GetFieldValue(Dictionary<string, object?> item, string fieldName)
+    {
+        if (item.TryGetValue(fieldName, out var value))
+        {
+            return value?.ToString() ?? "";
+        }
+        return "";
+    }
+
+    private bool IsMaxItemsReached()
+    {
+        return Widget.MaxItems > 0 && _items.Count >= Widget.MaxItems;
+    }
+
+    private void HandleAddItem()
+    {
+        // 导航到新增页面或打开对话框
+        if (!string.IsNullOrWhiteSpace(Widget.RelatedEntityType))
+        {
+            Nav.NavigateTo($"/{Widget.RelatedEntityType}/new?{Widget.ForeignKeyField}={MasterEntityId}");
+        }
+    }
+
+    private void HandleEditItem(Dictionary<string, object?> item)
+    {
+        var id = GetFieldValue(item, "id");
+        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(Widget.RelatedEntityType))
+        {
+            Nav.NavigateTo($"/{Widget.RelatedEntityType}/{id}");
+        }
+    }
+
+    private async Task HandleDeleteItem(Dictionary<string, object?> item)
+    {
+        var id = GetFieldValue(item, "id");
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(Widget.RelatedEntityType))
+        {
+            return;
+        }
+
+        try
+        {
+            var client = await Auth.CreateClientWithAuthAsync();
+            var response = await client.DeleteAsync($"/api/{Widget.RelatedEntityType}s/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadDataAsync();
+            }
+            else
+            {
+                Logger.LogError("Failed to delete {EntityType} {Id}: {StatusCode}", Widget.RelatedEntityType, id, response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting {EntityType} {Id}", Widget.RelatedEntityType, id);
+        }
+    }
+
+    private class SubFormField
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+    }
+}

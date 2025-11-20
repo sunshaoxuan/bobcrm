@@ -36,6 +36,9 @@ public class FormTemplate
     /// </summary>
     public bool IsSystemDefault { get; set; } = false;
 
+    /// <summary>模板版本号（用于跟踪变更）</summary>
+    public int Version { get; set; } = 1;
+
     /// <summary>布局JSON（Widget树）</summary>
     public string? LayoutJson { get; set; }
 
