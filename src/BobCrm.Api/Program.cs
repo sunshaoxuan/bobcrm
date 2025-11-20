@@ -197,6 +197,7 @@ builder.Services.AddScoped<FunctionTreeBuilder>();
 builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
+builder.Services.AddScoped<FieldFilterService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 
