@@ -10,6 +10,23 @@
 ## [0.6.0] - 2025-11-20
 
 ### Added
+#### 客户列表模板化迁移
+- **后端增强**：
+  - `EntityDefinitionSynchronizer` 添加模板和绑定自动生成功能
+  - 在同步实体定义后自动调用 `EnsureTemplatesAndBindingsAsync`，确保系统实体（如Customer）存在模板（列表、详情、编辑）和绑定
+  - `DefaultTemplateGenerator` 在生成List模板时自动添加 `RowActionsJson`，包含Edit和Delete操作
+- **前端增强**：
+  - `DataGridRuntime.razor` 实现完整的行操作功能
+    - 解析并渲染 `RowActionsJson` 中定义的操作按钮（Edit、Delete）
+    - 实现行点击导航到详情页（`/customer/{id}`）
+    - 实现Edit按钮导航和Delete按钮删除功能
+    - 确保 `ApiEndpoint` 正确映射到实体API（`/api/customers`）
+  - `Customers.razor` 已迁移到使用 `ListTemplateHost` 和 `DataGridWidget` 的模板驱动方法
+- **自动化测试**：
+  - 验证 `TemplateRuntimeEndpoint` 返回 "customer" 的种子模板
+  - 验证 `DataGridWidget` 的序列化/反序列化
+  - 所有单元测试通过（379个通过，13个跳过）
+
 #### 动态枚举系统完善
 - **DTO扩展**：
   - `CreateEnumDefinitionRequest`添加`IsEnabled`属性支持启用状态控制
