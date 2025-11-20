@@ -496,7 +496,7 @@ else
 
                 if (!resp.IsSuccessStatusCode)
                 {
-                    error = $"模板加载失败: {resp.StatusCode}";
+                    error = $"{I18n.T("MSG_TEMPLATE_LOAD_FAILED")}: {resp.StatusCode}";
                     await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load template {id}: {resp.StatusCode}");
                     return;
                 }
@@ -508,7 +508,7 @@ else
 
                 if (template == null)
                 {
-                    error = "模板数据解析失败";
+                    error = I18n.T("MSG_TEMPLATE_PARSE_FAILED");
                     return;
                 }
 
@@ -562,7 +562,7 @@ else
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[FormDesigner] LoadTemplate failed: {ex.Message}");
-            error = $"加载失败: {ex.Message}";
+            error = $"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}";
         }
     }
 
@@ -615,13 +615,13 @@ else
             // 验证必填字段
             if (string.IsNullOrWhiteSpace(templateName))
             {
-                await JS.InvokeVoidAsync("alert", "请输入模板名称");
+                await JS.InvokeVoidAsync("alert", I18n.T("MSG_TEMPLATE_NAME_REQUIRED"));
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(entityType))
             {
-                await JS.InvokeVoidAsync("alert", "请选择实体类型");
+                await JS.InvokeVoidAsync("alert", I18n.T("MSG_ENTITY_TYPE_REQUIRED"));
                 return;
             }
 
@@ -661,13 +661,13 @@ else
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    await JS.InvokeVoidAsync("alert", "模板更新成功");
+                    await JS.InvokeVoidAsync("alert", I18n.T("MSG_TEMPLATE_UPDATE_SUCCESS"));
                     await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Template {templateIdNumeric.Value} updated successfully");
                 }
                 else
                 {
                     var errorContent = await resp.Content.ReadAsStringAsync();
-                    error = $"更新失败: {resp.StatusCode} - {errorContent}";
+                    error = $"{I18n.T("MSG_UPDATE_FAILED")}: {resp.StatusCode} - {errorContent}";
                     await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Update failed: {error}");
                 }
             }
@@ -698,7 +698,7 @@ else
                         templateIdNumeric = newTemplate.Id;
                         isEntityTypeLocked = true; // 保存后锁定实体类型
                         originalEntityType = entityType;
-                        await JS.InvokeVoidAsync("alert", "模板创建成功");
+                        await JS.InvokeVoidAsync("alert", I18n.T("MSG_TEMPLATE_CREATE_SUCCESS"));
                         await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Template created with ID {newTemplate.Id}");
 
                         // 更新URL以反映新的模板ID（避免重复创建）
@@ -708,7 +708,7 @@ else
                 else
                 {
                     var errorContent = await resp.Content.ReadAsStringAsync();
-                    error = $"创建失败: {resp.StatusCode} - {errorContent}";
+                    error = $"{I18n.T("MSG_CREATE_FAILED")}: {resp.StatusCode} - {errorContent}";
                     await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Create failed: {error}");
                 }
             }
