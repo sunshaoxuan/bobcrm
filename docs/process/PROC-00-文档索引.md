@@ -29,6 +29,8 @@
 ## 2. 指南与手册（guides/）
 - [FRONT-01-实体定义与动态实体操作指南](guides/FRONT-01-实体定义与动态实体操作指南.md)
 - [DEV-02-Roslyn环境配置](guides/DEV-02-Roslyn环境配置.md)
+- [GUIDE-05-动态枚举系统使用指南](guides/GUIDE-05-动态枚举系统使用指南.md)
+- [GUIDE-06-菜单编辑器使用指南](guides/GUIDE-06-菜单编辑器使用指南.md)
 - [I18N-01-多语机制设计文档](guides/I18N-01-多语机制设计文档.md)
 - [I18N-02-元数据多语机制设计文档](guides/I18N-02-元数据多语机制设计文档.md)
 - [OPS-01-容器问题-设计说明](guides/OPS-01-容器问题-设计说明.md)
@@ -62,6 +64,8 @@
 - [PROC-03-代码评审与改进清单](process/PROC-03-代码评审与改进清单.md)
 - [PROC-04-文档代码差距审计报告](process/PROC-04-文档代码差距审计报告.md)
 - [PROC-05-多语言功能代码评审](process/PROC-05-多语言功能代码评审.md)
+- [PROC-06-下一步开发计划](process/PROC-06-下一步开发计划.md)
+- [PROC-07-系统实体模板化迁移记录](process/PROC-07-系统实体模板化迁移记录.md)
 - [ARCH-24-紧凑型顶部菜单导航-实施计划](process/ARCH-24-紧凑型顶部菜单导航-实施计划.md)
 
 ## 6. 示例（examples/）
