@@ -110,8 +110,8 @@ public static class WidgetRegistry
 
         if (!tabContainer.Children.OfType<TabWidget>().Any())
         {
-            var tab1 = new TabWidget { Label = "Tab 1", IsDefault = true };
-            var tab2 = new TabWidget { Label = "Tab 2" };
+            var tab1 = new TabWidget { Label = "LBL_TAB_1", IsDefault = true };
+            var tab2 = new TabWidget { Label = "LBL_TAB_2" };
             tabContainer.Children.Add(tab1);
             tabContainer.Children.Add(tab2);
         }

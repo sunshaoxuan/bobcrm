@@ -23,6 +23,14 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         PropertyNamingPolicy = null
     };
 
+    // Design tokens for layout generation
+    private const string BACKGROUND_COLOR_SECTION = "var(--bg-secondary)"; // Replaces #fafafa
+    private const string BACKGROUND_COLOR_CARD = "var(--bg-primary)";       // Replaces #ffffff
+    private const int WIDTH_BUTTON_PCT = 10;
+    private const int WIDTH_SEARCH_PCT = 30;
+    private const int WIDTH_FIELD_PCT = 48;
+    private const int WIDTH_COLUMN_PX = 150;
+
     private readonly AppDbContext? _db;
     private readonly ILogger<DefaultTemplateGenerator>? _logger;
 
@@ -179,7 +187,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     ["action"] = "create",
                     ["icon"] = "plus",
                     ["buttonType"] = "primary",
-                    ["width"] = 10,
+                    ["width"] = WIDTH_BUTTON_PCT,
                     ["widthUnit"] = "%"
                 },
                 new()
@@ -189,7 +197,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     ["label"] = "",
                     ["placeholder"] = "MSG_SEARCH_PLACEHOLDER",
                     ["dataField"] = "__search__",
-                    ["width"] = 30,
+                    ["width"] = WIDTH_SEARCH_PCT,
                     ["widthUnit"] = "%"
                 }
             };
@@ -207,7 +215,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     ["justifyContent"] = "space-between",
                     ["gap"] = 12,
                     ["padding"] = 12,
-                    ["backgroundColor"] = "#fafafa"
+                    ["backgroundColor"] = BACKGROUND_COLOR_SECTION
                 }
             };
             widgets.Add(toolbarSection);
@@ -217,7 +225,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             {
                 field = f.PropertyName?.ToLowerInvariant(),
                 label = ResolveLabel(f),
-                width = 150,
+                width = WIDTH_COLUMN_PX,
                 sortable = true
             }).ToList();
 
@@ -271,7 +279,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                             ["label"] = "BTN_SAVE",
                             ["action"] = "save",
                             ["buttonType"] = "primary",
-                            ["width"] = 10,
+                            ["width"] = WIDTH_BUTTON_PCT,
                             ["widthUnit"] = "%"
                         },
                         new()
@@ -281,7 +289,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                             ["label"] = "BTN_CANCEL",
                             ["action"] = "cancel",
                             ["buttonType"] = "default",
-                            ["width"] = 10,
+                            ["width"] = WIDTH_BUTTON_PCT,
                             ["widthUnit"] = "%"
                         }
                     },
@@ -312,7 +320,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     ["label"] = label,
                     ["dataField"] = propertyName,
                     ["required"] = field.IsRequired,
-                    ["width"] = 48,
+                    ["width"] = WIDTH_FIELD_PCT,
                     ["widthUnit"] = "%",
                     ["visible"] = true
                 };
@@ -347,7 +355,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                         ["flexWrap"] = true,
                         ["gap"] = 12,
                         ["padding"] = 16,
-                        ["backgroundColor"] = "#ffffff"
+                        ["backgroundColor"] = BACKGROUND_COLOR_CARD
                     }
                 };
                 widgets.Add(card);

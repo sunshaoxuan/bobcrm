@@ -146,6 +146,7 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             IRepository<FormTemplate> repo,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -154,7 +155,7 @@ public static class TemplateEndpoints
             if (template == null)
             {
                 logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
-                return Results.NotFound(new { error = "模板不存在" });
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
             return Results.Json(template);
@@ -224,6 +225,7 @@ public static class TemplateEndpoints
             IRepository<FormTemplate> repo,
             IUnitOfWork uow,
             UpdateTemplateRequest req,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -232,7 +234,7 @@ public static class TemplateEndpoints
             if (template == null)
             {
                 logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
-                return Results.NotFound(new { error = "模板不存在" });
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
             logger.LogInformation("[Templates] Updating template {TemplateId} for user {UserId}", id, uid);
@@ -244,7 +246,7 @@ public static class TemplateEndpoints
             {
                 logger.LogWarning("[Templates] Attempted to change EntityType from {Old} to {New}",
                     template.EntityType, req.EntityType);
-                return Results.BadRequest(new { error = "实体类型一旦设置后不允许修改" });
+                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_CHANGE_ENTITY_TYPE") });
             }
 
             // 如果设置为用户默认模板，需要取消同一实体类型下的其他用户默认模板
@@ -291,6 +293,7 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             IRepository<FormTemplate> repo,
             IUnitOfWork uow,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -299,28 +302,28 @@ public static class TemplateEndpoints
             if (template == null)
             {
                 logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
-                return Results.NotFound(new { error = "模板不存在" });
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
             // 系统默认模板不允许删除
             if (template.IsSystemDefault)
             {
                 logger.LogWarning("[Templates] Attempted to delete system default template {TemplateId}", id);
-                return Results.BadRequest(new { error = "系统默认模板不允许删除" });
+                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_SYSTEM_TEMPLATE") });
             }
 
             // 用户默认模板不允许删除
             if (template.IsUserDefault)
             {
                 logger.LogWarning("[Templates] Attempted to delete user default template {TemplateId}", id);
-                return Results.BadRequest(new { error = "用户默认模板不允许删除，请先设置其他模板为默认模板" });
+                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_USER_DEFAULT") });
             }
 
             // 正在使用的模板不允许删除
             if (template.IsInUse)
             {
                 logger.LogWarning("[Templates] Attempted to delete in-use template {TemplateId}", id);
-                return Results.BadRequest(new { error = "正在使用的模板不允许删除" });
+                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_IN_USE") });
             }
 
             repo.Remove(template);
@@ -328,7 +331,7 @@ public static class TemplateEndpoints
 
             logger.LogInformation("[Templates] Template {TemplateId} deleted successfully", id);
 
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("模板已删除"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(i18n.T("MSG_TEMPLATE_DELETED")));
         })
         .WithName("DeleteTemplate")
         .WithSummary("删除模板")
@@ -341,6 +344,7 @@ public static class TemplateEndpoints
             IRepository<FormTemplate> repo,
             IUnitOfWork uow,
             CopyTemplateRequest req,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -353,7 +357,7 @@ public static class TemplateEndpoints
             if (sourceTemplate == null)
             {
                 logger.LogWarning("[Templates] Template {TemplateId} not found for copying by user {UserId}", id, uid);
-                return Results.NotFound(new { error = "模板不存在" });
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
             logger.LogInformation("[Templates] Copying template {TemplateId} for user {UserId}, new name: {Name}",
@@ -399,6 +403,7 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             IRepository<FormTemplate> repo,
             IUnitOfWork uow,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -411,13 +416,13 @@ public static class TemplateEndpoints
             if (template == null)
             {
                 logger.LogWarning("[Templates] Template {TemplateId} not found for applying by user {UserId}", id, uid);
-                return Results.NotFound(new { error = "模板不存在" });
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
             if (string.IsNullOrWhiteSpace(template.EntityType))
             {
                 logger.LogWarning("[Templates] Cannot apply template {TemplateId} without EntityType", id);
-                return Results.BadRequest(new { error = "模板缺少实体类型，无法应用" });
+                return Results.BadRequest(new { error = i18n.T("MSG_TEMPLATE_NO_ENTITY_TYPE") });
             }
 
             logger.LogInformation("[Templates] Applying template {TemplateId} for user {UserId}, entity: {EntityType}",
@@ -515,6 +520,7 @@ public static class TemplateEndpoints
             string entityType,
             ClaimsPrincipal user,
             IRepository<FormTemplate> repo,
+            I18nService i18n,
             ILogger<Program> logger) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -557,7 +563,7 @@ public static class TemplateEndpoints
             }
 
             logger.LogDebug("[Templates] No template found for entity {EntityType}", entityType);
-            return Results.NotFound(new { error = "未找到模板" });
+            return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
         })
         .WithName("GetEffectiveTemplate")
         .WithSummary("获取有效模板")

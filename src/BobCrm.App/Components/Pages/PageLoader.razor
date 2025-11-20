@@ -154,8 +154,6 @@ else if (entityData != null)
             loading = true;
             await InvokeAsync(StateHasChanged);
 
-            await JS.InvokeVoidAsync("console.log", $"[PageLoader] Loading data for entity: {EntityType}, ID: {Id}");
-
             runtimeContext = null;
             appliedScopes = Array.Empty<string>();
             string? layoutJson = null;
@@ -169,8 +167,6 @@ else if (entityData != null)
                     .Distinct(System.StringComparer.OrdinalIgnoreCase)
                     .ToArray() ?? Array.Empty<string>();
                 layoutJson = runtime.Template.LayoutJson;
-                await JS.InvokeVoidAsync("console.log",
-                    $"[PageLoader] Runtime binding resolved: {runtime.Binding.Id}");
             }
 
             if (string.IsNullOrWhiteSpace(layoutJson))
@@ -189,28 +185,17 @@ else if (entityData != null)
                     if (template != null)
                     {
                         layoutJson = template.LayoutJson;
-                        await JS.InvokeVoidAsync("console.log",
-                            $"[PageLoader] Template loaded: {template.Name} (ID: {template.Id}, IsDefault: {template.IsUserDefault})");
                     }
                 }
                 else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     // 如果没有找到模板，回退到旧的UserLayout API
-                    await JS.InvokeVoidAsync("console.warn",
-                        $"[PageLoader] No FormTemplate found for entity {EntityType}, falling back to UserLayout API");
-
                     var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
                     if (layoutResp.IsSuccessStatusCode)
                     {
                         var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                         layoutJson = layoutDoc.GetRawText();
-                        await JS.InvokeVoidAsync("console.log", $"[PageLoader] Fallback layout loaded from UserLayout");
                     }
-                }
-                else
-                {
-                    await JS.InvokeVoidAsync("console.warn",
-                        $"[PageLoader] Failed to load template: {templateResp.StatusCode}");
                 }
             }
 
@@ -226,7 +211,6 @@ else if (entityData != null)
 
             var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
             entityData = dataDoc;
-            await JS.InvokeVoidAsync("console.log", $"[PageLoader] Entity data loaded successfully");
 
             // 3. 解析布局JSON（如果遇到数据绑定错误，保留控件但不显示数据）
             if (!string.IsNullOrWhiteSpace(layoutJson))
@@ -235,18 +219,16 @@ else if (entityData != null)
                 {
                     var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
                     layoutWidgets = ParseLayoutFromJson(doc.RootElement);
-                    await JS.InvokeVoidAsync("console.log", $"[PageLoader] Parsed {layoutWidgets.Count} widgets from layout");
                 }
                 catch (Exception ex)
                 {
-                    await JS.InvokeVoidAsync("console.error", $"[PageLoader] Failed to parse layout JSON: {ex.Message}");
-                    // 解析失败，使用空布局
+                    // 解析失败，使用空布局，记录错误到日志但不显示给用户
+                    System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to parse layout JSON: {ex.Message}");
                     layoutWidgets = new List<DraggableWidget>();
                 }
             }
             else
             {
-                await JS.InvokeVoidAsync("console.log", "[PageLoader] No layout JSON, using empty widget list");
                 layoutWidgets = new List<DraggableWidget>();
             }
 
@@ -266,21 +248,17 @@ else if (entityData != null)
                     }
                     catch (Exception ex)
                     {
-                        // 单个字段绑定错误不影响其他字段
-                        await JS.InvokeVoidAsync("console.warn",
-                            $"[PageLoader] Failed to bind field, skipping: {ex.Message}");
+                        // 单个字段绑定错误不影响其他字段，仅记录到调试日志
+                        System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to bind field, skipping: {ex.Message}");
                     }
                 }
-                await JS.InvokeVoidAsync("console.log", $"[PageLoader] Initialized field values");
             }
 
             loading = false;
             await InvokeAsync(StateHasChanged);
-            await JS.InvokeVoidAsync("console.log", "[PageLoader] Load completed successfully");
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[PageLoader] Load failed: {ex.Message}");
             error = ex.Message;
             loading = false;
             await InvokeAsync(StateHasChanged);

@@ -6,33 +6,33 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 
-<PageTitle>模板管理 - OneCRM</PageTitle>
+<PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
 
 <div style="max-width:1200px; margin:0 auto; padding:24px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
-        <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">模板管理</h2>
+        <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">@I18n.T("TPL_PAGE_TITLE")</h2>
         <button @onclick="CreateNewTemplate" class="btn btn-primary">
-            ➕ 新建模板
+            ➕ @I18n.T("BTN_NEW_TEMPLATE")
         </button>
     </div>
 
     <!-- 筛选器 -->
     <div class="panel" style="margin-bottom:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <select @onchange="OnFilterChanged" name="usageType" class="field-control" style="width:150px" value="@filterUsageType">
-            <option value="">全部用途</option>
-            <option value="List">列表</option>
-            <option value="Detail">详情</option>
-            <option value="Edit">编辑</option>
+            <option value="">@I18n.T("LBL_ALL_USAGE")</option>
+            <option value="List">@I18n.T("TPL_USAGE_LIST")</option>
+            <option value="Detail">@I18n.T("TPL_USAGE_DETAIL")</option>
+            <option value="Edit">@I18n.T("TPL_USAGE_EDIT")</option>
         </select>
 
         <select @onchange="OnFilterChanged" name="templateType" class="field-control" style="width:150px" value="@filterTemplateType">
-            <option value="">全部类型</option>
-            <option value="system">系统模板</option>
-            <option value="user">用户模板</option>
+            <option value="">@I18n.T("LBL_ALL_TYPES")</option>
+            <option value="system">@I18n.T("LBL_SYSTEM_TEMPLATE")</option>
+            <option value="user">@I18n.T("LBL_USER_TEMPLATE")</option>
         </select>
 
         <input type="text"
-               placeholder="搜索模板名称..."
+               placeholder="@I18n.T("TPL_SEARCH_PLACEHOLDER")"
                class="field-control"
                style="flex:1; min-width:200px"
                @bind="searchKeyword"
@@ -40,14 +40,14 @@
                @onkeyup="OnSearchChanged" />
 
         <select @onchange="OnGroupByChanged" class="field-control" style="width:150px" value="@groupBy">
-            <option value="none">平铺列表</option>
-            <option value="entity">按实体分组</option>
+            <option value="none">@I18n.T("LBL_FLAT_LIST")</option>
+            <option value="entity">@I18n.T("LBL_GROUP_BY_ENTITY")</option>
         </select>
 
         @if (HasActiveFilters())
         {
             <button @onclick="ClearFilters" class="btn btn-ghost btn-sm">
-                清除筛选
+                @I18n.T("BTN_CLEAR_FILTERS")
             </button>
         }
     </div>
@@ -55,7 +55,7 @@
     @if (loading)
     {
         <div style="padding:48px; text-align:center; color:var(--muted)">
-            加载中...
+            @I18n.T("LBL_LOADING")...
         </div>
     }
     else if (!string.IsNullOrWhiteSpace(error))
@@ -97,9 +97,9 @@
             <div class="panel info-card">
                 <div class="info-icon">ℹ️</div>
                 <div class="info-content">
-                    <div class="info-title">暂无模板</div>
+                    <div class="info-title">@I18n.T("MSG_NO_TEMPLATES")</div>
                     <div class="info-text">
-                        点击右上角"新建模板"按钮创建您的第一个表单模板
+                        @I18n.T("MSG_NO_TEMPLATES_HINT")
                     </div>
                 </div>
             </div>
@@ -319,7 +319,7 @@
             }
             else
             {
-                error = $"加载失败: {resp.StatusCode}";
+                error = $"{I18n.T("MSG_LOAD_DATA_FAILED")}: {resp.StatusCode}";
             }
 
             loading = false;
@@ -395,7 +395,7 @@
             var template = FindTemplate(templateId);
             if (template == null) return;
 
-            var newName = await JS.InvokeAsync<string>("prompt", $"请输入新模板名称:", $"{template.Name} (副本)");
+            var newName = await JS.InvokeAsync<string>("prompt", I18n.T("TPL_PROMPT_COPY_NAME"), $"{template.Name}{I18n.T("LBL_COPY_SUFFIX")}");
             if (string.IsNullOrWhiteSpace(newName)) return;
 
             var payload = new
@@ -403,7 +403,7 @@
                 name = newName,
                 entityType = template.EntityType,
                 usageType = template.UsageType,
-                description = $"从 '{template.Name}' 复制"
+                description = string.Format(I18n.T("TPL_COPIED_FROM"), template.Name)
             };
 
             var client = await Auth.CreateClientWithAuthAsync();
@@ -411,19 +411,19 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                ShowMessage("模板已复制", true);
+                ShowMessage(I18n.T("MSG_TEMPLATE_COPIED"), true);
                 await LoadTemplates();
             }
             else
             {
                 var errorMsg = await resp.Content.ReadAsStringAsync();
-                ShowMessage($"复制失败: {errorMsg}", false);
+                ShowMessage($"{I18n.T("MSG_COPY_FAILED")}: {errorMsg}", false);
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[Templates] Copy error: {ex.Message}");
-            ShowMessage($"复制失败: {ex.Message}", false);
+            ShowMessage($"{I18n.T("MSG_COPY_FAILED")}: {ex.Message}", false);
         }
     }
 
@@ -434,8 +434,7 @@
             var template = FindTemplate(templateId);
             if (template == null) return;
 
-            var confirm = await JS.InvokeAsync<bool>("confirm",
-                $"确定要将 '{template.Name}' 设置为默认模板吗？\n这将替换当前的默认模板。");
+            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_APPLY_TEMPLATE_CONFIRM"));
             if (!confirm) return;
 
             var client = await Auth.CreateClientWithAuthAsync();
@@ -443,19 +442,19 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                ShowMessage("模板已应用为默认模板", true);
+                ShowMessage(I18n.T("MSG_TEMPLATE_APPLIED"), true);
                 await LoadTemplates();
             }
             else
             {
                 var errorMsg = await resp.Content.ReadAsStringAsync();
-                ShowMessage($"应用失败: {errorMsg}", false);
+                ShowMessage($"{I18n.T("MSG_APPLY_FAILED")}: {errorMsg}", false);
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[Templates] Apply error: {ex.Message}");
-            ShowMessage($"应用失败: {ex.Message}", false);
+            ShowMessage($"{I18n.T("MSG_APPLY_FAILED")}: {ex.Message}", false);
         }
     }
 
@@ -476,18 +475,18 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                ShowMessage("已设置为默认模板", true);
+                ShowMessage(I18n.T("MSG_SET_AS_DEFAULT_SUCCESS"), true);
                 await LoadTemplates();
             }
             else
             {
-                ShowMessage("设置失败", false);
+                ShowMessage(I18n.T("MSG_SET_FAILED"), false);
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[Templates] Set default error: {ex.Message}");
-            ShowMessage($"设置失败: {ex.Message}", false);
+            ShowMessage($"{I18n.T("MSG_SET_FAILED")}: {ex.Message}", false);
         }
     }
 
@@ -495,26 +494,26 @@
     {
         try
         {
-            var confirm = await JS.InvokeAsync<bool>("confirm", "确定要删除此模板吗？");
+            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_CONFIRM_DELETE_TEMPLATE"));
             if (!confirm) return;
 
             var resp = await Auth.DeleteWithRefreshAsync($"/api/templates/{templateId}");
 
             if (resp.IsSuccessStatusCode)
             {
-                ShowMessage("模板已删除", true);
+                ShowMessage(I18n.T("MSG_TEMPLATE_DELETED"), true);
                 await LoadTemplates();
             }
             else
             {
                 var errorMsg = await resp.Content.ReadAsStringAsync();
-                ShowMessage($"删除失败: {errorMsg}", false);
+                ShowMessage($"{I18n.T("MSG_DELETE_FAILED")}: {errorMsg}", false);
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("console.error", $"[Templates] Delete error: {ex.Message}");
-            ShowMessage($"删除失败: {ex.Message}", false);
+            ShowMessage($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}", false);
         }
     }
 
@@ -541,7 +540,7 @@
         {
             builder.OpenElement(9, "span");
             builder.AddAttribute(10, "class", "badge badge-default");
-            builder.AddContent(11, "✓ 用户默认");
+            builder.AddContent(11, $"✓ {I18n.T("LBL_USER_DEFAULT")}");
             builder.CloseElement();
         }
 
@@ -549,7 +548,7 @@
         {
             builder.OpenElement(12, "span");
             builder.AddAttribute(13, "class", "badge badge-info");
-            builder.AddContent(14, "🔒 系统模板");
+            builder.AddContent(14, $"🔒 {I18n.T("LBL_SYSTEM_TEMPLATE")}");
             builder.CloseElement();
         }
 
@@ -581,7 +580,7 @@
         // 元数据
         builder.OpenElement(21, "div");
         builder.AddAttribute(22, "class", "template-meta");
-        builder.AddContent(23, $"更新于 {template.UpdatedAt:yyyy-MM-dd HH:mm}");
+        builder.AddContent(23, $"{I18n.T("LBL_UPDATED_AT")} {template.UpdatedAt:yyyy-MM-dd HH:mm}");
         builder.CloseElement();
 
         builder.CloseElement(); // template-info
@@ -596,7 +595,7 @@
             builder.OpenElement(26, "button");
             builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
             builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
-            builder.AddContent(29, "✏️ 编辑");
+            builder.AddContent(29, $"✏️ {I18n.T("BTN_EDIT_TEMPLATE")}");
             builder.CloseElement();
         }
 
@@ -604,7 +603,7 @@
         builder.OpenElement(30, "button");
         builder.AddAttribute(31, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => CopyTemplate(template.Id)));
-        builder.AddContent(33, "📋 复制");
+        builder.AddContent(33, $"📋 {I18n.T("BTN_COPY")}");
         builder.CloseElement();
 
         // 应用按钮（设为默认）
@@ -613,7 +612,7 @@
             builder.OpenElement(34, "button");
             builder.AddAttribute(35, "class", "btn btn-ghost btn-sm");
             builder.AddAttribute(36, "onclick", EventCallback.Factory.Create(this, () => ApplyTemplate(template.Id)));
-            builder.AddContent(37, "✓ 应用");
+            builder.AddContent(37, $"✓ {I18n.T("BTN_APPLY")}");
             builder.CloseElement();
         }
 
@@ -623,7 +622,7 @@
         builder.AddAttribute(39, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(40, "disabled", !canDelete);
         builder.AddAttribute(41, "onclick", EventCallback.Factory.Create(this, () => DeleteTemplate(template.Id)));
-        builder.AddContent(42, "🗑️ 删除");
+        builder.AddContent(42, $"🗑️ {I18n.T("BTN_DELETE")}");
         builder.CloseElement();
 
         builder.CloseElement(); // template-actions
@@ -666,9 +665,9 @@
     {
         return usageType switch
         {
-            BobCrm.App.Models.FormTemplateUsageType.List => "列表",
-            BobCrm.App.Models.FormTemplateUsageType.Detail => "详情",
-            BobCrm.App.Models.FormTemplateUsageType.Edit => "编辑",
+            BobCrm.App.Models.FormTemplateUsageType.List => I18n.T("TPL_USAGE_LIST"),
+            BobCrm.App.Models.FormTemplateUsageType.Detail => I18n.T("TPL_USAGE_DETAIL"),
+            BobCrm.App.Models.FormTemplateUsageType.Edit => I18n.T("TPL_USAGE_EDIT"),
             _ => usageType.ToString()
         };
     }

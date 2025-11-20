@@ -949,6 +949,46 @@
   "MSG_ENUM_DELETE_SUCCESS": { "zh": "枚举删除成功", "ja": "列挙を削除しました", "en": "Enum deleted successfully" },
   "MSG_OPTION_VALUE_REQUIRED": { "zh": "选项值不能为空", "ja": "オプション値は必須です", "en": "Option value is required" },
   "TXT_ENUM_CODE_HINT": { "zh": "用于引用的唯一标识，如: customer_type", "ja": "参照用の一意識別子、例: customer_type", "en": "Unique identifier for reference, e.g.: customer_type" },
-  "MENU_ENUM_MANAGEMENT": { "zh": "枚举管理", "ja": "列挙管理", "en": "Enum Management" }
+  "MENU_ENUM_MANAGEMENT": { "zh": "枚举管理", "ja": "列挙管理", "en": "Enum Management" },
+
+  "BTN_COPY": { "zh": "复制", "ja": "コピー", "en": "Copy" },
+  "BTN_APPLY": { "zh": "应用", "ja": "適用", "en": "Apply" },
+  "BTN_CLEAR_FILTERS": { "zh": "清除筛选", "ja": "フィルタをクリア", "en": "Clear Filters" },
+
+  "LBL_ALL_USAGE": { "zh": "全部用途", "ja": "すべての用途", "en": "All Usage" },
+  "LBL_ALL_TYPES": { "zh": "全部类型", "ja": "すべてのタイプ", "en": "All Types" },
+  "LBL_SYSTEM_TEMPLATE": { "zh": "系统模板", "ja": "システムテンプレート", "en": "System Template" },
+  "LBL_FLAT_LIST": { "zh": "平铺列表", "ja": "フラットリスト", "en": "Flat List" },
+  "LBL_GROUP_BY_ENTITY": { "zh": "按实体分组", "ja": "エンティティ別にグループ化", "en": "Group by Entity" },
+  "LBL_UPDATED_AT": { "zh": "更新于", "ja": "更新日時", "en": "Updated at" },
+  "LBL_COPY_SUFFIX": { "zh": " (副本)", "ja": " (コピー)", "en": " (Copy)" },
+  "LBL_TAB_1": { "zh": "标签页 1", "ja": "タブ 1", "en": "Tab 1" },
+  "LBL_TAB_2": { "zh": "标签页 2", "ja": "タブ 2", "en": "Tab 2" },
+
+  "MSG_NO_TEMPLATES_HINT": { "zh": "点击右上角"新建模板"按钮创建您的第一个表单模板", "ja": "右上の「新規テンプレート」ボタンをクリックして最初のフォームテンプレートを作成してください", "en": "Click the 'New Template' button in the upper right corner to create your first form template" },
+  "MSG_TEMPLATE_COPIED": { "zh": "模板已复制", "ja": "テンプレートがコピーされました", "en": "Template copied" },
+  "MSG_COPY_FAILED": { "zh": "复制失败", "ja": "コピーに失敗しました", "en": "Copy failed" },
+  "MSG_APPLY_TEMPLATE_CONFIRM": { "zh": "确定要将此模板设置为默认模板吗？\n这将替换当前的默认模板。", "ja": "このテンプレートをデフォルトに設定しますか？\n現在のデフォルトテンプレートが置き換えられます。", "en": "Are you sure you want to set this template as default?\nThis will replace the current default template." },
+  "MSG_TEMPLATE_APPLIED": { "zh": "模板已应用为默认模板", "ja": "テンプレートがデフォルトとして適用されました", "en": "Template applied as default" },
+  "MSG_APPLY_FAILED": { "zh": "应用失败", "ja": "適用に失敗しました", "en": "Apply failed" },
+  "MSG_SET_AS_DEFAULT_SUCCESS": { "zh": "已设置为默认模板", "ja": "デフォルトテンプレートとして設定されました", "en": "Set as default template" },
+  "MSG_SET_FAILED": { "zh": "设置失败", "ja": "設定に失敗しました", "en": "Set failed" },
+  "MSG_DELETE_FAILED": { "zh": "删除失败", "ja": "削除に失敗しました", "en": "Delete failed" },
+  "MSG_TEMPLATE_NOT_FOUND": { "zh": "模板不存在", "ja": "テンプレートが見つかりません", "en": "Template not found" },
+  "MSG_CANNOT_DELETE_SYSTEM_TEMPLATE": { "zh": "系统默认模板不允许删除", "ja": "システムデフォルトテンプレートは削除できません", "en": "Cannot delete system default template" },
+  "MSG_CANNOT_DELETE_USER_DEFAULT": { "zh": "用户默认模板不允许删除，请先设置其他模板为默认模板", "ja": "ユーザーデフォルトテンプレートは削除できません。まず他のテンプレートをデフォルトに設定してください", "en": "Cannot delete user default template. Please set another template as default first" },
+  "MSG_CANNOT_DELETE_IN_USE": { "zh": "正在使用的模板不允许删除", "ja": "使用中のテンプレートは削除できません", "en": "Cannot delete template in use" },
+  "MSG_TEMPLATE_NO_ENTITY_TYPE": { "zh": "模板缺少实体类型，无法应用", "ja": "テンプレートにエンティティタイプがありません。適用できません", "en": "Template missing entity type, cannot apply" },
+  "MSG_CANNOT_CHANGE_ENTITY_TYPE": { "zh": "实体类型一旦设置后不允许修改", "ja": "エンティティタイプは一度設定すると変更できません", "en": "Entity type cannot be changed once set" },
+  "MSG_LOAD_DATA_FAILED": { "zh": "加载数据失败", "ja": "データの読み込みに失敗しました", "en": "Failed to load data" },
+
+  "TPL_SEARCH_PLACEHOLDER": { "zh": "搜索模板名称...", "ja": "テンプレート名を検索...", "en": "Search template name..." },
+  "TPL_PROMPT_COPY_NAME": { "zh": "请输入新模板名称:", "ja": "新しいテンプレート名を入力してください:", "en": "Please enter new template name:" },
+  "TPL_COPIED_FROM": { "zh": "从 '{0}' 复制", "ja": "'{0}' からコピー", "en": "Copied from '{0}'" },
+  "TPL_COPIED_FROM_SYSTEM": { "zh": "从系统模板 '{0}' 复制", "ja": "システムテンプレート '{0}' からコピー", "en": "Copied from system template '{0}'" },
+  "TPL_USAGE_LIST": { "zh": "列表", "ja": "リスト", "en": "List" },
+  "TPL_USAGE_DETAIL": { "zh": "详情", "ja": "詳細", "en": "Detail" },
+  "TPL_USAGE_EDIT": { "zh": "编辑", "ja": "編集", "en": "Edit" },
+  "TPL_PAGE_TITLE": { "zh": "模板管理", "ja": "テンプレート管理", "en": "Template Management" }
 }
 
