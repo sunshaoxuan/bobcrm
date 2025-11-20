@@ -42,6 +42,14 @@
   - 按钮：`BTN_NEW_ENUM`, `BTN_ADD_OPTION`
   - 消息：`MSG_ENUM_CREATE_SUCCESS`, `MSG_ENUM_UPDATE_SUCCESS`, `MSG_ENUM_DELETE_SUCCESS`, `MSG_ENUM_LOAD_FAILED`, `MSG_ENUM_SAVE_FAILED`, `MSG_ENUM_CODE_REQUIRED`, `MSG_OPTION_VALUE_REQUIRED`, `MSG_CONFIRM_DELETE_ENUM`, `MSG_ENUM_IN_USE`  
   - 菜单：`MENU_SYS_ENTITY_ENUM`
+  
+#### 用户与角色模板化集成
+- **组件集成**：
+  - `UserRoleAssignmentWidget`：集成到 User 实体详情模板，提供可视化的角色分配界面
+  - `RolePermissionTreeWidget`：集成到 Role 实体详情模板，提供树形权限配置界面
+- **模板生成**：
+  - `DefaultTemplateGenerator` 自动识别 User/Role 实体并注入专用 Widget
+  - `WidgetRegistry` 注册 `userrole` and `permtree` 控件类型
 
 ### Changed
 - **API路径统一**：所有枚举API端点统一使用`/api/enums`前缀
