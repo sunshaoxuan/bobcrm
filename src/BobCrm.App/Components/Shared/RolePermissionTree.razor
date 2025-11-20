@@ -1,0 +1,313 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject IRoleService RoleService
+@inject IMessageService Message
+@inject I18nService I18n
+@inject IMultilingualTextResolver MultilingualResolver
+
+<div class="role-permission-tree">
+    @if (_loading)
+    {
+        <Spin />
+    }
+    else
+    {
+        <div class="permission-tree-header">
+            <h4>@I18n.T("LBL_ROLE_PERMISSIONS")</h4>
+            <Space>
+                <SpaceItem>
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CheckSquare" OnClick="SelectAllAsync">
+                        @I18n.T("BTN_SELECT_ALL")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.BorderOutlined" OnClick="DeselectAllAsync">
+                        @I18n.T("BTN_DESELECT_ALL")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.ExpandAlt" OnClick="ExpandAllAsync">
+                        @I18n.T("BTN_EXPAND_ALL")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CompressOutlined" OnClick="CollapseAllAsync">
+                        @I18n.T("BTN_COLLAPSE_ALL")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary"
+                            Size="@ButtonSize.Small"
+                            Icon="@IconType.Outline.Save"
+                            Loading="_saving"
+                            OnClick="SavePermissionsAsync">
+                        @I18n.T("BTN_SAVE")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </div>
+
+        @if (ShowSearch)
+        {
+            <div class="permission-tree-search">
+                <Input Placeholder="@I18n.T("LBL_SEARCH_PERMISSIONS")"
+                       @bind-Value="_searchText"
+                       AllowClear
+                       Suffix="@IconType.Outline.Search" />
+            </div>
+        }
+
+        <div class="permission-tree-container">
+            @if (_treeData.Count == 0)
+            {
+                <Empty Description="@I18n.T("TXT_NO_PERMISSIONS")" />
+            }
+            else
+            {
+                <Tree TItem="TreeNode<Guid>"
+                      DataSource="_treeData"
+                      TitleExpression="x => x.DataItem.Title"
+                      KeyExpression="x => x.DataItem.Key"
+                      ChildrenExpression="x => x.DataItem.Children"
+                      IsLeafExpression="x => x.DataItem.IsLeaf"
+                      Checkable
+                      Selectable="false"
+                      CheckedKeys="_checkedKeys"
+                      OnCheck="OnTreeCheck"
+                      ExpandedKeys="_expandedKeys"
+                      OnExpand="OnTreeExpand"
+                      DefaultExpandAll="@DefaultExpandAll" />
+            }
+        </div>
+
+        @if (ShowStatistics)
+        {
+            <div class="permission-tree-stats">
+                <Statistic Title="@I18n.T("LBL_TOTAL_FUNCTIONS")" Value="_totalFunctions" />
+                <Statistic Title="@I18n.T("LBL_SELECTED_PERMISSIONS")" Value="_checkedKeys.Length" />
+            </div>
+        }
+    }
+</div>
+
+<style>
+.role-permission-tree {
+    padding: 16px;
+}
+
+.permission-tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.permission-tree-header h4 {
+    margin: 0;
+}
+
+.permission-tree-search {
+    margin-bottom: 16px;
+}
+
+.permission-tree-container {
+    min-height: 300px;
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    padding: 12px;
+    background: #fafafa;
+}
+
+.permission-tree-stats {
+    margin-top: 16px;
+    display: flex;
+    gap: 24px;
+}
+</style>
+
+@code {
+    [Parameter]
+    public Guid? RoleId { get; set; }
+
+    [Parameter]
+    public bool ShowSearch { get; set; } = true;
+
+    [Parameter]
+    public bool ShowStatistics { get; set; } = true;
+
+    [Parameter]
+    public bool DefaultExpandAll { get; set; } = false;
+
+    [Parameter]
+    public bool CascadeSelect { get; set; } = true;
+
+    private bool _loading = true;
+    private bool _saving = false;
+    private string _searchText = "";
+    private List<TreeNode<Guid>> _treeData = new();
+    private string[] _checkedKeys = Array.Empty<string>();
+    private string[] _expandedKeys = Array.Empty<string>();
+    private int _totalFunctions = 0;
+    private Dictionary<Guid, FunctionMenuNode> _functionLookup = new();
+    private List<Guid> _initialCheckedFunctions = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RoleId.HasValue)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            // 获取功能树
+            var treeResponse = await RoleService.GetFunctionTreeAsync();
+            var functions = treeResponse.Tree;
+
+            // 获取角色详情（包含权限）
+            RoleProfileDto? role = null;
+            if (RoleId.HasValue)
+            {
+                role = await RoleService.GetRoleAsync(RoleId.Value);
+            }
+
+            // 构建查找表
+            _functionLookup.Clear();
+            BuildFunctionLookup(functions);
+
+            // 构建树数据
+            _treeData = functions.Select(f => BuildTreeNode(f)).ToList();
+            _totalFunctions = _functionLookup.Count;
+
+            // 设置已选中的权限
+            if (role != null && role.FunctionIds != null)
+            {
+                _initialCheckedFunctions = role.FunctionIds.ToList();
+                _checkedKeys = role.FunctionIds.Select(id => id.ToString()).ToArray();
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void BuildFunctionLookup(List<FunctionMenuNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            _functionLookup[node.Id] = node;
+            if (node.Children.Count > 0)
+            {
+                BuildFunctionLookup(node.Children);
+            }
+        }
+    }
+
+    private TreeNode<Guid> BuildTreeNode(FunctionMenuNode function)
+    {
+        var title = MultilingualResolver.Resolve(function.DisplayNameTranslations, function.Name);
+        var node = new TreeNode<Guid>
+        {
+            Key = function.Id.ToString(),
+            Title = $"{title} ({function.Code})",
+            IsLeaf = function.Children.Count == 0,
+            Children = function.Children.Select(BuildTreeNode).ToList()
+        };
+        return node;
+    }
+
+    private void OnTreeCheck(TreeEventArgs<Guid> args)
+    {
+        _checkedKeys = args.CheckedKeys ?? Array.Empty<string>();
+        StateHasChanged();
+    }
+
+    private void OnTreeExpand(TreeEventArgs<Guid> args)
+    {
+        _expandedKeys = args.ExpandedKeys ?? Array.Empty<string>();
+        StateHasChanged();
+    }
+
+    private async Task SelectAllAsync()
+    {
+        _checkedKeys = _functionLookup.Keys.Select(k => k.ToString()).ToArray();
+        await Message.Info(I18n.T("MSG_ALL_SELECTED"));
+    }
+
+    private async Task DeselectAllAsync()
+    {
+        _checkedKeys = Array.Empty<string>();
+        await Message.Info(I18n.T("MSG_ALL_DESELECTED"));
+    }
+
+    private async Task ExpandAllAsync()
+    {
+        _expandedKeys = _functionLookup.Keys.Select(k => k.ToString()).ToArray();
+        await Task.CompletedTask;
+    }
+
+    private async Task CollapseAllAsync()
+    {
+        _expandedKeys = Array.Empty<string>();
+        await Task.CompletedTask;
+    }
+
+    private async Task SavePermissionsAsync()
+    {
+        if (!RoleId.HasValue)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var selectedFunctionIds = _checkedKeys.Select(Guid.Parse).ToList();
+
+            var request = new UpdatePermissionsRequestDto
+            {
+                FunctionIds = selectedFunctionIds,
+                FunctionPermissions = new List<FunctionPermissionDto>()
+            };
+
+            var success = await RoleService.UpdatePermissionsAsync(RoleId.Value, request);
+
+            if (success)
+            {
+                await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                _initialCheckedFunctions = selectedFunctionIds;
+            }
+            else
+            {
+                await Message.Error(I18n.T("MSG_SAVE_FAILED"));
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private class TreeNode<T>
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public bool IsLeaf { get; set; }
+        public List<TreeNode<T>> Children { get; set; } = new();
+    }
+}
