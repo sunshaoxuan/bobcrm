@@ -5,6 +5,7 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject IModalService Modal
 
 <PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
 
@@ -327,7 +328,6 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Load error: {ex.Message}");
             error = ex.Message;
             loading = false;
             await InvokeAsync(StateHasChanged);
@@ -395,8 +395,20 @@
             var template = FindTemplate(templateId);
             if (template == null) return;
 
-            var newName = await JS.InvokeAsync<string>("prompt", I18n.T("TPL_PROMPT_COPY_NAME"), $"{template.Name}{I18n.T("LBL_COPY_SUFFIX")}");
-            if (string.IsNullOrWhiteSpace(newName)) return;
+            var defaultName = $"{template.Name}{I18n.T("LBL_COPY_SUFFIX")}";
+            var newName = defaultName;
+
+            var confirmResult = await Modal.ConfirmAsync(new ConfirmOptions
+            {
+                Title = I18n.T("TPL_PROMPT_COPY_NAME"),
+                Content = @<div>
+                    <Input @bind-Value="@newName" Placeholder="@defaultName" />
+                </div>,
+                OkText = I18n.T("BTN_OK"),
+                CancelText = I18n.T("BTN_CANCEL")
+            });
+
+            if (!confirmResult || string.IsNullOrWhiteSpace(newName)) return;
 
             var payload = new
             {
@@ -422,7 +434,6 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Copy error: {ex.Message}");
             ShowMessage($"{I18n.T("MSG_COPY_FAILED")}: {ex.Message}", false);
         }
     }
@@ -434,7 +445,15 @@
             var template = FindTemplate(templateId);
             if (template == null) return;
 
-            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_APPLY_TEMPLATE_CONFIRM"));
+            var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+            {
+                Title = I18n.T("LBL_CONFIRM"),
+                Content = I18n.T("MSG_APPLY_TEMPLATE_CONFIRM"),
+                OkText = I18n.T("BTN_OK"),
+                CancelText = I18n.T("BTN_CANCEL"),
+                OkType = "primary"
+            });
+
             if (!confirm) return;
 
             var client = await Auth.CreateClientWithAuthAsync();
@@ -453,7 +472,6 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Apply error: {ex.Message}");
             ShowMessage($"{I18n.T("MSG_APPLY_FAILED")}: {ex.Message}", false);
         }
     }
@@ -485,7 +503,6 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Set default error: {ex.Message}");
             ShowMessage($"{I18n.T("MSG_SET_FAILED")}: {ex.Message}", false);
         }
     }
@@ -494,7 +511,15 @@
     {
         try
         {
-            var confirm = await JS.InvokeAsync<bool>("confirm", I18n.T("MSG_CONFIRM_DELETE_TEMPLATE"));
+            var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+            {
+                Title = I18n.T("LBL_CONFIRM"),
+                Content = I18n.T("MSG_CONFIRM_DELETE_TEMPLATE"),
+                OkText = I18n.T("BTN_OK"),
+                CancelText = I18n.T("BTN_CANCEL"),
+                OkType = "danger"
+            });
+
             if (!confirm) return;
 
             var resp = await Auth.DeleteWithRefreshAsync($"/api/templates/{templateId}");
@@ -512,7 +537,6 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Templates] Delete error: {ex.Message}");
             ShowMessage($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}", false);
         }
     }
