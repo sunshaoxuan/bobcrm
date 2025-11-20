@@ -27,115 +27,15 @@ public static class TemplateEndpoints
         // 获取用户的所有模板（包括系统模板）
         group.MapGet("", async (
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            ILogger<Program> logger,
+            ITemplateService templateService,
             string? entityType,
             string? usageType,
             string? templateType,
             string? groupBy) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
-            logger.LogDebug("[Templates] Retrieving templates for user {UserId}, entityType: {EntityType}, usageType: {UsageType}, templateType: {TemplateType}",
-                uid, entityType ?? "all", usageType ?? "all", templateType ?? "all");
-
-            // Query both user templates and system templates
-            var query = repo.Query(t => t.UserId == uid || t.IsSystemDefault);
-
-            // 按实体类型过滤
-            if (!string.IsNullOrWhiteSpace(entityType))
-            {
-                query = query.Where(t => t.EntityType == entityType);
-            }
-
-            // 按用途过滤
-            if (!string.IsNullOrWhiteSpace(usageType) && Enum.TryParse<FormTemplateUsageType>(usageType, true, out var parsedUsageType))
-            {
-                query = query.Where(t => t.UsageType == parsedUsageType);
-            }
-
-            // 按模板类型过滤（system/user）
-            if (!string.IsNullOrWhiteSpace(templateType))
-            {
-                if (templateType.Equals("system", StringComparison.OrdinalIgnoreCase))
-                {
-                    query = query.Where(t => t.IsSystemDefault);
-                }
-                else if (templateType.Equals("user", StringComparison.OrdinalIgnoreCase))
-                {
-                    query = query.Where(t => t.UserId == uid && !t.IsSystemDefault);
-                }
-            }
-
-            var templates = await Task.FromResult(query
-                .OrderByDescending(t => t.IsSystemDefault)
-                .ThenByDescending(t => t.IsUserDefault)
-                .ThenByDescending(t => t.UpdatedAt)
-                .ToList());
-
-            // 按分组方式组织数据
-            if (groupBy == "entity")
-            {
-                var grouped = templates.GroupBy(t => t.EntityType ?? "未分类")
-                    .Select(g => new
-                    {
-                        EntityType = g.Key,
-                        Templates = g.Select(t => new
-                        {
-                            t.Id,
-                            t.Name,
-                            t.EntityType,
-                            t.IsUserDefault,
-                            t.IsSystemDefault,
-                            t.Description,
-                            t.CreatedAt,
-                            t.UpdatedAt,
-                            t.IsInUse
-                        })
-                    });
-                return Results.Json(grouped);
-            }
-            else if (groupBy == "user")
-            {
-                // 按用户分组（未来扩展，管理员可以看到所有用户的模板）
-                var grouped = new[]
-                {
-                    new
-                    {
-                        UserId = uid,
-                        Templates = templates.Select(t => new
-                        {
-                            t.Id,
-                            t.Name,
-                            t.EntityType,
-                            t.IsUserDefault,
-                            t.IsSystemDefault,
-                            t.Description,
-                            t.CreatedAt,
-                            t.UpdatedAt,
-                            t.IsInUse
-                        })
-                    }
-                };
-                return Results.Json(grouped);
-            }
-            else
-            {
-                // 平铺列表
-                var result = templates.Select(t => new
-                {
-                    t.Id,
-                    t.Name,
-                    t.EntityType,
-                    t.IsUserDefault,
-                    t.IsSystemDefault,
-                    t.Description,
-                    t.CreatedAt,
-                    t.UpdatedAt,
-                    t.IsInUse
-                });
-                return Results.Json(result);
-            }
+            var result = await templateService.GetTemplatesAsync(uid, entityType, usageType, templateType, groupBy);
+            return Results.Json(result);
         })
         .WithName("GetTemplates")
         .WithSummary("获取用户的表单模板列表")
@@ -145,16 +45,14 @@ public static class TemplateEndpoints
         group.MapGet("/{id:int}", async (
             int id,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            ITemplateService templateService,
+            I18nService i18n) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            var template = await Task.FromResult(repo.Query(t => t.Id == id && t.UserId == uid).FirstOrDefault());
+            var template = await templateService.GetTemplateByIdAsync(id, uid);
 
             if (template == null)
             {
-                logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
                 return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
@@ -167,51 +65,11 @@ public static class TemplateEndpoints
         // 创建新模板
         group.MapPost("", async (
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            IUnitOfWork uow,
-            CreateTemplateRequest req,
-            ILogger<Program> logger) =>
+            ITemplateService templateService,
+            CreateTemplateRequest req) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
-            logger.LogInformation("[Templates] Creating template for user {UserId}, name: {Name}, entityType: {EntityType}",
-                uid, req.Name, req.EntityType ?? "null");
-
-            // 如果设置为用户默认模板，需要取消同一实体类型下的其他用户默认模板
-            if (req.IsUserDefault && !string.IsNullOrWhiteSpace(req.EntityType))
-            {
-                var existingDefaults = repo.Query(t => t.UserId == uid &&
-                    t.EntityType == req.EntityType &&
-                    t.IsUserDefault).ToList();
-
-                foreach (var existing in existingDefaults)
-                {
-                    existing.IsUserDefault = false;
-                    repo.Update(existing);
-                }
-
-                logger.LogInformation("[Templates] Cleared {Count} existing user default templates", existingDefaults.Count);
-            }
-
-            var template = new FormTemplate
-            {
-                Name = req.Name,
-                EntityType = req.EntityType,
-                UserId = uid,
-                IsUserDefault = req.IsUserDefault,
-                IsSystemDefault = false, // 只有管理员可以设置系统默认
-                LayoutJson = req.LayoutJson,
-                Description = req.Description,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsInUse = false
-            };
-
-            await repo.AddAsync(template);
-            await uow.SaveChangesAsync();
-
-            logger.LogInformation("[Templates] Template created successfully with ID {TemplateId}", template.Id);
-
+            var template = await templateService.CreateTemplateAsync(uid, req);
             return Results.Created($"/api/templates/{template.Id}", template);
         })
         .WithName("CreateTemplate")
@@ -222,66 +80,24 @@ public static class TemplateEndpoints
         group.MapPut("/{id:int}", async (
             int id,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            IUnitOfWork uow,
+            ITemplateService templateService,
             UpdateTemplateRequest req,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            I18nService i18n) =>
         {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            var template = await Task.FromResult(repo.Query(t => t.Id == id && t.UserId == uid).FirstOrDefault());
-
-            if (template == null)
+            try
             {
-                logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var template = await templateService.UpdateTemplateAsync(id, uid, req);
+                return Results.Ok(template);
+            }
+            catch (KeyNotFoundException)
+            {
                 return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
-
-            logger.LogInformation("[Templates] Updating template {TemplateId} for user {UserId}", id, uid);
-
-            // EntityType一旦设置后不允许修改
-            if (!string.IsNullOrWhiteSpace(template.EntityType) &&
-                req.EntityType != null &&
-                req.EntityType != template.EntityType)
+            catch (InvalidOperationException ex)
             {
-                logger.LogWarning("[Templates] Attempted to change EntityType from {Old} to {New}",
-                    template.EntityType, req.EntityType);
-                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_CHANGE_ENTITY_TYPE") });
+                return Results.BadRequest(new { error = ex.Message });
             }
-
-            // 如果设置为用户默认模板，需要取消同一实体类型下的其他用户默认模板
-            if (req.IsUserDefault == true && !string.IsNullOrWhiteSpace(template.EntityType))
-            {
-                var existingDefaults = repo.Query(t => t.UserId == uid &&
-                    t.EntityType == template.EntityType &&
-                    t.IsUserDefault &&
-                    t.Id != id).ToList();
-
-                foreach (var existing in existingDefaults)
-                {
-                    existing.IsUserDefault = false;
-                    repo.Update(existing);
-                }
-            }
-
-            // 更新字段
-            if (req.Name != null) template.Name = req.Name;
-            if (req.EntityType != null && string.IsNullOrWhiteSpace(template.EntityType))
-            {
-                template.EntityType = req.EntityType;
-            }
-            if (req.IsUserDefault != null) template.IsUserDefault = req.IsUserDefault.Value;
-            if (req.LayoutJson != null) template.LayoutJson = req.LayoutJson;
-            if (req.Description != null) template.Description = req.Description;
-
-            template.UpdatedAt = DateTime.UtcNow;
-
-            repo.Update(template);
-            await uow.SaveChangesAsync();
-
-            logger.LogInformation("[Templates] Template {TemplateId} updated successfully", id);
-
-            return Results.Ok(template);
         })
         .WithName("UpdateTemplate")
         .WithSummary("更新模板")
@@ -291,47 +107,23 @@ public static class TemplateEndpoints
         group.MapDelete("/{id:int}", async (
             int id,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            IUnitOfWork uow,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            ITemplateService templateService,
+            I18nService i18n) =>
         {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            var template = await Task.FromResult(repo.Query(t => t.Id == id && t.UserId == uid).FirstOrDefault());
-
-            if (template == null)
+            try
             {
-                logger.LogWarning("[Templates] Template {TemplateId} not found for user {UserId}", id, uid);
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                await templateService.DeleteTemplateAsync(id, uid);
+                return Results.Ok(ApiResponseExtensions.SuccessResponse(i18n.T("MSG_TEMPLATE_DELETED")));
+            }
+            catch (KeyNotFoundException)
+            {
                 return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
-
-            // 系统默认模板不允许删除
-            if (template.IsSystemDefault)
+            catch (InvalidOperationException ex)
             {
-                logger.LogWarning("[Templates] Attempted to delete system default template {TemplateId}", id);
-                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_SYSTEM_TEMPLATE") });
+                return Results.BadRequest(new { error = ex.Message });
             }
-
-            // 用户默认模板不允许删除
-            if (template.IsUserDefault)
-            {
-                logger.LogWarning("[Templates] Attempted to delete user default template {TemplateId}", id);
-                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_USER_DEFAULT") });
-            }
-
-            // 正在使用的模板不允许删除
-            if (template.IsInUse)
-            {
-                logger.LogWarning("[Templates] Attempted to delete in-use template {TemplateId}", id);
-                return Results.BadRequest(new { error = i18n.T("MSG_CANNOT_DELETE_IN_USE") });
-            }
-
-            repo.Remove(template);
-            await uow.SaveChangesAsync();
-
-            logger.LogInformation("[Templates] Template {TemplateId} deleted successfully", id);
-
-            return Results.Ok(ApiResponseExtensions.SuccessResponse(i18n.T("MSG_TEMPLATE_DELETED")));
         })
         .WithName("DeleteTemplate")
         .WithSummary("删除模板")
@@ -341,57 +133,20 @@ public static class TemplateEndpoints
         group.MapPost("/{id:int}/copy", async (
             int id,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            IUnitOfWork uow,
+            ITemplateService templateService,
             CopyTemplateRequest req,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            I18nService i18n) =>
         {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
-            // 查找源模板（可以是系统模板或用户模板）
-            var sourceTemplate = await Task.FromResult(
-                repo.Query(t => t.Id == id && (t.UserId == uid || t.IsSystemDefault))
-                    .FirstOrDefault());
-
-            if (sourceTemplate == null)
+            try
             {
-                logger.LogWarning("[Templates] Template {TemplateId} not found for copying by user {UserId}", id, uid);
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var newTemplate = await templateService.CopyTemplateAsync(id, uid, req);
+                return Results.Created($"/api/templates/{newTemplate.Id}", newTemplate);
+            }
+            catch (KeyNotFoundException)
+            {
                 return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
-
-            logger.LogInformation("[Templates] Copying template {TemplateId} for user {UserId}, new name: {Name}",
-                id, uid, req.Name);
-
-            // 创建新模板（深拷贝）
-            var newTemplate = new FormTemplate
-            {
-                Name = req.Name ?? $"{sourceTemplate.Name} (Copy)",
-                EntityType = req.EntityType ?? sourceTemplate.EntityType,
-                UserId = uid,
-                IsUserDefault = false, // 复制的模板默认不是用户默认模板
-                IsSystemDefault = false, // 用户创建的模板不能是系统模板
-                LayoutJson = sourceTemplate.LayoutJson,
-                UsageType = req.UsageType ?? sourceTemplate.UsageType,
-                Description = req.Description ?? $"从 '{sourceTemplate.Name}' 复制",
-                Tags = sourceTemplate.Tags != null ? new List<string>(sourceTemplate.Tags) : null,
-                RequiredFunctionCode = sourceTemplate.RequiredFunctionCode,
-                LayoutMode = sourceTemplate.LayoutMode,
-                DetailDisplayMode = sourceTemplate.DetailDisplayMode,
-                DetailRoute = sourceTemplate.DetailRoute,
-                ModalSize = sourceTemplate.ModalSize,
-                Version = 1, // 新模板版本从 1 开始
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsInUse = false
-            };
-
-            await repo.AddAsync(newTemplate);
-            await uow.SaveChangesAsync();
-
-            logger.LogInformation("[Templates] Template copied successfully, new ID: {TemplateId}", newTemplate.Id);
-
-            return Results.Created($"/api/templates/{newTemplate.Id}", newTemplate);
         })
         .WithName("CopyTemplate")
         .WithSummary("复制模板")
@@ -401,115 +156,36 @@ public static class TemplateEndpoints
         group.MapPut("/{id:int}/apply", async (
             int id,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            IUnitOfWork uow,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            ITemplateService templateService,
+            I18nService i18n) =>
         {
-            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
-            // 查找要应用的模板
-            var template = await Task.FromResult(
-                repo.Query(t => t.Id == id && (t.UserId == uid || t.IsSystemDefault))
-                    .FirstOrDefault());
-
-            if (template == null)
+            try
             {
-                logger.LogWarning("[Templates] Template {TemplateId} not found for applying by user {UserId}", id, uid);
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var template = await templateService.ApplyTemplateAsync(id, uid);
+
+                return Results.Ok(new
+                {
+                    message = "模板已应用为默认模板",
+                    template = new
+                    {
+                        template.Id,
+                        template.Name,
+                        template.EntityType,
+                        template.UsageType,
+                        template.IsUserDefault,
+                        template.IsSystemDefault
+                    }
+                });
+            }
+            catch (KeyNotFoundException)
+            {
                 return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
-
-            if (string.IsNullOrWhiteSpace(template.EntityType))
+            catch (InvalidOperationException ex)
             {
-                logger.LogWarning("[Templates] Cannot apply template {TemplateId} without EntityType", id);
-                return Results.BadRequest(new { error = i18n.T("MSG_TEMPLATE_NO_ENTITY_TYPE") });
+                return Results.BadRequest(new { error = ex.Message });
             }
-
-            logger.LogInformation("[Templates] Applying template {TemplateId} for user {UserId}, entity: {EntityType}",
-                id, uid, template.EntityType);
-
-            // 如果是系统模板，需要先复制一份给用户
-            if (template.IsSystemDefault)
-            {
-                // 检查用户是否已经有这个模板的副本
-                var existingCopy = await Task.FromResult(
-                    repo.Query(t => t.UserId == uid &&
-                                   t.EntityType == template.EntityType &&
-                                   t.UsageType == template.UsageType &&
-                                   t.Name == template.Name)
-                        .FirstOrDefault());
-
-                if (existingCopy != null)
-                {
-                    // 使用现有副本
-                    template = existingCopy;
-                }
-                else
-                {
-                    // 创建新副本
-                    var copy = new FormTemplate
-                    {
-                        Name = template.Name,
-                        EntityType = template.EntityType,
-                        UserId = uid,
-                        IsUserDefault = false,
-                        IsSystemDefault = false,
-                        LayoutJson = template.LayoutJson,
-                        UsageType = template.UsageType,
-                        Description = $"从系统模板 '{template.Name}' 复制",
-                        Tags = template.Tags != null ? new List<string>(template.Tags) : null,
-                        RequiredFunctionCode = template.RequiredFunctionCode,
-                        LayoutMode = template.LayoutMode,
-                        DetailDisplayMode = template.DetailDisplayMode,
-                        DetailRoute = template.DetailRoute,
-                        ModalSize = template.ModalSize,
-                        Version = 1,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        IsInUse = false
-                    };
-
-                    await repo.AddAsync(copy);
-                    template = copy;
-                }
-            }
-
-            // 取消同一实体类型和用途下的其他用户默认模板
-            var existingDefaults = repo.Query(t => t.UserId == uid &&
-                t.EntityType == template.EntityType &&
-                t.UsageType == template.UsageType &&
-                t.IsUserDefault &&
-                t.Id != template.Id).ToList();
-
-            foreach (var existing in existingDefaults)
-            {
-                existing.IsUserDefault = false;
-                repo.Update(existing);
-                logger.LogDebug("[Templates] Cleared user default flag from template {TemplateId}", existing.Id);
-            }
-
-            // 设置为用户默认模板
-            template.IsUserDefault = true;
-            template.UpdatedAt = DateTime.UtcNow;
-            repo.Update(template);
-
-            await uow.SaveChangesAsync();
-
-            logger.LogInformation("[Templates] Template {TemplateId} applied successfully as user default", template.Id);
-
-            return Results.Ok(new
-            {
-                message = "模板已应用为默认模板",
-                template = new
-                {
-                    template.Id,
-                    template.Name,
-                    template.EntityType,
-                    template.UsageType,
-                    template.IsUserDefault,
-                    template.IsSystemDefault
-                }
-            });
         })
         .WithName("ApplyTemplate")
         .WithSummary("应用模板")
@@ -519,51 +195,18 @@ public static class TemplateEndpoints
         group.MapGet("/effective/{entityType}", async (
             string entityType,
             ClaimsPrincipal user,
-            IRepository<FormTemplate> repo,
-            I18nService i18n,
-            ILogger<Program> logger) =>
+            ITemplateService templateService,
+            I18nService i18n) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var template = await templateService.GetEffectiveTemplateAsync(entityType, uid);
 
-            logger.LogDebug("[Templates] Getting effective template for entity {EntityType}, user {UserId}",
-                entityType, uid);
-
-            // 1. 优先查找用户默认模板
-            var userDefault = await Task.FromResult(repo.Query(t =>
-                t.UserId == uid &&
-                t.EntityType == entityType &&
-                t.IsUserDefault).FirstOrDefault());
-
-            if (userDefault != null)
+            if (template == null)
             {
-                logger.LogDebug("[Templates] Found user default template {TemplateId}", userDefault.Id);
-                return Results.Json(userDefault);
+                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
             }
 
-            // 2. 查找系统默认模板
-            var systemDefault = await Task.FromResult(repo.Query(t =>
-                t.EntityType == entityType &&
-                t.IsSystemDefault).FirstOrDefault());
-
-            if (systemDefault != null)
-            {
-                logger.LogDebug("[Templates] Found system default template {TemplateId}", systemDefault.Id);
-                return Results.Json(systemDefault);
-            }
-
-            // 3. 查找该实体类型的第一个模板（任意用户）
-            var firstTemplate = await Task.FromResult(repo.Query(t => t.EntityType == entityType)
-                .OrderBy(t => t.CreatedAt)
-                .FirstOrDefault());
-
-            if (firstTemplate != null)
-            {
-                logger.LogDebug("[Templates] Found first template {TemplateId} for entity type", firstTemplate.Id);
-                return Results.Json(firstTemplate);
-            }
-
-            logger.LogDebug("[Templates] No template found for entity {EntityType}", entityType);
-            return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+            return Results.Json(template);
         })
         .WithName("GetEffectiveTemplate")
         .WithSummary("获取有效模板")
