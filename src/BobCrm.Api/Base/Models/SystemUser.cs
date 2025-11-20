@@ -31,7 +31,7 @@ public class SystemUser : IBizEntity
             Namespace = type.Namespace ?? "BobCrm.Api.Base.Models",
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.SystemUser",
-            EntityRoute = "users",
+            EntityRoute = "user",
             DisplayName = ResolveText("LBL_SYSTEM_USER", "System User"),
             Description = ResolveText("DESC_SYSTEM_USER", "Manage system users and their access state"),
             ApiEndpoint = "/api/users",
