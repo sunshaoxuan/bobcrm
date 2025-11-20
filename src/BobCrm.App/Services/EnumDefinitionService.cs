@@ -21,7 +21,7 @@ public class EnumDefinitionService
     public async Task<List<EnumDefinitionDto>> GetAllAsync()
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.GetFromJsonAsync<List<EnumDefinitionDto>>("/api/enum-definitions");
+        var response = await http.GetFromJsonAsync<List<EnumDefinitionDto>>("/api/enums");
         return response ?? new List<EnumDefinitionDto>();
     }
 
@@ -31,7 +31,7 @@ public class EnumDefinitionService
     public async Task<EnumDefinitionDto?> GetByIdAsync(Guid id)
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.GetFromJsonAsync<EnumDefinitionDto>($"/api/enum-definitions/{id}");
+        var response = await http.GetFromJsonAsync<EnumDefinitionDto>($"/api/enums/{id}");
         return response;
     }
 
@@ -41,7 +41,7 @@ public class EnumDefinitionService
     public async Task<EnumDefinitionDto?> CreateAsync(CreateEnumDefinitionRequest request)
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.PostAsJsonAsync("/api/enum-definitions", request);
+        var response = await http.PostAsJsonAsync("/api/enums", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
     }
@@ -52,7 +52,7 @@ public class EnumDefinitionService
     public async Task<EnumDefinitionDto?> UpdateAsync(Guid id, UpdateEnumDefinitionRequest request)
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.PutAsJsonAsync($"/api/enum-definitions/{id}", request);
+        var response = await http.PutAsJsonAsync($"/api/enums/{id}", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
     }
@@ -63,7 +63,7 @@ public class EnumDefinitionService
     public async Task DeleteAsync(Guid id)
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.DeleteAsync($"/api/enum-definitions/{id}");
+        var response = await http.DeleteAsync($"/api/enums/{id}");
         response.EnsureSuccessStatusCode();
     }
 }

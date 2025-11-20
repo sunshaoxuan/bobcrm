@@ -7,9 +7,36 @@
 
 ---
 
-## [未发布] - 进行中
+## [0.6.0] - 2025-11-20
 
 ### Added
+#### 动态枚举系统完善
+- **DTO扩展**：
+  - `CreateEnumDefinitionRequest`添加`IsEnabled`属性支持启用状态控制
+  - `UpdateEnumDefinitionRequest`添加`Options`属性支持直接更新枚举选项
+- **前端集成**：
+  - `EntityDefinitionDto.cs`添加`FieldDataType.Enum`常量
+  - `EntityDefinitionEdit.razor`完整集成枚举字段类型选择
+  - 新增"枚举定义"列显示关联的枚举
+  - 实现枚举选择器UI，支持从已定义枚举列表中选择
+  - 添加`GetEnumDisplayName`辅助方法支持多语言显示
+- **多语言资源**：添加18个枚举相关i18n资源键
+  - 标签：`LBL_ENUM_DEFINITION`, `LBL_ENUM_CODE`, `LBL_ENUM_OPTIONS`, `LBL_OPTION_VALUE`, `LBL_COLOR_TAG`, `LBL_CREATE_ENUM`, `LBL_EDIT_ENUM`
+  - 按钮：`BTN_NEW_ENUM`, `BTN_ADD_OPTION`
+  - 消息：`MSG_ENUM_CREATE_SUCCESS`, `MSG_ENUM_UPDATE_SUCCESS`, `MSG_ENUM_DELETE_SUCCESS`, `MSG_ENUM_LOAD_FAILED`, `MSG_ENUM_SAVE_FAILED`, `MSG_ENUM_CODE_REQUIRED`, `MSG_OPTION_VALUE_REQUIRED`, `MSG_CONFIRM_DELETE_ENUM`, `MSG_ENUM_IN_USE`  
+  - 菜单：`MENU_SYS_ENTITY_ENUM`
+
+### Changed
+- **API路径统一**：所有枚举API端点统一使用`/api/enums`前缀
+- **路由规范**：枚举管理页面路由统一为`/system/enums`
+- **EnumDefinitionService**：更新所有API调用路径适配新的端点结构
+
+### Fixed
+- **类型安全**：修正Dictionary和MultilingualTextDto之间的类型转换
+- **表单绑定**：优化MultilingualInput组件与后端DTO的数据绑定
+
+---
+
 #### 2025-11-19
 - **枚举系统前后端UI集成完成**：为动态枚举系统添加完整的前端管理界面
   - **前端常量与i18n资源**：
@@ -31,8 +58,6 @@
 
 ### Changed
 - **DataGridRuntime.razor**：注入 `I18nService`，枚举显示名从硬编码 "en" 改为使用 `I18n.CurrentLang`
-
----
 
 - **Default template automation**：实体发布后自动生成 Detail/Edit/List 模板并注册菜单挂点，形成"发布即上线"的闭环。
 - **Template & menu management UI**：模板中心支持绑定切换；菜单管理支持多语标题、模板/功能双模式指派及拖拽排序。

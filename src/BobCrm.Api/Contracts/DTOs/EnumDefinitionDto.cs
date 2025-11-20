@@ -46,6 +46,8 @@ public class CreateEnumDefinitionRequest
     
     public Dictionary<string, string?> Description { get; set; } = new();
     
+    public bool IsEnabled { get; set; } = true;
+    
     public List<CreateEnumOptionRequest> Options { get; set; } = new();
 }
 
@@ -79,6 +81,7 @@ public class UpdateEnumDefinitionRequest
     public Dictionary<string, string?> DisplayName { get; set; } = new();
     public Dictionary<string, string?> Description { get; set; } = new();
     public bool IsEnabled { get; set; }
+    public List<EnumOptionDto> Options { get; set; } = new();
 }
 
 /// <summary>
