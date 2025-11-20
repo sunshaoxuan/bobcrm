@@ -196,6 +196,7 @@ builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<FunctionTreeBuilder>();
 builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
+builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 
@@ -374,6 +375,7 @@ app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
 app.MapOrganizationEndpoints();
 app.MapAccessEndpoints();
+app.MapFieldPermissionEndpoints();
 app.MapFileEndpoints();
 app.MapDataSetEndpoints();
 app.MapEnumDefinitionEndpoints();

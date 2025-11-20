@@ -33,6 +33,7 @@ public class RoleProfile : IBizEntity
     public List<RoleFunctionPermission> Functions { get; set; } = new();
     public List<RoleDataScope> DataScopes { get; set; } = new();
     public List<RoleAssignment> Assignments { get; set; } = new();
+    public List<FieldPermission> FieldPermissions { get; set; } = new();
 
     /// <summary>
     /// 提供RoleProfile实体的初始定义

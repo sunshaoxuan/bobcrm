@@ -60,6 +60,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<RoleFunctionPermission> RoleFunctionPermissions => Set<RoleFunctionPermission>();
     public DbSet<RoleDataScope> RoleDataScopes => Set<RoleDataScope>();
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
+    public DbSet<FieldPermission> FieldPermissions => Set<FieldPermission>();
     public DbSet<FieldDataTypeEntry> FieldDataTypes => Set<FieldDataTypeEntry>();
     public DbSet<FieldSourceEntry> FieldSources => Set<FieldSourceEntry>();
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
