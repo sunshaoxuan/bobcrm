@@ -54,6 +54,7 @@ public static class WidgetRegistry
             new WidgetDefinition("datagrid", "LBL_DATAGRID", IconType.Outline.Table, WidgetCategory.Data, () => new DataGridWidget()),
             new WidgetDefinition("orgtree", "LBL_ORGTREE", IconType.Outline.Apartment, WidgetCategory.Data, () => new OrganizationTreeWidget()),
             new WidgetDefinition("permtree", "LBL_PERMTREE", IconType.Outline.SafetyCertificate, WidgetCategory.Data, () => new RolePermissionTreeWidget()),
+            new WidgetDefinition("userrole", "LBL_USERROLE", IconType.Outline.UserSwitch, WidgetCategory.Data, () => new UserRoleAssignmentWidget()),
         };
 
         _definitions = defs.ToDictionary(d => d.Type.ToLowerInvariant());

@@ -75,6 +75,7 @@ public class WidgetJsonConverter : JsonConverter<DraggableWidget>
             "datagrid" => new DataGridWidget(),
             "orgtree" => new OrganizationTreeWidget(),
             "permtree" => new RolePermissionTreeWidget(),
+            "userrole" => new UserRoleAssignmentWidget(),
 
             _ => null
         };

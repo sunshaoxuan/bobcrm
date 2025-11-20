@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
 
@@ -150,127 +151,31 @@ public class RolePermissionTreeWidget : DraggableWidget
     {
         var builder = context.Builder;
 
-        // 运行态渲染 - 角色权限树控件
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "perm-tree-runtime");
-        builder.AddAttribute(2, "style", "padding:16px; background:#fff; border:1px solid #d9d9d9; border-radius:4px;");
+        // 运行态渲染 - 渲染实际的 RolePermissionTree 组件
+        builder.OpenComponent(0, typeof(BobCrm.App.Components.Shared.RolePermissionTree));
 
-        // 标题
-        if (!string.IsNullOrWhiteSpace(Label))
+        // 绑定 RoleId 参数 - 从实体 ID 获取
+        if (context.EventTarget is Microsoft.AspNetCore.Components.ComponentBase component)
         {
-            builder.OpenElement(3, "div");
-            builder.AddAttribute(4, "style", "font-weight:600; margin-bottom:12px; font-size:16px;");
-            builder.AddContent(5, Label);
-            builder.CloseElement();
-        }
-
-        // 工具栏
-        if (ShowSelectAll || ShowExpandAll)
-        {
-            builder.OpenElement(6, "div");
-            builder.AddAttribute(7, "style", "margin-bottom:12px; display:flex; gap:8px;");
-
-            if (ShowSelectAll && !ReadOnly)
+            // 尝试从上下文获取实体 ID (RoleProfile 的 Id)
+            var idProperty = component.GetType().GetProperty("Id");
+            if (idProperty != null)
             {
-                builder.OpenElement(8, "button");
-                builder.AddAttribute(9, "style", "padding:4px 12px; border:1px solid #d9d9d9; border-radius:2px; cursor:pointer;");
-                builder.AddContent(10, "Select All");
-                builder.CloseElement();
-
-                builder.OpenElement(11, "button");
-                builder.AddAttribute(12, "style", "padding:4px 12px; border:1px solid #d9d9d9; border-radius:2px; cursor:pointer;");
-                builder.AddContent(13, "Deselect All");
-                builder.CloseElement();
+                var entityId = idProperty.GetValue(component);
+                if (entityId != null && Guid.TryParse(entityId.ToString(), out var roleId))
+                {
+                    builder.AddAttribute(1, "RoleId", roleId);
+                }
             }
-
-            if (ShowExpandAll)
-            {
-                builder.OpenElement(14, "button");
-                builder.AddAttribute(15, "style", "padding:4px 12px; border:1px solid #d9d9d9; border-radius:2px; cursor:pointer;");
-                builder.AddContent(16, "Expand All");
-                builder.CloseElement();
-
-                builder.OpenElement(17, "button");
-                builder.AddAttribute(18, "style", "padding:4px 12px; border:1px solid #d9d9d9; border-radius:2px; cursor:pointer;");
-                builder.AddContent(19, "Collapse All");
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
         }
 
-        // 权限树容器
-        builder.OpenElement(20, "div");
-        builder.AddAttribute(21, "class", "permission-tree-container");
-        builder.AddAttribute(22, "style", "min-height:300px; max-height:500px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:2px; padding:12px; background:#fafafa;");
+        // 传递其他配置参数
+        builder.AddAttribute(2, "ShowSearch", ShowSearch);
+        builder.AddAttribute(3, "ShowStatistics", ShowStatistics);
+        builder.AddAttribute(4, "DefaultExpandAll", DefaultExpandLevel == -1);
+        builder.AddAttribute(5, "CascadeSelect", CascadeSelect);
 
-        // 示例权限节点(实际应从 /api/access/functions API 加载功能树数据)
-        RenderRuntimePermissionNode(builder, "Customer Management", true, 0);
-        builder.OpenElement(24, "div");
-        builder.AddAttribute(25, "style", "margin-left:24px;");
-        RenderRuntimePermissionNode(builder, "View Customers", true, 1);
-        RenderRuntimePermissionNode(builder, "Edit Customers", false, 1);
-        RenderRuntimePermissionNode(builder, "Delete Customers", false, 1);
-        builder.CloseElement();
-
-        RenderRuntimePermissionNode(builder, "Organization Management", false, 0);
-
-        if (ShowTemplateBindings)
-        {
-            builder.OpenElement(30, "div");
-            builder.AddAttribute(31, "style", "margin-left:24px;");
-            RenderRuntimePermissionNode(builder, "Template: Customer Detail", true, 1);
-            RenderRuntimePermissionNode(builder, "Template: Customer List", true, 1);
-            builder.CloseElement();
-        }
-
-        builder.CloseElement(); // permission-tree-container
-
-        // 配置信息提示
-        builder.OpenElement(34, "div");
-        builder.AddAttribute(35, "style", "margin-top:8px; font-size:11px; color:#999; display:flex; gap:12px;");
-        builder.OpenElement(36, "span");
-        builder.AddContent(37, $"Cascade: {CascadeSelect}");
-        builder.CloseElement();
-        builder.OpenElement(38, "span");
-        builder.AddContent(39, $"Read-only: {ReadOnly}");
-        builder.CloseElement();
-        builder.OpenElement(40, "span");
-        builder.AddContent(41, $"Show templates: {ShowTemplateBindings}");
-        builder.CloseElement();
-        builder.CloseElement();
-
-        builder.CloseElement(); // container
-    }
-
-    private void RenderRuntimePermissionNode(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, string text, bool isChecked, int level)
-    {
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "style", "padding:6px 8px; display:flex; align-items:center; gap:8px; border-radius:2px; hover:background:#e6f7ff;");
-
-        if (!ReadOnly)
-        {
-            builder.OpenElement(2, "input");
-            builder.AddAttribute(3, "type", "checkbox");
-            builder.AddAttribute(4, "checked", isChecked);
-            builder.AddAttribute(5, "style", "cursor:pointer;");
-            builder.CloseElement();
-        }
-
-        if (ShowNodeIcons)
-        {
-            builder.OpenElement(6, "span");
-            builder.AddAttribute(7, "style", "color:#1890ff;");
-            builder.AddContent(8, level == 0 ? "📁" : "📄");
-            builder.CloseElement();
-        }
-
-        builder.OpenElement(9, "span");
-        builder.AddAttribute(10, "style", isChecked ? "font-weight:500; color:#000;" : "color:#666;");
-        builder.AddContent(11, text);
-        builder.CloseElement();
-
-        builder.CloseElement();
+        builder.CloseComponent();
     }
 
     public override void RenderDesign(DesignRenderContext context)

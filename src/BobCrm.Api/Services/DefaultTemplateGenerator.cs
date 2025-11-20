@@ -230,8 +230,52 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     widget["enumDefinitionId"] = field.EnumDefinitionId.Value.ToString();
                     widget["isMultiSelect"] = field.IsMultiSelect;
                 }
-                
+
                 widgets.Add(widget);
+            }
+
+            // 根据实体路由追加专用控件
+            if (entity.EntityRoute?.ToLowerInvariant() == "users")
+            {
+                // 为 User 实体添加角色分配控件
+                var userRoleWidget = new Dictionary<string, object?>
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "userrole",
+                    ["label"] = "LBL_USER_ROLE_ASSIGNMENT",
+                    ["userIdField"] = "Id",
+                    ["showSearch"] = true,
+                    ["showSelectAll"] = true,
+                    ["showCurrentRoles"] = true,
+                    ["showOrganizationScope"] = true,
+                    ["readOnly"] = false,
+                    ["w"] = 12, // Full width
+                    ["visible"] = true
+                };
+                widgets.Add(userRoleWidget);
+            }
+            else if (entity.EntityRoute?.ToLowerInvariant() == "roles")
+            {
+                // 为 Role 实体添加权限树控件
+                var permTreeWidget = new Dictionary<string, object?>
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "permtree",
+                    ["label"] = "LBL_ROLE_PERMISSIONS",
+                    ["roleIdField"] = "Id",
+                    ["showSearch"] = true,
+                    ["showSelectAll"] = true,
+                    ["showExpandAll"] = true,
+                    ["showNodeIcons"] = true,
+                    ["showTemplateBindings"] = false,
+                    ["defaultExpandLevel"] = 1,
+                    ["readOnly"] = false,
+                    ["cascadeSelect"] = true,
+                    ["showStatistics"] = true,
+                    ["w"] = 12, // Full width
+                    ["visible"] = true
+                };
+                widgets.Add(permTreeWidget);
             }
         }
 
