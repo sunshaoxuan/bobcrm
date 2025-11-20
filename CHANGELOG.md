@@ -34,6 +34,7 @@
 ### Fixed
 - **类型安全**：修正Dictionary和MultilingualTextDto之间的类型转换
 - **表单绑定**：优化MultilingualInput组件与后端DTO的数据绑定
+- **编译修复**：解决 `EnumDefinitionEdit.razor` 和 `EnumDefinitions.razor` 中的构建错误，恢复完整功能
 
 ---
 
