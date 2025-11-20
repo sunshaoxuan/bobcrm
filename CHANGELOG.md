@@ -28,6 +28,34 @@
   - `LBL_SEARCH_ICON`: "搜索图标" / "アイコンを検索" / "Search icon"
   - `TXT_NO_ICONS_FOUND`: "未找到匹配的图标" / "一致するアイコンが見つかりません" / "No icons found"
 
+#### 菜单导入/导出功能
+- **后端 API** (`src/BobCrm.Api/Endpoints/AccessEndpoints.cs`):
+  - 新增 `GET /api/access/functions/export`：导出完整菜单树为 JSON 格式
+    - 递归构建菜单树结构（包含多语言 DisplayName、图标、路由、模板等）
+    - 导出格式包含版本号和导出时间戳
+  - 新增 `POST /api/access/functions/import`：导入菜单树到数据库
+    - 支持冲突检测：检查功能码是否已存在
+    - 支持两种合并策略：`skip`（跳过冲突项）和 `replace`（覆盖冲突项）
+    - 递归导入菜单树，自动处理父子关系和排序
+- **前端 UI** (`src/BobCrm.App/Components/Pages/MenuManagement.razor`):
+  - 添加"导出"按钮：点击后生成 JSON 文件并自动下载（文件名格式：`menus-export-yyyyMMdd-HHmmss.json`）
+  - 添加"导入"按钮：打开导入对话框，支持拖拽或点击上传 JSON 文件
+  - 导入对话框两步流程：
+    - 步骤1：上传文件（最大 10MB，仅支持 .json 格式）
+    - 步骤2：预览导入内容，显示冲突提示和合并策略选择
+  - 冲突检测：显示已存在的功能码列表，支持选择"跳过冲突项"或"覆盖冲突项"
+  - 导入结果反馈：显示已导入和已跳过的菜单数量
+- **服务层** (`src/BobCrm.App/Services/MenuService.cs`):
+  - 新增 `ExportMenusAsync()`：调用导出 API，返回 JSON 数据
+  - 新增 `CheckImportConflictsAsync()`：检查导入冲突，返回冲突功能码列表
+  - 新增 `ImportMenusAsync()`：执行导入操作，支持合并策略参数
+  - 新增数据模型：`MenuImportData`, `MenuImportNode`, `ImportResult`, `ImportErrorResponse`
+- **新增多语言资源键**（共 17 个）：
+  - 按钮：`BTN_IMPORT`, `BTN_CONFIRM_IMPORT`
+  - 标签：`LBL_IMPORT_MENU`, `LBL_IMPORT_TOTAL`, `LBL_IMPORTED`, `LBL_MERGE_STRATEGY`, `LBL_REPLACE_CONFLICTS`, `LBL_SKIP_CONFLICTS`, `LBL_SKIPPED`, `LBL_STEP1_UPLOAD`, `LBL_STEP2_PREVIEW`
+  - 消息：`MSG_EXPORT_SUCCESS`, `MSG_EXPORT_FAILED`, `MSG_FILE_TOO_LARGE`, `MSG_FILE_PARSE_ERROR`, `MSG_IMPORT_CONFLICTS`, `MSG_IMPORT_SUCCESS`, `MSG_IMPORT_FAILED`, `MSG_INVALID_IMPORT_FILE`
+  - 文本：`TXT_MORE`
+
 ### Changed
 #### 文档更新
 - **菜单编辑器使用指南完善**：
