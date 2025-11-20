@@ -1,0 +1,395 @@
+@page "/system/enums/create"
+@page "/system/enums/edit/{Id:guid}"
+@using BobCrm.Api.Contracts.DTOs
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@using AntDesign
+
+@inject EnumDefinitionService EnumService
+@inject NavigationManager Nav
+@inject I18nService I18n
+@inject ToastService ToastService
+
+<AuthChecker>
+    <PageHeader Title="@_pageTitle" OnBack="GoBack">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Button OnClick="GoBack">@I18n.T("BTN_CANCEL")</Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" OnClick="HandleSave" Loading="_saving">
+                        @I18n.T("BTN_SAVE")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <div style="padding: 24px;">
+        @if (_loading)
+        {
+            <Spin Tip="Loading..." />
+        }
+        else
+        {
+            <Card Title="@I18n.T("LBL_BASIC_INFO")" Style="margin-bottom: 16px;">
+                <div style="padding: 16px;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; margin-bottom: 8px;"><strong>@I18n.T("LBL_ENUM_CODE")</strong></label>
+                        <Input TValue="string" @bind-Value="_model.Code"
+                               Placeholder="例如: ORDER_STATUS"
+                               Disabled="@IsEditMode"
+                               MaxLength="100" />
+                        <span style="color: #8c8c8c; font-size: 12px; display: block; margin-top: 4px;">@I18n.T("MSG_ENUM_CODE_HINT")</span>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; margin-bottom: 8px;"><strong>@I18n.T("LBL_DISPLAY_NAME") (@I18n.T("LBL_MULTILINGUAL"))</strong></label>
+                        <MultilingualInput @bind-Value="_model.DisplayName" />
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; margin-bottom: 8px;"><strong>@I18n.T("LBL_DESCRIPTION") (@I18n.T("LBL_MULTILINGUAL"))</strong></label>
+                        <MultilingualInput @bind-Value="_model.Description" />
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; margin-bottom: 8px;"><strong>@I18n.T("LBL_ENABLED")</strong></label>
+                        <Switch TValue="bool" @bind-Value="_model.IsEnabled" />
+                    </div>
+                </div>
+            </Card>
+
+            <Card Title="@I18n.T("LBL_ENUM_OPTIONS")">
+                <div style="margin-bottom: 16px;">
+                    <Button Type="@ButtonType.Dashed"
+                            Icon="@IconType.Outline.Plus"
+                            OnClick="AddOption"
+                            Block>
+                        @I18n.T("BTN_ADD_OPTION")
+                    </Button>
+                </div>
+
+                <AntDesign.Table DataSource="@_options" TItem="EnumOptionViewModel" PaginationPosition="bottomRight">
+                    <Column Title="@I18n.T("LBL_OPTION_VALUE")" TData="string">
+                        @if (context.IsEditing)
+                        {
+                            <Input TValue="string" @bind-Value="context.Value" />
+                        }
+                        else
+                        {
+                            @context.Value
+                        }
+                    </Column>
+                    <Column Title="@I18n.T("LBL_DISPLAY_NAME")" TData="MultilingualTextDto">
+                        @if (context.IsEditing)
+                        {
+                            <MultilingualInput @bind-Value="context.DisplayName" />
+                        }
+                        else
+                        {
+                            @(context.DisplayName?.GetValue(I18n.CurrentLang) ?? "")
+                        }
+                    </Column>
+                    <Column Title="@I18n.T("LBL_COLOR_TAG")" TData="string">
+                        @if (context.IsEditing)
+                        {
+                            <Select TItemValue="string?" TItem="string" @bind-Value="context.ColorTag" Style="width: 120px;">
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("blue")" Label="Blue" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("green")" Label="Green" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("red")" Label="Red" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("gold")" Label="Gold" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("purple")" Label="Purple" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("cyan")" Label="Cyan" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("magenta")" Label="Magenta" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("volcano")" Label="Volcano" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("geekblue")" Label="Geekblue" />
+                                <SelectOption TItemValue="string?" TItem="string" Value="@("default")" Label="Default" />
+                            </Select>
+                        }
+                        else if (!string.IsNullOrEmpty(context.ColorTag))
+                        {
+                            <Tag Color="@context.ColorTag">@context.ColorTag</Tag>
+                        }
+                    </Column>
+                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
+                        <Space>
+                            @if (context.IsEditing)
+                            {
+                                <SpaceItem>
+                                    <Button Type="@ButtonType.Link" OnClick="() => SaveOption(context)">
+                                        @I18n.T("BTN_SAVE")
+                                    </Button>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Button Type="@ButtonType.Link" Danger OnClick="() => CancelEditOption(context)">
+                                        @I18n.T("BTN_CANCEL")
+                                    </Button>
+                                </SpaceItem>
+                            }
+                            else
+                            {
+                                <SpaceItem>
+                                    <Button Type="@ButtonType.Link" OnClick="() => EditOption(context)">
+                                        @I18n.T("BTN_EDIT")
+                                    </Button>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Popconfirm Title="@I18n.T("MSG_CONFIRM_DELETE")"
+                                                OnConfirm="() => DeleteOption(context)"
+                                                OkText="@I18n.T("BTN_YES")"
+                                                CancelText="@I18n.T("BTN_NO")">
+                                        <Button Type="@ButtonType.Link" Danger>
+                                            @I18n.T("BTN_DELETE")
+                                        </Button>
+                                    </Popconfirm>
+                                </SpaceItem>
+                            }
+                        </Space>
+                    </ActionColumn>
+                </AntDesign.Table>
+            </Card>
+        }
+    </div>
+</AuthChecker>
+
+@code {
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private bool IsEditMode => Id.HasValue;
+    private string _pageTitle => IsEditMode ? I18n.T("LBL_EDIT_ENUM") : I18n.T("LBL_CREATE_ENUM");
+
+    private bool _loading = false;
+    private bool _saving = false;
+    
+    private EnumEditViewModel _model = new();
+    private List<EnumOptionViewModel> _options = new();
+    // 使用 Dictionary 存储备份，Key 为 TempId
+    private Dictionary<Guid, EnumOptionViewModel> _backupOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            await LoadEnum();
+        }
+    }
+
+    private async Task LoadEnum()
+    {
+        _loading = true;
+        try
+        {
+            var enumDef = await EnumService.GetByIdAsync(Id!.Value);
+            if (enumDef == null)
+            {
+                ToastService.Error(I18n.T("MSG_ENUM_LOAD_FAILED"));
+                GoBack();
+                return;
+            }
+
+            _model = new EnumEditViewModel
+            {
+                Code = enumDef.Code,
+                DisplayName = new MultilingualTextDto(enumDef.DisplayName),
+                Description = new MultilingualTextDto(enumDef.Description),
+                IsEnabled = enumDef.IsEnabled
+            };
+
+            _options = enumDef.Options.Select(o => new EnumOptionViewModel
+            {
+                TempId = Guid.NewGuid(),
+                Value = o.Value,
+                DisplayName = new MultilingualTextDto(o.DisplayName),
+                ColorTag = o.ColorTag,
+                IsEditing = false
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"{I18n.T("MSG_ENUM_LOAD_FAILED")}: {ex.Message}");
+            GoBack();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void AddOption()
+    {
+        var newOption = new EnumOptionViewModel
+        {
+            IsEditing = true
+        };
+        _options.Add(newOption);
+        _backupOptions[newOption.TempId] = newOption.Clone();
+    }
+
+    private void EditOption(EnumOptionViewModel option)
+    {
+        option.IsEditing = true;
+        _backupOptions[option.TempId] = option.Clone();
+    }
+
+    private void CancelEditOption(EnumOptionViewModel option)
+    {
+        if (_backupOptions.TryGetValue(option.TempId, out var backup))
+        {
+            var index = _options.IndexOf(option);
+            if (index != -1)
+            {
+                // 如果是新添加的选项（备份的值为空），则直接删除
+                if (string.IsNullOrEmpty(backup.Value) && (backup.DisplayName == null || backup.DisplayName.Count == 0))
+                {
+                    _options.RemoveAt(index);
+                }
+                else
+                {
+                    _options[index] = backup;
+                    _options[index].IsEditing = false;
+                }
+            }
+        }
+        else
+        {
+            _options.Remove(option);
+        }
+    }
+
+    private void SaveOption(EnumOptionViewModel option)
+    {
+        if (string.IsNullOrWhiteSpace(option.Value))
+        {
+            ToastService.Error(I18n.T("MSG_OPTION_VALUE_REQUIRED"));
+            return;
+        }
+
+        // 检查重复值
+        if (_options.Count(o => o.Value == option.Value && o.TempId != option.TempId) > 0)
+        {
+            ToastService.Error("选项值已存在");
+            return;
+        }
+
+        option.IsEditing = false;
+        _backupOptions.Remove(option.TempId);
+    }
+
+    private void DeleteOption(EnumOptionViewModel option)
+    {
+        _options.Remove(option);
+        _backupOptions.Remove(option.TempId);
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Code))
+        {
+            ToastService.Error(I18n.T("MSG_ENUM_CODE_REQUIRED"));
+            return;
+        }
+
+        if (_options.Any(o => o.IsEditing))
+        {
+            ToastService.Warning("请先保存或取消正在编辑的选项");
+            return;
+        }
+
+        if (_options.Count == 0)
+        {
+            ToastService.Warning("请至少添加一个枚举选项");
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (IsEditMode)
+            {
+                var updateRequest = new UpdateEnumDefinitionRequest
+                {
+                    DisplayName = _model.DisplayName ?? new(),
+                    Description = _model.Description ?? new(),
+                    IsEnabled = _model.IsEnabled,
+                    Options = _options.Select(o => new EnumOptionDto
+                    {
+                        Value = o.Value,
+                        DisplayName = o.DisplayName ?? new(),
+                        ColorTag = o.ColorTag,
+                        SortOrder = 0,
+                        IsEnabled = true
+                    }).ToList()
+                };
+                await EnumService.UpdateAsync(Id!.Value, updateRequest);
+                ToastService.Success(I18n.T("MSG_ENUM_UPDATE_SUCCESS"));
+            }
+            else
+            {
+                var createRequest = new CreateEnumDefinitionRequest
+                {
+                    Code = _model.Code,
+                    DisplayName = _model.DisplayName ?? new(),
+                    Description = _model.Description ?? new(),
+                    IsEnabled = _model.IsEnabled,
+                    Options = _options.Select(o => new CreateEnumOptionRequest
+                    {
+                        Value = o.Value,
+                        DisplayName = o.DisplayName ?? new(),
+                        ColorTag = o.ColorTag,
+                        SortOrder = 0,
+                        Description = new Dictionary<string, string?>()
+                    }).ToList()
+                };
+                await EnumService.CreateAsync(createRequest);
+                ToastService.Success(I18n.T("MSG_ENUM_CREATE_SUCCESS"));
+            }
+
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"{I18n.T("MSG_ENUM_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/system/enums");
+    }
+
+    private class EnumEditViewModel
+    {
+        public string Code { get; set; } = string.Empty;
+        public MultilingualTextDto? DisplayName { get; set; } = new();
+        public MultilingualTextDto? Description { get; set; } = new();
+        public bool IsEnabled { get; set; } = true;
+    }
+
+    private class EnumOptionViewModel
+    {
+        public Guid TempId { get; set; } = Guid.NewGuid();
+        public string Value { get; set; } = string.Empty;
+        public MultilingualTextDto? DisplayName { get; set; } = new();
+        public string? ColorTag { get; set; }
+        public bool IsEditing { get; set; }
+
+        public EnumOptionViewModel Clone()
+        {
+            return new EnumOptionViewModel
+            {
+                TempId = this.TempId,
+                Value = this.Value,
+                DisplayName = this.DisplayName != null ? new MultilingualTextDto(this.DisplayName) : new(),
+                ColorTag = this.ColorTag,
+                IsEditing = this.IsEditing
+            };
+        }
+    }
+}

@@ -4,6 +4,7 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.ToastService ToastService
 @inject NavigationManager Nav
+@using AntDesign
 @using BobCrm.Api.Contracts.DTOs
 @using System.Linq
 
@@ -68,7 +69,7 @@
                             <Tag Color="@PresetColor.Red.ToString()">已禁用</Tag>
                         }
                     </Column>
-                    <Column Title="@I18n.T("LBL_ACTIONS")" TData="string" Width="250px" Fixed="right">
+                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")" Width="250px" Fixed="ColumnFixPlacement.Right">
                         <Space Size="@("small")">
                             <SpaceItem>
                                 <Button Size="@ButtonSize.Small"
@@ -100,7 +101,7 @@
                                 </Popconfirm>
                             </SpaceItem>
                         </Space>
-                    </Column>
+                    </ActionColumn>
                 </Table>
             </Card>
         }
