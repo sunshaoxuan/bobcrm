@@ -200,6 +200,87 @@ public static class AccessEndpoints
             }
         }).RequireFunction("SYS.SET.MENU");
 
+        group.MapGet("/functions/export", async (
+            [FromServices] AppDbContext db,
+            CancellationToken ct) =>
+        {
+            var nodes = await db.FunctionNodes
+                .AsNoTracking()
+                .OrderBy(f => f.SortOrder)
+                .ToListAsync(ct);
+
+            var rootNodes = nodes.Where(n => !n.ParentId.HasValue).ToList();
+            var lookup = nodes.ToDictionary(n => n.Id);
+
+            var exportData = new
+            {
+                version = "1.0",
+                exportDate = DateTime.UtcNow,
+                functions = rootNodes.Select(node => BuildExportNode(node, lookup)).ToList()
+            };
+
+            return Results.Ok(exportData);
+        }).RequireFunction("SYS.SET.MENU");
+
+        group.MapPost("/functions/import", async (
+            [FromBody] MenuImportRequest request,
+            [FromServices] AppDbContext db,
+            [FromServices] AuditTrailService auditTrail,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                // 检查冲突
+                var existingCodes = await db.FunctionNodes
+                    .AsNoTracking()
+                    .Select(f => f.Code)
+                    .ToHashSetAsync(ct);
+
+                var importCodes = ExtractAllCodes(request.Functions);
+                var conflicts = importCodes.Where(code => existingCodes.Contains(code)).ToList();
+
+                if (conflicts.Count > 0 && request.MergeStrategy != "replace")
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "功能码冲突",
+                        conflicts = conflicts,
+                        message = "存在冲突的功能码。请选择合并策略：'replace'（替换现有）或 'skip'（跳过冲突）"
+                    });
+                }
+
+                // 导入功能节点
+                var importedCount = 0;
+                var skippedCount = 0;
+
+                foreach (var funcNode in request.Functions)
+                {
+                    var result = await ImportFunctionNode(funcNode, null, db, existingCodes, request.MergeStrategy, ct);
+                    importedCount += result.imported;
+                    skippedCount += result.skipped;
+                }
+
+                await db.SaveChangesAsync(ct);
+                await auditTrail.RecordAsync("MENU", "IMPORT", $"Imported {importedCount} functions, skipped {skippedCount}", null, new
+                {
+                    importedCount,
+                    skippedCount,
+                    strategy = request.MergeStrategy
+                }, ct);
+
+                return Results.Ok(new
+                {
+                    message = "导入成功",
+                    imported = importedCount,
+                    skipped = skippedCount
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = $"导入失败: {ex.Message}" });
+            }
+        }).RequireFunction("SYS.SET.MENU");
+
         group.MapGet("/roles", async ([FromServices] AppDbContext db, CancellationToken ct) =>
         {
             var roles = await db.RoleProfiles
@@ -430,6 +511,110 @@ public static class AccessEndpoints
             TemplateOptions = new List<FunctionTemplateOptionDto>(),
             TemplateBindings = new List<FunctionNodeTemplateBindingDto>()
         };
+    }
+
+    private static object BuildExportNode(FunctionNode node, Dictionary<Guid, FunctionNode> lookup)
+    {
+        var children = lookup.Values
+            .Where(n => n.ParentId == node.Id)
+            .OrderBy(n => n.SortOrder)
+            .Select(child => BuildExportNode(child, lookup))
+            .ToList();
+
+        return new
+        {
+            code = node.Code,
+            name = node.Name,
+            displayName = node.DisplayName,
+            route = node.Route,
+            icon = node.Icon,
+            isMenu = node.IsMenu,
+            sortOrder = node.SortOrder,
+            children = children.Count > 0 ? children : null
+        };
+    }
+
+    private static List<string> ExtractAllCodes(List<MenuImportNode> nodes)
+    {
+        var codes = new List<string>();
+        foreach (var node in nodes)
+        {
+            codes.Add(node.Code);
+            if (node.Children != null && node.Children.Count > 0)
+            {
+                codes.AddRange(ExtractAllCodes(node.Children));
+            }
+        }
+        return codes;
+    }
+
+    private static async Task<(int imported, int skipped)> ImportFunctionNode(
+        MenuImportNode importNode,
+        Guid? parentId,
+        AppDbContext db,
+        HashSet<string> existingCodes,
+        string? mergeStrategy,
+        CancellationToken ct)
+    {
+        var imported = 0;
+        var skipped = 0;
+
+        // 检查是否已存在
+        var existing = await db.FunctionNodes
+            .FirstOrDefaultAsync(f => f.Code == importNode.Code, ct);
+
+        if (existing != null)
+        {
+            if (mergeStrategy == "replace")
+            {
+                // 替换现有节点
+                existing.Name = importNode.Name ?? existing.Name;
+                existing.DisplayName = importNode.DisplayName;
+                existing.Route = importNode.Route;
+                existing.Icon = importNode.Icon;
+                existing.IsMenu = importNode.IsMenu;
+                existing.SortOrder = importNode.SortOrder;
+                imported++;
+            }
+            else
+            {
+                // 跳过
+                skipped++;
+                return (imported, skipped);
+            }
+        }
+        else
+        {
+            // 创建新节点
+            var newNode = new FunctionNode
+            {
+                Id = Guid.NewGuid(),
+                ParentId = parentId,
+                Code = importNode.Code,
+                Name = importNode.Name ?? importNode.Code,
+                DisplayName = importNode.DisplayName,
+                Route = importNode.Route,
+                Icon = importNode.Icon,
+                IsMenu = importNode.IsMenu,
+                SortOrder = importNode.SortOrder
+            };
+            db.FunctionNodes.Add(newNode);
+            imported++;
+            existing = newNode;
+        }
+
+        // 递归导入子节点
+        if (importNode.Children != null && importNode.Children.Count > 0)
+        {
+            foreach (var child in importNode.Children)
+            {
+                var result = await ImportFunctionNode(child, existing.Id, db, existingCodes, mergeStrategy, ct);
+                imported += result.imported;
+                skipped += result.skipped;
+            }
+        }
+
+        return (imported, skipped);
     }
 
 }

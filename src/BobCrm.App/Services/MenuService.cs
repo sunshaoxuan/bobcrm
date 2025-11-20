@@ -78,4 +78,85 @@ public class MenuService
         var templates = await resp.Content.ReadFromJsonAsync<List<TemplateSummary>>(cancellationToken: ct);
         return templates ?? new List<TemplateSummary>();
     }
+
+    public async Task<object?> ExportMenusAsync(CancellationToken ct = default)
+    {
+        var resp = await _auth.GetWithRefreshAsync("/api/access/functions/export");
+        if (!resp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await resp.Content.ReadFromJsonAsync<object>(cancellationToken: ct);
+    }
+
+    public async Task<List<string>> CheckImportConflictsAsync(List<MenuImportNode> functions, CancellationToken ct = default)
+    {
+        try
+        {
+            var client = await _auth.CreateClientWithAuthAsync();
+            var request = new { functions, mergeStrategy = "check" };
+            var resp = await client.PostAsJsonAsync("/api/access/functions/import", request, ct);
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var error = await resp.Content.ReadFromJsonAsync<ImportErrorResponse>(cancellationToken: ct);
+                return error?.Conflicts ?? new List<string>();
+            }
+
+            return new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    public async Task<ImportResult?> ImportMenusAsync(List<MenuImportNode> functions, string mergeStrategy, CancellationToken ct = default)
+    {
+        var client = await _auth.CreateClientWithAuthAsync();
+        var request = new { functions, mergeStrategy };
+        var resp = await client.PostAsJsonAsync("/api/access/functions/import", request, ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorContent = await resp.Content.ReadAsStringAsync(ct);
+            throw new Exception(errorContent);
+        }
+
+        return await resp.Content.ReadFromJsonAsync<ImportResult>(cancellationToken: ct);
+    }
+}
+
+public record MenuImportData
+{
+    public string Version { get; init; } = "1.0";
+    public DateTime ExportDate { get; init; }
+    public List<MenuImportNode> Functions { get; init; } = new();
+}
+
+public record MenuImportNode
+{
+    public string Code { get; init; } = string.Empty;
+    public string? Name { get; init; }
+    public Dictionary<string, string?>? DisplayName { get; init; }
+    public string? Route { get; init; }
+    public string? Icon { get; init; }
+    public bool IsMenu { get; init; } = true;
+    public int SortOrder { get; init; } = 100;
+    public List<MenuImportNode>? Children { get; init; }
+}
+
+public record ImportResult
+{
+    public string Message { get; init; } = string.Empty;
+    public int Imported { get; init; }
+    public int Skipped { get; init; }
+}
+
+public record ImportErrorResponse
+{
+    public string Error { get; init; } = string.Empty;
+    public List<string> Conflicts { get; init; } = new();
+    public string Message { get; init; } = string.Empty;
 }

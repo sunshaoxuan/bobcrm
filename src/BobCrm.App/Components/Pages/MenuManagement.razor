@@ -8,6 +8,7 @@
 @inject I18nService I18n
 @inject AntDesign.IMessageService Message
 @inject IMultilingualTextResolver MultilingualResolver
+@inject IJSRuntime JSRuntime
 
 <PageTitle>@I18n.T("MENU_MENU_MANAGE") · OneCRM</PageTitle>
 
@@ -30,6 +31,12 @@
                     </Button>
                     <Button Icon="@IconType.Outline.Reload" OnClick="() => LoadTreeAsync(_selectedNode?.Id)">
                         @I18n.T("BTN_REFRESH")
+                    </Button>
+                    <Button Icon="@IconType.Outline.Download" OnClick="ExportMenus">
+                        @I18n.T("BTN_EXPORT")
+                    </Button>
+                    <Button Icon="@IconType.Outline.Upload" OnClick="() => _showImportModal = true">
+                        @I18n.T("BTN_IMPORT")
                     </Button>
                 </div>
 
@@ -186,6 +193,67 @@
             }
         </div>
     </Modal>
+
+    <Modal @bind-Visible="_showImportModal"
+           Title="@I18n.T("LBL_IMPORT_MENU")"
+           Width="600"
+           DestroyOnClose="true"
+           Footer="null">
+        <div class="import-container">
+            <div class="import-step">
+                <h4>@I18n.T("LBL_STEP1_UPLOAD")</h4>
+                <InputFile OnChange="HandleFileUpload" accept=".json" />
+                @if (!string.IsNullOrWhiteSpace(_importError))
+                {
+                    <Alert Message="@_importError" Type="@AlertType.Error" ShowIcon="true" Style="margin-top: 12px" />
+                }
+            </div>
+
+            @if (_importPreview != null)
+            {
+                <div class="import-step">
+                    <h4>@I18n.T("LBL_STEP2_PREVIEW")</h4>
+                    <div class="import-summary">
+                        <p>@I18n.T("LBL_IMPORT_TOTAL"): @_importPreview.TotalCount</p>
+                        @if (_importPreview.Conflicts.Count > 0)
+                        {
+                            <Alert Type="@AlertType.Warning" ShowIcon="true">
+                                <MessageTemplate>
+                                    <p>@I18n.T("MSG_IMPORT_CONFLICTS"): @_importPreview.Conflicts.Count</p>
+                                    <ul style="margin-top: 8px; padding-left: 20px">
+                                        @foreach (var conflict in _importPreview.Conflicts.Take(5))
+                                        {
+                                            <li>@conflict</li>
+                                        }
+                                        @if (_importPreview.Conflicts.Count > 5)
+                                        {
+                                            <li>... @(_importPreview.Conflicts.Count - 5) @I18n.T("TXT_MORE")</li>
+                                        }
+                                    </ul>
+                                </MessageTemplate>
+                            </Alert>
+                            <div style="margin-top: 12px">
+                                <label>@I18n.T("LBL_MERGE_STRATEGY"):</label>
+                                <RadioGroup @bind-Value="_mergeStrategy">
+                                    <Radio Value="@("skip")">@I18n.T("LBL_SKIP_CONFLICTS")</Radio>
+                                    <Radio Value="@("replace")">@I18n.T("LBL_REPLACE_CONFLICTS")</Radio>
+                                </RadioGroup>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="import-actions">
+                    <Button OnClick="() => { _showImportModal = false; _importPreview = null; }">
+                        @I18n.T("BTN_CANCEL")
+                    </Button>
+                    <Button Type="@ButtonType.Primary" OnClick="ConfirmImport" Loading="_importing">
+                        @I18n.T("BTN_CONFIRM_IMPORT")
+                    </Button>
+                </div>
+            }
+        </div>
+    </Modal>
 </AuthChecker>
 
 @code {
@@ -202,6 +270,14 @@
     private MenuFormModel _form = new();
     private readonly List<TemplateSummary> _templates = new();
     private bool _templatesLoaded;
+
+    // 导入/导出相关
+    private bool _showImportModal;
+    private ImportPreview? _importPreview;
+    private string? _importError;
+    private string _mergeStrategy = "skip";
+    private bool _importing;
+    private string? _importData;
 
     protected override async Task OnInitializedAsync()
     {
@@ -762,6 +838,123 @@
         _templates.AddRange(templates);
         _templatesLoaded = true;
         StateHasChanged();
+    }
+
+    private async Task ExportMenus()
+    {
+        try
+        {
+            var response = await MenuService.ExportMenusAsync();
+            if (response != null)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                var fileName = $"menu-export-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+                await JSRuntime.InvokeVoidAsync("bobcrm.downloadFile", fileName, json, "application/json");
+                Message.Success(I18n.T("MSG_EXPORT_SUCCESS"));
+            }
+        }
+        catch (Exception ex)
+        {
+            Message.Error($"{I18n.T("MSG_EXPORT_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        _importError = null;
+        _importPreview = null;
+
+        try
+        {
+            var file = e.File;
+            if (file.Size > 5 * 1024 * 1024) // 5MB limit
+            {
+                _importError = I18n.T("MSG_FILE_TOO_LARGE");
+                return;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            _importData = await reader.ReadToEndAsync();
+
+            // 预解析检查格式
+            var data = System.Text.Json.JsonSerializer.Deserialize<MenuImportData>(_importData);
+            if (data?.Functions == null || data.Functions.Count == 0)
+            {
+                _importError = I18n.T("MSG_INVALID_IMPORT_FILE");
+                return;
+            }
+
+            // 获取冲突
+            var conflicts = await MenuService.CheckImportConflictsAsync(data.Functions);
+            var totalCount = CountNodes(data.Functions);
+
+            _importPreview = new ImportPreview
+            {
+                TotalCount = totalCount,
+                Conflicts = conflicts
+            };
+        }
+        catch (Exception ex)
+        {
+            _importError = $"{I18n.T("MSG_FILE_PARSE_ERROR")}: {ex.Message}";
+        }
+    }
+
+    private async Task ConfirmImport()
+    {
+        if (string.IsNullOrWhiteSpace(_importData) || _importPreview == null)
+        {
+            return;
+        }
+
+        _importing = true;
+        try
+        {
+            var data = System.Text.Json.JsonSerializer.Deserialize<MenuImportData>(_importData);
+            if (data == null)
+            {
+                Message.Error(I18n.T("MSG_INVALID_IMPORT_FILE"));
+                return;
+            }
+
+            var result = await MenuService.ImportMenusAsync(data.Functions, _mergeStrategy);
+            if (result != null)
+            {
+                Message.Success($"{I18n.T("MSG_IMPORT_SUCCESS")}: {result.Imported} {I18n.T("LBL_IMPORTED")}, {result.Skipped} {I18n.T("LBL_SKIPPED")}");
+                _showImportModal = false;
+                _importPreview = null;
+                _importData = null;
+                await LoadTreeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Message.Error($"{I18n.T("MSG_IMPORT_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+
+    private int CountNodes(List<MenuImportNode> nodes)
+    {
+        var count = nodes.Count;
+        foreach (var node in nodes)
+        {
+            if (node.Children != null && node.Children.Count > 0)
+            {
+                count += CountNodes(node.Children);
+            }
+        }
+        return count;
+    }
+
+    private class ImportPreview
+    {
+        public int TotalCount { get; set; }
+        public List<string> Conflicts { get; set; } = new();
     }
 
     private class MenuFormModel

@@ -131,3 +131,21 @@ public record RoleProfileDto
     public List<RoleFunctionDto> Functions { get; init; } = new();
     public List<RoleDataScopeDto> DataScopes { get; init; } = new();
 }
+
+public record MenuImportRequest
+{
+    public List<MenuImportNode> Functions { get; init; } = new();
+    public string? MergeStrategy { get; init; }  // "replace" or "skip"
+}
+
+public record MenuImportNode
+{
+    public string Code { get; init; } = string.Empty;
+    public string? Name { get; init; }
+    public Dictionary<string, string?>? DisplayName { get; init; }
+    public string? Route { get; init; }
+    public string? Icon { get; init; }
+    public bool IsMenu { get; init; } = true;
+    public int SortOrder { get; init; } = 100;
+    public List<MenuImportNode>? Children { get; init; }
+}
