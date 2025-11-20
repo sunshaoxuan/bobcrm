@@ -177,6 +177,13 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 sortable = true
             }).ToList();
 
+            // 定义行操作（Edit和Delete）
+            var rowActions = new[]
+            {
+                new { action = "edit", label = "Edit", icon = "edit" },
+                new { action = "delete", label = "Delete", icon = "delete" }
+            };
+
             var dataGrid = new Dictionary<string, object?>
             {
                 ["id"] = Guid.NewGuid().ToString(),
@@ -185,6 +192,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 ["entityType"] = entity.EntityRoute,
                 ["apiEndpoint"] = entity.ApiEndpoint ?? $"/api/{entity.EntityRoute}s", // Simple pluralization fallback
                 ["columnsJson"] = JsonSerializer.Serialize(columns, JsonOptions),
+                ["rowActionsJson"] = JsonSerializer.Serialize(rowActions, JsonOptions),
                 ["showPagination"] = true,
                 ["pageSize"] = 20,
                 ["allowMultiSelect"] = true,
