@@ -168,8 +168,52 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         if (usage == FormTemplateUsageType.List)
         {
-            // For List, we create a single DataGridWidget
-            var columns = fields.Select(f => new
+            // 1. 添加工具栏 Section（包含新增按钮和搜索框）
+            var toolbarWidgets = new List<Dictionary<string, object?>>
+            {
+                new()
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "button",
+                    ["label"] = "BTN_ADD",
+                    ["action"] = "create",
+                    ["icon"] = "plus",
+                    ["buttonType"] = "primary",
+                    ["width"] = 10,
+                    ["widthUnit"] = "%"
+                },
+                new()
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "textbox",
+                    ["label"] = "",
+                    ["placeholder"] = "MSG_SEARCH_PLACEHOLDER",
+                    ["dataField"] = "__search__",
+                    ["width"] = 30,
+                    ["widthUnit"] = "%"
+                }
+            };
+
+            var toolbarSection = new Dictionary<string, object?>
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = "section",
+                ["label"] = "",
+                ["showTitle"] = false,
+                ["children"] = toolbarWidgets,
+                ["containerLayout"] = new Dictionary<string, object?>
+                {
+                    ["flexDirection"] = "row",
+                    ["justifyContent"] = "space-between",
+                    ["gap"] = 12,
+                    ["padding"] = 12,
+                    ["backgroundColor"] = "#fafafa"
+                }
+            };
+            widgets.Add(toolbarSection);
+
+            // 2. 添加 DataGrid 控件
+            var columns = fields.Take(8).Select(f => new
             {
                 field = f.PropertyName?.ToLowerInvariant(),
                 label = ResolveLabel(f),
@@ -177,34 +221,82 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 sortable = true
             }).ToList();
 
-            // 定义行操作（Edit和Delete）
+            // 定义行操作（View, Edit, Delete）
             var rowActions = new[]
             {
-                new { action = "edit", label = "Edit", icon = "edit" },
-                new { action = "delete", label = "Delete", icon = "delete" }
+                new { action = "view", label = "BTN_VIEW", icon = "eye" },
+                new { action = "edit", label = "BTN_EDIT", icon = "edit" },
+                new { action = "delete", label = "BTN_DELETE", icon = "delete" }
             };
 
             var dataGrid = new Dictionary<string, object?>
             {
                 ["id"] = Guid.NewGuid().ToString(),
                 ["type"] = "datagrid",
-                ["label"] = $"{entity.DisplayName?.Values.FirstOrDefault() ?? entity.EntityName} List",
+                ["label"] = "",
                 ["entityType"] = entity.EntityRoute,
-                ["apiEndpoint"] = entity.ApiEndpoint ?? $"/api/{entity.EntityRoute}s", // Simple pluralization fallback
+                ["apiEndpoint"] = entity.ApiEndpoint ?? $"/api/{entity.EntityRoute}s",
                 ["columnsJson"] = JsonSerializer.Serialize(columns, JsonOptions),
                 ["rowActionsJson"] = JsonSerializer.Serialize(rowActions, JsonOptions),
                 ["showPagination"] = true,
                 ["pageSize"] = 20,
                 ["allowMultiSelect"] = true,
-                ["showSearch"] = true,
+                ["showSearch"] = false, // 使用工具栏的搜索框
                 ["showRefreshButton"] = true,
-                ["showBordered"] = false
+                ["showBordered"] = true,
+                ["size"] = "middle"
             };
             widgets.Add(dataGrid);
         }
         else
         {
-            // For Detail/Edit, we create a list of field widgets
+            // For Detail/Edit, we create a Card to group field widgets
+            var fieldWidgets = new List<Dictionary<string, object?>>();
+
+            // Add action buttons at the top for Edit mode
+            if (usage == FormTemplateUsageType.Edit)
+            {
+                var buttonSection = new Dictionary<string, object?>
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "section",
+                    ["label"] = "",
+                    ["showTitle"] = false,
+                    ["children"] = new List<Dictionary<string, object?>>
+                    {
+                        new()
+                        {
+                            ["id"] = Guid.NewGuid().ToString(),
+                            ["type"] = "button",
+                            ["label"] = "BTN_SAVE",
+                            ["action"] = "save",
+                            ["buttonType"] = "primary",
+                            ["width"] = 10,
+                            ["widthUnit"] = "%"
+                        },
+                        new()
+                        {
+                            ["id"] = Guid.NewGuid().ToString(),
+                            ["type"] = "button",
+                            ["label"] = "BTN_CANCEL",
+                            ["action"] = "cancel",
+                            ["buttonType"] = "default",
+                            ["width"] = 10,
+                            ["widthUnit"] = "%"
+                        }
+                    },
+                    ["containerLayout"] = new Dictionary<string, object?>
+                    {
+                        ["flexDirection"] = "row",
+                        ["justifyContent"] = "flex-start",
+                        ["gap"] = 12,
+                        ["padding"] = 12
+                    }
+                };
+                widgets.Add(buttonSection);
+            }
+
+            // Create field widgets
             foreach (var field in fields)
             {
                 var propertyName = field.PropertyName?.Trim();
@@ -220,7 +312,8 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     ["label"] = label,
                     ["dataField"] = propertyName,
                     ["required"] = field.IsRequired,
-                    ["w"] = 6, // Half width (12 grid system)
+                    ["width"] = 48,
+                    ["widthUnit"] = "%",
                     ["visible"] = true
                 };
 
@@ -231,7 +324,33 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     widget["isMultiSelect"] = field.IsMultiSelect;
                 }
 
-                widgets.Add(widget);
+                fieldWidgets.Add(widget);
+            }
+
+            // Wrap fields in a Card for better organization
+            if (fieldWidgets.Count > 0)
+            {
+                var card = new Dictionary<string, object?>
+                {
+                    ["id"] = Guid.NewGuid().ToString(),
+                    ["type"] = "card",
+                    ["title"] = "LBL_BASIC_INFO",
+                    ["showTitle"] = true,
+                    ["collapsible"] = false,
+                    ["defaultExpanded"] = true,
+                    ["children"] = fieldWidgets,
+                    ["width"] = 100,
+                    ["widthUnit"] = "%",
+                    ["containerLayout"] = new Dictionary<string, object?>
+                    {
+                        ["flexDirection"] = "row",
+                        ["flexWrap"] = true,
+                        ["gap"] = 12,
+                        ["padding"] = 16,
+                        ["backgroundColor"] = "#ffffff"
+                    }
+                };
+                widgets.Add(card);
             }
 
             // 根据实体路由追加专用控件

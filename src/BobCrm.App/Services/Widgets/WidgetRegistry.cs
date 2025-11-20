@@ -45,6 +45,7 @@ public static class WidgetRegistry
 
             new WidgetDefinition("section", "LBL_SECTION", IconType.Outline.AppstoreAdd, WidgetCategory.Layout, () => new SectionWidget()),
             new WidgetDefinition("panel", "LBL_PANEL", IconType.Outline.Appstore, WidgetCategory.Layout, () => new PanelWidget()),
+            new WidgetDefinition("card", "LBL_CARD", IconType.Outline.Container, WidgetCategory.Layout, () => new CardWidget()),
             new WidgetDefinition("grid", "LBL_GRID", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new GridWidget()),
             new WidgetDefinition("frame", "LBL_FRAME", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new FrameWidget()),
             new WidgetDefinition("tabbox", "LBL_TABBOX", IconType.Outline.Appstore, WidgetCategory.Layout, () => new TabContainerWidget()),
@@ -52,6 +53,7 @@ public static class WidgetRegistry
 
             // 数据控件
             new WidgetDefinition("datagrid", "LBL_DATAGRID", IconType.Outline.Table, WidgetCategory.Data, () => new DataGridWidget()),
+            new WidgetDefinition("subform", "LBL_SUBFORM", IconType.Outline.Subnode, WidgetCategory.Data, () => new SubFormWidget()),
             new WidgetDefinition("orgtree", "LBL_ORGTREE", IconType.Outline.Apartment, WidgetCategory.Data, () => new OrganizationTreeWidget()),
             new WidgetDefinition("permtree", "LBL_PERMTREE", IconType.Outline.SafetyCertificate, WidgetCategory.Data, () => new RolePermissionTreeWidget()),
             new WidgetDefinition("userrole", "LBL_USERROLE", IconType.Outline.UserSwitch, WidgetCategory.Data, () => new UserRoleAssignmentWidget()),
