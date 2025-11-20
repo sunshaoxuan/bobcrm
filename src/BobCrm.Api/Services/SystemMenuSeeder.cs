@@ -31,8 +31,12 @@ public class SystemMenuSeeder
         // 3. 确保枚举管理菜单存在
         var enumMenu = await EnsureMenuNodeAsync(sysDomain, "SYS.ENUM", "枚举管理", "/system/enums", "unordered-list", 10);
 
-        // 4. 确保管理员角色拥有此权限
+        // 4. 确保菜单编辑器菜单存在
+        var menuEditorMenu = await EnsureMenuNodeAsync(sysDomain, "SYS.SET.MENU", "菜单编辑器", "/menus", "menu", 20);
+
+        // 5. 确保管理员角色拥有这些权限
         await EnsureAdminPermissionAsync(enumMenu);
+        await EnsureAdminPermissionAsync(menuEditorMenu);
 
         await _db.SaveChangesAsync();
     }

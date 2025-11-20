@@ -1,0 +1,211 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject UserService UserService
+@inject IRoleService RoleService
+@inject IMessageService Message
+@inject I18nService I18n
+
+<div class="user-role-assignment">
+    @if (_loading)
+    {
+        <Spin />
+    }
+    else
+    {
+        <div class="role-assignment-header">
+            <h4>@I18n.T("LBL_USER_ROLE_ASSIGNMENT")</h4>
+            <Button Type="@ButtonType.Primary"
+                    Size="@ButtonSize.Small"
+                    Icon="@IconType.Outline.Save"
+                    Loading="_saving"
+                    OnClick="SaveRolesAsync">
+                @I18n.T("BTN_SAVE")
+            </Button>
+        </div>
+
+        <div class="role-assignment-content">
+            <Transfer DataSource="_allRoles"
+                      TitleTexts="@(new[] { I18n.T("LBL_AVAILABLE_ROLES"), I18n.T("LBL_ASSIGNED_ROLES") })"
+                      @bind-TargetKeys="_assignedRoleIds"
+                      ShowSearch
+                      ShowSelectAll>
+                <ChildContent Context="item">
+                    <div class="role-item">
+                        <span class="role-name">@item.Name</span>
+                        <span class="role-code">@item.Code</span>
+                    </div>
+                </ChildContent>
+            </Transfer>
+        </div>
+
+        @if (_currentRoles.Count > 0)
+        {
+            <div class="role-assignment-list">
+                <h5>@I18n.T("LBL_CURRENT_ROLE_ASSIGNMENTS")</h5>
+                <ul>
+                    @foreach (var role in _currentRoles)
+                    {
+                        <li>
+                            <span>@role.RoleName (@role.RoleCode)</span>
+                            @if (role.OrganizationId.HasValue)
+                            {
+                                <Tag Color="blue">@I18n.T("LBL_ORGANIZATION_SCOPED")</Tag>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+</div>
+
+<style>
+.user-role-assignment {
+    padding: 16px;
+}
+
+.role-assignment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.role-assignment-header h4 {
+    margin: 0;
+}
+
+.role-assignment-content {
+    margin-bottom: 16px;
+}
+
+.role-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.role-name {
+    font-weight: 500;
+}
+
+.role-code {
+    color: #999;
+    font-size: 12px;
+}
+
+.role-assignment-list {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.role-assignment-list h5 {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.role-assignment-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.role-assignment-list li {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+</style>
+
+@code {
+    [Parameter]
+    public string? UserId { get; set; }
+
+    private bool _loading = true;
+    private bool _saving = false;
+    private List<TransferItem> _allRoles = new();
+    private string[] _assignedRoleIds = Array.Empty<string>();
+    private List<UserRoleAssignmentDto> _currentRoles = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(UserId))
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            // 获取所有角色
+            var allRoles = await RoleService.GetRolesAsync();
+            _allRoles = allRoles.Select(r => new TransferItem
+            {
+                Key = r.Id.ToString(),
+                Title = r.Name,
+                Description = r.Code
+            }).ToList();
+
+            // 获取用户当前角色
+            if (!string.IsNullOrWhiteSpace(UserId))
+            {
+                var user = await UserService.GetUserAsync(UserId);
+                if (user != null)
+                {
+                    _currentRoles = user.Roles;
+                    _assignedRoleIds = user.Roles.Select(r => r.RoleId.ToString()).ToArray();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveRolesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UserId))
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var roleIds = _assignedRoleIds.Select(Guid.Parse).ToList();
+            var success = await UserService.UpdateRolesAsync(UserId, roleIds);
+
+            if (success)
+            {
+                await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                await LoadDataAsync(); // 重新加载以获取最新的角色分配信息
+            }
+            else
+            {
+                await Message.Error(I18n.T("MSG_SAVE_FAILED"));
+            }
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
