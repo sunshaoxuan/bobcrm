@@ -25,13 +25,13 @@
 在系统菜单中添加 **枚举管理** 入口，使管理员可以直接访问 `/system/enums` 页面。
 
 ### 任务清单
-- [ ] 在 `MenuService` 或静态菜单配置中注册菜单项：
+- [x] 在 `MenuService` 或静态菜单配置中注册菜单项：
   - 路径：`/system/enums`
   - 图标：`UnorderedListOutlined` 或 `DatabaseOutlined`
   - 功能码：`Menu_EnumManagement`
   - 父级：系统管理
-- [ ] 为 `EnumManagement.razor` 添加权限检查（`@attribute [Authorize]` + `RequiredFunctionCode = "Menu_EnumManagement"`）
-- [ ] 在 `PermissionSeeder` 中为系统管理员角色分配 `Menu_EnumManagement` 功能码
+- [x] 为 `EnumManagement.razor` 添加权限检查（`@attribute [Authorize]` + `RequiredFunctionCode = "Menu_EnumManagement"`）
+- [x] 在 `PermissionSeeder` 中为系统管理员角色分配 `Menu_EnumManagement` 功能码
 - [ ] 验证：
   - 管理员登录后可在侧边栏看到 **枚举管理** 入口
   - 非管理员用户看不到该菜单项

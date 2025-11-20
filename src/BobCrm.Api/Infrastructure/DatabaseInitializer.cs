@@ -43,6 +43,11 @@ public static class DatabaseInitializer
             await enumSeeder.EnsureSystemEnumsAsync();
             Console.WriteLine("[DatabaseInitializer] System enums initialized successfully");
 
+            // 初始化系统菜单
+            var menuSeeder = new BobCrm.Api.Services.SystemMenuSeeder(appDbContext);
+            await menuSeeder.EnsureSystemMenusAsync();
+            Console.WriteLine("[DatabaseInitializer] System menus initialized successfully");
+
             await CleanupSampleEntityDefinitionsAsync(appDbContext);
 
             await CleanupTestUsersAsync(appDbContext);
