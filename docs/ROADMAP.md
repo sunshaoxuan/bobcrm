@@ -69,7 +69,7 @@
     - [x] 菜单编辑器入口：`/menus`（权限码：`SYS.SET.MENU`）
     - [x] MenuManagement.razor提供完整CRUD和拖拽功能
     - [ ] 详见 [GUIDE-06-菜单编辑器使用指南](guides/GUIDE-06-菜单编辑器使用指南.md)（待编写）
-    - [x] 实施计划参考 [PROC-06-下一步开发计划](process/PROC-06-下一步开发计划.md)
+    - [x] 实施计划参考 [PROC-06-v0.6.0-开发计划](process/PROC-06-v0.6.0-开发计划.md)
 
 ### 1.3 高级数据可视化与交互
 - [ ] **仪表盘引擎**:

@@ -64,7 +64,7 @@
 - [PROC-03-代码评审与改进清单](process/PROC-03-代码评审与改进清单.md)
 - [PROC-04-文档代码差距审计报告](process/PROC-04-文档代码差距审计报告.md)
 - [PROC-05-多语言功能代码评审](process/PROC-05-多语言功能代码评审.md)
-- [PROC-06-下一步开发计划](process/PROC-06-下一步开发计划.md)
+- [PROC-06-v0.6.0-开发计划](process/PROC-06-v0.6.0-开发计划.md)
 - [PROC-07-系统实体模板化迁移记录](process/PROC-07-系统实体模板化迁移记录.md)
 - [ARCH-24-紧凑型顶部菜单导航-实施计划](process/ARCH-24-紧凑型顶部菜单导航-实施计划.md)
 
