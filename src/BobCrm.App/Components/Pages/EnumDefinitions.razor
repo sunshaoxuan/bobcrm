@@ -105,6 +105,82 @@
             </Card>
         }
     </div>
+
+    @* 查看详情Modal *@
+    <Modal Title="@_viewModalTitle"
+           Visible="_viewModalVisible"
+           OnOk="CloseViewModal"
+           OnCancel="CloseViewModal"
+           Footer="null"
+           Width="800">
+        @if (_viewingEnum != null)
+        {
+            <Descriptions Bordered Column="2" Size="@DescriptionsSize.Small">
+                <DescriptionsItem Title="@I18n.T("LBL_ENUM_CODE")" Span="2">
+                    <strong>@_viewingEnum.Code</strong>
+                </DescriptionsItem>
+                <DescriptionsItem Title="显示名称（中文）">
+                    @(_viewingEnum.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
+                </DescriptionsItem>
+                <DescriptionsItem Title="显示名称（日文）">
+                    @(_viewingEnum.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
+                </DescriptionsItem>
+                <DescriptionsItem Title="显示名称（英文）">
+                    @(_viewingEnum.DisplayName?.GetValueOrDefault("en-US") ?? "-")
+                </DescriptionsItem>
+                <DescriptionsItem Title="状态">
+                    @if (_viewingEnum.IsEnabled)
+                    {
+                        <Tag Color="@PresetColor.Green.ToString()">已启用</Tag>
+                    }
+                    else
+                    {
+                        <Tag Color="@PresetColor.Red.ToString()">已禁用</Tag>
+                    }
+                </DescriptionsItem>
+                <DescriptionsItem Title="描述" Span="2">
+                    @(_viewingEnum.Description?.GetValueOrDefault(I18n.CurrentLang) ?? "-")
+                </DescriptionsItem>
+            </Descriptions>
+
+            <Divider>@I18n.T("LBL_ENUM_OPTIONS")</Divider>
+
+            <Table TItem="EnumOptionDto"
+                   DataSource="@_viewingEnum.Options"
+                   Bordered
+                   Size="@TableSize.Small"
+                   PageSize="999">
+                <Column Title="@I18n.T("LBL_OPTION_VALUE")" TData="string" Width="200px">
+                    <strong>@context.Value</strong>
+                </Column>
+                <Column Title="显示名称（中文）" TData="string">
+                    @(context.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
+                </Column>
+                <Column Title="显示名称（日文）" TData="string">
+                    @(context.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
+                </Column>
+                <Column Title="显示名称（英文）" TData="string">
+                    @(context.DisplayName?.GetValueOrDefault("en-US") ?? "-")
+                </Column>
+                <Column Title="@I18n.T("LBL_COLOR_TAG")" TData="string" Width="120px" Align="ColumnAlign.Center">
+                    @if (!string.IsNullOrEmpty(context.ColorTag))
+                    {
+                        <Tag Color="@context.ColorTag">@context.ColorTag</Tag>
+                    }
+                    else
+                    {
+                        <span>-</span>
+                    }
+                </Column>
+            </Table>
+
+            <div style="margin-top: 16px; text-align: right;">
+                <Button Type="@ButtonType.Default" OnClick="CloseViewModal">
+                    @I18n.T("BTN_CLOSE")
+                </Button>
+            </div>
+        }
+    </Modal>
 </AuthChecker>
 
 @code {
@@ -112,6 +188,11 @@
     private List<EnumDefinitionDto> _enums = new();
     private string _search = string.Empty;
     private bool? _isEnabledFilter = null;
+
+    // 查看详情相关
+    private bool _viewModalVisible = false;
+    private string _viewModalTitle = "";
+    private EnumDefinitionDto? _viewingEnum = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -176,10 +257,32 @@
         Nav.NavigateTo($"/enums/edit/{id}");
     }
 
-    private void ViewEnum(Guid id)
+    private async Task ViewEnum(Guid id)
     {
-        // TODO: 实现查看枚举详情
-        ToastService.Info("查看功能待实现");
+        try
+        {
+            _viewingEnum = await EnumService.GetByIdAsync(id);
+            if (_viewingEnum != null)
+            {
+                _viewModalTitle = $"{I18n.T("LBL_ENUM_DEFINITION")}: {_viewingEnum.Code}";
+                _viewModalVisible = true;
+            }
+            else
+            {
+                ToastService.Error(I18n.T("MSG_ENUM_LOAD_FAILED"));
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"{I18n.T("MSG_ENUM_LOAD_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private void CloseViewModal()
+    {
+        _viewModalVisible = false;
+        _viewingEnum = null;
+        _viewModalTitle = "";
     }
 
     private async Task HandleDelete(Guid id)
