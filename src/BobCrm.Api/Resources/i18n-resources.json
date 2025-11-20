@@ -858,6 +858,7 @@
   "MENU_SYS_MSG_TEMPLATE": { "zh": "消息模板", "ja": "メッセージテンプレート", "en": "Message Templates" },
   "MENU_SYS_ENTITY": { "zh": "实体管理", "ja": "エンティティ管理", "en": "Entity Management" },
   "MENU_SYS_ENTITY_EDITOR": { "zh": "业务实体编辑", "ja": "業務エンティティ編集", "en": "Business Entity Editor" },
+  "MENU_SYS_ENTITY_ENUM": { "zh": "枚举定义", "ja": "列挙型定義", "en": "Enum Definitions" },
   "MENU_SYS_TEMPLATE": { "zh": "模板管理", "ja": "テンプレート管理", "en": "Template Management" },
   "MENU_SYS_TEMPLATE_DESIGN": { "zh": "模板设计", "ja": "テンプレート設計", "en": "Template Designer" },
   "MENU_SYS_TEMPLATE_ASSIGN": { "zh": "模板分配", "ja": "テンプレート割り当て", "en": "Template Assignment" },

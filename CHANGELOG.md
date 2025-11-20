@@ -19,6 +19,11 @@
     - `EnumDefinitions.razor`：枚举列表管理页面，支持搜索、状态筛选、查看、编辑、删除功能
     - `EnumDefinitionEdit.razor`：枚举创建/编辑页面，支持多语言显示名、枚举选项管理、颜色标签配置
     - 实现行内编辑枚举选项，支持添加、编辑、删除操作
+    - 查看详情 Modal：只读模式展示枚举完整信息（基本信息、所有语言的显示名、选项列表）
+  - **菜单系统集成**：
+    - 添加 `MENU_SYS_ENTITY_ENUM` 菜单资源键（中日英三语）
+    - 提供 SQL 初始化脚本 `add-enum-menu-node.sql`，在"系统设置 > 实体管理"下注册枚举菜单
+    - 菜单代码 `SYS.ENTITY.ENUM`，路由 `/enums`，图标 `ordered-list`
   - **数据展示优化**：
     - `DataGridRuntime.razor` 改进枚举值显示，使用当前语言而非硬编码英文
     - 支持单选和多选枚举值的正确解析与展示
