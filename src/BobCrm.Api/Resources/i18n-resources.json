@@ -989,6 +989,13 @@
   "TPL_USAGE_LIST": { "zh": "列表", "ja": "リスト", "en": "List" },
   "TPL_USAGE_DETAIL": { "zh": "详情", "ja": "詳細", "en": "Detail" },
   "TPL_USAGE_EDIT": { "zh": "编辑", "ja": "編集", "en": "Edit" },
-  "TPL_PAGE_TITLE": { "zh": "模板管理", "ja": "テンプレート管理", "en": "Template Management" }
+  "TPL_PAGE_TITLE": { "zh": "模板管理", "ja": "テンプレート管理", "en": "Template Management" },
+
+  "MSG_TEMPLATE_NAME_REQUIRED": { "zh": "请输入模板名称", "ja": "テンプレート名を入力してください", "en": "Please enter template name" },
+  "MSG_ENTITY_TYPE_REQUIRED": { "zh": "请选择实体类型", "ja": "エンティティタイプを選択してください", "en": "Please select entity type" },
+  "MSG_TEMPLATE_LOAD_FAILED": { "zh": "模板加载失败", "ja": "テンプレートの読み込みに失敗しました", "en": "Failed to load template" },
+  "MSG_TEMPLATE_PARSE_FAILED": { "zh": "模板数据解析失败", "ja": "テンプレートデータの解析に失敗しました", "en": "Failed to parse template data" },
+  "MSG_UPDATE_FAILED": { "zh": "更新失败", "ja": "更新に失敗しました", "en": "Update failed" },
+  "MSG_CREATE_FAILED": { "zh": "创建失败", "ja": "作成に失敗しました", "en": "Create failed" }
 }
 
