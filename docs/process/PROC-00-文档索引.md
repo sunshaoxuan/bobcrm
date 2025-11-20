@@ -56,6 +56,7 @@
 - [OPS-02-容器问题-修复历史](history/OPS-02-容器问题-修复历史.md)
 - [PROJ-01-项目现状分析报告](history/PROJ-01-项目现状分析报告.md)
 - [TMP-01-模板设计器进度跟踪](history/TMP-01-模板设计器进度跟踪.md)
+- [PROC-06-v0.6.0-开发计划](history/PROC-06-v0.6.0-开发计划.md) (已完成)
 
 ## 5. 流程与规范（process/）
 - 本页：`PROC-00-文档索引.md`
@@ -64,8 +65,6 @@
 - [PROC-03-代码评审与改进清单](process/PROC-03-代码评审与改进清单.md)
 - [PROC-04-文档代码差距审计报告](process/PROC-04-文档代码差距审计报告.md)
 - [PROC-05-多语言功能代码评审](process/PROC-05-多语言功能代码评审.md)
-- [PROC-06-v0.6.0-开发计划](process/PROC-06-v0.6.0-开发计划.md)
-- [PROC-07-系统实体模板化迁移记录](process/PROC-07-系统实体模板化迁移记录.md)
 - [ARCH-24-紧凑型顶部菜单导航-实施计划](process/ARCH-24-紧凑型顶部菜单导航-实施计划.md)
 
 ## 6. 示例（examples/）
