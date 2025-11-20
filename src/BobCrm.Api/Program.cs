@@ -315,7 +315,8 @@ using (var scope = app.Services.CreateScope())
         // Sync system entities (IBizEntity implementations) to EntityDefinition table
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<EntityDefinitionSynchronizer>>();
         var templateService = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Services.IDefaultTemplateService>();
-        var synchronizer = new EntityDefinitionSynchronizer(db, logger, templateService);
+        var bindingService = scope.ServiceProvider.GetRequiredService<TemplateBindingService>();
+        var synchronizer = new EntityDefinitionSynchronizer(db, logger, templateService, bindingService);
         await synchronizer.SyncSystemEntitiesAsync();
 
         // Sync internationalization resources (add missing i18n keys to database)

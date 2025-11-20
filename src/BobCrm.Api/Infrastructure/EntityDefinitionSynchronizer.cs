@@ -1,131 +1,105 @@
-using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Base.Models.Metadata;
+using BobCrm.Api.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace BobCrm.Api.Infrastructure;
 
 /// <summary>
-/// 实体定义同步器 - 在系统启动时自动同步系统实体到EntityDefinition表
+/// 实体定义同步器 - 将系统实体（IBizEntity实现）同步到EntityDefinition表
 /// </summary>
 public class EntityDefinitionSynchronizer
 {
     private readonly AppDbContext _db;
     private readonly ILogger<EntityDefinitionSynchronizer> _logger;
-    private readonly BobCrm.Api.Services.IDefaultTemplateService? _templateService;
+    private readonly IDefaultTemplateService? _templateService;
+    private readonly TemplateBindingService? _bindingService;
 
     public EntityDefinitionSynchronizer(
-        AppDbContext db, 
+        AppDbContext db,
         ILogger<EntityDefinitionSynchronizer> logger,
-        BobCrm.Api.Services.IDefaultTemplateService? templateService = null)
+        IDefaultTemplateService? templateService = null,
+        TemplateBindingService? bindingService = null)
     {
         _db = db;
         _logger = logger;
         _templateService = templateService;
+        _bindingService = bindingService;
     }
 
     /// <summary>
-    /// 同步所有实现IBizEntity的系统实体
+    /// 同步所有系统实体到EntityDefinition表
     /// </summary>
     public async Task SyncSystemEntitiesAsync()
     {
-        _logger.LogInformation("[EntitySync] ========== Starting system entity synchronization ==========");
+        _logger.LogInformation("[EntitySync] Starting system entity synchronization...");
 
-        try
-        {
-            // 扫描所有实现IBizEntity的类
-            var entityTypes = ScanBizEntityTypes();
-            _logger.LogInformation("[EntitySync] Found {Count} IBizEntity types to sync", entityTypes.Count);
-
-            int syncedCount = 0;
-            foreach (var entityType in entityTypes)
-            {
-                var synced = await SyncEntityAsync(entityType);
-                if (synced)
-                {
-                    syncedCount++;
-                }
-            }
-
-            if (syncedCount > 0)
-            {
-                await _db.SaveChangesAsync();
-                _logger.LogInformation("[EntitySync] Successfully synced {Count} system entities", syncedCount);
-            }
-            else
-            {
-                _logger.LogInformation("[EntitySync] All system entities already up to date");
-            }
-
-            _logger.LogInformation("[EntitySync] ========== System entity synchronization completed ==========");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[EntitySync] Synchronization failed with error");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// 扫描程序集中所有实现IBizEntity的类型
-    /// </summary>
-    private List<Type> ScanBizEntityTypes()
-    {
-        var assembly = typeof(Customer).Assembly;
-        var bizEntityInterface = typeof(IBizEntity);
-
-        var types = assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract)
-            .Where(t => t.GetInterfaces().Contains(bizEntityInterface))
+        // 查找所有实现IBizEntity的类型
+        var entityTypes = typeof(Customer).Assembly.GetTypes()
+            .Where(t => typeof(IBizEntity).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
             .ToList();
 
-        return types;
+        _logger.LogInformation("[EntitySync] Found {Count} IBizEntity implementations", entityTypes.Count);
+
+        foreach (var entityType in entityTypes)
+        {
+            try
+            {
+                // 获取GetInitialDefinition静态方法
+                var getDefMethod = entityType.GetMethod(
+                    "GetInitialDefinition",
+                    BindingFlags.Public | BindingFlags.Static);
+
+                if (getDefMethod == null)
+                {
+                    _logger.LogWarning("[EntitySync] Type {Type} does not have GetInitialDefinition method, skipping", entityType.FullName);
+                    continue;
+                }
+
+                var definition = (EntityDefinition?)getDefMethod.Invoke(null, null);
+                if (definition == null)
+                {
+                    _logger.LogWarning("[EntitySync] GetInitialDefinition returned null for {Type}, skipping", entityType.FullName);
+                    continue;
+                }
+
+                // 同步实体定义
+                await SyncEntityDefinitionAsync(definition);
+                
+                // 确保模板和绑定（无论实体是新创建还是已存在）
+                await EnsureTemplatesAndBindingsAsync(definition);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[EntitySync] Error syncing entity type {Type}", entityType.FullName);
+            }
+        }
+
+        _logger.LogInformation("[EntitySync] System entity synchronization completed");
     }
 
     /// <summary>
-    /// 同步单个实体
+    /// 同步单个实体定义
     /// </summary>
-    /// <returns>是否进行了同步（true=新增或更新，false=已存在跳过）</returns>
-    private async Task<bool> SyncEntityAsync(Type entityType)
+    private async Task<bool> SyncEntityDefinitionAsync(EntityDefinition definition)
     {
-        // 通过反射调用静态方法 GetInitialDefinition()
-        var getDefMethod = entityType.GetMethod(
-            "GetInitialDefinition",
-            BindingFlags.Public | BindingFlags.Static);
-
-        if (getDefMethod == null)
-        {
-            _logger.LogWarning("[EntitySync] {TypeName} missing GetInitialDefinition method, skipping",
-                entityType.Name);
-            return false;
-        }
-
-        var definition = (EntityDefinition?)getDefMethod.Invoke(null, null);
-        if (definition == null)
-        {
-            _logger.LogWarning("[EntitySync] {TypeName}.GetInitialDefinition() returned null, skipping",
-                entityType.Name);
-            return false;
-        }
-
-        // 检查数据库中是否已存在
         var existing = await _db.EntityDefinitions
             .Include(ed => ed.Fields)
             .FirstOrDefaultAsync(ed => ed.FullTypeName == definition.FullTypeName);
 
         if (existing == null)
         {
-            // 首次启动，插入新实体定义
-            _logger.LogInformation("[EntitySync] Inserting new system entity: {FullTypeName}",
-                definition.FullTypeName);
-
-            // 确保Source为System
+            _logger.LogInformation("[EntitySync] Creating new entity definition: {FullTypeName}", definition.FullTypeName);
             definition.Source = EntitySource.System;
             definition.CreatedAt = DateTime.UtcNow;
             definition.UpdatedAt = DateTime.UtcNow;
 
             await _db.EntityDefinitions.AddAsync(definition);
+            await _db.SaveChangesAsync();
             return true;
         }
         else
@@ -162,6 +136,31 @@ public class EntityDefinitionSynchronizer
             _logger.LogDebug("[EntitySync] Entity already exists and is correctly configured: {FullTypeName}",
                 definition.FullTypeName);
             return false;
+        }
+    }
+
+    // New helper to ensure templates and bindings
+    private async Task EnsureTemplatesAndBindingsAsync(EntityDefinition entityDef)
+    {
+        if (_templateService == null || _bindingService == null)
+        {
+            _logger.LogWarning("Template service or binding service not configured; skipping template generation.");
+            return;
+        }
+        // Ensure default templates (List, Detail, Edit)
+        var result = await _templateService.EnsureTemplatesAsync(entityDef, "system");
+        // For each usage type, upsert binding
+        foreach (var kvp in result.Templates)
+        {
+            var usage = kvp.Key;
+            var template = kvp.Value;
+            await _bindingService.UpsertBindingAsync(
+                entityDef.EntityRoute ?? entityDef.EntityName,
+                usage,
+                template.Id,
+                isSystem: true,
+                updatedBy: "system",
+                requiredFunctionCode: null);
         }
     }
 

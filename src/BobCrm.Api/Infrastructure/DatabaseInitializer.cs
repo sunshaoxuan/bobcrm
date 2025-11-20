@@ -34,7 +34,7 @@ public static class DatabaseInitializer
 
         {
 
-            var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance, null);
+            var synchronizer = new EntityDefinitionSynchronizer(appDbContext, NullLogger<EntityDefinitionSynchronizer>.Instance, null, null);
 
             await synchronizer.SyncSystemEntitiesAsync();
 
@@ -1075,8 +1075,10 @@ public static class DatabaseInitializer
 
 
 
-                ed.EntityName != null &&
-
+                ed.EntityName != null &&
+
+
+
                 EF.Functions.ILike(ed.EntityName, "Workflow%"))
 
 
