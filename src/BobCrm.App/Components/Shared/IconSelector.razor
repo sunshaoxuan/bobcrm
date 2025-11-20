@@ -1,0 +1,293 @@
+@using BobCrm.App.Services.Multilingual
+@inject I18nService I18n
+
+<div class="icon-selector">
+    <div class="icon-selector-input">
+        <Input.Group Compact>
+            <Input @bind-Value="@_inputValue"
+                   Placeholder="@I18n.T("LBL_ICON_NAME")"
+                   OnInput="HandleInputChange"
+                   Style="width: calc(100% - 80px)">
+                <Prefix>
+                    @if (!string.IsNullOrWhiteSpace(Value))
+                    {
+                        <Icon Type="@Value" />
+                    }
+                </Prefix>
+            </Input>
+            <Button Type="@ButtonType.Default"
+                    Icon="@IconType.Outline.AppstoreAdd"
+                    OnClick="TogglePicker"
+                    Style="width: 80px">
+                @I18n.T("BTN_SELECT")
+            </Button>
+        </Input.Group>
+    </div>
+
+    @if (_showPicker)
+    {
+        <div class="icon-picker-panel">
+            <div class="icon-picker-header">
+                <Input @bind-Value="@_searchText"
+                       Placeholder="@I18n.T("LBL_SEARCH_ICON")"
+                       AllowClear="true"
+                       OnInput="HandleSearch">
+                    <Prefix>
+                        <Icon Type="@IconType.Outline.Search" />
+                    </Prefix>
+                </Input>
+            </div>
+            <div class="icon-picker-body">
+                @if (_filteredIcons.Count == 0)
+                {
+                    <div class="icon-picker-empty">
+                        <Icon Type="@IconType.Outline.Inbox" Style="font-size: 32px; color: #d9d9d9" />
+                        <p>@I18n.T("TXT_NO_ICONS_FOUND")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="icon-grid">
+                        @foreach (var icon in _filteredIcons)
+                        {
+                            <div class="icon-item @(Value == icon.Value ? "selected" : "")"
+                                 @onclick="() => SelectIcon(icon.Value)"
+                                 title="@icon.Label">
+                                <Icon Type="@icon.Value" />
+                                <span class="icon-label">@icon.Label</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    private string _inputValue = string.Empty;
+    private string _searchText = string.Empty;
+    private bool _showPicker = false;
+    private List<IconItem> _allIcons = new();
+    private List<IconItem> _filteredIcons = new();
+
+    protected override void OnInitialized()
+    {
+        InitializeIcons();
+        _inputValue = Value ?? string.Empty;
+        _filteredIcons = _allIcons;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_inputValue != Value)
+        {
+            _inputValue = Value ?? string.Empty;
+        }
+    }
+
+    private void InitializeIcons()
+    {
+        // 常用图标列表 - Ant Design Blazor Outline 图标
+        _allIcons = new List<IconItem>
+        {
+            // 通用图标
+            new("home", "Home"),
+            new("setting", "Setting"),
+            new("user", "User"),
+            new("team", "Team"),
+            new("solution", "Solution"),
+            new("search", "Search"),
+            new("menu", "Menu"),
+            new("appstore", "Appstore"),
+            new("dashboard", "Dashboard"),
+            new("notification", "Notification"),
+            new("bell", "Bell"),
+            new("message", "Message"),
+            new("mail", "Mail"),
+
+            // 文件和文档
+            new("file", "File"),
+            new("file-text", "File Text"),
+            new("folder", "Folder"),
+            new("folder-open", "Folder Open"),
+            new("book", "Book"),
+            new("read", "Read"),
+            new("save", "Save"),
+            new("copy", "Copy"),
+            new("file-add", "File Add"),
+            new("folder-add", "Folder Add"),
+
+            // 编辑操作
+            new("edit", "Edit"),
+            new("delete", "Delete"),
+            new("plus", "Plus"),
+            new("plus-circle", "Plus Circle"),
+            new("minus", "Minus"),
+            new("minus-circle", "Minus Circle"),
+            new("close", "Close"),
+            new("close-circle", "Close Circle"),
+            new("check", "Check"),
+            new("check-circle", "Check Circle"),
+
+            // 导航
+            new("left", "Left"),
+            new("right", "Right"),
+            new("up", "Up"),
+            new("down", "Down"),
+            new("arrow-left", "Arrow Left"),
+            new("arrow-right", "Arrow Right"),
+            new("arrow-up", "Arrow Up"),
+            new("arrow-down", "Arrow Down"),
+            new("rollback", "Rollback"),
+            new("enter", "Enter"),
+
+            // 多媒体
+            new("picture", "Picture"),
+            new("camera", "Camera"),
+            new("video-camera", "Video Camera"),
+            new("sound", "Sound"),
+            new("play-circle", "Play Circle"),
+
+            // 商业
+            new("shop", "Shop"),
+            new("shopping", "Shopping"),
+            new("shopping-cart", "Shopping Cart"),
+            new("dollar", "Dollar"),
+            new("credit-card", "Credit Card"),
+            new("wallet", "Wallet"),
+            new("bank", "Bank"),
+            new("gift", "Gift"),
+
+            // 数据展示
+            new("table", "Table"),
+            new("bar-chart", "Bar Chart"),
+            new("pie-chart", "Pie Chart"),
+            new("line-chart", "Line Chart"),
+            new("area-chart", "Area Chart"),
+            new("stock", "Stock"),
+            new("fund", "Fund"),
+
+            // 通信
+            new("phone", "Phone"),
+            new("mobile", "Mobile"),
+            new("contacts", "Contacts"),
+            new("customer-service", "Customer Service"),
+            new("idcard", "ID Card"),
+
+            // 地图和位置
+            new("environment", "Environment"),
+            new("compass", "Compass"),
+            new("global", "Global"),
+
+            // 时间
+            new("clock-circle", "Clock"),
+            new("calendar", "Calendar"),
+            new("hourglass", "Hourglass"),
+
+            // 工具
+            new("tool", "Tool"),
+            new("api", "API"),
+            new("code", "Code"),
+            new("bug", "Bug"),
+            new("experiment", "Experiment"),
+            new("bulb", "Bulb"),
+            new("rocket", "Rocket"),
+
+            // 状态
+            new("info-circle", "Info"),
+            new("question-circle", "Question"),
+            new("warning", "Warning"),
+            new("exclamation-circle", "Exclamation"),
+            new("stop", "Stop"),
+            new("loading", "Loading"),
+
+            // 安全
+            new("lock", "Lock"),
+            new("unlock", "Unlock"),
+            new("key", "Key"),
+            new("safety", "Safety"),
+            new("eye", "Eye"),
+            new("eye-invisible", "Eye Invisible"),
+
+            // 其他
+            new("heart", "Heart"),
+            new("star", "Star"),
+            new("like", "Like"),
+            new("dislike", "Dislike"),
+            new("fire", "Fire"),
+            new("flag", "Flag"),
+            new("tag", "Tag"),
+            new("tags", "Tags"),
+            new("coffee", "Coffee"),
+            new("crown", "Crown"),
+            new("trophy", "Trophy"),
+            new("gift", "Gift"),
+            new("skin", "Skin"),
+            new("smile", "Smile"),
+        };
+    }
+
+    private void HandleInputChange(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? string.Empty;
+        _inputValue = newValue;
+        UpdateValue(newValue);
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        FilterIcons();
+    }
+
+    private void FilterIcons()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filteredIcons = _allIcons;
+        }
+        else
+        {
+            var searchLower = _searchText.ToLower();
+            _filteredIcons = _allIcons
+                .Where(icon => icon.Value.Contains(searchLower, StringComparison.OrdinalIgnoreCase)
+                            || icon.Label.Contains(searchLower, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void TogglePicker()
+    {
+        _showPicker = !_showPicker;
+        if (_showPicker)
+        {
+            _searchText = string.Empty;
+            FilterIcons();
+        }
+    }
+
+    private async Task SelectIcon(string iconValue)
+    {
+        _inputValue = iconValue;
+        _showPicker = false;
+        await UpdateValue(iconValue);
+    }
+
+    private async Task UpdateValue(string? newValue)
+    {
+        if (Value != newValue)
+        {
+            Value = newValue;
+            await ValueChanged.InvokeAsync(newValue);
+        }
+    }
+
+    private record IconItem(string Value, string Label);
+}

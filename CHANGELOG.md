@@ -9,6 +9,25 @@
 
 ## [未发布] - 进行中
 
+### Added
+#### 图标选择器组件
+- **新增 IconSelector 组件** (`src/BobCrm.App/Components/Shared/IconSelector.razor`)：
+  - 可视化图标选择器，替代文本输入方式
+  - 内置 120+ 个 Ant Design Blazor 常用图标（Outline 系列）
+  - 实现图标搜索功能：支持按图标名称和标签搜索过滤
+  - 网格布局显示：每行自适应显示，最小宽度 80px
+  - 图标预览：选中状态高亮显示，鼠标悬停预览效果
+  - 向后兼容：支持手动输入图标名称，输入框带图标预览
+  - 下拉面板：点击"选择"按钮展开/收起图标选择面板
+  - 响应式设计：支持浅色/深色主题自动切换
+  - 多语言支持：界面文本全部使用 i18n 资源键
+  - 集成到 `MenuManagement.razor`：菜单图标字段使用新选择器
+- **新增多语言资源键**：
+  - `BTN_SELECT`: "选择" / "選択" / "Select"
+  - `LBL_ICON_NAME`: "图标名称" / "アイコン名" / "Icon Name"
+  - `LBL_SEARCH_ICON`: "搜索图标" / "アイコンを検索" / "Search icon"
+  - `TXT_NO_ICONS_FOUND`: "未找到匹配的图标" / "一致するアイコンが見つかりません" / "No icons found"
+
 ### Changed
 #### 文档更新
 - **菜单编辑器使用指南完善**：
