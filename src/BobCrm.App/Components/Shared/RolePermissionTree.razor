@@ -12,9 +12,15 @@
     }
     else
     {
-        <div class="permission-tree-header">
+        <div class="permission-header">
             <h4>@I18n.T("LBL_ROLE_PERMISSIONS")</h4>
-            <Space>
+        </div>
+
+        <Tabs DefaultActiveKey="1" Type="@TabType.Card">
+            <TabPane Key="1" Tab="@I18n.T("LBL_FUNCTION_PERMISSIONS")">
+                <div class="permission-tab-content">
+                    <div class="permission-tree-header">
+                        <Space>
                 <SpaceItem>
                     <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CheckSquare" OnClick="SelectAllAsync">
                         @I18n.T("BTN_SELECT_ALL")
@@ -87,6 +93,15 @@
                 <Statistic Title="@I18n.T("LBL_SELECTED_PERMISSIONS")" Value="_checkedKeys.Length" />
             </div>
         }
+                </div>
+            </TabPane>
+
+            <TabPane Key="2" Tab="@I18n.T("LBL_FIELD_PERMISSIONS")">
+                <div class="permission-tab-content">
+                    <RoleFieldPermissions RoleId="@RoleId" />
+                </div>
+            </TabPane>
+        </Tabs>
     }
 </div>
 
@@ -95,15 +110,23 @@
     padding: 16px;
 }
 
-.permission-tree-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.permission-header {
     margin-bottom: 16px;
 }
 
-.permission-tree-header h4 {
+.permission-header h4 {
     margin: 0;
+}
+
+.permission-tab-content {
+    padding: 16px 0;
+}
+
+.permission-tree-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .permission-tree-search {

@@ -263,6 +263,7 @@
   "LBL_FIELD_DEFINITIONS": { "zh": "字段定义", "ja": "フィールド定義", "en": "Field Definitions" },
   "LBL_FIELD_NAME": { "zh": "字段名", "ja": "フィールド名", "en": "Field Name" },
   "LBL_FIELD_PERMISSIONS": { "zh": "字段权限", "ja": "フィールド権限", "en": "Field Permissions" },
+  "LBL_FUNCTION_PERMISSIONS": { "zh": "功能权限", "ja": "機能権限", "en": "Function Permissions" },
   "LBL_CAN_READ": { "zh": "可读", "ja": "読取可", "en": "Can Read" },
   "LBL_CAN_WRITE": { "zh": "可写", "ja": "書込可", "en": "Can Write" },
   "LBL_REMARKS": { "zh": "备注", "ja": "備考", "en": "Remarks" },
