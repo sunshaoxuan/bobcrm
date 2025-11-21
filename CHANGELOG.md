@@ -10,6 +10,148 @@
 ## [未发布] - 进行中
 
 ### Added
+
+---
+
+## [0.8.0] - 2025-11-21
+
+### Added
+#### 字段级权限系统（Field-Level Security）
+- **后端实现** (`src/BobCrm.Api/`):
+  - 新增 `FieldPermission` 实体模型（`Base/Models/FieldPermission.cs`）：
+    - 字段：`RoleId`, `EntityType`, `FieldName`, `CanRead`, `CanWrite`, `Remarks`
+    - 实现 `IAuditableEntity` 接口，支持审计字段
+    - 复合唯一索引：`(RoleId, EntityType, FieldName)`
+  - 新增 `IFieldPermissionService` 接口和实现（`Services/FieldPermissionService.cs`）：
+    - 12个核心方法：权限查询、批量更新、删除、用户权限检查
+    - 多角色权限聚合策略：Union（最宽松权限优先）
+    - **多层缓存优化**（CRITICAL性能修复）：
+      - 用户角色缓存（5分钟 TTL）
+      - 字段权限缓存（5分钟 TTL）
+      - 性能提升：100字段 = 200查询 → 2查询
+    - 自动缓存失效：权限修改时清除相关缓存
+  - 新增 11个 REST API 端点（`Endpoints/FieldPermissionEndpoints.cs`）：
+    - `GET /api/field-permissions/role/{roleId}` - 获取角色所有权限
+    - `GET /api/field-permissions/role/{roleId}/entity/{entityType}` - 获取角色对特定实体的权限
+    - `POST /api/field-permissions/role/{roleId}/entity/{entityType}/bulk` - 批量更新权限
+    - `GET /api/field-permissions/user/entity/{entityType}/readable-fields` - 获取用户可读字段
+    - `GET /api/field-permissions/user/entity/{entityType}/writable-fields` - 获取用户可写字段
+    - 其他查询、单项更新、删除端点
+  - 新增运行时字段过滤服务（`Services/FieldFilterService.cs`）：
+    - JSON 字段过滤：自动过滤 API 响应中用户无权访问的字段
+    - 写入验证：验证用户是否有权修改提交的字段
+    - 递归过滤：支持嵌套对象和数组
+  - 新增便捷扩展方法（`Utils/FieldFilterExtensions.cs`）：
+    - `FilteredOkAsync()` - 返回过滤后的成功响应
+    - `ValidateWritePermissionsAsync()` - 验证写入权限
+    - `OrElseAsync()` - 链式 API 支持
+  - 数据库迁移（`Migrations/20251121000000_AddFieldPermissions.cs`）：
+    - 创建 `FieldPermissions` 表
+    - 外键关联到 `RoleProfiles` 表（CASCADE删除）
+    - 默认值：`CanRead=true`, `CanWrite=false`
+  - EF Core 配置（`Infrastructure/Ef/Configurations/FieldPermissionConfiguration.cs`）：
+    - 复合唯一索引配置
+    - 字段长度限制：`EntityType`, `FieldName` (128字符)
+    - 审计字段配置
+
+- **前端实现** (`src/BobCrm.App/`):
+  - 新增 `RoleFieldPermissions` 组件（`Components/Shared/RoleFieldPermissions.razor`，~300行）：
+    - 折叠面板（Collapse）展示实体分组
+    - 表格（Table）显示字段权限
+    - 复选框切换 `CanRead` / `CanWrite` 权限
+    - 备注（Remarks）输入框
+    - 批量保存功能
+    - 统计信息显示：总字段数、可读/可写字段数
+    - 空状态提示：无实体或无字段时的友好提示
+  - 集成到 `RolePermissionTree` 组件：
+    - 使用 Ant Design `Tabs` 组件实现标签页界面
+    - Tab 1：功能权限（原有的树形权限选择器）
+    - Tab 2：字段权限（新增的字段权限管理器）
+    - 统一的权限管理入口
+  - 新增 16个多语言资源键（`src/BobCrm.Api/Resources/i18n-resources.json`）：
+    - `LBL_FIELD_PERMISSIONS`: "字段权限" / "フィールド権限" / "Field Permissions"
+    - `LBL_FUNCTION_PERMISSIONS`: "功能权限" / "機能権限" / "Function Permissions"
+    - `LBL_CAN_READ`: "可读" / "読取可" / "Can Read"
+    - `LBL_CAN_WRITE`: "可写" / "書込可" / "Can Write"
+    - `LBL_REMARKS`: "备注" / "備考" / "Remarks"
+    - `LBL_TOTAL_FIELDS`, `LBL_READABLE_FIELDS`, `LBL_WRITABLE_FIELDS` 等统计标签
+    - `MSG_NO_ENTITIES`, `MSG_NO_FIELDS` 等提示消息
+    - `MSG_PERMISSIONS_SAVED` 等操作反馈消息
+
+- **文档**：
+  - 新增字段级权限使用示例（`docs/examples/EX-04-字段级权限使用示例.md`，450+行）：
+    - 5个使用场景示例
+    - API 配置指南
+    - 最佳实践和安全考虑
+    - 故障排查指南
+
+### Changed
+#### 架构重构
+- **模板服务提取** (`src/BobCrm.Api/`):
+  - 新增 `ITemplateService` 接口（`Abstractions/ITemplateService.cs`）：
+    - 定义 8个核心方法：模板查询、创建、更新、删除、复制、应用、获取有效模板
+  - 新增 `TemplateService` 实现（`Services/TemplateService.cs`，~400行）：
+    - 从 `TemplateEndpoints.cs` 提取所有业务逻辑
+    - 增强错误处理：异常驱动（`KeyNotFoundException`, `InvalidOperationException`）
+    - 改进日志记录：Information 和 Warning 级别
+    - 支持"系统默认"和"用户默认"模板管理
+  - 重构 `TemplateEndpoints` (`Endpoints/TemplateEndpoints.cs`):
+    - 代码减少 41%（873行 → 515行）
+    - 端点层仅负责 HTTP 请求/响应
+    - 所有业务逻辑委托给 `TemplateService`
+    - CRUD 端点代码减少 76%
+  - 服务注册（`Program.cs`）：
+    - 注册 `ITemplateService` 为 Scoped 生命周期
+    - 注册 `IFieldPermissionService` 为 Scoped 生命周期
+    - 注册 `FieldFilterService` 为 Scoped 生命周期
+
+#### 性能优化
+- **FieldPermissionService 缓存实现**（CRITICAL修复）:
+  - 问题：N+1查询问题导致严重性能下降
+    - 修复前：每个字段检查 = 2次数据库查询
+    - 示例：100个字段的列表 = 200次数据库查询
+  - 解决方案：多层缓存策略
+    - `GetUserRoleIdsAsync()`：缓存用户角色ID（5分钟）
+    - `GetUserEntityPermissionsAsync()`：缓存用户对实体的所有字段权限（5分钟）
+    - 权限聚合在缓存层完成（Union策略）
+  - 性能提升：
+    - 100个字段的列表：200查询 → 2查询（99%减少）
+    - 首次加载：1次角色查询 + 1次权限查询
+    - 后续5分钟内：完全命中缓存，0数据库查询
+  - 缓存失效策略：
+    - 权限修改时自动清除相关角色缓存
+    - 使用 `IMemoryCache.Remove()` 精确失效
+
+### Fixed
+- **字段权限 UI 缺失**：
+  - 问题：v0.8.0 初版仅实现后端，无 UI 配置入口
+  - 修复：集成 `RoleFieldPermissions` 到 `RolePermissionTree`，提供标签页界面
+- **权限查询性能问题**：
+  - 问题：`GetUserFieldPermissionAsync` 无缓存，导致 N+1 查询
+  - 修复：实现多层缓存，性能提升 99%
+- **复合索引验证**：
+  - 确认 `FieldPermissions` 表存在复合唯一索引 `IX_FieldPermissions_Role_Entity_Field`
+  - 优化查询性能和数据完整性
+
+### Technical Details
+#### 提交记录
+- `bdd058e`: feat: extract TemplateService from TemplateEndpoints (TASK-01)
+- `71d582a`: feat: implement Field-Level Security backend (TASK-03)
+- `8d7d4ec`: feat: implement runtime field filtering for Field-Level Security (TASK-03)
+- `5443213`: feat: add Field Permissions UI component (TASK-03)
+- `729812e`: feat: add database migration for Field Permissions (TASK-03)
+- `9d41524`: perf: implement multi-level caching for FieldPermissionService (FIX-01)
+- `422238d`: feat: integrate Field Permissions into RolePermissionTree (FIX-03)
+
+#### 代码审查响应
+- **REVIEW-06**: 初始代码审查，识别缺失的缓存、UI集成
+- **REVIEW-07**: 验证所有修复通过，v0.8.0 发布候选版本稳定
+
+---
+
+## [0.7.0] - 2025-11-20
+
+### Added
 #### 图标选择器组件
 - **新增 IconSelector 组件** (`src/BobCrm.App/Components/Shared/IconSelector.razor`)：
   - 可视化图标选择器，替代文本输入方式
