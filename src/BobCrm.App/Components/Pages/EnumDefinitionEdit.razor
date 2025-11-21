@@ -38,7 +38,7 @@
                     <div style="margin-bottom: 16px;">
                         <label style="display:block; margin-bottom: 8px;"><strong>@I18n.T("LBL_ENUM_CODE")</strong></label>
                         <Input TValue="string" @bind-Value="_model.Code"
-                               Placeholder="例如: ORDER_STATUS"
+                               Placeholder="@I18n.T("MSG_ENUM_CODE_PLACEHOLDER")"
                                Disabled="@IsEditMode"
                                MaxLength="100" />
                         <span style="color: #8c8c8c; font-size: 12px; display: block; margin-top: 4px;">@I18n.T("MSG_ENUM_CODE_HINT")</span>
@@ -155,6 +155,7 @@
 </AuthChecker>
 
 @code {
+#nullable enable
     [Parameter]
     public Guid? Id { get; set; }
 
