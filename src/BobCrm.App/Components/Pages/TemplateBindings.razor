@@ -1,6 +1,6 @@
 @page "/templates/bindings"
 @rendermode RenderMode.InteractiveServer
-@using BobCrm.App.Models
+@using AppModels = BobCrm.App.Models
 @using BobCrm.App.Services
 @implements IDisposable
 @using Microsoft.Extensions.DependencyInjection
@@ -485,9 +485,9 @@
 </style>
 
 @code {
-    private readonly List<TemplateUsageType> _usageOptions = Enum.GetValues<TemplateUsageType>().ToList();
+    private readonly List<AppModels.TemplateUsageType> _usageOptions = Enum.GetValues<AppModels.TemplateUsageType>().ToList();
     private readonly List<string> _entityOptions = new();
-    private List<FormTemplate> _entityTemplates = new();
+    private List<AppModels.FormTemplate> _entityTemplates = new();
 
     private bool _loading = true;
     private bool _templatesLoading;
@@ -497,14 +497,14 @@
     private bool _functionCodeDirty;
 
     private string? _selectedEntity;
-    private TemplateUsageType _selectedUsage = TemplateUsageType.Detail;
+    private AppModels.TemplateUsageType _selectedUsage = AppModels.TemplateUsageType.Detail;
     private int? _selectedTemplateId;
     private string? _functionCode;
     private string? _statusMessage;
     private bool _statusSuccess;
 
-    private TemplateBindingDto? _currentBinding;
-    private TemplateRuntimeResponse? _runtimeContext;
+    private AppModels.TemplateBindingDto? _currentBinding;
+    private AppModels.TemplateRuntimeResponse? _runtimeContext;
 
     private CancellationTokenSource? _loadCts;
 
@@ -517,6 +517,11 @@
         {
             _i18n.OnChanged += HandleI18nChanged;
         }
+    }
+
+    private void HandleI18nChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -568,7 +573,7 @@
         {
             if (string.IsNullOrWhiteSpace(_selectedEntity))
             {
-                _entityTemplates = new List<FormTemplate>();
+                _entityTemplates = new List<AppModels.FormTemplate>();
                 _selectedTemplateId = null;
                 _runtimeContext = null;
                 _loading = false;
@@ -624,7 +629,7 @@
         }
     }
 
-    private void ResetFunctionCode(List<FormTemplate> visible)
+    private void ResetFunctionCode(List<AppModels.FormTemplate> visible)
     {
         if (_currentBinding != null)
         {
@@ -639,7 +644,7 @@
         }
     }
 
-    private IEnumerable<FormTemplate> GetVisibleTemplates()
+    private IEnumerable<AppModels.FormTemplate> GetVisibleTemplates()
     {
         return _entityTemplates
             .Where(t => t.UsageType == _selectedUsage)
@@ -648,7 +653,7 @@
             .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase);
     }
 
-    private IEnumerable<FormTemplate> GetTemplatesForScope(bool isSystemScope)
+    private IEnumerable<AppModels.FormTemplate> GetTemplatesForScope(bool isSystemScope)
     {
         return GetVisibleTemplates()
             .Where(t => isSystemScope ? t.IsSystemDefault : !t.IsSystemDefault);
@@ -775,9 +780,9 @@
 
     private void HandleUsageChanged(ChangeEventArgs args)
     {
-        if (int.TryParse(args.Value?.ToString(), out var value) && Enum.IsDefined(typeof(TemplateUsageType), value))
+        if (int.TryParse(args.Value?.ToString(), out var value) && Enum.IsDefined(typeof(AppModels.TemplateUsageType), value))
         {
-            _selectedUsage = (TemplateUsageType)value;
+            _selectedUsage = (AppModels.TemplateUsageType)value;
             _currentBinding = null;
             _runtimeContext = null;
             _ = LoadSelectionAsync(PrepareNewToken());
@@ -800,37 +805,28 @@
         var template = _entityTemplates.FirstOrDefault(t => t.Id == _selectedTemplateId);
         _functionCode = template?.RequiredFunctionCode;
         _functionCodeDirty = false;
-        _ = InvokeAsync(StateHasChanged);
     }
 
-    private string GetUsageLabel(TemplateUsageType usage) => usage switch
-    {
-        TemplateUsageType.Detail => "详情",
-        TemplateUsageType.Edit => "编辑",
-        TemplateUsageType.List => "列表",
-        TemplateUsageType.Combined => "复合",
-        _ => usage.ToString()
-    };
 
-    private void HandleI18nChanged()
-    {
-        try
-        {
-            InvokeAsync(StateHasChanged);
-        }
-        catch
-        {
-        }
-    }
 
     public void Dispose()
     {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
         if (_i18n is not null)
         {
             _i18n.OnChanged -= HandleI18nChanged;
         }
+    }
 
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
+    private string GetUsageLabel(AppModels.TemplateUsageType usage)
+    {
+        return usage switch
+        {
+            AppModels.TemplateUsageType.List => "列表",
+            AppModels.TemplateUsageType.Detail => "详情",
+            AppModels.TemplateUsageType.Edit => "编辑",
+            _ => usage.ToString()
+        };
     }
 }

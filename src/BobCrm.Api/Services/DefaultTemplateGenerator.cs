@@ -176,51 +176,6 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         if (usage == FormTemplateUsageType.List)
         {
-            // 1. 添加工具栏 Section（包含新增按钮和搜索框）
-            var toolbarWidgets = new List<Dictionary<string, object?>>
-            {
-                new()
-                {
-                    ["id"] = Guid.NewGuid().ToString(),
-                    ["type"] = "button",
-                    ["label"] = "BTN_ADD",
-                    ["action"] = "create",
-                    ["icon"] = "plus",
-                    ["buttonType"] = "primary",
-                    ["width"] = WIDTH_BUTTON_PCT,
-                    ["widthUnit"] = "%"
-                },
-                new()
-                {
-                    ["id"] = Guid.NewGuid().ToString(),
-                    ["type"] = "textbox",
-                    ["label"] = "",
-                    ["placeholder"] = "MSG_SEARCH_PLACEHOLDER",
-                    ["dataField"] = "__search__",
-                    ["width"] = WIDTH_SEARCH_PCT,
-                    ["widthUnit"] = "%"
-                }
-            };
-
-            var toolbarSection = new Dictionary<string, object?>
-            {
-                ["id"] = Guid.NewGuid().ToString(),
-                ["type"] = "section",
-                ["label"] = "",
-                ["showTitle"] = false,
-                ["children"] = toolbarWidgets,
-                ["containerLayout"] = new Dictionary<string, object?>
-                {
-                    ["flexDirection"] = "row",
-                    ["justifyContent"] = "space-between",
-                    ["gap"] = 12,
-                    ["padding"] = 12,
-                    ["backgroundColor"] = BACKGROUND_COLOR_SECTION
-                }
-            };
-            widgets.Add(toolbarSection);
-
-            // 2. 添加 DataGrid 控件
             var columns = fields.Take(8).Select(f => new
             {
                 field = f.PropertyName?.ToLowerInvariant(),
@@ -335,30 +290,9 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 fieldWidgets.Add(widget);
             }
 
-            // Wrap fields in a Card for better organization
             if (fieldWidgets.Count > 0)
             {
-                var card = new Dictionary<string, object?>
-                {
-                    ["id"] = Guid.NewGuid().ToString(),
-                    ["type"] = "card",
-                    ["title"] = "LBL_BASIC_INFO",
-                    ["showTitle"] = true,
-                    ["collapsible"] = false,
-                    ["defaultExpanded"] = true,
-                    ["children"] = fieldWidgets,
-                    ["width"] = 100,
-                    ["widthUnit"] = "%",
-                    ["containerLayout"] = new Dictionary<string, object?>
-                    {
-                        ["flexDirection"] = "row",
-                        ["flexWrap"] = true,
-                        ["gap"] = 12,
-                        ["padding"] = 16,
-                        ["backgroundColor"] = BACKGROUND_COLOR_CARD
-                    }
-                };
-                widgets.Add(card);
+                widgets.AddRange(fieldWidgets);
             }
 
             // 根据实体路由追加专用控件

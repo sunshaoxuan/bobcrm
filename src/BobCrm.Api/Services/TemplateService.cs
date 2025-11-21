@@ -1,5 +1,5 @@
 using BobCrm.Api.Abstractions;
-using BobCrm.Api.Base.Models;
+using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Core.Persistence;
@@ -14,13 +14,13 @@ public class TemplateService : ITemplateService
 {
     private readonly IRepository<FormTemplate> _repo;
     private readonly IUnitOfWork _uow;
-    private readonly I18nService _i18n;
+    private readonly II18nService _i18n;
     private readonly ILogger<TemplateService> _logger;
 
     public TemplateService(
         IRepository<FormTemplate> repo,
         IUnitOfWork uow,
-        I18nService i18n,
+        II18nService i18n,
         ILogger<TemplateService> logger)
     {
         _repo = repo;

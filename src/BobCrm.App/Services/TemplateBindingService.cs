@@ -58,11 +58,11 @@ public class TemplateBindingService
         }
     }
 
-    public virtual async Task<IReadOnlyList<FormTemplate>> GetTemplatesAsync(string? entityType, CancellationToken cancellationToken = default)
+    public virtual async Task<IReadOnlyList<BobCrm.App.Models.FormTemplate>> GetTemplatesAsync(string? entityType, CancellationToken cancellationToken = default)
     {
         if (_auth is null)
         {
-            return Array.Empty<FormTemplate>();
+            return Array.Empty<BobCrm.App.Models.FormTemplate>();
         }
 
         try
@@ -76,20 +76,20 @@ public class TemplateBindingService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("[TemplateBinding] Failed to load templates for {Entity}: {Status}", entityType ?? "*", response.StatusCode);
-                return Array.Empty<FormTemplate>();
+                return Array.Empty<BobCrm.App.Models.FormTemplate>();
             }
 
-            var templates = await response.Content.ReadFromJsonAsync<List<FormTemplate>>(_jsonOptions, cancellationToken);
-            return (IReadOnlyList<FormTemplate>?)templates ?? Array.Empty<FormTemplate>();
+            var templates = await response.Content.ReadFromJsonAsync<List<BobCrm.App.Models.FormTemplate>>(_jsonOptions, cancellationToken);
+            return (IReadOnlyList<BobCrm.App.Models.FormTemplate>?)templates ?? Array.Empty<BobCrm.App.Models.FormTemplate>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[TemplateBinding] Load templates failed for {Entity}", entityType ?? "*");
-            return Array.Empty<FormTemplate>();
+            return Array.Empty<BobCrm.App.Models.FormTemplate>();
         }
     }
 
-    public virtual async Task<TemplateBindingDto?> GetBindingAsync(string entityType, TemplateUsageType usageType, CancellationToken cancellationToken = default)
+    public virtual async Task<TemplateBindingDto?> GetBindingAsync(string entityType, BobCrm.App.Models.TemplateUsageType usageType, CancellationToken cancellationToken = default)
     {
         if (_auth is null)
         {
@@ -121,7 +121,7 @@ public class TemplateBindingService
 
     public virtual async Task<TemplateBindingDto?> UpsertBindingAsync(
         string entityType,
-        TemplateUsageType usageType,
+        BobCrm.App.Models.TemplateUsageType usageType,
         int templateId,
         bool isSystem,
         string? requiredFunctionCode,

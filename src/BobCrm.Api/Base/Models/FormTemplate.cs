@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BobCrm.Api.Base;
 
@@ -37,6 +38,7 @@ public class FormTemplate
     public bool IsSystemDefault { get; set; } = false;
 
     /// <summary>模板版本号（用于跟踪变更）</summary>
+    [NotMapped]
     public int Version { get; set; } = 1;
 
     /// <summary>布局JSON（Widget树）</summary>

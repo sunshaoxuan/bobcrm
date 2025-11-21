@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using BobCrm.Api.Abstractions;
 using System.Linq;
 using System.Security.Claims;
 using BobCrm.Api.Core.Persistence;
@@ -46,7 +46,7 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var template = await templateService.GetTemplateByIdAsync(id, uid);
@@ -82,7 +82,7 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             ITemplateService templateService,
             UpdateTemplateRequest req,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             try
             {
@@ -108,7 +108,7 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             try
             {
@@ -135,7 +135,7 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             ITemplateService templateService,
             CopyTemplateRequest req,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             try
             {
@@ -157,7 +157,7 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             try
             {
@@ -196,7 +196,7 @@ public static class TemplateEndpoints
             string entityType,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            I18nService i18n) =>
+            II18nService i18n) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var template = await templateService.GetEffectiveTemplateAsync(entityType, uid);
@@ -493,23 +493,4 @@ public static class TemplateEndpoints
     private sealed record EntityMenuMetadata(string DisplayName, string? Route);
 }
 
-// 请求DTO
-public record CreateTemplateRequest(
-    string Name,
-    string? EntityType,
-    bool IsUserDefault,
-    string? LayoutJson,
-    string? Description);
 
-public record UpdateTemplateRequest(
-    string? Name,
-    string? EntityType,
-    bool? IsUserDefault,
-    string? LayoutJson,
-    string? Description);
-
-public record CopyTemplateRequest(
-    string? Name,
-    string? EntityType,
-    FormTemplateUsageType? UsageType,
-    string? Description);

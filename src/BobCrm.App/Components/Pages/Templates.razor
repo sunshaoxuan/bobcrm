@@ -1,11 +1,13 @@
 @page "/templates"
 @rendermode RenderMode.InteractiveServer
-@using BobCrm.App.Models
+@using AppModels = BobCrm.App.Models
+@using BobCrm.Api.Contracts.DTOs
+@using BobCrm.Api.Base
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
 @inject NavigationManager Nav
-@inject IModalService Modal
+@inject ModalService Modal
 
 <PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
 
@@ -19,14 +21,14 @@
 
     <!-- 筛选器 -->
     <div class="panel" style="margin-bottom:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <select @onchange="OnFilterChanged" name="usageType" class="field-control" style="width:150px" value="@filterUsageType">
+        <select @onchange="OnUsageTypeChanged" name="usageType" class="field-control" style="width:150px" value="@filterUsageType">
             <option value="">@I18n.T("LBL_ALL_USAGE")</option>
             <option value="List">@I18n.T("TPL_USAGE_LIST")</option>
             <option value="Detail">@I18n.T("TPL_USAGE_DETAIL")</option>
             <option value="Edit">@I18n.T("TPL_USAGE_EDIT")</option>
         </select>
 
-        <select @onchange="OnFilterChanged" name="templateType" class="field-control" style="width:150px" value="@filterTemplateType">
+        <select @onchange="OnTemplateTypeChanged" name="templateType" class="field-control" style="width:150px" value="@filterTemplateType">
             <option value="">@I18n.T("LBL_ALL_TYPES")</option>
             <option value="system">@I18n.T("LBL_SYSTEM_TEMPLATE")</option>
             <option value="user">@I18n.T("LBL_USER_TEMPLATE")</option>
@@ -219,8 +221,8 @@
     private string filterTemplateType = "";
     private string searchKeyword = "";
 
-    private List<FormTemplate>? flatTemplates;
-    private List<TemplateGroupByEntity>? groupedTemplates;
+    private List<AppModels.FormTemplate>? flatTemplates;
+    private List<AppModels.TemplateGroupByEntity>? groupedTemplates;
 
     protected override void OnInitialized()
     {
@@ -281,14 +283,14 @@
 
                 if (groupBy == "entity")
                 {
-                    var rawGroups = System.Text.Json.JsonSerializer.Deserialize<List<TemplateGroupByEntity>>(
+                    var rawGroups = System.Text.Json.JsonSerializer.Deserialize<List<AppModels.TemplateGroupByEntity>>(
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                     // 应用客户端搜索过滤
                     if (!string.IsNullOrWhiteSpace(searchKeyword) && rawGroups != null)
                     {
-                        groupedTemplates = rawGroups.Select(g => new TemplateGroupByEntity
+                        groupedTemplates = rawGroups.Select(g => new AppModels.TemplateGroupByEntity
                         {
                             EntityType = g.EntityType,
                             Templates = g.Templates.Where(t => t.Name != null && t.Name.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)).ToList()
@@ -302,7 +304,7 @@
                 }
                 else
                 {
-                    var rawTemplates = System.Text.Json.JsonSerializer.Deserialize<List<FormTemplate>>(
+                    var rawTemplates = System.Text.Json.JsonSerializer.Deserialize<List<AppModels.FormTemplate>>(
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -340,20 +342,15 @@
         await LoadTemplates();
     }
 
-    private async void OnFilterChanged(ChangeEventArgs e)
+    private async Task OnUsageTypeChanged(ChangeEventArgs e)
     {
-        var target = e.Value?.ToString() ?? "";
-        var name = ((Microsoft.AspNetCore.Components.Forms.InputBase<string>)e).AdditionalAttributes?["name"]?.ToString();
+        filterUsageType = e.Value?.ToString() ?? "";
+        await LoadTemplates();
+    }
 
-        if (name == "usageType")
-        {
-            filterUsageType = target;
-        }
-        else if (name == "templateType")
-        {
-            filterTemplateType = target;
-        }
-
+    private async Task OnTemplateTypeChanged(ChangeEventArgs e)
+    {
+        filterTemplateType = e.Value?.ToString() ?? "";
         await LoadTemplates();
     }
 
@@ -398,12 +395,21 @@
             var defaultName = $"{template.Name}{I18n.T("LBL_COPY_SUFFIX")}";
             var newName = defaultName;
 
+            RenderFragment nameInput = builder =>
+            {
+                builder.OpenElement(0, "div");
+                builder.OpenComponent<Input<string>>(1);
+                builder.AddAttribute(2, "Value", newName);
+                builder.AddAttribute(3, "ValueChanged", EventCallback.Factory.Create<string>(this, v => newName = v));
+                builder.AddAttribute(4, "Placeholder", defaultName);
+                builder.CloseComponent();
+                builder.CloseElement();
+            };
+
             var confirmResult = await Modal.ConfirmAsync(new ConfirmOptions
             {
                 Title = I18n.T("TPL_PROMPT_COPY_NAME"),
-                Content = @<div>
-                    <Input @bind-Value="@newName" Placeholder="@defaultName" />
-                </div>,
+                Content = OneOf.OneOf<string, RenderFragment>.FromT1(nameInput),
                 OkText = I18n.T("BTN_OK"),
                 CancelText = I18n.T("BTN_CANCEL")
             });
@@ -442,22 +448,8 @@
     {
         try
         {
-            var template = FindTemplate(templateId);
-            if (template == null) return;
-
-            var confirm = await Modal.ConfirmAsync(new ConfirmOptions
-            {
-                Title = I18n.T("LBL_CONFIRM"),
-                Content = I18n.T("MSG_APPLY_TEMPLATE_CONFIRM"),
-                OkText = I18n.T("BTN_OK"),
-                CancelText = I18n.T("BTN_CANCEL"),
-                OkType = "primary"
-            });
-
-            if (!confirm) return;
-
             var client = await Auth.CreateClientWithAuthAsync();
-            var resp = await client.PutAsync($"/api/templates/{templateId}/apply", null);
+            var resp = await client.PostAsync($"/api/templates/{templateId}/apply", null);
 
             if (resp.IsSuccessStatusCode)
             {
@@ -476,53 +468,23 @@
         }
     }
 
-    private async Task SetAsDefault(int templateId)
-    {
-        try
-        {
-            var template = FindTemplate(templateId);
-            if (template == null) return;
-
-            var payload = new
-            {
-                isUserDefault = true
-            };
-
-            var client = await Auth.CreateClientWithAuthAsync();
-            var resp = await client.PutAsJsonAsync($"/api/templates/{templateId}", payload);
-
-            if (resp.IsSuccessStatusCode)
-            {
-                ShowMessage(I18n.T("MSG_SET_AS_DEFAULT_SUCCESS"), true);
-                await LoadTemplates();
-            }
-            else
-            {
-                ShowMessage(I18n.T("MSG_SET_FAILED"), false);
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowMessage($"{I18n.T("MSG_SET_FAILED")}: {ex.Message}", false);
-        }
-    }
-
     private async Task DeleteTemplate(int templateId)
     {
         try
         {
-            var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+            var confirmResult = await Modal.ConfirmAsync(new ConfirmOptions
             {
-                Title = I18n.T("LBL_CONFIRM"),
-                Content = I18n.T("MSG_CONFIRM_DELETE_TEMPLATE"),
-                OkText = I18n.T("BTN_OK"),
+                Title = I18n.T("TPL_PROMPT_DELETE_TITLE"),
+                Content = I18n.T("TPL_PROMPT_DELETE_CONTENT"),
+                OkText = I18n.T("BTN_DELETE"),
                 CancelText = I18n.T("BTN_CANCEL"),
-                OkType = "danger"
+                OkType = ButtonType.Primary
             });
 
-            if (!confirm) return;
+            if (!confirmResult) return;
 
-            var resp = await Auth.DeleteWithRefreshAsync($"/api/templates/{templateId}");
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.DeleteAsync($"/api/templates/{templateId}");
 
             if (resp.IsSuccessStatusCode)
             {
@@ -541,7 +503,7 @@
         }
     }
 
-    private RenderFragment RenderTemplateCard(FormTemplate template) => builder =>
+    private RenderFragment RenderTemplateCard(AppModels.FormTemplate template) => builder =>
     {
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "card template-card");
@@ -654,7 +616,7 @@
         builder.CloseElement(); // template-card
     };
 
-    private FormTemplate? FindTemplate(int templateId)
+    private AppModels.FormTemplate? FindTemplate(int templateId)
     {
         if (flatTemplates != null)
         {
@@ -685,24 +647,24 @@
         };
     }
 
-    private string GetUsageDisplayName(BobCrm.App.Models.FormTemplateUsageType usageType)
+    private string GetUsageDisplayName(AppModels.TemplateUsageType usageType)
     {
         return usageType switch
         {
-            BobCrm.App.Models.FormTemplateUsageType.List => I18n.T("TPL_USAGE_LIST"),
-            BobCrm.App.Models.FormTemplateUsageType.Detail => I18n.T("TPL_USAGE_DETAIL"),
-            BobCrm.App.Models.FormTemplateUsageType.Edit => I18n.T("TPL_USAGE_EDIT"),
+            AppModels.TemplateUsageType.List => I18n.T("TPL_USAGE_LIST"),
+            AppModels.TemplateUsageType.Detail => I18n.T("TPL_USAGE_DETAIL"),
+            AppModels.TemplateUsageType.Edit => I18n.T("TPL_USAGE_EDIT"),
             _ => usageType.ToString()
         };
     }
 
-    private string GetUsageBadgeClass(BobCrm.App.Models.FormTemplateUsageType usageType)
+    private string GetUsageBadgeClass(AppModels.TemplateUsageType usageType)
     {
         return usageType switch
         {
-            BobCrm.App.Models.FormTemplateUsageType.List => "badge badge-primary",
-            BobCrm.App.Models.FormTemplateUsageType.Detail => "badge badge-success",
-            BobCrm.App.Models.FormTemplateUsageType.Edit => "badge badge-warning",
+            AppModels.TemplateUsageType.List => "badge badge-primary",
+            AppModels.TemplateUsageType.Detail => "badge badge-success",
+            AppModels.TemplateUsageType.Edit => "badge badge-warning",
             _ => "badge"
         };
     }
@@ -725,4 +687,3 @@
         I18n.OnChanged -= HandleI18nChanged;
     }
 }
-

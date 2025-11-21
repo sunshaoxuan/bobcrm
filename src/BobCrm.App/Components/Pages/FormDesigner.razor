@@ -617,13 +617,13 @@ else
             // 验证必填字段
             if (string.IsNullOrWhiteSpace(templateName))
             {
-                await Message.Error(I18n.T("MSG_TEMPLATE_NAME_REQUIRED"));
+                Message.Error(I18n.T("MSG_TEMPLATE_NAME_REQUIRED"));
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(entityType))
             {
-                await Message.Error(I18n.T("MSG_ENTITY_TYPE_REQUIRED"));
+                Message.Error(I18n.T("MSG_ENTITY_TYPE_REQUIRED"));
                 return;
             }
 
@@ -663,13 +663,13 @@ else
 
                 if (resp.IsSuccessStatusCode)
                 {
-                    await Message.Success(I18n.T("MSG_TEMPLATE_UPDATE_SUCCESS"));
+                    Message.Success(I18n.T("MSG_TEMPLATE_UPDATE_SUCCESS"));
                 }
                 else
                 {
                     var errorContent = await resp.Content.ReadAsStringAsync();
                     error = $"{I18n.T("MSG_UPDATE_FAILED")}: {resp.StatusCode} - {errorContent}";
-                    await Message.Error(error);
+                    Message.Error(error);
                 }
             }
             else
@@ -699,7 +699,7 @@ else
                         templateIdNumeric = newTemplate.Id;
                         isEntityTypeLocked = true; // 保存后锁定实体类型
                         originalEntityType = entityType;
-                        await Message.Success(I18n.T("MSG_TEMPLATE_CREATE_SUCCESS"));
+                        Message.Success(I18n.T("MSG_TEMPLATE_CREATE_SUCCESS"));
 
                         // 更新URL以反映新的模板ID（避免重复创建）
                         Nav.NavigateTo($"/designer/{newTemplate.Id}", forceLoad: false);
@@ -709,7 +709,7 @@ else
                 {
                     var errorContent = await resp.Content.ReadAsStringAsync();
                     error = $"{I18n.T("MSG_CREATE_FAILED")}: {resp.StatusCode} - {errorContent}";
-                    await Message.Error(error);
+                    Message.Error(error);
                 }
             }
         }
