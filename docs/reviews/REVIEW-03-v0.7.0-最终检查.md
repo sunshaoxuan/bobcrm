@@ -56,4 +56,4 @@ var confirm = await JS.InvokeAsync<bool>("confirm", ...);
 
 ## 3. 结论
 
-代码功能正常，但由于使用了原生浏览器对话框，缺乏设计指南要求的“高级”润色。我已创建修复计划 (`docs/plans/PLAN-02-v0.7.0-Remediation.md`) 来解决这些具体项目。
+代码功能正常，但由于使用了原生浏览器对话框，缺乏设计指南要求的“高级”润色。我已创建修复计划 (`docs/plans/PLAN-02-v0.7.0-修复计划.md`) 来解决这些具体项目。
