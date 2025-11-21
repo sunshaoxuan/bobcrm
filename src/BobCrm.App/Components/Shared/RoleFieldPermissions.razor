@@ -1,0 +1,302 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject IRoleService RoleService
+@inject IMessageService Message
+@inject I18nService I18n
+@inject HttpClient Http
+
+<div class="role-field-permissions">
+    @if (_loading)
+    {
+        <Spin />
+    }
+    else
+    {
+        <div class="field-permissions-header">
+            <h4>@I18n.T("LBL_FIELD_PERMISSIONS")</h4>
+            <Space>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary"
+                            Size="@ButtonSize.Small"
+                            Icon="@IconType.Outline.Save"
+                            Loading="_saving"
+                            OnClick="SavePermissionsAsync">
+                        @I18n.T("BTN_SAVE")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </div>
+
+        <div class="field-permissions-container">
+            @if (_entities.Count == 0)
+            {
+                <Empty Description="@I18n.T("TXT_NO_ENTITIES")" />
+            }
+            else
+            {
+                <Collapse Accordion>
+                    @foreach (var entity in _entities)
+                    {
+                        <Panel Header="@($"{entity.DisplayName} ({entity.EntityType})")" Key="@entity.EntityType">
+                            @if (entity.Fields.Count == 0)
+                            {
+                                <Empty Description="@I18n.T("TXT_NO_FIELDS")" Simple />
+                            }
+                            else
+                            {
+                                <Table TItem="FieldPermissionItem" DataSource="@entity.Fields" Size="@TableSize.Small">
+                                    <Column Title="@I18n.T("LBL_FIELD_NAME")" @bind-Field="@context.FieldName" />
+                                    <Column Title="@I18n.T("LBL_CAN_READ")">
+                                        <Checkbox @bind-Value="@context.CanRead" />
+                                    </Column>
+                                    <Column Title="@I18n.T("LBL_CAN_WRITE")">
+                                        <Checkbox @bind-Value="@context.CanWrite" />
+                                    </Column>
+                                    <Column Title="@I18n.T("LBL_REMARKS")">
+                                        <Input @bind-Value="@context.Remarks" Placeholder="@I18n.T("LBL_OPTIONAL")" Size="@InputSize.Small" />
+                                    </Column>
+                                </Table>
+                            }
+                        </Panel>
+                    }
+                </Collapse>
+            }
+        </div>
+
+        @if (ShowStatistics && _entities.Count > 0)
+        {
+            <div class="field-permissions-stats">
+                <Statistic Title="@I18n.T("LBL_TOTAL_ENTITIES")" Value="_entities.Count" />
+                <Statistic Title="@I18n.T("LBL_TOTAL_FIELDS")" Value="_totalFields" />
+                <Statistic Title="@I18n.T("LBL_READABLE_FIELDS")" Value="_readableFields" />
+                <Statistic Title="@I18n.T("LBL_WRITABLE_FIELDS")" Value="_writableFields" />
+            </div>
+        }
+    }
+</div>
+
+<style>
+.role-field-permissions {
+    padding: 16px;
+}
+
+.field-permissions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.field-permissions-header h4 {
+    margin: 0;
+}
+
+.field-permissions-container {
+    min-height: 300px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.field-permissions-stats {
+    margin-top: 16px;
+    display: flex;
+    gap: 24px;
+}
+</style>
+
+@code {
+    [Parameter]
+    public Guid? RoleId { get; set; }
+
+    [Parameter]
+    public bool ShowStatistics { get; set; } = true;
+
+    private bool _loading = true;
+    private bool _saving = false;
+    private List<EntityFieldPermissions> _entities = new();
+    private int _totalFields => _entities.Sum(e => e.Fields.Count);
+    private int _readableFields => _entities.Sum(e => e.Fields.Count(f => f.CanRead));
+    private int _writableFields => _entities.Sum(e => e.Fields.Count(f => f.CanWrite));
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RoleId.HasValue)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            // 1. 获取所有实体定义
+            var entitiesResponse = await Http.GetFromJsonAsync<List<EntityDefinitionDto>>("/api/entity-definitions");
+            if (entitiesResponse == null)
+            {
+                return;
+            }
+
+            // 2. 获取角色的字段权限
+            Dictionary<string, Dictionary<string, FieldPermissionDto>>? rolePermissions = null;
+            if (RoleId.HasValue)
+            {
+                var permissionsResponse = await Http.GetFromJsonAsync<List<FieldPermissionDto>>($"/api/field-permissions/role/{RoleId}");
+                if (permissionsResponse != null)
+                {
+                    rolePermissions = permissionsResponse
+                        .GroupBy(p => p.EntityType)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.ToDictionary(p => p.FieldName, p => p));
+                }
+            }
+
+            // 3. 构建实体-字段权限结构
+            _entities = entitiesResponse
+                .Where(e => !string.IsNullOrWhiteSpace(e.EntityRoute))
+                .Select(e => new EntityFieldPermissions
+                {
+                    EntityType = e.EntityRoute ?? e.EntityName,
+                    DisplayName = ResolveDisplayName(e),
+                    Fields = e.Fields
+                        .Where(f => !f.IsDeleted)
+                        .Select(f =>
+                        {
+                            var hasPermission = rolePermissions != null &&
+                                               rolePermissions.TryGetValue(e.EntityRoute ?? e.EntityName, out var fieldPerms) &&
+                                               fieldPerms.TryGetValue(f.PropertyName, out var perm);
+
+                            return new FieldPermissionItem
+                            {
+                                FieldName = f.PropertyName,
+                                CanRead = hasPermission ? perm.CanRead : true,  // 默认可读
+                                CanWrite = hasPermission ? perm.CanWrite : false, // 默认不可写
+                                Remarks = hasPermission ? perm.Remarks : null
+                            };
+                        })
+                        .ToList()
+                })
+                .Where(e => e.Fields.Count > 0)
+                .OrderBy(e => e.DisplayName)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string ResolveDisplayName(EntityDefinitionDto entity)
+    {
+        if (entity.DisplayName != null)
+        {
+            var currentLang = I18n.GetCurrentLanguage();
+            if (entity.DisplayName.TryGetValue(currentLang, out var displayName) && !string.IsNullOrWhiteSpace(displayName))
+            {
+                return displayName;
+            }
+        }
+        return entity.EntityName;
+    }
+
+    private async Task SavePermissionsAsync()
+    {
+        if (!RoleId.HasValue)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            // 收集所有字段权限
+            var allPermissions = _entities.SelectMany(entity =>
+                entity.Fields.Select(field => new
+                {
+                    EntityType = entity.EntityType,
+                    field.FieldName,
+                    field.CanRead,
+                    field.CanWrite,
+                    field.Remarks
+                })
+            ).ToList();
+
+            // 按实体分组并批量保存
+            var entitiesByType = allPermissions.GroupBy(p => p.EntityType);
+
+            foreach (var group in entitiesByType)
+            {
+                var permissions = group.Select(p => new FieldPermissionDto
+                {
+                    FieldName = p.FieldName,
+                    CanRead = p.CanRead,
+                    CanWrite = p.CanWrite,
+                    Remarks = p.Remarks
+                }).ToList();
+
+                var request = new { Permissions = permissions };
+                var response = await Http.PostAsJsonAsync($"/api/field-permissions/role/{RoleId}/entity/{group.Key}/bulk", request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {group.Key}");
+                    return;
+                }
+            }
+
+            await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+        }
+        catch (Exception ex)
+        {
+            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private class EntityFieldPermissions
+    {
+        public string EntityType { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public List<FieldPermissionItem> Fields { get; set; } = new();
+    }
+
+    private class FieldPermissionItem
+    {
+        public string FieldName { get; set; } = string.Empty;
+        public bool CanRead { get; set; }
+        public bool CanWrite { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    private class EntityDefinitionDto
+    {
+        public string EntityName { get; set; } = string.Empty;
+        public string? EntityRoute { get; set; }
+        public Dictionary<string, string?>? DisplayName { get; set; }
+        public List<FieldMetadataDto> Fields { get; set; } = new();
+    }
+
+    private class FieldMetadataDto
+    {
+        public string PropertyName { get; set; } = string.Empty;
+        public bool IsDeleted { get; set; }
+    }
+
+    private class FieldPermissionDto
+    {
+        public string EntityType { get; set; } = string.Empty;
+        public string FieldName { get; set; } = string.Empty;
+        public bool CanRead { get; set; }
+        public bool CanWrite { get; set; }
+        public string? Remarks { get; set; }
+    }
+}
