@@ -49,8 +49,24 @@ public class AccessService
         new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
         new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
         new("SYS.MSG.TEMPLATE", "消息模板", null, "book", false, 123, "SYS.MSG"),
-        new("SYS.ENTITY", "实体管理", null, "profile", true, 13, "SYS"),
-        new("SYS.ENTITY.EDITOR", "业务实体编辑", "/entity-definitions", "profile", true, 131, "SYS.ENTITY"),
+        new("SYS.ENTITY", "模型与枚举", null, "database", true, 13, "SYS", new Dictionary<string, string?>
+        {
+            ["zh"] = "模型与枚举",
+            ["ja"] = "モデルと列挙",
+            ["en"] = "Modeling & Enums"
+        }),
+        new("SYS.ENTITY.EDITOR", "业务实体编辑", "/entity-definitions", "profile", true, 131, "SYS.ENTITY", new Dictionary<string, string?>
+        {
+            ["zh"] = "实体管理",
+            ["ja"] = "エンティティ管理",
+            ["en"] = "Entity Management"
+        }),
+        new("SYS.ENTITY.ENUM", "枚举管理", "/system/enums", "unordered-list", true, 132, "SYS.ENTITY", new Dictionary<string, string?>
+        {
+            ["zh"] = "枚举管理",
+            ["ja"] = "列挙管理",
+            ["en"] = "Enum Management"
+        }),
         new("SYS.TEMPLATE", "模板管理", null, "appstore", true, 14, "SYS"),
         new("SYS.TEMPLATE.DESIGN", "模板设计", "/templates", "appstore", true, 141, "SYS.TEMPLATE"),
         new("SYS.TEMPLATE.ASSIGN", "模板分配", null, "branches", false, 142, "SYS.TEMPLATE"),
