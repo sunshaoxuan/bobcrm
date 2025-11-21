@@ -787,6 +787,7 @@
 
   "MENU_ROLES": { "zh": "角色管理", "ja": "ロール管理", "en": "Role Management" },
   "MENU_USERS": { "zh": "用户档案", "ja": "ユーザー台帳", "en": "User Profiles" },
+  "MENU_MENU_MANAGE": { "zh": "菜单管理", "ja": "メニュー管理", "en": "Menu Management" },
     "BTN_CREATE_ROLE": { "zh": "创建角色", "ja": "ロール作成", "en": "Create Role" },
     "BTN_NEW_ROLE": { "zh": "新建角色", "ja": "ロール新規作成", "en": "New Role" },
     "BTN_PERMISSIONS": { "zh": "配置权限", "ja": "権限設定", "en": "Configure Permissions" },
