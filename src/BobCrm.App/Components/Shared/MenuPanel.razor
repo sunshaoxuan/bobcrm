@@ -16,7 +16,7 @@
                     </Button>
                     <h3>
                         <Icon Type="@ResolveIcon(Domain.Icon)" />
-                        <span>@Domain.Name</span>
+                        <span>@GetLabel(Domain)</span>
                     </h3>
                 </div>
                 <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" OnClick="HandleClose" />
@@ -34,33 +34,33 @@
                 {
                     @foreach (var moduleEntry in _modules)
                     {
-                        <div class="module-group">
-                            <div class="module-group-header">
-                                <div class="module-icon">
-                                    <Icon Type="@ResolveIcon(moduleEntry.Module.Icon)" />
+                            <div class="module-group">
+                                <div class="module-group-header">
+                                    <div class="module-icon">
+                                        <Icon Type="@ResolveIcon(moduleEntry.Module.Icon)" />
+                                    </div>
+                                    <h4 class="module-title">@GetLabel(moduleEntry.Module)</h4>
                                 </div>
-                                <h4 class="module-title">@moduleEntry.Module.Name</h4>
-                            </div>
-                            <div class="function-cards">
-                                @foreach (var function in moduleEntry.Functions)
-                                {
-                                    var isActive = IsFunctionActive(function);
+                                <div class="function-cards">
+                                    @foreach (var function in moduleEntry.Functions)
+                                    {
+                                        var isActive = IsFunctionActive(function);
                                     var route = NormalizeRoute(function.Route);
                                     var isDisabled = string.IsNullOrWhiteSpace(route);
 
-                                    <button type="button"
-                                            class="function-card @(isActive ? "active" : string.Empty)"
-                                            disabled="@isDisabled"
-                                            @onclick="() => HandleFunctionClick(route)">
-                                        <div class="function-card-icon">
-                                            <Icon Type="@ResolveIcon(function.Icon)" />
-                                        </div>
-                                        <div class="function-card-label">@function.Name</div>
-                                    </button>
-                                }
+                                        <button type="button"
+                                                class="function-card @(isActive ? "active" : string.Empty)"
+                                                disabled="@isDisabled"
+                                                @onclick="() => HandleFunctionClick(route)">
+                                            <div class="function-card-icon">
+                                                <Icon Type="@ResolveIcon(function.Icon)" />
+                                            </div>
+                                            <div class="function-card-label">@GetLabel(function)</div>
+                                        </button>
+                                    }
+                                </div>
                             </div>
-                        </div>
-                    }
+                        }
                 }
             </div>
         </div>
@@ -194,6 +194,8 @@
     }
 
     private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
+    private string GetLabel(FunctionMenuNode node) =>
+        node.DisplayNameTranslations?.GetValue(I18n.CurrentLang) ?? node.Name;
 
     public void Dispose()
     {

@@ -14,7 +14,7 @@
             @onclick="TogglePopover"
             @onclick:stopPropagation
             @ref="_buttonElement"
-            title="@(ActiveDomain?.Name ?? I18n.T("LBL_SELECT_DOMAIN"))">
+            title="@(ActiveDomain != null ? GetLabel(ActiveDomain) : I18n.T("LBL_SELECT_DOMAIN"))">
         @if (ActiveDomain != null)
         {
             <span class="domain-icon">
@@ -44,7 +44,7 @@
                         <span class="domain-item-icon">
                             <Icon Type="@ResolveIcon(domain.Icon)" />
                         </span>
-                        <span class="domain-item-name">@domain.Name</span>
+                        <span class="domain-item-name">@GetLabel(domain)</span>
                         @if (isActive)
                         {
                             <span class="domain-item-check">
@@ -127,6 +127,8 @@
     }
 
     private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;
+    private string GetLabel(FunctionMenuNode node) =>
+        node.DisplayNameTranslations?.GetValue(I18n.CurrentLang) ?? node.Name;
 
     public void Dispose()
     {
