@@ -100,11 +100,11 @@ public static class FieldFilterExtensions
 
         if (!isValid)
         {
-            return (false, Results.Forbidden(new
+            return (false, Results.Json(new
             {
                 error = "Insufficient field permissions",
                 unauthorizedFields = unauthorizedFields
-            }));
+            }, statusCode: 403));
         }
 
         return (true, null);

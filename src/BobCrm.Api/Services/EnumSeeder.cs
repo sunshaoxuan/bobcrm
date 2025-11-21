@@ -158,7 +158,7 @@ public class EnumSeeder
             { "zh", "优先级" },
             { "en", "Priority" },
             { "ja", "優先度" }
-        }, new[]
+        }, new (string Value, Dictionary<string, string?> DisplayName, int SortOrder, string? ColorTag)[]
         {
             ("LOW", new Dictionary<string, string?> { { "zh", "低" }, { "en", "Low" }, { "ja", "低" } }, 0, "green"),
             ("MEDIUM", new Dictionary<string, string?> { { "zh", "中" }, { "en", "Medium" }, { "ja", "中" } }, 1, "blue"),
@@ -172,10 +172,10 @@ public class EnumSeeder
             { "zh", "状态" },
             { "en", "Status" },
             { "ja", "ステータス" }
-        }, new[]
+        }, new (string Value, Dictionary<string, string?> DisplayName, int SortOrder, string? ColorTag)[]
         {
             ("ACTIVE", new Dictionary<string, string?> { { "zh", "激活" }, { "en", "Active" }, { "ja", "有効" } }, 0, "green"),
-            ("INACTIVE", new Dictionary<string, string?> { { "zh", "未激活" }, { "en", "Inactive" }, { "ja", "無効" } }, 1, "gray"),
+            ("INACTIVE", new Dictionary<string, string?> { { "zh", "未激活" }, { "en", "Inactive" }, { "ja", "无效" } }, 1, "gray"),
             ("PENDING", new Dictionary<string, string?> { { "zh", "待处理" }, { "en", "Pending" }, { "ja", "保留中" } }, 2, "blue"),
             ("ARCHIVED", new Dictionary<string, string?> { { "zh", "已归档" }, { "en", "Archived" }, { "ja", "アーカイブ済み" } }, 3, "gray")
         });
