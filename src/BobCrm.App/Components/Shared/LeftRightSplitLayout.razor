@@ -80,5 +80,7 @@
     [Parameter]
     public EventCallback<string> OnRecordDeleted { get; set; }
 
+#pragma warning disable CS0649
     private string? _selectedRecordId;
+#pragma warning restore CS0649
 }

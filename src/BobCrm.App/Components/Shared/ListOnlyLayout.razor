@@ -1,5 +1,5 @@
 @using BobCrm.App.Components.Shared
-@using BobCrm.App.Models
+@using AppModels = BobCrm.App.Models
 @inject NavigationManager Navigation
 
 @*
@@ -29,13 +29,13 @@
     public string? EditTemplate { get; set; }
 
     [Parameter]
-    public DetailDisplayMode DetailDisplayMode { get; set; } = DetailDisplayMode.Page;
+    public AppModels.DetailDisplayMode DetailDisplayMode { get; set; } = AppModels.DetailDisplayMode.Page;
 
     [Parameter]
     public string? DetailRoute { get; set; }
 
     [Parameter]
-    public ModalSize? ModalSize { get; set; }
+    public AppModels.ModalSize? ModalSize { get; set; }
 
     [Parameter]
     public EventCallback<string> OnRecordSelected { get; set; }

@@ -4,7 +4,9 @@ using System.Text.Json;
 
 namespace BobCrm.App.Services;
 
-public class I18nService
+using BobCrm.Api.Abstractions;
+
+public class I18nService : II18nService
 
 {
 

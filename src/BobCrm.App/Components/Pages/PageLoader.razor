@@ -178,7 +178,7 @@ else if (entityData != null)
                 if (templateResp.IsSuccessStatusCode)
                 {
                     var templateContent = await templateResp.Content.ReadAsStringAsync();
-                    var template = System.Text.Json.JsonSerializer.Deserialize<FormTemplate>(
+                    var template = System.Text.Json.JsonSerializer.Deserialize<BobCrm.App.Models.FormTemplate>(
                         templateContent,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 

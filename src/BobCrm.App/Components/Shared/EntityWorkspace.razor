@@ -1,5 +1,5 @@
 @using BobCrm.App.Components.Shared
-@using BobCrm.App.Models
+@using AppModels = BobCrm.App.Models
 @inject NavigationManager Navigation
 
 @*
@@ -10,7 +10,7 @@
 *@
 
 <div class="entity-workspace" data-entity-type="@EntityType">
-    @if (LayoutMode == LayoutMode.LeftRightSplit)
+    @if (LayoutMode == AppModels.LayoutMode.LeftRightSplit)
     {
         <LeftRightSplitLayout EntityType="@EntityType"
                               ListTemplate="@ListTemplate"
@@ -20,7 +20,7 @@
                               OnRecordSaved="HandleRecordSaved"
                               OnRecordDeleted="HandleRecordDeleted" />
     }
-    else if (LayoutMode == LayoutMode.TopBottomSplit)
+    else if (LayoutMode == AppModels.LayoutMode.TopBottomSplit)
     {
         <TopBottomSplitLayout EntityType="@EntityType"
                              ListTemplate="@ListTemplate"
@@ -50,10 +50,10 @@
     public string EntityType { get; set; } = string.Empty;
 
     [Parameter, EditorRequired]
-    public LayoutMode LayoutMode { get; set; } = LayoutMode.ListOnly;
+    public AppModels.LayoutMode LayoutMode { get; set; } = AppModels.LayoutMode.ListOnly;
 
     [Parameter, EditorRequired]
-    public DetailDisplayMode DetailDisplayMode { get; set; } = DetailDisplayMode.Page;
+    public AppModels.DetailDisplayMode DetailDisplayMode { get; set; } = AppModels.DetailDisplayMode.Page;
 
     [Parameter]
     public string? ListTemplate { get; set; }
@@ -68,7 +68,7 @@
     public string? DetailRoute { get; set; }
 
     [Parameter]
-    public ModalSize? ModalSize { get; set; }
+    public AppModels.ModalSize? ModalSize { get; set; }
 
     [Parameter]
     public EventCallback<string> OnRecordSelected { get; set; }
