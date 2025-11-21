@@ -27,7 +27,7 @@
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.BorderOutlined" OnClick="DeselectAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.MinusSquare" OnClick="DeselectAllAsync">
                         @I18n.T("BTN_DESELECT_ALL")
                     </Button>
                 </SpaceItem>
@@ -37,7 +37,7 @@
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CompressOutlined" OnClick="CollapseAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.Compress" OnClick="CollapseAllAsync">
                         @I18n.T("BTN_COLLAPSE_ALL")
                     </Button>
                 </SpaceItem>
@@ -59,7 +59,7 @@
                 <Input Placeholder="@I18n.T("LBL_SEARCH_PERMISSIONS")"
                        @bind-Value="_searchText"
                        AllowClear
-                       Suffix="@IconType.Outline.Search" />
+                       Suffix="@_searchSuffix" />
             </div>
         }
 
@@ -78,10 +78,8 @@
                       IsLeafExpression="x => x.DataItem.IsLeaf"
                       Checkable
                       Selectable="false"
-                      CheckedKeys="_checkedKeys"
-                      OnCheck="OnTreeCheck"
-                      ExpandedKeys="_expandedKeys"
-                      OnExpand="OnTreeExpand"
+                      @bind-CheckedKeys="_checkedKeys"
+                      @bind-ExpandedKeys="_expandedKeys"
                       DefaultExpandAll="@DefaultExpandAll" />
             }
         </div>
@@ -176,6 +174,8 @@
     private Dictionary<Guid, FunctionMenuNode> _functionLookup = new();
     private List<Guid> _initialCheckedFunctions = new();
 
+    private RenderFragment _searchSuffix => @<Icon Type="@IconType.Outline.Search" />;
+
     protected override async Task OnParametersSetAsync()
     {
         if (RoleId.HasValue)
@@ -209,15 +209,15 @@
             _totalFunctions = _functionLookup.Count;
 
             // 设置已选中的权限
-            if (role != null && role.FunctionIds != null)
+            if (role != null && role.Functions != null)
             {
-                _initialCheckedFunctions = role.FunctionIds.ToList();
-                _checkedKeys = role.FunctionIds.Select(id => id.ToString()).ToArray();
+                _initialCheckedFunctions = role.Functions.Select(f => f.FunctionId).ToList();
+                _checkedKeys = role.Functions.Select(f => f.FunctionId.ToString()).ToArray();
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -250,28 +250,18 @@
         return node;
     }
 
-    private void OnTreeCheck(TreeEventArgs<Guid> args)
-    {
-        _checkedKeys = args.CheckedKeys ?? Array.Empty<string>();
-        StateHasChanged();
-    }
-
-    private void OnTreeExpand(TreeEventArgs<Guid> args)
-    {
-        _expandedKeys = args.ExpandedKeys ?? Array.Empty<string>();
-        StateHasChanged();
-    }
+    // Removed OnTreeCheck and OnTreeExpand as we use @bind-CheckedKeys and @bind-ExpandedKeys
 
     private async Task SelectAllAsync()
     {
         _checkedKeys = _functionLookup.Keys.Select(k => k.ToString()).ToArray();
-        await Message.Info(I18n.T("MSG_ALL_SELECTED"));
+        Message.Info(I18n.T("MSG_ALL_SELECTED"));
     }
 
     private async Task DeselectAllAsync()
     {
         _checkedKeys = Array.Empty<string>();
-        await Message.Info(I18n.T("MSG_ALL_DESELECTED"));
+        Message.Info(I18n.T("MSG_ALL_DESELECTED"));
     }
 
     private async Task ExpandAllAsync()
@@ -301,24 +291,24 @@
             var request = new UpdatePermissionsRequestDto
             {
                 FunctionIds = selectedFunctionIds,
-                FunctionPermissions = new List<FunctionPermissionDto>()
+                FunctionPermissions = new List<FunctionPermissionSelectionDto>()
             };
 
             var success = await RoleService.UpdatePermissionsAsync(RoleId.Value, request);
 
             if (success)
             {
-                await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
                 _initialCheckedFunctions = selectedFunctionIds;
             }
             else
             {
-                await Message.Error(I18n.T("MSG_SAVE_FAILED"));
+                Message.Error(I18n.T("MSG_SAVE_FAILED"));
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {

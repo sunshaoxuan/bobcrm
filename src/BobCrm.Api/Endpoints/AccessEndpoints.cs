@@ -231,10 +231,11 @@ public static class AccessEndpoints
             try
             {
                 // 检查冲突
-                var existingCodes = await db.FunctionNodes
+                var existingCodesList = await db.FunctionNodes
                     .AsNoTracking()
                     .Select(f => f.Code)
-                    .ToHashSetAsync(ct);
+                    .ToListAsync(ct);
+                var existingCodes = new HashSet<string>(existingCodesList);
 
                 var importCodes = ExtractAllCodes(request.Functions);
                 var conflicts = importCodes.Where(code => existingCodes.Contains(code)).ToList();

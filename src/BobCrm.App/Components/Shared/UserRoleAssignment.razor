@@ -29,12 +29,6 @@
                       @bind-TargetKeys="_assignedRoleIds"
                       ShowSearch
                       ShowSelectAll>
-                <ChildContent Context="item">
-                    <div class="role-item">
-                        <span class="role-name">@item.Name</span>
-                        <span class="role-code">@item.Code</span>
-                    </div>
-                </ChildContent>
             </Transfer>
         </div>
 
@@ -49,7 +43,7 @@
                             <span>@role.RoleName (@role.RoleCode)</span>
                             @if (role.OrganizationId.HasValue)
                             {
-                                <Tag Color="blue">@I18n.T("LBL_ORGANIZATION_SCOPED")</Tag>
+                                <Tag Color="@PresetColor.Blue.ToString()">@I18n.T("LBL_ORGANIZATION_SCOPED")</Tag>
                             }
                         </li>
                     }
@@ -151,7 +145,7 @@
             _allRoles = allRoles.Select(r => new TransferItem
             {
                 Key = r.Id.ToString(),
-                Title = r.Name,
+                Title = $"{r.Name} ({r.Code})",
                 Description = r.Code
             }).ToList();
 
@@ -168,7 +162,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -191,17 +185,17 @@
 
             if (success)
             {
-                await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
                 await LoadDataAsync(); // 重新加载以获取最新的角色分配信息
             }
             else
             {
-                await Message.Error(I18n.T("MSG_SAVE_FAILED"));
+                Message.Error(I18n.T("MSG_SAVE_FAILED"));
             }
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {

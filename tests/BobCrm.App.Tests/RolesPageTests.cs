@@ -16,6 +16,7 @@ using BobCrm.App.Components.Pages;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
 using BobCrm.App.Services.Multilingual;
+using BobCrm.App.Services.Widgets.Rendering;
 
 namespace BobCrm.App.Tests;
 
@@ -43,6 +44,7 @@ public class RolesPageTests : TestContext
         Services.AddAntDesign();
         Services.AddScoped<NavigationManager, FakeNavigationManager>();
         Services.AddScoped<IRoleService>(_ => _roleService);
+        Services.AddScoped<IRuntimeWidgetRenderer, RuntimeWidgetRenderer>();
     }
 
     [Fact]

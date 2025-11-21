@@ -1,8 +1,10 @@
 @page "/roles"
 @rendermode RenderMode.InteractiveServer
+@using BobCrm.App.Models
 
 @inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
+@inject IRoleService RoleService
 
 <AuthChecker>
     <div class="collection-shell">
@@ -18,14 +20,91 @@
 
         <div class="collection-content" style="padding: 24px;">
             <ListTemplateHost EntityType="role" />
+            @if (_isLoading)
+            {
+                <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+            }
+            else if (_roles.Count > 0)
+            {
+                <div class="role-list">
+                    @foreach (var role in _roles)
+                    {
+                        <div class="role-card @(role.Id == _selectedRole?.Id ? "active" : string.Empty)" @onclick="() => SelectRoleAsync(role)">
+                            <div class="role-name">@role.Name</div>
+                            <div class="role-code">@role.Code</div>
+                        </div>
+                    }
+                </div>
+
+                @if (_selectedRole is not null && _functionTree is not null)
+                {
+                    <div class="permission-layout">
+                        <div data-testid="permission-tree" class="permission-tree">
+                            @foreach (var node in _functionTree.Tree)
+                            {
+                                <div class="permission-node @(node.Id == _selectedFunctionNode?.Id ? "active" : string.Empty)"
+                                     @onclick="() => SelectFunctionNode(node)">
+                                    <div class="permission-title">@node.Name</div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (_selectedFunctionNode is not null)
+                        {
+                            <div class="permission-panel">
+                                <div class="permission-node">@_selectedFunctionNode.Name</div>
+                                <select class="role-template-dropdown" @onchange="OnTemplateChanged" value="@_selectedBinding">
+                                    @foreach (var option in _selectedFunctionNode.TemplateOptions)
+                                    {
+                                        <option value="@option.BindingId">@option.TemplateName</option>
+                                    }
+                                </select>
+                                <button data-testid="save-permissions-button" class="btn btn-primary" @onclick="SavePermissionsAsync">
+                                    @I18n.T("BTN_SAVE")
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+            }
         </div>
     </div>
 </AuthChecker>
 
 @code {
-    protected override void OnInitialized()
+    private List<RoleProfileDto> _roles = new();
+    private FunctionTreeResponse? _functionTree;
+    private RoleProfileDto? _selectedRole;
+    private FunctionMenuNode? _selectedFunctionNode;
+    private int? _selectedBinding;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
     {
         I18n.OnChanged += HandleI18nChanged;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        if (RoleService == null)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        _roles = await RoleService.GetRolesAsync();
+        _functionTree = await RoleService.GetFunctionTreeAsync();
+        if (_roles.Count > 0 && _functionTree?.Tree.Any() == true)
+        {
+            await SelectRoleAsync(_roles.First());
+        }
+        _isLoading = false;
     }
 
     private void CreateRole()
@@ -34,4 +113,61 @@
     }
 
     private void HandleI18nChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SelectRoleAsync(RoleProfileDto role)
+    {
+        _selectedRole = role;
+        var detail = await RoleService.GetRoleAsync(role.Id);
+        if (detail is not null)
+        {
+            _selectedRole = detail;
+        }
+
+        _selectedFunctionNode = _functionTree?.Tree.FirstOrDefault();
+        SetSelectedBinding();
+    }
+
+    private void OnTemplateChanged(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var bindingId))
+        {
+            _selectedBinding = bindingId;
+        }
+    }
+
+    private void SelectFunctionNode(FunctionMenuNode node)
+    {
+        _selectedFunctionNode = node;
+        SetSelectedBinding();
+    }
+
+    private void SetSelectedBinding()
+    {
+        if (_selectedRole is null || _selectedFunctionNode is null)
+        {
+            _selectedBinding = null;
+            return;
+        }
+
+        var existing = _selectedRole.Functions?.FirstOrDefault(f => f.FunctionId == _selectedFunctionNode.Id);
+        _selectedBinding = existing?.TemplateBindingId ?? _selectedFunctionNode.TemplateOptions.FirstOrDefault()?.BindingId;
+    }
+
+    private async Task SavePermissionsAsync()
+    {
+        if (_selectedRole is null || _selectedFunctionNode is null)
+        {
+            return;
+        }
+
+        var request = new UpdatePermissionsRequestDto
+        {
+            FunctionPermissions = new List<FunctionPermissionSelectionDto>
+            {
+                new() { FunctionId = _selectedFunctionNode.Id, TemplateBindingId = _selectedBinding }
+            }
+        };
+
+        await RoleService.UpdatePermissionsAsync(_selectedRole.Id, request);
+    }
 }

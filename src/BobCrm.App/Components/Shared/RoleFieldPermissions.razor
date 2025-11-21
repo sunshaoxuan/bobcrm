@@ -45,14 +45,14 @@
                             else
                             {
                                 <Table TItem="FieldPermissionItem" DataSource="@entity.Fields" Size="@TableSize.Small">
-                                    <Column Title="@I18n.T("LBL_FIELD_NAME")" @bind-Field="@context.FieldName" />
-                                    <Column Title="@I18n.T("LBL_CAN_READ")">
+                                    <Column TData="string" Title="@I18n.T("LBL_FIELD_NAME")" @bind-Field="@context.FieldName" />
+                                    <Column TData="bool" Title="@I18n.T("LBL_CAN_READ")">
                                         <Checkbox @bind-Value="@context.CanRead" />
                                     </Column>
-                                    <Column Title="@I18n.T("LBL_CAN_WRITE")">
+                                    <Column TData="bool" Title="@I18n.T("LBL_CAN_WRITE")">
                                         <Checkbox @bind-Value="@context.CanWrite" />
                                     </Column>
-                                    <Column Title="@I18n.T("LBL_REMARKS")">
+                                    <Column TData="string" Title="@I18n.T("LBL_REMARKS")">
                                         <Input @bind-Value="@context.Remarks" Placeholder="@I18n.T("LBL_OPTIONAL")" Size="@InputSize.Small" />
                                     </Column>
                                 </Table>
@@ -164,16 +164,17 @@
                         .Where(f => !f.IsDeleted)
                         .Select(f =>
                         {
+                            FieldPermissionDto? perm = null;
                             var hasPermission = rolePermissions != null &&
                                                rolePermissions.TryGetValue(e.EntityRoute ?? e.EntityName, out var fieldPerms) &&
-                                               fieldPerms.TryGetValue(f.PropertyName, out var perm);
+                                               fieldPerms.TryGetValue(f.PropertyName, out perm);
 
                             return new FieldPermissionItem
                             {
                                 FieldName = f.PropertyName,
-                                CanRead = hasPermission ? perm.CanRead : true,  // 默认可读
-                                CanWrite = hasPermission ? perm.CanWrite : false, // 默认不可写
-                                Remarks = hasPermission ? perm.Remarks : null
+                                CanRead = hasPermission && perm != null ? perm.CanRead : true,  // 默认可读
+                                CanWrite = hasPermission && perm != null ? perm.CanWrite : false, // 默认不可写
+                                Remarks = hasPermission && perm != null ? perm.Remarks : null
                             };
                         })
                         .ToList()
@@ -184,7 +185,7 @@
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -196,7 +197,7 @@
     {
         if (entity.DisplayName != null)
         {
-            var currentLang = I18n.GetCurrentLanguage();
+            var currentLang = System.Globalization.CultureInfo.CurrentUICulture.Name; // Fallback to standard culture info if I18n service method is missing
             if (entity.DisplayName.TryGetValue(currentLang, out var displayName) && !string.IsNullOrWhiteSpace(displayName))
             {
                 return displayName;
@@ -240,21 +241,14 @@
                     Remarks = p.Remarks
                 }).ToList();
 
-                var request = new { Permissions = permissions };
-                var response = await Http.PostAsJsonAsync($"/api/field-permissions/role/{RoleId}/entity/{group.Key}/bulk", request);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {group.Key}");
-                    return;
-                }
+                await Http.PutAsJsonAsync($"/api/field-permissions/role/{RoleId}/entity/{group.Key}", permissions);
             }
 
-            await Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
+            Message.Success(I18n.T("MSG_SAVE_SUCCESS"));
         }
         catch (Exception ex)
         {
-            await Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+            Message.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -262,14 +256,14 @@
         }
     }
 
-    private class EntityFieldPermissions
+    public class EntityFieldPermissions
     {
         public string EntityType { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public List<FieldPermissionItem> Fields { get; set; } = new();
     }
 
-    private class FieldPermissionItem
+    public class FieldPermissionItem
     {
         public string FieldName { get; set; } = string.Empty;
         public bool CanRead { get; set; }
@@ -277,7 +271,7 @@
         public string? Remarks { get; set; }
     }
 
-    private class EntityDefinitionDto
+    public class EntityDefinitionDto
     {
         public string EntityName { get; set; } = string.Empty;
         public string? EntityRoute { get; set; }
@@ -285,13 +279,13 @@
         public List<FieldMetadataDto> Fields { get; set; } = new();
     }
 
-    private class FieldMetadataDto
+    public class FieldMetadataDto
     {
         public string PropertyName { get; set; } = string.Empty;
         public bool IsDeleted { get; set; }
     }
 
-    private class FieldPermissionDto
+    public class FieldPermissionDto
     {
         public string EntityType { get; set; } = string.Empty;
         public string FieldName { get; set; } = string.Empty;
