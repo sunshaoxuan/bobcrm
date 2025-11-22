@@ -8,6 +8,8 @@ using BobCrm.Api.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace BobCrm.Api.Tests;
 
 public class FunctionTreeBuilderTests
@@ -74,7 +76,9 @@ public class FunctionTreeBuilderTests
         db.FunctionNodes.AddRange(root, child);
         await db.SaveChangesAsync();
 
-        var builder = new FunctionTreeBuilder(db);
+        var logger = NullLogger<MultilingualFieldService>.Instance;
+        var multilingual = new MultilingualFieldService(db, logger);
+        var builder = new FunctionTreeBuilder(db, multilingual);
         var nodes = await db.FunctionNodes
             .AsNoTracking()
             .Include(n => n.Template)

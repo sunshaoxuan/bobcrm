@@ -18,10 +18,12 @@ namespace BobCrm.Api.Services;
 public class FunctionTreeBuilder
 {
     private readonly AppDbContext _db;
+    private readonly MultilingualFieldService _multilingual;
 
-    public FunctionTreeBuilder(AppDbContext db)
+    public FunctionTreeBuilder(AppDbContext db, MultilingualFieldService multilingual)
     {
         _db = db;
+        _multilingual = multilingual;
     }
 
     public async Task<List<FunctionNodeDto>> BuildAsync(
@@ -85,43 +87,25 @@ public class FunctionTreeBuilder
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var resourceMap = new Dictionary<string, Dictionary<string, string?>>(StringComparer.OrdinalIgnoreCase);
-        if (keySet.Count > 0)
-        {
-            var resources = await _db.LocalizationResources
-                .AsNoTracking()
-                .Where(r => keySet.Contains(r.Key))
-                .ToListAsync(ct);
-
-            foreach (var resource in resources)
-            {
-                var normalized = resource.Translations.ToDictionary(
-                    kvp => kvp.Key.Trim().ToLowerInvariant(),
-                    kvp => string.IsNullOrWhiteSpace(kvp.Value) ? null : kvp.Value.Trim(),
-                    StringComparer.OrdinalIgnoreCase);
-
-                resourceMap[resource.Key] = normalized;
-            }
-        }
+        var resourceMap = await _multilingual.LoadResourcesAsync(keySet, ct);
 
         var result = new Dictionary<Guid, MultilingualText?>();
         foreach (var node in nodes)
         {
-            var merged = node.DisplayName is { Count: > 0 }
+            var fallback = node.DisplayName is { Count: > 0 }
                 ? CloneDictionary(node.DisplayName)
                 : null;
+
+            Dictionary<string, string?>? merged = null;
 
             if (!string.IsNullOrWhiteSpace(node.DisplayNameKey) &&
                 resourceMap.TryGetValue(node.DisplayNameKey!, out var resourceNames))
             {
-                merged ??= new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-                foreach (var (lang, text) in resourceNames)
-                {
-                    if (!merged.ContainsKey(lang))
-                    {
-                        merged[lang] = text;
-                    }
-                }
+                merged = _multilingual.Merge(resourceNames, fallback);
+            }
+            else
+            {
+                merged = fallback;
             }
 
             result[node.Id] = merged == null ? null : new MultilingualText(merged);

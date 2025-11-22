@@ -35,34 +35,99 @@ public class MultilingualFieldService
         Dictionary<string, string?>? explicitValues,
         CancellationToken ct = default)
     {
-        var normalized = Normalize(explicitValues);
+        // 1. Normalize the fallback/explicit values
+        var normalizedFallback = Normalize(explicitValues);
 
         if (string.IsNullOrWhiteSpace(resourceKey))
         {
-            return normalized;
+            return normalizedFallback;
         }
 
+        // 2. Load resource from database
         var resource = await LoadResourceAsync(resourceKey.Trim(), ct);
+        
+        // 3. If no DB resource, return fallback
         if (resource == null)
         {
-            _logger.LogWarning("[i18n] Localization resource '{ResourceKey}' not found when resolving multilingual field.", resourceKey);
-            return normalized;
+            if (normalizedFallback != null && normalizedFallback.Count > 0)
+            {
+                return normalizedFallback;
+            }
+            
+            _logger.LogWarning("[i18n] Localization resource '{ResourceKey}' not found and no fallback provided.", resourceKey);
+            return null;
         }
 
-        if (normalized == null || normalized.Count == 0)
+        // 4. Merge using the centralized logic
+        return Merge(resource, normalizedFallback);
+    }
+
+    /// <summary>
+    /// 批量加载多语资源。
+    /// </summary>
+    public async Task<Dictionary<string, Dictionary<string, string?>>> LoadResourcesAsync(
+        IEnumerable<string> keys,
+        CancellationToken ct = default)
+    {
+        var distinctKeys = keys
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (distinctKeys.Count == 0)
+        {
+            return new Dictionary<string, Dictionary<string, string?>>();
+        }
+
+        var resources = await _db.LocalizationResources
+            .AsNoTracking()
+            .Where(r => distinctKeys.Contains(r.Key))
+            .ToListAsync(ct);
+
+        var result = new Dictionary<string, Dictionary<string, string?>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var resource in resources)
+        {
+             result[resource.Key] = resource.Translations
+                .ToDictionary(
+                    pair => pair.Key.Trim().ToLowerInvariant(),
+                    pair => string.IsNullOrWhiteSpace(pair.Value) ? null : pair.Value.Trim(),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 合并多语资源：数据库资源优先于代码默认值。
+    /// </summary>
+    public Dictionary<string, string?>? Merge(
+        Dictionary<string, string?>? resource,
+        Dictionary<string, string?>? fallback)
+    {
+        // If no fallback, return resource (even if null)
+        if (fallback == null || fallback.Count == 0)
         {
             return resource;
         }
 
+        // If no resource, return fallback
+        if (resource == null || resource.Count == 0)
+        {
+            return fallback;
+        }
+
+        // Merge: Start with fallback, then overlay DB values (DB overrides code)
+        var result = new Dictionary<string, string?>(fallback, StringComparer.OrdinalIgnoreCase);
+        
         foreach (var (lang, text) in resource)
         {
-            if (!normalized.TryGetValue(lang, out var existing) || string.IsNullOrWhiteSpace(existing))
+            if (!string.IsNullOrWhiteSpace(text))
             {
-                normalized[lang] = text;
+                result[lang] = text;
             }
         }
 
-        return normalized;
+        return result;
     }
 
     /// <summary>

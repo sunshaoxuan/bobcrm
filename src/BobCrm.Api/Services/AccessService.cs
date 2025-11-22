@@ -948,7 +948,7 @@ public class AccessService
             node.SortOrder = seed.SortOrder;
             var displayNameKey = ResolveDisplayNameKey(seed);
             node.DisplayNameKey = displayNameKey;
-            node.DisplayName = await ResolveSeedDisplayNameAsync(displayNameKey, seed.DisplayNameMap, displayNameCache, ct);
+            node.DisplayName = await _multilingual.ResolveAsync(displayNameKey, seed.DisplayNameMap, ct);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -980,46 +980,7 @@ public class AccessService
             ? $"MENU_{seed.Code.Replace('.', '_')}"
             : seed.DisplayNameKey.Trim();
 
-    private async Task<Dictionary<string, string?>?> ResolveSeedDisplayNameAsync(
-        string displayNameKey,
-        Dictionary<string, string?> fallbackMap,
-        Dictionary<string, Dictionary<string, string?>?> cache,
-        CancellationToken ct)
-    {
-        if (cache.TryGetValue(displayNameKey, out var cached))
-        {
-            return cached == null
-                ? null
-                : new Dictionary<string, string?>(cached, StringComparer.OrdinalIgnoreCase);
-        }
 
-        // 1. Load resource values from DB (pass null as explicitValues)
-        var resourceValues = await _multilingual.ResolveAsync(displayNameKey, null, ct);
-
-        // 2. Start with fallback map
-        var result = new Dictionary<string, string?>(fallbackMap, StringComparer.OrdinalIgnoreCase);
-
-        // 3. Overlay resource values (DB takes precedence over code defaults)
-        if (resourceValues != null)
-        {
-            foreach (var kvp in resourceValues)
-            {
-                if (!string.IsNullOrWhiteSpace(kvp.Value))
-                {
-                    result[kvp.Key] = kvp.Value;
-                }
-            }
-        }
-
-        Dictionary<string, string?>? snapshot = result.Count == 0
-            ? null
-            : new Dictionary<string, string?>(result, StringComparer.OrdinalIgnoreCase);
-
-        cache[displayNameKey] = snapshot;
-        return snapshot == null
-            ? null
-            : new Dictionary<string, string?>(snapshot, StringComparer.OrdinalIgnoreCase);
-    }
 }
 
 public record ScopeBinding(RoleDataScope Scope, Guid? OrganizationId);
