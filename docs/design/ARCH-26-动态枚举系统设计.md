@@ -316,6 +316,13 @@ public class CreateEnumOptionRequest
 ]
 ```
 
+## 菜单结构
+
+为了方便管理，"枚举管理" (Enum Management) 应置于 "实体管理" (Entity Management) 之前。
+
+- 枚举管理 (SortOrder: 131)
+- 实体管理 (SortOrder: 132)
+
 ## 实施步骤
 
 ### Phase 0: 数据模型 & 迁移

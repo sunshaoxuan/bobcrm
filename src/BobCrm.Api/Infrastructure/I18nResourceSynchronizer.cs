@@ -31,20 +31,59 @@ public class I18nResourceSynchronizer
             .ToListAsync();
         var existingKeys = existingKeysList.ToHashSet();
 
-        var missingResources = allResources
-            .Where(r => !existingKeys.Contains(r.Key))
-            .ToList();
+        var missingResources = new List<LocalizationResource>();
+        var updatedResources = new List<LocalizationResource>();
+
+        foreach (var resource in allResources)
+        {
+            if (!existingKeys.Contains(resource.Key))
+            {
+                missingResources.Add(resource);
+            }
+            else
+            {
+                // Check if updates are needed
+                var existing = await _db.LocalizationResources.FirstOrDefaultAsync(r => r.Key == resource.Key);
+                if (existing != null)
+                {
+                    bool changed = false;
+                    foreach (var kvp in resource.Translations)
+                    {
+                        if (!existing.Translations.TryGetValue(kvp.Key, out var existingVal) || existingVal != kvp.Value)
+                        {
+                            existing.Translations[kvp.Key] = kvp.Value;
+                            changed = true;
+                        }
+                    }
+                    
+                    if (changed)
+                    {
+                        updatedResources.Add(existing);
+                    }
+                }
+            }
+        }
 
         if (missingResources.Any())
         {
             _logger.LogInformation("同步 {Count} 个缺失的国际化资源到数据库", missingResources.Count);
             await _db.LocalizationResources.AddRangeAsync(missingResources);
+        }
+
+        if (updatedResources.Any())
+        {
+             _logger.LogInformation("更新 {Count} 个已存在的国际化资源", updatedResources.Count);
+             _db.LocalizationResources.UpdateRange(updatedResources);
+        }
+
+        if (missingResources.Any() || updatedResources.Any())
+        {
             await _db.SaveChangesAsync();
             _logger.LogInformation("成功同步国际化资源");
         }
         else
         {
-            _logger.LogDebug("所有国际化资源已存在，无需同步");
+            _logger.LogDebug("所有国际化资源已最新，无需同步");
         }
     }
 }

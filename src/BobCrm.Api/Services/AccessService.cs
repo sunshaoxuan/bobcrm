@@ -44,7 +44,12 @@ public class AccessService
         new("SYS", "系统管理", null, "setting", true, 10, "APP.ROOT"),
         new("SYS.SET", "系统设置", null, "setting", true, 11, "SYS"),
         new("SYS.SET.CONFIG", "系统设置", "/settings", "setting", true, 111, "SYS.SET"),
-        new("SYS.SET.MENU", "菜单管理", "/menus", "menu", true, 112, "SYS.SET"),
+        new("SYS.SET.MENU", "菜单管理", "/menus", "menu", true, 112, "SYS.SET", new Dictionary<string, string?>
+        {
+            ["zh"] = "菜单管理",
+            ["ja"] = "メニュー管理",
+            ["en"] = "Menu Management"
+        }),
         new("SYS.MSG", "邮件与消息", null, "mail", true, 12, "SYS"),
         new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
         new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
@@ -55,13 +60,13 @@ public class AccessService
             ["ja"] = "モデルと列挙",
             ["en"] = "Modeling & Enums"
         }),
-        new("SYS.ENTITY.EDITOR", "业务实体编辑", "/entity-definitions", "profile", true, 131, "SYS.ENTITY", new Dictionary<string, string?>
+        new("SYS.ENTITY.EDITOR", "业务实体编辑", "/entity-definitions", "profile", true, 132, "SYS.ENTITY", new Dictionary<string, string?>
         {
             ["zh"] = "实体管理",
             ["ja"] = "エンティティ管理",
             ["en"] = "Entity Management"
         }),
-        new("SYS.ENTITY.ENUM", "枚举管理", "/system/enums", "unordered-list", true, 132, "SYS.ENTITY", new Dictionary<string, string?>
+        new("SYS.ENTITY.ENUM", "枚举管理", "/system/enums", "unordered-list", true, 131, "SYS.ENTITY", new Dictionary<string, string?>
         {
             ["zh"] = "枚举管理",
             ["ja"] = "列挙管理",
@@ -943,7 +948,7 @@ public class AccessService
             node.SortOrder = seed.SortOrder;
             var displayNameKey = ResolveDisplayNameKey(seed);
             node.DisplayNameKey = displayNameKey;
-            node.DisplayName = await ResolveSeedDisplayNameAsync(displayNameKey, seed.Name, displayNameCache, ct);
+            node.DisplayName = await ResolveSeedDisplayNameAsync(displayNameKey, seed.DisplayNameMap, displayNameCache, ct);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -977,7 +982,7 @@ public class AccessService
 
     private async Task<Dictionary<string, string?>?> ResolveSeedDisplayNameAsync(
         string displayNameKey,
-        string zhName,
+        Dictionary<string, string?> fallbackMap,
         Dictionary<string, Dictionary<string, string?>?> cache,
         CancellationToken ct)
     {
@@ -988,11 +993,27 @@ public class AccessService
                 : new Dictionary<string, string?>(cached, StringComparer.OrdinalIgnoreCase);
         }
 
-        var fallback = MultilingualFieldService.FromSingleValue(zhName);
-        var resolved = await _multilingual.ResolveAsync(displayNameKey, fallback, ct);
-        Dictionary<string, string?>? snapshot = resolved == null
+        // 1. Load resource values from DB (pass null as explicitValues)
+        var resourceValues = await _multilingual.ResolveAsync(displayNameKey, null, ct);
+
+        // 2. Start with fallback map
+        var result = new Dictionary<string, string?>(fallbackMap, StringComparer.OrdinalIgnoreCase);
+
+        // 3. Overlay resource values (DB takes precedence over code defaults)
+        if (resourceValues != null)
+        {
+            foreach (var kvp in resourceValues)
+            {
+                if (!string.IsNullOrWhiteSpace(kvp.Value))
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+
+        Dictionary<string, string?>? snapshot = result.Count == 0
             ? null
-            : new Dictionary<string, string?>(resolved, StringComparer.OrdinalIgnoreCase);
+            : new Dictionary<string, string?>(result, StringComparer.OrdinalIgnoreCase);
 
         cache[displayNameKey] = snapshot;
         return snapshot == null

@@ -1,0 +1,50 @@
+  復元対象のプロジェクトを決定しています...
+  復元対象のすべてのプロジェクトは最新です。
+  BobCrm.Api -> C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.dll
+  BobCrm.App -> C:\workspace\bobcrm\src\BobCrm.App\bin\Debug\net8.0\BobCrm.App.dll
+  BobCrm.Api.Tests -> C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.Tests.dll
+C:\workspace\bobcrm\tests\BobCrm.Api.Tests\bin\Debug\net8.0\BobCrm.Api.Tests.dll (.NETCoreApp,Version=v8.0) のテスト実行
+VSTest のバージョン 17.14.1 (x64)
+
+テスト実行を開始しています。お待ちください...
+合計 1 個のテスト ファイルが指定されたパターンと一致しました。
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Create_ShouldReturn201 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Create_ShouldReturn201 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.FullWorkflow_CreatePublishCompileAndQuery_ShouldSucceed [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GetAll_ShouldReturn200 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Delete_ShouldReturn204 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Update_ShouldReturn200 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_PublishNewEntity_ShouldReturn200 [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GenerateCode_ShouldReturnCode [SKIP]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Compile_ShouldReturnSuccess [SKIP]
+  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Create_ShouldReturn201 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Create_ShouldReturn201 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.FullWorkflow_CreatePublishCompileAndQuery_ShouldSucceed [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GetAll_ShouldReturn200 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Delete_ShouldReturn204 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Update_ShouldReturn200 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_PublishNewEntity_ShouldReturn200 [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GenerateCode_ShouldReturnCode [1 ms]
+  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Compile_ShouldReturnSuccess [1 ms]
+[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Query_ShouldReturnData [SKIP]
+  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Query_ShouldReturnData [1 ms]
+[xUnit.net 00:00:26.17]     BobCrm.Api.Tests.AdminAndAccessTests.Admin_Db_Health_And_Recreate [SKIP]
+  スキップ BobCrm.Api.Tests.AdminAndAccessTests.Admin_Db_Health_And_Recreate [1 ms]
+[xUnit.net 00:00:45.41]     BobCrm.Api.Tests.AdminEnvironmentTests.Admin_DB_Recreate_Only_Works_In_Development [SKIP]
+[xUnit.net 00:00:45.42]     BobCrm.Api.Tests.AdminEnvironmentTests.Admin_Reset_Password_Works_In_Development [SKIP]
+  スキップ BobCrm.Api.Tests.AdminEnvironmentTests.Admin_DB_Recreate_Only_Works_In_Development [1 ms]
+  スキップ BobCrm.Api.Tests.AdminEnvironmentTests.Admin_Reset_Password_Works_In_Development [1 ms]
+  失敗 BobCrm.Api.Tests.MenuTemplateWorkflowTests.Published_entity_menu_role_and_template_flow_is_reported_by_api [1 s]
+  エラー メッセージ:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Customer Accounts"
+Actual:   "客户主档"
+           ↑ (pos 0)
+  スタック トレース:
+     at BobCrm.Api.Tests.MenuTemplateWorkflowTests.Published_entity_menu_role_and_template_flow_is_reported_by_api() in C:\workspace\bobcrm\tests\BobCrm.Api.Tests\MenuTemplateWorkflowTests.cs:line 45
+--- End of stack trace from previous location ---
+
+失敗!   -失敗:     1、合格:   378、スキップ:    13、合計:   392、期間: 53 s - BobCrm.Api.Tests.dll (net8.0)
+
+ワークロードの更新が利用可能です。詳細については、`dotnet workload list` を実行してください。
