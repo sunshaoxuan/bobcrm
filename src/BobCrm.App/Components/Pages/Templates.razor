@@ -592,13 +592,15 @@
         builder.AddContent(33, $"📋 {I18n.T("BTN_COPY")}");
         builder.CloseElement();
 
-        // 应用按钮（设为默认）
-        if (!template.IsUserDefault && !string.IsNullOrWhiteSpace(template.EntityType))
+        // 应用按钮（设为默认）- 始终显示，已应用时为disabled状态
+        if (!string.IsNullOrWhiteSpace(template.EntityType))
         {
+            var isApplied = template.IsUserDefault;
             builder.OpenElement(34, "button");
-            builder.AddAttribute(35, "class", "btn btn-ghost btn-sm");
-            builder.AddAttribute(36, "onclick", EventCallback.Factory.Create(this, () => ApplyTemplate(template.Id)));
-            builder.AddContent(37, $"✓ {I18n.T("BTN_APPLY")}");
+            builder.AddAttribute(35, "class", isApplied ? "btn btn-success btn-sm" : "btn btn-ghost btn-sm");
+            builder.AddAttribute(36, "disabled", isApplied);
+            builder.AddAttribute(37, "onclick", EventCallback.Factory.Create(this, () => ApplyTemplate(template.Id)));
+            builder.AddContent(38, isApplied ? "✓ 已应用" : $"✓ {I18n.T("BTN_APPLY")}");
             builder.CloseElement();
         }
 
