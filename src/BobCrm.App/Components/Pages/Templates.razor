@@ -575,15 +575,12 @@
         builder.OpenElement(24, "div");
         builder.AddAttribute(25, "class", "template-actions");
 
-        // 编辑按钮（系统模板不可编辑）
-        if (!template.IsSystemDefault)
-        {
-            builder.OpenElement(26, "button");
-            builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
-            builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
-            builder.AddContent(29, $"✏️ {I18n.T("BTN_EDIT_TEMPLATE")}");
-            builder.CloseElement();
-        }
+        // 编辑按钮（允许系统模板进入编辑）
+        builder.OpenElement(26, "button");
+        builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
+        builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
+        builder.AddContent(29, $"✏️ {I18n.T("BTN_EDIT_TEMPLATE")}");
+        builder.CloseElement();
 
         // 复制按钮
         builder.OpenElement(30, "button");
