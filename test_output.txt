@@ -8,43 +8,22 @@ VSTest のバージョン 17.14.1 (x64)
 
 テスト実行を開始しています。お待ちください...
 合計 1 個のテスト ファイルが指定されたパターンと一致しました。
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Create_ShouldReturn201 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Create_ShouldReturn201 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.FullWorkflow_CreatePublishCompileAndQuery_ShouldSucceed [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GetAll_ShouldReturn200 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Delete_ShouldReturn204 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Update_ShouldReturn200 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_PublishNewEntity_ShouldReturn200 [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GenerateCode_ShouldReturnCode [SKIP]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Compile_ShouldReturnSuccess [SKIP]
-  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Create_ShouldReturn201 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Create_ShouldReturn201 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.FullWorkflow_CreatePublishCompileAndQuery_ShouldSucceed [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GetAll_ShouldReturn200 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Delete_ShouldReturn204 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Update_ShouldReturn200 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_PublishNewEntity_ShouldReturn200 [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_GenerateCode_ShouldReturnCode [1 ms]
-  スキップ BobCrm.Api.Tests.IntegrationTests.EntityDefinitions_Compile_ShouldReturnSuccess [1 ms]
-[xUnit.net 00:00:09.89]     BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Query_ShouldReturnData [SKIP]
-  スキップ BobCrm.Api.Tests.IntegrationTests.DynamicEntities_Query_ShouldReturnData [1 ms]
-[xUnit.net 00:00:26.17]     BobCrm.Api.Tests.AdminAndAccessTests.Admin_Db_Health_And_Recreate [SKIP]
-  スキップ BobCrm.Api.Tests.AdminAndAccessTests.Admin_Db_Health_And_Recreate [1 ms]
-[xUnit.net 00:00:45.41]     BobCrm.Api.Tests.AdminEnvironmentTests.Admin_DB_Recreate_Only_Works_In_Development [SKIP]
-[xUnit.net 00:00:45.42]     BobCrm.Api.Tests.AdminEnvironmentTests.Admin_Reset_Password_Works_In_Development [SKIP]
-  スキップ BobCrm.Api.Tests.AdminEnvironmentTests.Admin_DB_Recreate_Only_Works_In_Development [1 ms]
-  スキップ BobCrm.Api.Tests.AdminEnvironmentTests.Admin_Reset_Password_Works_In_Development [1 ms]
-  失敗 BobCrm.Api.Tests.MenuTemplateWorkflowTests.Published_entity_menu_role_and_template_flow_is_reported_by_api [1 s]
+  失敗 BobCrm.Api.Tests.MenuCrashReproductionTests.BuildAsync_ShouldNotCrash_WithComplexTree [571 ms]
   エラー メッセージ:
-   Assert.Equal() Failure: Strings differ
-           ↓ (pos 0)
-Expected: "Customer Accounts"
-Actual:   "客户主档"
-           ↑ (pos 0)
+   Expected menuNode.DisplayNameTranslations!["ja"] to be "メニュー管理" with a length of 6, but "メニュー管理 (Duplicate)" has a length of 18, differs near " (D" (index 6).
   スタック トレース:
-     at BobCrm.Api.Tests.MenuTemplateWorkflowTests.Published_entity_menu_role_and_template_flow_is_reported_by_api() in C:\workspace\bobcrm\tests\BobCrm.Api.Tests\MenuTemplateWorkflowTests.cs:line 45
+     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)
+   at FluentAssertions.Execution.TestFrameworkProvider.Throw(String message)
+   at FluentAssertions.Execution.DefaultAssertionStrategy.HandleFailure(String message)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Execution.AssertionScope.FailWith(Func`1 failReasonFunc)
+   at FluentAssertions.Primitives.StringEqualityValidator.ValidateAgainstLengthDifferences()
+   at FluentAssertions.Primitives.StringValidator.Validate()
+   at FluentAssertions.Primitives.StringAssertions`1.Be(String expected, String because, Object[] becauseArgs)
+   at BobCrm.Api.Tests.MenuCrashReproductionTests.BuildAsync_ShouldNotCrash_WithComplexTree() in C:\workspace\bobcrm\tests\BobCrm.Api.Tests\MenuCrashReproductionTests.cs:line 103
+   at BobCrm.Api.Tests.MenuCrashReproductionTests.BuildAsync_ShouldNotCrash_WithComplexTree() in C:\workspace\bobcrm\tests\BobCrm.Api.Tests\MenuCrashReproductionTests.cs:line 103
 --- End of stack trace from previous location ---
 
-失敗!   -失敗:     1、合格:   378、スキップ:    13、合計:   392、期間: 53 s - BobCrm.Api.Tests.dll (net8.0)
+失敗!   -失敗:     1、合格:     0、スキップ:     0、合計:     1、期間: 571 ms - BobCrm.Api.Tests.dll (net8.0)
 
 ワークロードの更新が利用可能です。詳細については、`dotnet workload list` を実行してください。

@@ -87,11 +87,21 @@ public class MultilingualFieldService
         var result = new Dictionary<string, Dictionary<string, string?>>(StringComparer.OrdinalIgnoreCase);
         foreach (var resource in resources)
         {
-             result[resource.Key] = resource.Translations
-                .ToDictionary(
-                    pair => pair.Key.Trim().ToLowerInvariant(),
-                    pair => string.IsNullOrWhiteSpace(pair.Value) ? null : pair.Value.Trim(),
-                    StringComparer.OrdinalIgnoreCase);
+             var normalized = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+             if (resource.Translations != null)
+             {
+                 foreach (var (key, value) in resource.Translations)
+                 {
+                     if (string.IsNullOrWhiteSpace(key)) continue;
+                     var normalizedKey = key.Trim().ToLowerInvariant();
+                     // Handle duplicates by keeping the first value (don't overwrite)
+                     if (!normalized.ContainsKey(normalizedKey))
+                     {
+                         normalized[normalizedKey] = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+                     }
+                 }
+             }
+             result[resource.Key] = normalized;
         }
 
         return result;
@@ -192,10 +202,20 @@ public class MultilingualFieldService
             return null;
         }
 
-        return resource.Translations
-            .ToDictionary(
-                pair => pair.Key.Trim().ToLowerInvariant(),
-                pair => string.IsNullOrWhiteSpace(pair.Value) ? null : pair.Value.Trim(),
-                StringComparer.OrdinalIgnoreCase);
+        var normalized = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (resource.Translations != null)
+        {
+            foreach (var (k, v) in resource.Translations)
+            {
+                if (string.IsNullOrWhiteSpace(k)) continue;
+                var normalizedKey = k.Trim().ToLowerInvariant();
+                // Handle duplicates by keeping the first value
+                if (!normalized.ContainsKey(normalizedKey))
+                {
+                    normalized[normalizedKey] = string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+                }
+            }
+        }
+        return normalized;
     }
 }
