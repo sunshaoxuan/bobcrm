@@ -523,33 +523,28 @@ else
                 // 如果模板有实体类型，锁定它（不允许修改）
                 isEntityTypeLocked = !string.IsNullOrWhiteSpace(template.EntityType);
 
-                // 解析布局JSON
+                // 解析布局JSON（兼容旧格式）
+                layoutWidgets = new List<DraggableWidget>();
                 if (!string.IsNullOrWhiteSpace(template.LayoutJson))
                 {
                     var doc = System.Text.Json.JsonDocument.Parse(template.LayoutJson);
                     var root = doc.RootElement;
 
-                    if (root.TryGetProperty("items", out var itemsEl))
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                        root.TryGetProperty("items", out var itemsEl))
                     {
-                        layoutWidgets = new List<DraggableWidget>();
-
                         foreach (var item in itemsEl.EnumerateObject())
                         {
-                            try
-                            {
-                                var widget = LayoutMapper.FromJsonElement(item.Value);
-                                layoutWidgets.Add(widget);
-                            }
-                            catch (Exception ex)
-                            {
-                                await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to parse widget: {ex.Message}");
-                            }
+                            TryAddWidget(item.Value);
                         }
                     }
-                }
-                else
-                {
-                    layoutWidgets = new List<DraggableWidget>();
+                    else if (root.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var el in root.EnumerateArray())
+                        {
+                            TryAddWidget(el);
+                        }
+                    }
                 }
 
                 await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template {id}: {layoutWidgets.Count} widgets, entityType={entityType}, locked={isEntityTypeLocked}");
@@ -1246,6 +1241,19 @@ else
             templateName = I18n.T("LBL_NEW_TEMPLATE");
         }
         try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private void TryAddWidget(System.Text.Json.JsonElement element)
+    {
+        try
+        {
+            var widget = LayoutMapper.FromJsonElement(element);
+            layoutWidgets.Add(widget);
+        }
+        catch (Exception ex)
+        {
+            _ = JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to parse widget: {ex.Message}");
+        }
     }
 
     /// <summary>
