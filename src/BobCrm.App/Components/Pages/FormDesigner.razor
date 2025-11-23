@@ -35,6 +35,7 @@ else if (error != null)
 {
     <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
     <div style="margin-top:16px">
+        <Button OnClick="RetryLoad" Style="margin-right:8px">@I18n.T("BTN_RETRY")</Button>
         <Button OnClick="@(() => Nav.NavigateTo("/templates"))">@I18n.T("BTN_BACK")</Button>
     </div>
 }
@@ -50,6 +51,7 @@ else
                 <Tag Color="@TagColor.Blue">@entityType</Tag>
             </div>
             <div class="designer-header-actions">
+                <Button OnClick="CancelAndReturn" Icon="@IconType.Outline.Left">@I18n.T("BTN_CANCEL")</Button>
                 <Button Ghost OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
                 <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
             </div>
@@ -310,8 +312,11 @@ else
     private HashSet<string> resizingIds = new();
     private ElementReference canvasRef;
 
-    // ⭐ 可用字段列表（从FieldDefinitions API加载）
+    // ⭐ 可用字段列表（从FieldDefinitions API加载，非实体绑定）
     private List<FieldDefinitionItem> availableFields = new();
+
+    // ⭐ 当前实体字段列表（来自实体定义）
+    private List<EntityFieldDto> entityFields = new();
 
     // ⭐ 可用实体类型列表（供 EntitySelector 使用）
     private List<EntityTypeItem> availableEntityTypes = new();
@@ -339,24 +344,8 @@ else
 
         try
         {
-            // 0. 初始化全局拖放钩子（添加is-dragging类到body，控制pointer-events）
             await JS.InvokeVoidAsync("bobcrm.initDragDrop");
-
-            // 1. 加载可用字段列表（设计器必需）
-            await LoadAvailableFields();
-
-            // 2. 加载模板
-            if (string.IsNullOrWhiteSpace(TemplateId))
-            {
-                InitializeEmptyTemplate();
-            }
-            else
-            {
-                await LoadTemplate();
-            }
-
-            loading = false;
-            await InvokeAsync(StateHasChanged);
+            await InitializeDesignerAsync();
         }
         catch (Exception ex)
         {
@@ -366,69 +355,147 @@ else
         }
     }
 
+    private async Task InitializeDesignerAsync()
+    {
+        error = null;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+
+        // 1. 加载可用实体和字段（设计器必需）
+        await LoadAvailableEntities();
+        await LoadAvailableFields();
+
+        // 2. 加载模板
+        if (string.IsNullOrWhiteSpace(TemplateId))
+        {
+            InitializeEmptyTemplate();
+        }
+        else
+        {
+            await LoadTemplate();
+        }
+
+        if (!string.IsNullOrWhiteSpace(entityType))
+        {
+            await LoadEntityFields(entityType);
+        }
+
+        loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
     /// <summary>
     /// EntitySelector 的数据加载器
     /// </summary>
     private async Task<List<EntityTypeItem>> LoadAvailableEntitiesForSelector()
     {
+        if (availableEntityTypes.Any())
+        {
+            return availableEntityTypes;
+        }
+
         try
         {
-            await JS.InvokeVoidAsync("console.log", "[FormDesigner] Loading entities for selector...");
-            
-            var resp = await Auth.GetWithRefreshAsync("/api/entities");
-            
-            if (resp.IsSuccessStatusCode)
-            {
-                var content = await resp.Content.ReadAsStringAsync();
-                var jsonOptions = new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-                
-                var entities = System.Text.Json.JsonSerializer.Deserialize<List<EntityTypeItem>>(content, jsonOptions) ?? new();
-                
-                // ⭐ 关键：翻译显示名称和描述，填充到实体对象中
-                foreach (var entity in entities)
-                {
-                    entity.DisplayName = I18n.T(entity.DisplayNameKey);
-                    if (!string.IsNullOrWhiteSpace(entity.DescriptionKey))
-                    {
-                        entity.Description = I18n.T(entity.DescriptionKey);
-                    }
-                }
-                
-                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {entities.Count} entity types for selector (with translations)");
-                
-                return entities;
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("console.error", $"[FormDesigner] API failed with status {resp.StatusCode}");
-                return new List<EntityTypeItem>();
-            }
+            await LoadAvailableEntities();
+            return availableEntityTypes;
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Exception: {ex.Message}");
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load entities: {ex.Message}");
             return new List<EntityTypeItem>();
         }
     }
 
+    private async Task LoadAvailableEntities()
+    {
+        await JS.InvokeVoidAsync("console.log", "[FormDesigner] Loading entities for selector...");
+
+        var resp = await Auth.GetWithRefreshAsync("/api/entities");
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"{I18n.T("MSG_LOAD_FAILED")}: {resp.StatusCode}");
+        }
+
+        var content = await resp.Content.ReadAsStringAsync();
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        var entities = System.Text.Json.JsonSerializer.Deserialize<List<EntityApiItem>>(content, jsonOptions) ?? new();
+
+        availableEntityTypes = entities.Select(e => new EntityTypeItem
+        {
+            EntityType = e.EntityType ?? string.Empty,
+            EntityName = e.EntityName ?? string.Empty,
+            ApiEndpoint = e.ApiEndpoint,
+            Icon = e.Icon,
+            Category = e.Category,
+            DisplayName = ResolveMultilingual(e.DisplayName, e.EntityName ?? e.EntityType ?? string.Empty),
+            Description = ResolveMultilingual(e.Description, string.Empty)
+        }).ToList();
+
+        await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {availableEntityTypes.Count} entity types for selector (with translations)");
+    }
 
     private async Task LoadAvailableFields()
     {
         try
         {
             var resp = await Auth.GetWithRefreshAsync("/api/fields");
-            if (resp.IsSuccessStatusCode)
+            if (!resp.IsSuccessStatusCode)
             {
-                var fields = await resp.Content.ReadFromJsonAsync<List<FieldDefinitionItem>>();
-                availableFields = fields ?? new();
+                throw new InvalidOperationException($"{I18n.T("MSG_LOAD_FAILED")}: {resp.StatusCode}");
             }
+
+            var fields = await resp.Content.ReadFromJsonAsync<List<FieldDefinitionItem>>();
+            availableFields = fields ?? new();
         }
         catch (Exception ex)
         {
+            error = $"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}";
             await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load fields: {ex.Message}");
+            throw;
+        }
+    }
+
+    private async Task LoadEntityFields(string entity)
+    {
+        try
+        {
+            entityFields = new();
+
+            foreach (var candidate in BuildEntityTypeCandidates(entity))
+            {
+                var definition = await TryLoadDefinition(candidate);
+                if (definition == null) continue;
+
+                entityFields = definition.Fields?.Select(f => new EntityFieldDto
+                {
+                    PropertyName = f.PropertyName ?? string.Empty,
+                    DisplayName = f.DisplayName,
+                    DataType = f.DataType ?? string.Empty,
+                    SortOrder = f.SortOrder,
+                    IsRequired = f.IsRequired,
+                    Length = f.Length,
+                    EnumDefinitionId = f.EnumDefinitionId,
+                    IsMultiSelect = f.IsMultiSelect
+                }).ToList() ?? new();
+
+                if (entityFields.Any())
+                {
+                    await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {entityFields.Count} entity fields for {candidate}");
+                    return;
+                }
+            }
+
+            await JS.InvokeVoidAsync("console.warn", $"[FormDesigner] No entity fields found for {entity}");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[FormDesigner] Failed to load entity fields: {ex.Message}");
+            entityFields = new();
         }
     }
 
@@ -457,9 +524,11 @@ else
         var entity = availableEntityTypes.FirstOrDefault(e => e.EntityType == entityType);
         if (entity != null)
         {
-            return I18n.T(entity.DisplayNameKey);
+            return string.IsNullOrWhiteSpace(entity.DisplayName)
+                ? entity.EntityName
+                : entity.DisplayName;
         }
-        
+
         // 如果没有加载列表，根据实体类型推断显示名称
         // 例如：customer -> ENTITY_CUSTOMER
         var displayKey = $"ENTITY_{entityType.ToUpper()}";
@@ -471,6 +540,16 @@ else
         // 点击画布背景时，取消选中Widget，显示模板属性
         selectedWidget = null;
         StateHasChanged();
+    }
+
+    private async Task RetryLoad()
+    {
+        await InitializeDesignerAsync();
+    }
+
+    private void CancelAndReturn()
+    {
+        Nav.NavigateTo("/templates");
     }
 
     private async Task LoadTemplate()
@@ -515,13 +594,23 @@ else
                 }
 
                 // 填充模板信息
-                templateName = template.Name;
+                templateName = ResolveTemplateName(template.Name);
                 description = template.Description ?? "";
-                entityType = template.EntityType ?? "";
+                entityType = NormalizeEntityType(template.EntityType);
                 originalEntityType = template.EntityType;
+
+                // 从模板名提取实体（防止系统模板 EntityType 为空导致结构树缺失）
+                if (string.IsNullOrWhiteSpace(entityType) && TryParseEntityFromTemplateKey(template.Name, out var parsedEntity))
+                {
+                    entityType = parsedEntity;
+                }
 
                 // 如果模板有实体类型，锁定它（不允许修改）
                 isEntityTypeLocked = !string.IsNullOrWhiteSpace(template.EntityType);
+                if (!string.IsNullOrWhiteSpace(entityType))
+                {
+                    await LoadEntityFields(entityType);
+                }
 
                 // 解析布局JSON（兼容旧格式）
                 layoutWidgets = new List<DraggableWidget>();
@@ -547,6 +636,12 @@ else
                     }
                 }
 
+                if (!layoutWidgets.Any() && IsLikelyListTemplate(template))
+                {
+                    ApplyDefaultListLayout(template.EntityType);
+                    Message.Info("Default list layout applied. Undo?");
+                }
+
                 await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded template {id}: {layoutWidgets.Count} widgets, entityType={entityType}, locked={isEntityTypeLocked}");
             }
             else
@@ -563,6 +658,151 @@ else
         }
     }
 
+    private bool IsLikelyListTemplate(FormTemplateDto template)
+    {
+        if (template.UsageType == TemplateUsageType.List) return true;
+        if (template.Name?.Contains("list", StringComparison.OrdinalIgnoreCase) == true) return true;
+        return template.Name?.StartsWith("TEMPLATE_NAME_LIST", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private string ResolveTemplateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return I18n.T("LBL_TEMPLATE_NAME");
+
+        var translated = I18n.T(name);
+        if (!string.Equals(translated, name, StringComparison.Ordinal))
+        {
+            return translated;
+        }
+
+        if (TryRenderTemplateNameFromKey(name, out var rendered))
+        {
+            return rendered;
+        }
+
+        return name;
+    }
+
+    private bool TryParseEntityFromTemplateKey(string name, out string entity)
+    {
+        entity = string.Empty;
+        const string prefix = "TEMPLATE_NAME_";
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var parts = name[prefix.Length..].Split('_', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return false;
+
+        entity = string.Join('_', parts.Skip(1)).ToLowerInvariant();
+        return true;
+    }
+
+    private bool TryRenderTemplateNameFromKey(string name, out string rendered)
+    {
+        rendered = name;
+        const string prefix = "TEMPLATE_NAME_";
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var parts = name[prefix.Length..].Split('_', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return false;
+
+        var usage = parts[0];
+        var entity = string.Join('_', parts.Skip(1));
+
+        var usageLabel = usage.ToLowerInvariant() switch
+        {
+            "list" => I18n.T("TPL_USAGE_LIST"),
+            "edit" => I18n.T("TPL_USAGE_EDIT"),
+            "detail" => I18n.T("TPL_USAGE_DETAIL"),
+            _ => usage
+        };
+
+        var entityKey = $"ENTITY_{entity.ToUpperInvariant()}";
+        var entityLabel = I18n.T(entityKey);
+        if (string.Equals(entityLabel, entityKey, StringComparison.OrdinalIgnoreCase))
+        {
+            entityLabel = entity.ToLowerInvariant();
+        }
+
+        rendered = $"{usageLabel} - {entityLabel}";
+        return true;
+    }
+
+    private string NormalizeEntityType(string? entity)
+    {
+        if (string.IsNullOrWhiteSpace(entity)) return string.Empty;
+
+        if (entity.StartsWith("ENTITY_", StringComparison.OrdinalIgnoreCase))
+        {
+            return entity["ENTITY_".Length..].ToLowerInvariant();
+        }
+
+        return entity;
+    }
+
+    private void ApplyDefaultListLayout(string? templateEntityType)
+    {
+        var targetEntity = !string.IsNullOrWhiteSpace(entityType)
+            ? entityType
+            : (templateEntityType ?? string.Empty);
+
+        var sourceFields = entityFields.Any()
+            ? entityFields.OrderBy(f => f.SortOrder).ThenBy(f => f.PropertyName).ToList()
+            : availableFields.Select((f, idx) => new EntityFieldDto
+            {
+                PropertyName = f.Key,
+                DisplayName = new Dictionary<string, string?> { ["en"] = f.DisplayName },
+                SortOrder = idx + 1,
+                DataType = "String",
+                IsRequired = false
+            }).ToList();
+
+        var columns = sourceFields.Take(6).Select((f, index) => new
+        {
+            field = f.PropertyName.ToLowerInvariant(),
+            label = ResolveMultilingual(f.DisplayName, f.PropertyName),
+            width = 140 + (index % 2) * 20,
+            sortable = true,
+            enumDefinitionId = f.EnumDefinitionId,
+            isMultiSelect = f.IsMultiSelect
+        }).ToList();
+
+        if (!columns.Any())
+        {
+            columns.Add(new { field = "name", label = I18n.T("LBL_NAME"), width = 160, sortable = true, enumDefinitionId = (Guid?)null, isMultiSelect = false });
+        }
+
+        var rowActions = new[]
+        {
+            new { action = "view", label = "BTN_VIEW", icon = "eye" },
+            new { action = "edit", label = "BTN_EDIT", icon = "edit" }
+        };
+
+        var datagrid = new DataGridWidget
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = "datagrid",
+            Code = "datagrid1",
+            Label = I18n.T("TPL_USAGE_LIST"),
+            EntityType = targetEntity,
+            ApiEndpoint = string.IsNullOrWhiteSpace(targetEntity) ? null : $"/api/{targetEntity}s",
+            ColumnsJson = System.Text.Json.JsonSerializer.Serialize(columns),
+            RowActionsJson = System.Text.Json.JsonSerializer.Serialize(rowActions),
+            ShowPagination = true,
+            PageSize = 20,
+            AllowMultiSelect = true,
+            ShowSearch = true,
+            SearchPlaceholderKey = "LBL_SEARCH",
+            ShowRefreshButton = true,
+            ShowBordered = true,
+            Size = "middle",
+            EmptyTextKey = "MSG_NO_DATA",
+            Width = 100,
+            WidthUnit = "%"
+        };
+
+        layoutWidgets.Add(datagrid);
+    }
+
     /// <summary>
     /// FormTemplate DTO（与后端 FormTemplate 对应）
     /// </summary>
@@ -575,6 +815,58 @@ else
         public string? Description { get; set; }
         public bool IsUserDefault { get; set; }
         public bool IsSystemDefault { get; set; }
+        public TemplateUsageType UsageType { get; set; } = TemplateUsageType.Detail;
+    }
+
+    private class EntityDefinitionDto
+    {
+        public List<EntityFieldDto>? Fields { get; set; }
+    }
+
+    private async Task<EntityDefinitionDto?> TryLoadDefinition(string candidate)
+    {
+        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        // First try new endpoint
+        var resp = await Auth.GetWithRefreshAsync($"/api/entities/{Uri.EscapeDataString(candidate)}/definition");
+        if (resp.IsSuccessStatusCode)
+        {
+            var content = await resp.Content.ReadAsStringAsync();
+            return System.Text.Json.JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+        }
+
+        // Fallback to old endpoint
+        resp = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(candidate)}");
+        if (resp.IsSuccessStatusCode)
+        {
+            var content = await resp.Content.ReadAsStringAsync();
+            return System.Text.Json.JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+        }
+
+        await JS.InvokeVoidAsync("console.warn", $"[FormDesigner] Entity fields load failed for {candidate}: {resp.StatusCode}");
+        return null;
+    }
+
+    private IEnumerable<string> BuildEntityTypeCandidates(string entity)
+    {
+        var cleaned = entity?.Trim().Trim('/').ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(cleaned)) yield break;
+
+        if (cleaned.StartsWith("entity_"))
+        {
+            cleaned = cleaned["entity_".Length..];
+        }
+
+        yield return cleaned;
+
+        if (cleaned.EndsWith("s"))
+        {
+            yield return cleaned.TrimEnd('s');
+        }
+        else
+        {
+            yield return $"{cleaned}s";
+        }
     }
 
     private class FieldDefinitionItem
@@ -583,16 +875,37 @@ else
         public string DisplayName { get; set; } = string.Empty;
     }
 
+    private class EntityFieldDto
+    {
+        public string PropertyName { get; set; } = string.Empty;
+        public Dictionary<string, string?>? DisplayName { get; set; }
+        public string DataType { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+        public bool IsRequired { get; set; }
+        public int? Length { get; set; }
+        public Guid? EnumDefinitionId { get; set; }
+        public bool IsMultiSelect { get; set; }
+    }
+
     /// <summary>
     /// 实体类型项 - 实现 ISelectableEntity 接口，确保可用于 EntitySelector
     /// </summary>
+    private class EntityApiItem
+    {
+        public string? EntityType { get; set; }
+        public string? EntityName { get; set; }
+        public Dictionary<string, string?>? DisplayName { get; set; }
+        public Dictionary<string, string?>? Description { get; set; }
+        public string? ApiEndpoint { get; set; }
+        public string? Icon { get; set; }
+        public string? Category { get; set; }
+    }
+
     private class EntityTypeItem : BobCrm.App.Abstractions.ISelectableEntity
     {
         public string EntityType { get; set; } = string.Empty;  // 路由名（customer）
         public string EntityName { get; set; } = string.Empty;  // 类名（Customer）
-        public string DisplayNameKey { get; set; } = string.Empty;  // 多语言键
         public string DisplayName { get; set; } = string.Empty;  // 翻译后的显示名称（由前端填充）
-        public string? DescriptionKey { get; set; }
         public string? Description { get; set; }  // 翻译后的描述（由前端填充）
         public string? ApiEndpoint { get; set; }
         public string? Icon { get; set; }
@@ -603,6 +916,23 @@ else
         string BobCrm.App.Abstractions.ISelectableEntity.DisplayName => DisplayName;
         string? BobCrm.App.Abstractions.ISelectableEntity.Description => Description;
         string? BobCrm.App.Abstractions.ISelectableEntity.Icon => Icon;
+    }
+
+    private string ResolveMultilingual(Dictionary<string, string?>? source, string fallback)
+    {
+        if (source == null || source.Count == 0)
+        {
+            return I18n.T(fallback);
+        }
+
+        var lang = I18n.CurrentLang;
+        if (source.TryGetValue(lang, out var val) && !string.IsNullOrWhiteSpace(val))
+        {
+            return val!;
+        }
+
+        var first = source.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+        return first ?? fallback;
     }
 
     private async Task SaveLayout()

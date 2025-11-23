@@ -515,7 +515,7 @@
         // 名称
         builder.OpenElement(4, "div");
         builder.AddAttribute(5, "class", "template-name");
-        builder.AddContent(6, template.Name);
+        builder.AddContent(6, GetTemplateDisplayName(template.Name));
         builder.CloseElement();
 
         // 徽章
@@ -634,16 +634,79 @@
         return null;
     }
 
+    private string GetTemplateDisplayName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return I18n.T("LBL_TEMPLATE_NAME");
+        }
+
+        var translated = I18n.T(name);
+        if (!string.Equals(translated, name, StringComparison.Ordinal))
+        {
+            return translated;
+        }
+
+        if (TryRenderTemplateNameFromKey(name, out var rendered))
+        {
+            return rendered;
+        }
+
+        return name;
+    }
+
+    private bool TryRenderTemplateNameFromKey(string name, out string rendered)
+    {
+        rendered = name;
+        const string prefix = "TEMPLATE_NAME_";
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var parts = name[prefix.Length..].Split('_', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        var usage = parts[0];
+        var entity = string.Join('_', parts.Skip(1));
+
+        var usageLabel = usage.ToLowerInvariant() switch
+        {
+            "list" => I18n.T("TPL_USAGE_LIST"),
+            "edit" => I18n.T("TPL_USAGE_EDIT"),
+            "detail" => I18n.T("TPL_USAGE_DETAIL"),
+            _ => usage
+        };
+
+        var entityKey = $"ENTITY_{entity.ToUpperInvariant()}";
+        var entityLabel = I18n.T(entityKey);
+        if (string.Equals(entityLabel, entityKey, StringComparison.OrdinalIgnoreCase))
+        {
+            entityLabel = entity.ToLowerInvariant();
+        }
+
+        rendered = $"{usageLabel} - {entityLabel}";
+        return true;
+    }
+
     private string GetEntityDisplayName(string? entityType)
     {
-        return entityType switch
+        if (string.IsNullOrWhiteSpace(entityType))
         {
-            "customer" => "客户",
-            "product" => "产品",
-            "order" => "订单",
-            null or "" => "未分类",
-            _ => entityType
-        };
+            return I18n.T("LBL_UNASSIGNED_ENTITY");
+        }
+
+        var key = $"ENTITY_{entityType.ToUpperInvariant()}";
+        var translated = I18n.T(key);
+        if (!string.Equals(translated, key, StringComparison.OrdinalIgnoreCase))
+        {
+            return translated;
+        }
+
+        return entityType;
     }
 
     private string GetUsageDisplayName(AppModels.TemplateUsageType usageType)

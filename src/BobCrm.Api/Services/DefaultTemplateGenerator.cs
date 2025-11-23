@@ -61,7 +61,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         var template = new FormTemplate
         {
-            Name = $"{entity.EntityName} {usageType} Template",
+            Name = BuildTemplateNameKey(entity, usageType),
             EntityType = entity.EntityRoute,
             UserId = "__system__",
             IsSystemDefault = true,
@@ -111,6 +111,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         foreach (var usage in usages)
         {
+            var nameKey = BuildTemplateNameKey(entity, usage);
             var template = await _db.FormTemplates
                 .FirstOrDefaultAsync(
                     t => t.EntityType == entityType &&
@@ -124,7 +125,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             {
                 template = new FormTemplate
                 {
-                    Name = $"{entity.EntityName} {usage} Template",
+                    Name = nameKey,
                     EntityType = entityType,
                     UserId = "__system__",
                     IsSystemDefault = true,
@@ -141,11 +142,19 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             }
             else
             {
+                if (!string.Equals(template.Name, nameKey, StringComparison.Ordinal))
+                {
+                    template.Name = nameKey;
+                    result.Updated.Add(template);
+                }
                 if (template.LayoutJson != layoutJson)
                 {
                     template.LayoutJson = layoutJson;
                     template.UpdatedAt = DateTime.UtcNow;
-                    result.Updated.Add(template);
+                    if (!result.Updated.Contains(template))
+                    {
+                        result.Updated.Add(template);
+                    }
                 }
             }
 
@@ -170,6 +179,15 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                ?? new List<FieldMetadata>();
     }
 
+    private static string BuildTemplateNameKey(EntityDefinition entity, FormTemplateUsageType usage)
+    {
+        var entityToken = (entity.EntityRoute ?? entity.EntityName ?? "ENTITY")
+            .Replace("-", "_")
+            .ToUpperInvariant();
+        var usageToken = usage.ToString().ToUpperInvariant();
+        return $"TEMPLATE_NAME_{usageToken}_{entityToken}";
+    }
+
     private static string BuildLayoutJson(EntityDefinition entity, IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
     {
         var widgets = new List<Dictionary<string, object?>>();
@@ -181,8 +199,20 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 field = f.PropertyName?.ToLowerInvariant(),
                 label = ResolveLabel(f),
                 width = WIDTH_COLUMN_PX,
-                sortable = true
+                sortable = true,
+                enumDefinitionId = f.EnumDefinitionId,
+                isMultiSelect = f.IsMultiSelect
             }).ToList();
+
+            if (columns.Count == 0)
+            {
+                columns.Add(new { field = "name", label = "LBL_NAME", width = WIDTH_COLUMN_PX, sortable = true, enumDefinitionId = (Guid?)null, isMultiSelect = false });
+            }
+
+            var bulkActions = new[]
+            {
+                new { action = "delete", label = "BTN_DELETE", icon = "delete" }
+            };
 
             // 定义行操作（View, Edit, Delete）
             var rowActions = new[]
@@ -200,14 +230,19 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 ["entityType"] = entity.EntityRoute,
                 ["apiEndpoint"] = entity.ApiEndpoint ?? $"/api/{entity.EntityRoute}s",
                 ["columnsJson"] = JsonSerializer.Serialize(columns, JsonOptions),
+                ["defaultSortField"] = columns.First().field,
+                ["defaultSortDirection"] = "asc",
+                ["bulkActionsJson"] = JsonSerializer.Serialize(bulkActions, JsonOptions),
                 ["rowActionsJson"] = JsonSerializer.Serialize(rowActions, JsonOptions),
                 ["showPagination"] = true,
                 ["pageSize"] = 20,
                 ["allowMultiSelect"] = true,
-                ["showSearch"] = false, // 使用工具栏的搜索框
+                ["showSearch"] = true,
+                ["searchPlaceholderKey"] = "LBL_SEARCH",
                 ["showRefreshButton"] = true,
                 ["showBordered"] = true,
-                ["size"] = "middle"
+                ["size"] = "middle",
+                ["emptyTextKey"] = "MSG_NO_DATA"
             };
             widgets.Add(dataGrid);
         }
@@ -234,6 +269,16 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                             ["label"] = "BTN_SAVE",
                             ["action"] = "save",
                             ["buttonType"] = "primary",
+                            ["width"] = WIDTH_BUTTON_PCT,
+                            ["widthUnit"] = "%"
+                        },
+                        new()
+                        {
+                            ["id"] = Guid.NewGuid().ToString(),
+                            ["type"] = "button",
+                            ["label"] = "BTN_BACK",
+                            ["action"] = "cancel",
+                            ["buttonType"] = "default",
                             ["width"] = WIDTH_BUTTON_PCT,
                             ["widthUnit"] = "%"
                         },

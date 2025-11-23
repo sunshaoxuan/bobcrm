@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
@@ -49,27 +51,12 @@ public class EntityDefinitionSynchronizer
         {
             try
             {
-                // 获取GetInitialDefinition静态方法
-                var getDefMethod = entityType.GetMethod(
-                    "GetInitialDefinition",
-                    BindingFlags.Public | BindingFlags.Static);
-
-                if (getDefMethod == null)
-                {
-                    _logger.LogWarning("[EntitySync] Type {Type} does not have GetInitialDefinition method, skipping", entityType.FullName);
-                    continue;
-                }
-
-                var definition = (EntityDefinition?)getDefMethod.Invoke(null, null);
-                if (definition == null)
-                {
-                    _logger.LogWarning("[EntitySync] GetInitialDefinition returned null for {Type}, skipping", entityType.FullName);
-                    continue;
-                }
+                var definition = BuildInitialDefinition(entityType);
+                if (definition == null) continue;
 
                 // 同步实体定义
                 await SyncEntityDefinitionAsync(definition);
-                
+
                 // 确保模板和绑定（无论实体是新创建还是已存在）
                 await EnsureTemplatesAndBindingsAsync(definition);
             }
@@ -98,45 +85,90 @@ public class EntityDefinitionSynchronizer
             definition.CreatedAt = DateTime.UtcNow;
             definition.UpdatedAt = DateTime.UtcNow;
 
+            EnsureFieldMetadata(definition);
             await _db.EntityDefinitions.AddAsync(definition);
             await _db.SaveChangesAsync();
             return true;
         }
-        else
-        {
-            // 实体已存在，检查并更新Source字段
-            bool needsUpdate = false;
 
-            if (existing.Source != EntitySource.System)
+        // 实体已存在，检查并更新Source字段
+        var needsUpdate = EnsureEntityBasics(existing, definition);
+
+        if (existing.Source != EntitySource.System)
+        {
+            _logger.LogInformation("[EntitySync] Updating Source to System for: {FullTypeName}",
+                definition.FullTypeName);
+            existing.Source = EntitySource.System;
+            needsUpdate = true;
+        }
+
+        // 同步更新所有字段的Source为System（如果不正确的话）
+        foreach (var existingField in existing.Fields)
+        {
+            if (existingField.Source != FieldSource.System)
             {
-                _logger.LogInformation("[EntitySync] Updating Source to System for: {FullTypeName}",
-                    definition.FullTypeName);
-                existing.Source = EntitySource.System;
+                existingField.Source = FieldSource.System;
+                needsUpdate = true;
+            }
+        }
+
+        // 补齐缺失的字段元数据
+        foreach (var field in definition.Fields)
+        {
+            var existingField = existing.Fields.FirstOrDefault(f =>
+                f.PropertyName.Equals(field.PropertyName, StringComparison.OrdinalIgnoreCase));
+            if (existingField == null)
+            {
+                field.Id = Guid.NewGuid();
+                field.EntityDefinitionId = existing.Id;
+                existing.Fields.Add(field);
+                needsUpdate = true;
+                continue;
+            }
+
+            if (existingField.DisplayName == null && field.DisplayName != null)
+            {
+                existingField.DisplayName = field.DisplayName;
                 needsUpdate = true;
             }
 
-            // 同步更新所有字段的Source为System（如果不正确的话）
-            foreach (var existingField in existing.Fields)
+            if (existingField.SortOrder == 0 && field.SortOrder > 0)
             {
-                if (existingField.Source != FieldSource.System)
-                {
-                    existingField.Source = FieldSource.System;
-                    needsUpdate = true;
-                }
+                existingField.SortOrder = field.SortOrder;
+                needsUpdate = true;
             }
 
-            if (needsUpdate)
+            if (string.IsNullOrWhiteSpace(existingField.DataType) && !string.IsNullOrWhiteSpace(field.DataType))
             {
-                existing.UpdatedAt = DateTime.UtcNow;
-                _logger.LogInformation("[EntitySync] Updated Source fields for: {FullTypeName}",
-                    definition.FullTypeName);
-                return true;
+                existingField.DataType = field.DataType;
+                needsUpdate = true;
             }
 
-            _logger.LogDebug("[EntitySync] Entity already exists and is correctly configured: {FullTypeName}",
-                definition.FullTypeName);
-            return false;
+            if (!existingField.IsRequiredExplicitlySet && field.IsRequired)
+            {
+                existingField.IsRequired = true;
+                needsUpdate = true;
+            }
+
+            if (!existingField.Length.HasValue && field.Length.HasValue)
+            {
+                existingField.Length = field.Length;
+                needsUpdate = true;
+            }
         }
+
+        if (needsUpdate)
+        {
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("[EntitySync] Updated Source fields for: {FullTypeName}",
+                definition.FullTypeName);
+            return true;
+        }
+
+        _logger.LogDebug("[EntitySync] Entity already exists and is correctly configured: {FullTypeName}",
+            definition.FullTypeName);
+        return false;
     }
 
     // New helper to ensure templates and bindings
@@ -147,20 +179,40 @@ public class EntityDefinitionSynchronizer
             _logger.LogWarning("Template service or binding service not configured; skipping template generation.");
             return;
         }
-        // Ensure default templates (List, Detail, Edit)
-        var result = await _templateService.EnsureTemplatesAsync(entityDef, "system");
-        // For each usage type, upsert binding
-        foreach (var kvp in result.Templates)
+
+        if (string.IsNullOrWhiteSpace(entityDef.EntityRoute))
         {
-            var usage = kvp.Key;
-            var template = kvp.Value;
-            await _bindingService.UpsertBindingAsync(
-                entityDef.EntityRoute ?? entityDef.EntityName,
-                usage,
-                template.Id,
-                isSystem: true,
-                updatedBy: "system",
-                requiredFunctionCode: null);
+            _logger.LogWarning("[EntitySync] EntityRoute missing for {FullTypeName}, skip template binding", entityDef.FullTypeName);
+            return;
+        }
+
+        try
+        {
+            // Ensure default templates (List, Detail, Edit)
+            var result = await _templateService.EnsureTemplatesAsync(entityDef, "system");
+            if (result.Templates.Count == 0)
+            {
+                _logger.LogWarning("[EntitySync] No templates generated for {Entity}", entityDef.EntityRoute);
+                return;
+            }
+
+            // For each usage type, upsert binding
+            foreach (var kvp in result.Templates)
+            {
+                var usage = kvp.Key;
+                var template = kvp.Value;
+                await _bindingService.UpsertBindingAsync(
+                    entityDef.EntityRoute ?? entityDef.EntityName,
+                    usage,
+                    template.Id,
+                    isSystem: true,
+                    updatedBy: "system",
+                    requiredFunctionCode: null);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[EntitySync] Failed to generate templates/bindings for {Entity}", entityDef.EntityRoute);
         }
     }
 
@@ -180,21 +232,8 @@ public class EntityDefinitionSynchronizer
             throw new InvalidOperationException($"Entity type not found: {fullTypeName}");
         }
 
-        // 获取初始定义
-        var getDefMethod = entityType.GetMethod(
-            "GetInitialDefinition",
-            BindingFlags.Public | BindingFlags.Static);
-
-        if (getDefMethod == null)
-        {
-            throw new InvalidOperationException($"Entity type does not have GetInitialDefinition method: {fullTypeName}");
-        }
-
-        var initialDef = (EntityDefinition?)getDefMethod.Invoke(null, null);
-        if (initialDef == null)
-        {
-            throw new InvalidOperationException($"GetInitialDefinition returned null for: {fullTypeName}");
-        }
+        var initialDef = BuildInitialDefinition(entityType)
+            ?? throw new InvalidOperationException($"GetInitialDefinition returned null for: {fullTypeName}");
 
         // 查找现有定义
         var existing = await _db.EntityDefinitions
@@ -233,11 +272,91 @@ public class EntityDefinitionSynchronizer
         existing.UpdatedAt = DateTime.UtcNow;
 
         // 添加新的Fields和Interfaces
+        EnsureFieldMetadata(initialDef, existing.Id);
         existing.Fields = initialDef.Fields;
         existing.Interfaces = initialDef.Interfaces;
 
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("[EntitySync] System entity reset completed: {FullTypeName}", fullTypeName);
+    }
+
+    private EntityDefinition? BuildInitialDefinition(Type entityType)
+    {
+        var getDefMethod = entityType.GetMethod(
+            "GetInitialDefinition",
+            BindingFlags.Public | BindingFlags.Static);
+
+        if (getDefMethod == null)
+        {
+            _logger.LogWarning("[EntitySync] Type {Type} does not have GetInitialDefinition method, skipping", entityType.FullName);
+            return null;
+        }
+
+        var definition = (EntityDefinition?)getDefMethod.Invoke(null, null);
+        if (definition == null)
+        {
+            _logger.LogWarning("[EntitySync] GetInitialDefinition returned null for {Type}, skipping", entityType.FullName);
+            return null;
+        }
+
+        definition.Namespace ??= entityType.Namespace ?? "BobCrm.Api.Base.Models";
+        definition.EntityName ??= entityType.Name;
+        definition.FullTypeName ??= entityType.FullName ?? entityType.Name;
+        definition.EntityRoute ??= entityType.Name.ToLowerInvariant();
+        definition.ApiEndpoint ??= $"/api/{definition.EntityRoute}s";
+        definition.DisplayName ??= new Dictionary<string, string?> { ["en"] = entityType.Name };
+        EnsureFieldMetadata(definition);
+        definition.Interfaces ??= new List<EntityInterface>();
+        return definition;
+    }
+
+    private static void EnsureFieldMetadata(EntityDefinition definition, Guid? entityIdOverride = null)
+    {
+        definition.Fields ??= new List<FieldMetadata>();
+        var order = 1;
+        foreach (var field in definition.Fields)
+        {
+            field.EntityDefinitionId = entityIdOverride ?? definition.Id;
+            field.SortOrder = field.SortOrder == 0 ? order : field.SortOrder;
+            field.Source ??= FieldSource.System;
+            order++;
+        }
+    }
+
+    private static bool EnsureEntityBasics(EntityDefinition existing, EntityDefinition definition)
+    {
+        var updated = false;
+        if (string.IsNullOrWhiteSpace(existing.Namespace) && !string.IsNullOrWhiteSpace(definition.Namespace))
+        {
+            existing.Namespace = definition.Namespace;
+            updated = true;
+        }
+        if (string.IsNullOrWhiteSpace(existing.EntityRoute) && !string.IsNullOrWhiteSpace(definition.EntityRoute))
+        {
+            existing.EntityRoute = definition.EntityRoute;
+            updated = true;
+        }
+        if (string.IsNullOrWhiteSpace(existing.EntityName) && !string.IsNullOrWhiteSpace(definition.EntityName))
+        {
+            existing.EntityName = definition.EntityName;
+            updated = true;
+        }
+        if (existing.DisplayName == null && definition.DisplayName != null)
+        {
+            existing.DisplayName = definition.DisplayName;
+            updated = true;
+        }
+        if (existing.Description == null && definition.Description != null)
+        {
+            existing.Description = definition.Description;
+            updated = true;
+        }
+        if (string.IsNullOrWhiteSpace(existing.ApiEndpoint) && !string.IsNullOrWhiteSpace(definition.ApiEndpoint))
+        {
+            existing.ApiEndpoint = definition.ApiEndpoint;
+            updated = true;
+        }
+        return updated;
     }
 }

@@ -168,17 +168,7 @@
                 _columns = new();
             }
         }
-
-        // 如果没有配置列,使用默认列
-        if (_columns.Count == 0)
-        {
-            _columns = new List<DataGridColumn>
-            {
-                new() { Field = "id", Label = "ID", Width = 80, Sortable = true },
-                new() { Field = "name", Label = "Name", Width = 200, Sortable = true },
-                new() { Field = "code", Label = "Code", Width = 150, Sortable = true }
-            };
-        }
+        EnsureColumns();
 
         // 解析行操作定义
         if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
@@ -415,6 +405,44 @@
         if (Widget.AllowMultiSelect) count++;
         if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson)) count++;
         return count;
+    }
+
+    private void EnsureColumns()
+    {
+        if (_columns.Count == 0)
+        {
+            _columns = GetDefaultColumns();
+        }
+
+        foreach (var column in _columns)
+        {
+            if (string.IsNullOrWhiteSpace(column.Label) && !string.IsNullOrWhiteSpace(column.Field))
+            {
+                column.Label = column.Field;
+            }
+            else if (IsTranslationKey(column.Label))
+            {
+                var translated = I18n.T(column.Label);
+                if (!string.IsNullOrWhiteSpace(translated) &&
+                    !string.Equals(translated, column.Label, StringComparison.Ordinal))
+                {
+                    column.Label = translated;
+                }
+            }
+        }
+    }
+
+    private static List<DataGridColumn> GetDefaultColumns() => new()
+    {
+        new() { Field = "id", Label = "ID", Width = 80, Sortable = true },
+        new() { Field = "name", Label = "Name", Width = 200, Sortable = true },
+        new() { Field = "code", Label = "Code", Width = 150, Sortable = true }
+    };
+
+    private static bool IsTranslationKey(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label)) return false;
+        return label.All(ch => char.IsLetterOrDigit(ch) || ch == '_' || ch == '-');
     }
 
     private async Task PreviousPage()

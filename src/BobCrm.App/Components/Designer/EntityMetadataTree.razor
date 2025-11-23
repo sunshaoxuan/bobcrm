@@ -121,28 +121,19 @@ else
 
         try
         {
-            // Get entity definition by type
-            var response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(EntityType)}");
-
-            if (!response.IsSuccessStatusCode)
+            EntityDefinitionDto? entityDef = null;
+            foreach (var candidate in BuildEntityTypeCandidates(EntityType))
             {
-                // 对于系统内置实体可能没有元数据定义，保持空树但不中断设计
-                await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {EntityType}: {response.StatusCode}");
-                fieldNodes = new();
-                loading = false;
-                return;
+                entityDef = await TryLoadDefinition(candidate);
+
+                if (entityDef != null) break;
             }
-
-            var content = await response.Content.ReadAsStringAsync();
-            var entityDef = JsonSerializer.Deserialize<EntityDefinitionDto>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
 
             if (entityDef == null)
             {
-                error = "Failed to parse entity metadata";
+                error = I18n.T("MSG_LOAD_FAILED");
                 loading = false;
+                fieldNodes = new();
                 return;
             }
 
@@ -158,7 +149,7 @@ else
                     {
                         Key = field.PropertyName,
                         PropertyName = field.PropertyName,
-                        DisplayName = I18n.T(field.DisplayNameKey),
+                        DisplayName = ResolveDisplay(field.DisplayName, field.PropertyName),
                         DataType = field.DataType,
                         Length = field.Length,
                         Precision = field.Precision,
@@ -204,6 +195,18 @@ else
             loading = false;
             StateHasChanged();
         }
+    }
+
+    private string ResolveDisplay(Dictionary<string, string?>? map, string fallback)
+    {
+        if (map == null || map.Count == 0) return fallback;
+        var lang = I18n.CurrentLang;
+        if (map.TryGetValue(lang, out var v) && !string.IsNullOrWhiteSpace(v))
+        {
+            return v!;
+        }
+        var any = map.Values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        return any ?? fallback;
     }
 
     private async Task OnFieldDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, EntityFieldNode field)
@@ -345,7 +348,7 @@ else
     private class FieldDto
     {
         public string PropertyName { get; set; } = "";
-        public string DisplayNameKey { get; set; } = "";
+        public Dictionary<string, string?>? DisplayName { get; set; }
         public string DataType { get; set; } = "";
         public int? Length { get; set; }
         public int? Precision { get; set; }
@@ -358,6 +361,51 @@ else
     {
         public string InterfaceType { get; set; } = "";
         public bool IsEnabled { get; set; }
+    }
+
+    private async Task<EntityDefinitionDto?> TryLoadDefinition(string candidate)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        // New endpoint
+        var response = await Auth.GetWithRefreshAsync($"/api/entities/{Uri.EscapeDataString(candidate)}/definition");
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+        }
+
+        // Old endpoint fallback
+        response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(candidate)}");
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+        }
+
+        await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {candidate}: {response.StatusCode}");
+        return null;
+    }
+
+    private IEnumerable<string> BuildEntityTypeCandidates(string? entity)
+    {
+        var cleaned = entity?.Trim().Trim('/').ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(cleaned)) yield break;
+
+        if (cleaned.StartsWith("entity_"))
+        {
+            cleaned = cleaned["entity_".Length..];
+        }
+
+        yield return cleaned;
+        if (cleaned.EndsWith("s"))
+        {
+            yield return cleaned.TrimEnd('s');
+        }
+        else
+        {
+            yield return $"{cleaned}s";
+        }
     }
 }
 

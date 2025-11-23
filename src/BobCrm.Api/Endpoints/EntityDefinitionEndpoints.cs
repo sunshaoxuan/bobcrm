@@ -30,6 +30,29 @@ public static class EntityDefinitionEndpoints
 
             .WithOpenApi();
 
+        static List<string> BuildEntityCandidates(string entityType)
+        {
+            var normalized = entityType?.Trim().Trim('/').ToLowerInvariant() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(normalized)) return new List<string>();
+
+            if (normalized.StartsWith("entity_"))
+            {
+                normalized = normalized["entity_".Length..];
+            }
+
+            var list = new List<string> { normalized };
+            if (normalized.EndsWith("s"))
+            {
+                list.Add(normalized.TrimEnd('s'));
+            }
+            else
+            {
+                list.Add($"{normalized}s");
+            }
+
+            return list.Distinct().ToList();
+        }
+
         // 获取可用实体列表（公共端点，不需要认证）
 
         entitiesGroup.MapGet("", async (AppDbContext db) =>
@@ -76,6 +99,59 @@ public static class EntityDefinitionEndpoints
 
         .WithDescription("获取所有已启用且已发布的实体元数据（公共访问）")
 
+        .AllowAnonymous();
+
+        entitiesGroup.MapGet("/{entityType}/definition", async (string entityType, AppDbContext db) =>
+        {
+            var candidates = BuildEntityCandidates(entityType);
+
+            var definition = await db.EntityDefinitions
+                .AsNoTracking()
+                .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
+                .Include(ed => ed.Interfaces)
+                .FirstOrDefaultAsync(ed =>
+                    candidates.Contains(ed.EntityRoute.ToLower()) ||
+                    candidates.Contains(ed.EntityName.ToLower()) ||
+                    candidates.Contains(ed.FullTypeName.ToLower()));
+
+            if (definition == null)
+            {
+                return Results.NotFound(new { error = "实体定义不存在" });
+            }
+
+            var dto = new
+            {
+                definition.Id,
+                definition.EntityRoute,
+                definition.EntityName,
+                definition.FullTypeName,
+                definition.DisplayName,
+                definition.Description,
+                Fields = definition.Fields
+                    .Where(f => !f.IsDeleted)
+                    .OrderBy(f => f.SortOrder)
+                    .Select(f => new
+                    {
+                        f.PropertyName,
+                        f.DisplayName,
+                        f.DataType,
+                        f.SortOrder,
+                        f.IsRequired,
+                        f.Length,
+                        f.EnumDefinitionId,
+                        f.IsMultiSelect
+                    }).ToList(),
+                Interfaces = definition.Interfaces
+                    .Where(i => i.IsEnabled)
+                    .Select(i => new { i.InterfaceType, i.IsEnabled })
+                    .ToList()
+            };
+
+            return Results.Json(dto);
+        })
+        .WithName("GetEntityDefinitionByRoute")
+        .WithSummary("根据路由获取实体定义")
+        .WithDescription("根据实体路由/名称获取实体定义（含字段、接口），支持系统实体")
         .AllowAnonymous();
 
         // 获取所有实体（包括禁用的）- 需要管理员权限
@@ -393,13 +469,19 @@ public static class EntityDefinitionEndpoints
 
         {
 
+            var normalized = entityType?.Trim();
+
             var definition = await db.EntityDefinitions
 
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
 
                 .Include(ed => ed.Interfaces)
 
-                .FirstOrDefaultAsync(ed => ed.FullName == entityType);
+                .FirstOrDefaultAsync(ed =>
+                    ed.FullName == normalized ||
+                    ed.FullTypeName == normalized ||
+                    ed.EntityRoute == normalized ||
+                    ed.EntityName == normalized);
 
             if (definition == null)
 
