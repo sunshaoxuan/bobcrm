@@ -126,7 +126,9 @@ else
 
             if (!response.IsSuccessStatusCode)
             {
-                error = $"Failed to load entity metadata: {response.StatusCode}";
+                // 对于系统内置实体可能没有元数据定义，保持空树但不中断设计
+                await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {EntityType}: {response.StatusCode}");
+                fieldNodes = new();
                 loading = false;
                 return;
             }
