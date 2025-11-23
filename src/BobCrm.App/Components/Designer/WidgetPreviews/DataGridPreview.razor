@@ -1,0 +1,114 @@
+@using AntDesign
+@using BobCrm.App.Models.Widgets
+@using System.Text.Json
+@using System.Text.Json.Serialization
+
+<div class="dg-preview" style="border:1px dashed #d9d9d9; background:#f8f9fb; padding:8px; border-radius:4px; width:100%">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; color:#444; font-weight:600; font-size:12px">
+        <div>@(Grid.Label ?? "DataGrid")</div>
+        <div style="display:flex; gap:6px; align-items:center; font-size:11px; color:#999">
+            @if (Grid.ShowSearch)
+            {
+                <span style="display:flex; align-items:center; gap:2px"><Icon Type="@IconType.Outline.Search" /> @Grid.SearchPlaceholderKey</span>
+            }
+            @if (Grid.ShowRefreshButton)
+            {
+                <Icon Type="@IconType.Outline.Reload" />
+            }
+        </div>
+    </div>
+
+    <div class="dg-preview-table" style="border:@(Grid.ShowBordered ? "1px solid #d9d9d9" : "1px solid transparent"); border-radius:4px; overflow:hidden; background:#fff;">
+        <div style="display:flex; background:#fafafa; border-bottom:1px solid #e0e0e0;">
+            @foreach (var col in _columns)
+            {
+                <div style="flex:@(col.Flex); padding:8px; font-size:11px; font-weight:600; color:#444; border-right:1px solid #f0f0f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
+                    @col.Label
+                </div>
+            }
+        </div>
+        @for (var r = 0; r < 3; r++)
+        {
+            <div style="display:flex; border-bottom:1px solid #f0f0f0;">
+                @foreach (var col in _columns)
+                {
+                    <div style="flex:@(col.Flex); padding:6px 8px; font-size:10px; color:#999; border-right:1px solid #f9f9f9;">
+                        —
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (Grid.ShowPagination)
+    {
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 4px 0; color:#999; font-size:11px">
+            <div>Page 1 / …</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <Icon Type="@IconType.Outline.Left" />
+                <Icon Type="@IconType.Outline.Right" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public object? Widget { get; set; }
+
+    private DataGridWidget Grid => (Widget as DataGridWidget) ?? new DataGridWidget();
+
+    private List<PreviewColumn> _columns = new();
+
+    protected override void OnParametersSet()
+    {
+        _columns = ParseColumns(Grid.ColumnsJson);
+    }
+
+    private List<PreviewColumn> ParseColumns(string? columnsJson)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(columnsJson))
+            {
+                var cols = JsonSerializer.Deserialize<List<PreviewColumn>>(columnsJson) ?? new List<PreviewColumn>();
+                if (cols.Count > 0) return Normalize(cols);
+            }
+        }
+        catch
+        {
+            // ignore and fallback
+        }
+
+        return new List<PreviewColumn>
+        {
+            new() { Label = "COL_1", Flex = 1 },
+            new() { Label = "COL_2", Flex = 1 },
+            new() { Label = "COL_3", Flex = 1 }
+        };
+    }
+
+    private List<PreviewColumn> Normalize(List<PreviewColumn> cols)
+    {
+        foreach (var col in cols)
+        {
+            if (col.Flex <= 0) col.Flex = 1;
+            if (string.IsNullOrWhiteSpace(col.Label)) col.Label = col.Field ?? "COL";
+        }
+        return cols;
+    }
+
+    private class PreviewColumn
+    {
+        [JsonPropertyName("label")]
+        public string? Label { get; set; }
+
+        [JsonPropertyName("field")]
+        public string? Field { get; set; }
+
+        [JsonPropertyName("width")]
+        public int? Width { get; set; }
+
+        [JsonIgnore]
+        public int Flex { get; set; } = 1;
+    }
+}

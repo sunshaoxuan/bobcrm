@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
 
@@ -8,6 +9,8 @@ namespace BobCrm.App.Models.Widgets;
 /// </summary>
 public class DataGridWidget : DraggableWidget
 {
+    public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.DataGridPreview);
+
     /// <summary>
     /// 数据源ID(关联到 DataSet)
     /// </summary>
@@ -212,52 +215,5 @@ public class DataGridWidget : DraggableWidget
         builder.AddAttribute(1, "Widget", this);
         builder.AddAttribute(2, "ContainerStyle", "");
         builder.CloseComponent();
-    }
-
-    public override void RenderDesign(DesignRenderContext context)
-    {
-        var builder = context.Builder;
-
-        // 设计态预览
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "style", $"padding:8px; background:{context.BackgroundResolver(this)}; border:1px dashed #d9d9d9;");
-
-        builder.OpenElement(2, "div");
-        builder.AddAttribute(3, "style", $"{context.TextStyleResolver(this)} font-weight:bold; margin-bottom:4px;");
-        builder.AddContent(4, context.Localize(Label));
-        builder.CloseElement();
-
-        builder.OpenElement(5, "div");
-        builder.AddAttribute(6, "style", "display:flex; flex-direction:column; gap:2px;");
-
-        // 表头占位符
-        builder.OpenElement(7, "div");
-        builder.AddAttribute(8, "style", "background:#fafafa; padding:8px; border:1px solid #e0e0e0; display:flex; gap:8px;");
-        for (int i = 0; i < 3; i++)
-        {
-            builder.OpenElement(9, "div");
-            builder.AddAttribute(10, "style", "flex:1; font-size:11px; font-weight:500;");
-            builder.AddContent(11, $"Column {i + 1}");
-            builder.CloseElement();
-        }
-        builder.CloseElement();
-
-        // 数据行占位符
-        for (int row = 0; row < 3; row++)
-        {
-            builder.OpenElement(12, "div");
-            builder.AddAttribute(13, "style", "background:#fff; padding:6px 8px; border:1px solid #e0e0e0; display:flex; gap:8px;");
-            for (int col = 0; col < 3; col++)
-            {
-                builder.OpenElement(14, "div");
-                builder.AddAttribute(15, "style", "flex:1; font-size:10px; color:#999;");
-                builder.AddContent(16, "Data");
-                builder.CloseElement();
-            }
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
-        builder.CloseElement();
     }
 }

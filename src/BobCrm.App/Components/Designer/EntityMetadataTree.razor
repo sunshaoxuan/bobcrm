@@ -2,10 +2,13 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Services
 @using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Linq
 
-@inject BobCrm.App.Services.AuthService Auth
-@inject BobCrm.App.Services.I18nService I18n
+@inject AuthService Auth
+@inject I18nService I18n
 @inject IJSRuntime JS
+@inject EntityDefinitionService EntityDefinitionService
 
 @if (loading)
 {
@@ -20,7 +23,7 @@ else if (!string.IsNullOrWhiteSpace(error))
         <Alert Type="AlertType.Warning" Message="@error" ShowIcon="true" />
     </div>
 }
-else if (fieldNodes.Count == 0)
+else if (treeNodes.Count == 0)
 {
     <div style="padding:16px; text-align:center; color:#999">
         <Icon Type="@IconType.Outline.Inbox" Style="font-size:32px; margin-bottom:8px" />
@@ -29,81 +32,66 @@ else if (fieldNodes.Count == 0)
 }
 else
 {
-    <!-- Entity structure tree -->
     <div style="padding:8px">
-        @foreach (var group in fieldNodes.GroupBy(f => f.Source).OrderBy(g => GetSourceOrder(g.Key)))
-        {
-            <div style="margin-bottom:12px">
-                <div style="font-size:11px; color:#999; font-weight:600; margin-bottom:6px; padding:0 4px; text-transform:uppercase">
-                    @GetSourceDisplayName(group.Key)
-                </div>
-                @foreach (var field in group.OrderBy(f => f.PropertyName))
-                {
-                    <div class="entity-field-item"
-                         draggable="@field.IsDraggable"
-                         data-drag-type="entity-field"
-                         data-drag-data="@field.Key"
-                         @ondragstart="@((e) => OnFieldDragStart(e, field))"
-                         @ondragstart:preventDefault="false"
-                         @ondragend="OnFieldDragEnd"
-                         style="padding:6px 8px; margin:2px 0; background:#fff; border:1px solid #e0e0e0; border-radius:4px; cursor:move; display:flex; align-items:center; gap:8px; transition:all 0.2s"
-                         @onmouseenter="@(() => hoveredField = field)"
-                         @onmouseleave="@(() => hoveredField = null)">
-
-                        <Icon Type="@GetFieldIcon(field.DataType)" Style="color:#1890ff; font-size:14px" />
-
-                        <div style="flex:1; min-width:0">
-                            <div style="font-size:12px; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
-                                @field.PropertyName
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(field.DisplayName))
+        <Tree TItem="EntityFieldTreeNode"
+              DataSource="@treeNodes"
+              ChildrenExpression="@(n => n.DataItem?.Children ?? Enumerable.Empty<EntityFieldTreeNode>())"
+              TitleExpression="@(n => !string.IsNullOrWhiteSpace(n.DataItem?.DisplayName) ? n.DataItem!.DisplayName! : n.DataItem?.PropertyName ?? n.Key)"
+              KeyExpression="@(n => n.DataItem?.Key ?? n.Key)"
+              IconExpression="@(n => n.DataItem?.Icon)"
+              IsLeafExpression="@(n => !(n.DataItem?.IsComplex ?? false) && !((n.DataItem?.Children?.Any()) ?? false))"
+              ShowIcon="true"
+              BlockNode="true"
+              OnNodeLoadDelayAsync="OnNodeLoadDelayAsync">
+            <TitleTemplate Context="node">
+                @{
+                    var meta = node.DataItem;
+                    var isLeaf = node.IsLeaf;
+                }
+                <div class="entity-tree-row"
+                     draggable="@(meta != null && meta.IsDraggable && isLeaf)"
+                     data-drag-type="entity-field"
+                     data-drag-data="@meta?.Key"
+                     @ondragstart="(e) => OnFieldDragStart(e, meta)"
+                     @ondragend="OnFieldDragEnd">
+                    <div class="entity-tree-title">
+                        <Icon Type="@(node.Icon ?? IconType.Outline.FieldBinary)" Style="font-size:14px; color:#1890ff" />
+                        <div class="entity-tree-text">
+                            <div class="entity-tree-name">@meta?.PropertyName</div>
+                            @if (!string.IsNullOrWhiteSpace(meta?.DisplayName) && !string.Equals(meta?.PropertyName, meta?.DisplayName, StringComparison.OrdinalIgnoreCase))
                             {
-                                <div style="font-size:10px; color:#999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
-                                    @field.DisplayName
-                                </div>
-                            }
-                        </div>
-
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px">
-                        <Tag Color="@GetDataTypeTagColor(field.DataType)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
-                                @field.DataType
-                            </Tag>
-                            @if (field.IsRequired)
-                            {
-                                <Tag Color="@TagColor.Error" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
-                                    *
-                                </Tag>
+                                <div class="entity-tree-display">@meta?.DisplayName</div>
                             }
                         </div>
                     </div>
-
-                    @* Tooltip showing suggested widget *@
-                    @if (hoveredField == field)
-                    {
-                        <div style="font-size:10px; color:#52c41a; padding:4px 8px; background:#f6ffed; border:1px solid #b7eb8f; border-radius:2px; margin-top:-2px; margin-bottom:4px">
-                            <Icon Type="@IconType.Outline.Bulb" /> @I18n.T("LBL_SUGGESTED"): @field.SuggestedWidgetType
-                        </div>
-                    }
-                }
-            </div>
-        }
+                    <div class="entity-tree-tags">
+                        <Tag Color="@GetDataTypeTagColor(meta?.DataType ?? string.Empty)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
+                            @meta?.DataType
+                        </Tag>
+                        @if (meta?.IsRequired == true)
+                        {
+                            <Tag Color="@TagColor.Error" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">* </Tag>
+                        }
+                    </div>
+                </div>
+            </TitleTemplate>
+        </Tree>
     </div>
 }
 
 @code {
-    [Parameter]
-    public string? EntityType { get; set; }
+    [Parameter] public string? EntityType { get; set; }
 
-    [Parameter]
-    public EventCallback<EntityFieldNode> OnFieldDragStarted { get; set; }
+    [Parameter] public EventCallback<EntityFieldNode> OnFieldDragStarted { get; set; }
 
-    private bool loading = false;
-    private string? error = null;
-    private List<EntityFieldNode> fieldNodes = new();
-    private EntityFieldNode? hoveredField = null;
+    private bool loading;
+    private string? error;
+    private string? loadedEntity;
+    private List<EntityFieldTreeNode> treeNodes = new();
 
     protected override async Task OnParametersSetAsync()
     {
+        if (loadedEntity == EntityType) return;
         await LoadEntityMetadata();
     }
 
@@ -111,7 +99,8 @@ else
     {
         if (string.IsNullOrWhiteSpace(EntityType))
         {
-            fieldNodes = new();
+            treeNodes = new();
+            loadedEntity = null;
             return;
         }
 
@@ -125,65 +114,20 @@ else
             foreach (var candidate in BuildEntityTypeCandidates(EntityType))
             {
                 entityDef = await TryLoadDefinition(candidate);
-
                 if (entityDef != null) break;
             }
 
             if (entityDef == null)
             {
                 error = I18n.T("MSG_LOAD_FAILED");
-                loading = false;
-                fieldNodes = new();
+                treeNodes = new();
                 return;
             }
 
-            // Build field nodes
-            fieldNodes = new List<EntityFieldNode>();
+            treeNodes = BuildTreeNodes(entityDef);
+            loadedEntity = EntityType;
 
-            // Add custom fields
-            if (entityDef.Fields != null)
-            {
-                foreach (var field in entityDef.Fields)
-                {
-                    var node = new EntityFieldNode
-                    {
-                        Key = field.PropertyName,
-                        PropertyName = field.PropertyName,
-                        DisplayName = ResolveDisplay(field.DisplayName, field.PropertyName),
-                        DataType = field.DataType,
-                        Length = field.Length,
-                        Precision = field.Precision,
-                        Scale = field.Scale,
-                        IsRequired = field.IsRequired,
-                        DefaultValue = field.DefaultValue,
-                        Source = "Custom",
-                        IsDraggable = true,
-                        SuggestedWidgetType = GetSuggestedWidgetType(field.DataType, field.Length, field.IsRequired),
-                        Icon = GetFieldIcon(field.DataType)
-                    };
-                    fieldNodes.Add(node);
-                }
-            }
-
-            // Add interface fields
-            if (entityDef.Interfaces != null)
-            {
-                foreach (var iface in entityDef.Interfaces.Where(i => i.IsEnabled))
-                {
-                    var interfaceFields = GetInterfaceFields(iface.InterfaceType);
-                    foreach (var field in interfaceFields)
-                    {
-                        // Avoid duplicates
-                        if (!fieldNodes.Any(f => f.PropertyName == field.PropertyName))
-                        {
-                            field.Source = iface.InterfaceType;
-                            fieldNodes.Add(field);
-                        }
-                    }
-                }
-            }
-
-            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {fieldNodes.Count} fields for {EntityType}");
+            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {treeNodes.Count} groups for {EntityType}");
         }
         catch (Exception ex)
         {
@@ -195,6 +139,131 @@ else
             loading = false;
             StateHasChanged();
         }
+    }
+
+    private List<EntityFieldTreeNode> BuildTreeNodes(EntityDefinitionDto definition)
+    {
+        var list = new List<EntityFieldTreeNode>();
+        var fieldGroups = (definition.Fields ?? new()).GroupBy(f => f.Source ?? "Custom").OrderBy(g => GetSourceOrder(g.Key));
+
+        foreach (var group in fieldGroups)
+        {
+            var groupNode = new EntityFieldTreeNode
+            {
+                Key = $"group-{group.Key}",
+                PropertyName = GetSourceDisplayName(group.Key),
+                DisplayName = string.Empty,
+                DataType = group.Key,
+                Source = group.Key,
+                IsRequired = false,
+                IsDraggable = false,
+                IsGroup = true,
+                Icon = IconType.Outline.FolderOpen,
+                Children = new List<EntityFieldTreeNode>()
+            };
+
+            foreach (var field in group.OrderBy(f => f.SortOrder).ThenBy(f => f.PropertyName))
+            {
+                var isComplex = field.IsEntityRef || string.Equals(field.DataType, "EntityRef", StringComparison.OrdinalIgnoreCase);
+                var meta = new EntityFieldTreeNode
+                {
+                    Key = $"{definition.EntityRoute}:{field.PropertyName}",
+                    PropertyName = field.PropertyName,
+                    DisplayName = ResolveDisplay(field.DisplayName?.ToDictionary(k => k.Key, v => v.Value), field.PropertyName),
+                    DataType = field.DataType,
+                    IsRequired = field.IsRequired,
+                    Source = group.Key,
+                    IsDraggable = true,
+                    Icon = GetFieldIcon(field.DataType),
+                    IsComplex = isComplex,
+                    ReferencedEntityId = field.ReferencedEntityId,
+                    ReferencedEntityRoute = field.TableName,
+                    ChildrenLoaded = false,
+                    Children = new List<EntityFieldTreeNode>()
+                };
+
+                groupNode.Children.Add(meta);
+            }
+
+            list.Add(groupNode);
+        }
+
+        return list;
+    }
+
+    private async Task OnNodeLoadDelayAsync(TreeEventArgs<EntityFieldTreeNode> args)
+    {
+        var meta = args.Node?.DataItem;
+        if (meta == null || !meta.IsComplex || meta.ChildrenLoaded) return;
+        if (meta.ReferencedEntityId == null && string.IsNullOrWhiteSpace(meta.ReferencedEntityRoute)) return;
+
+        try
+        {
+            EntityDefinitionDto? referenced = null;
+            if (meta.ReferencedEntityId.HasValue)
+            {
+                referenced = await EntityDefinitionService.GetByIdAsync(meta.ReferencedEntityId.Value);
+            }
+
+            if (referenced == null && !string.IsNullOrWhiteSpace(meta.ReferencedEntityRoute))
+            {
+                foreach (var candidate in BuildEntityTypeCandidates(meta.ReferencedEntityRoute))
+                {
+                    referenced = await TryLoadDefinition(candidate);
+                    if (referenced != null) break;
+                }
+            }
+
+            if (referenced == null)
+            {
+                await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] No definition for ref {meta.ReferencedEntityRoute ?? meta.ReferencedEntityId?.ToString()}");
+                meta.ChildrenLoaded = true;
+                return;
+            }
+
+            var children = BuildTreeNodes(referenced).SelectMany(g => g.Children ?? new List<EntityFieldTreeNode>()).ToList();
+            meta.Children = children;
+            meta.ChildrenLoaded = true;
+            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {children.Count} children for {meta.PropertyName}");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Lazy load failed: {ex.Message}");
+            meta.ChildrenLoaded = true;
+        }
+    }
+
+    private async Task OnFieldDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, EntityFieldTreeNode? meta)
+    {
+        if (meta == null || meta.IsGroup || !meta.IsDraggable) return;
+        try
+        {
+            var field = new EntityFieldNode
+            {
+                Key = meta.Key,
+                PropertyName = meta.PropertyName,
+                DisplayName = meta.DisplayName ?? string.Empty,
+                DataType = meta.DataType,
+                IsRequired = meta.IsRequired,
+                Source = meta.Source,
+                IsDraggable = true,
+                SuggestedWidgetType = GetSuggestedWidgetType(meta.DataType, null, meta.IsRequired),
+                Icon = meta.Icon
+            };
+
+            await OnFieldDragStarted.InvokeAsync(field);
+            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Dragging field: {meta.PropertyName}");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Drag start error: {ex.Message}");
+        }
+    }
+
+    private void OnFieldDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        // no-op
     }
 
     private string ResolveDisplay(Dictionary<string, string?>? map, string fallback)
@@ -209,44 +278,6 @@ else
         return any ?? fallback;
     }
 
-    private async Task OnFieldDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e, EntityFieldNode field)
-    {
-        try
-        {
-            await OnFieldDragStarted.InvokeAsync(field);
-            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Dragging field: {field.PropertyName}");
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Drag start error: {ex.Message}");
-        }
-    }
-
-    private void OnFieldDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
-    {
-        // Cleanup after drag
-        hoveredField = null;
-        StateHasChanged();
-    }
-
-    private string GetSuggestedWidgetType(string dataType, int? length, bool isRequired)
-    {
-        return dataType switch
-        {
-            "String" when length <= 100 => "Input",
-            "String" when length > 100 => "TextArea",
-            "Integer" or "Long" => "InputNumber",
-            "Decimal" => "InputNumber",
-            "Boolean" => "Checkbox",
-            "DateTime" => "DatePicker",
-            "Date" => "DatePicker",
-            "Time" => "TimePicker",
-            "Guid" => "Input",
-            "Text" => "TextArea",
-            _ => "Input"
-        };
-    }
-
     private string GetFieldIcon(string dataType)
     {
         return dataType switch
@@ -258,6 +289,7 @@ else
             "Time" => IconType.Outline.ClockCircle,
             "Text" => IconType.Outline.FileText,
             "Guid" => IconType.Outline.Key,
+            "EntityRef" => IconType.Outline.Cluster,
             _ => IconType.Outline.Appstore
         };
     }
@@ -272,6 +304,7 @@ else
             "DateTime" or "Date" or "Time" => TagColor.Purple,
             "Text" => TagColor.Cyan,
             "Guid" => TagColor.GeekBlue,
+            "EntityRef" => TagColor.Processing,
             _ => TagColor.Default
         };
     }
@@ -302,81 +335,37 @@ else
         };
     }
 
-    private List<EntityFieldNode> GetInterfaceFields(string interfaceType)
+    private string GetSuggestedWidgetType(string dataType, int? length, bool isRequired)
     {
-        return interfaceType switch
+        return dataType switch
         {
-            "Base" => new List<EntityFieldNode>
-            {
-                new() { PropertyName = "Id", DisplayName = "ID", DataType = "Integer", IsRequired = true, Source = "Base", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
-                new() { PropertyName = "Code", DisplayName = I18n.T("FIELD_CODE"), DataType = "String", Length = 50, IsRequired = false, Source = "Base", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") },
-                new() { PropertyName = "Name", DisplayName = I18n.T("FIELD_NAME"), DataType = "String", Length = 200, IsRequired = true, Source = "Base", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
-            },
-            "Archive" => new List<EntityFieldNode>
-            {
-                new() { PropertyName = "IsArchived", DisplayName = I18n.T("FIELD_IS_ARCHIVED"), DataType = "Boolean", IsRequired = true, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "Checkbox", Icon = GetFieldIcon("Boolean") },
-                new() { PropertyName = "ArchivedAt", DisplayName = I18n.T("FIELD_ARCHIVED_AT"), DataType = "DateTime", IsRequired = false, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
-                new() { PropertyName = "ArchivedBy", DisplayName = I18n.T("FIELD_ARCHIVED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Archive", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
-            },
-            "Audit" => new List<EntityFieldNode>
-            {
-                new() { PropertyName = "CreatedAt", DisplayName = I18n.T("FIELD_CREATED_AT"), DataType = "DateTime", IsRequired = true, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
-                new() { PropertyName = "CreatedBy", DisplayName = I18n.T("FIELD_CREATED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") },
-                new() { PropertyName = "UpdatedAt", DisplayName = I18n.T("FIELD_UPDATED_AT"), DataType = "DateTime", IsRequired = true, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "DatePicker", Icon = GetFieldIcon("DateTime") },
-                new() { PropertyName = "UpdatedBy", DisplayName = I18n.T("FIELD_UPDATED_BY"), DataType = "String", Length = 100, IsRequired = false, Source = "Audit", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
-            },
-            "Tree" => new List<EntityFieldNode>
-            {
-                new() { PropertyName = "ParentId", DisplayName = I18n.T("FIELD_PARENT_ID"), DataType = "Integer", IsRequired = false, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
-                new() { PropertyName = "Level", DisplayName = I18n.T("FIELD_LEVEL"), DataType = "Integer", IsRequired = true, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "InputNumber", Icon = GetFieldIcon("Integer") },
-                new() { PropertyName = "Path", DisplayName = I18n.T("FIELD_PATH"), DataType = "String", Length = 500, IsRequired = false, Source = "Tree", IsDraggable = true, SuggestedWidgetType = "Input", Icon = GetFieldIcon("String") }
-            },
-            _ => new List<EntityFieldNode>()
+            "String" when length <= 100 => "Input",
+            "String" when length > 100 => "TextArea",
+            "Integer" or "Long" => "InputNumber",
+            "Decimal" => "InputNumber",
+            "Boolean" => "Checkbox",
+            "DateTime" => "DatePicker",
+            "Date" => "DatePicker",
+            "Time" => "TimePicker",
+            "Guid" => "Input",
+            "Text" => "TextArea",
+            "EntityRef" => "Select",
+            _ => "Input"
         };
-    }
-
-    // DTOs
-    private class EntityDefinitionDto
-    {
-        public Guid Id { get; set; }
-        public string EntityName { get; set; } = "";
-        public string Namespace { get; set; } = "";
-        public List<FieldDto>? Fields { get; set; }
-        public List<InterfaceDto>? Interfaces { get; set; }
-    }
-
-    private class FieldDto
-    {
-        public string PropertyName { get; set; } = "";
-        public Dictionary<string, string?>? DisplayName { get; set; }
-        public string DataType { get; set; } = "";
-        public int? Length { get; set; }
-        public int? Precision { get; set; }
-        public int? Scale { get; set; }
-        public bool IsRequired { get; set; }
-        public string? DefaultValue { get; set; }
-    }
-
-    private class InterfaceDto
-    {
-        public string InterfaceType { get; set; } = "";
-        public bool IsEnabled { get; set; }
     }
 
     private async Task<EntityDefinitionDto?> TryLoadDefinition(string candidate)
     {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
 
-        // New endpoint
-        var response = await Auth.GetWithRefreshAsync($"/api/entities/{Uri.EscapeDataString(candidate)}/definition");
+        var response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(candidate)}");
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
         }
 
-        // Old endpoint fallback
-        response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(candidate)}");
+        response = await Auth.GetWithRefreshAsync($"/api/entities/{Uri.EscapeDataString(candidate)}/definition");
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -407,17 +396,73 @@ else
             yield return $"{cleaned}s";
         }
     }
+
+    private class EntityFieldTreeNode
+    {
+        public string Key { get; set; } = string.Empty;
+        public string PropertyName { get; set; } = string.Empty;
+        public string? DisplayName { get; set; }
+        public string DataType { get; set; } = string.Empty;
+        public string Source { get; set; } = "Custom";
+        public bool IsRequired { get; set; }
+        public bool IsDraggable { get; set; }
+        public bool IsGroup { get; set; }
+        public bool IsComplex { get; set; }
+        public Guid? ReferencedEntityId { get; set; }
+        public string? ReferencedEntityRoute { get; set; }
+        public bool ChildrenLoaded { get; set; }
+        public string Icon { get; set; } = IconType.Outline.FieldBinary;
+        public List<EntityFieldTreeNode> Children { get; set; } = new();
+    }
 }
 
 <style>
-    .entity-field-item:hover {
-        background: #e6f7ff !important;
-        border-color: #1890ff !important;
-        box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+    .entity-tree-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 4px;
+        border-radius: 4px;
+        gap: 8px;
     }
 
-    .entity-field-item:active {
-        transform: scale(0.98);
+    .entity-tree-row:hover {
+        background: #e6f7ff;
+    }
+
+    .entity-tree-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .entity-tree-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .entity-tree-name {
+        font-size: 12px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .entity-tree-display {
+        font-size: 10px;
+        color: #999;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .entity-tree-tags {
+        display: flex;
+        align-items: center;
+        gap: 4px;
     }
 </style>
-
