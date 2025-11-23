@@ -143,8 +143,9 @@ public class TemplateService : ITemplateService
 
     public async Task<FormTemplate?> GetTemplateByIdAsync(int templateId, string userId)
     {
+        // Allow reading user-owned templates or system defaults
         var template = await Task.FromResult(
-            _repo.Query(t => t.Id == templateId && t.UserId == userId).FirstOrDefault());
+            _repo.Query(t => t.Id == templateId && (t.UserId == userId || t.IsSystemDefault)).FirstOrDefault());
 
         if (template == null)
         {
@@ -189,8 +190,9 @@ public class TemplateService : ITemplateService
 
     public async Task<FormTemplate> UpdateTemplateAsync(int templateId, string userId, UpdateTemplateRequest request)
     {
+        // Allow updating user-owned templates or system defaults
         var template = await Task.FromResult(
-            _repo.Query(t => t.Id == templateId && t.UserId == userId).FirstOrDefault());
+            _repo.Query(t => t.Id == templateId && (t.UserId == userId || t.IsSystemDefault)).FirstOrDefault());
 
         if (template == null)
         {
