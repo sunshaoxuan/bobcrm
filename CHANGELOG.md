@@ -10,6 +10,13 @@
 ## [未发布] - 进行中
 
 ### Added
+- 公共端点 `/api/entities/{entityType}/definition`：返回实体字段与接口投影，支持大小写、`entity_` 前缀、单复数候选；供 Form Designer/实体树加载系统实体。
+- 文档：新增《GUIDE-07 模板默认与设计器更新说明》（模板生成、设计器、多语展示的更新要点与验证清单）。
+
+### Changed
+- 默认模板生成：模板名改用 i18n Key `TEMPLATE_NAME_{USAGE}_{ENTITY}`；List 模板 DataGrid 默认带列、搜索、刷新、分页；Edit 模板新增 Back/Cancel 按钮；生成前强制调用 `GetInitialDefinition` 补全元数据。
+- 前端设计器：初始化即加载实体/字段（带路由候选与重试），空的 List 模板自动补 DataGrid 并提示；头部新增 Cancel/Return；实体结构加载失败给出友好提示。
+- 模板列表与 DataGrid 运行态：模板名/实体标签按 i18n Key 或模式翻译；无列配置时使用默认/占位列，避免空表渲染。
 
 ---
 
