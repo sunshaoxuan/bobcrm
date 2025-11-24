@@ -45,7 +45,9 @@
                             else
                             {
                                 <Table TItem="FieldPermissionItem" DataSource="@entity.Fields" Size="@TableSize.Small">
-                                    <Column TData="string" Title="@I18n.T("LBL_FIELD_NAME")" @bind-Field="@context.FieldName" />
+                                    <Column TData="string" Title="@I18n.T("LBL_FIELD_NAME")">
+                                        @context.FieldName
+                                    </Column>
                                     <Column TData="bool" Title="@I18n.T("LBL_CAN_READ")">
                                         <Checkbox @bind-Value="@context.CanRead" />
                                     </Column>

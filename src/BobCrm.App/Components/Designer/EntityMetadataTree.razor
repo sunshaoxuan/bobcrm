@@ -33,6 +33,7 @@ else if (treeNodes.Count == 0)
 else
 {
     <div style="padding:8px">
+    <div style="overflow-x: auto; width: 100%; padding-bottom: 8px;">
         <Tree TItem="EntityFieldTreeNode"
               DataSource="@treeNodes"
               ChildrenExpression="@(n => n.DataItem?.Children ?? Enumerable.Empty<EntityFieldTreeNode>())"
@@ -40,42 +41,60 @@ else
               KeyExpression="@(n => n.DataItem?.Key ?? n.Key)"
               IconExpression="@(n => n.DataItem?.Icon)"
               IsLeafExpression="@(n => !(n.DataItem?.IsComplex ?? false) && !((n.DataItem?.Children?.Any()) ?? false))"
-              ShowIcon="true"
+              ShowIcon="false"
               BlockNode="true"
               OnNodeLoadDelayAsync="OnNodeLoadDelayAsync">
             <TitleTemplate Context="node">
                 @{
                     var meta = node.DataItem;
                     var isLeaf = node.IsLeaf;
+                    var displayName = meta?.DisplayName;
+                    var propertyName = meta?.PropertyName;
+                    var showParens = !string.IsNullOrWhiteSpace(displayName) && !string.Equals(propertyName, displayName, StringComparison.OrdinalIgnoreCase);
                 }
-                <div class="entity-tree-row"
-                     draggable="@(meta != null && meta.IsDraggable && isLeaf)"
-                     data-drag-type="entity-field"
-                     data-drag-data="@meta?.Key"
-                     @ondragstart="(e) => OnFieldDragStart(e, meta)"
-                     @ondragend="OnFieldDragEnd">
-                    <div class="entity-tree-title">
-                        <Icon Type="@(node.Icon ?? IconType.Outline.FieldBinary)" Style="font-size:14px; color:#1890ff" />
-                        <div class="entity-tree-text">
-                            <div class="entity-tree-name">@meta?.PropertyName</div>
-                            @if (!string.IsNullOrWhiteSpace(meta?.DisplayName) && !string.Equals(meta?.PropertyName, meta?.DisplayName, StringComparison.OrdinalIgnoreCase))
+                <Tooltip Placement="@Placement.Right" MouseEnterDelay="0.5" OverlayClassName="compact-tooltip">
+                    <TitleTemplate>
+                        <div style="display:flex; flex-direction:column; gap:2px; padding:0">
+                            <div style="font-weight:600; line-height:1.2">@displayName</div>
+                            @if (showParens)
                             {
-                                <div class="entity-tree-display">@meta?.DisplayName</div>
+                                <div style="font-size:11px; color:#ccc; line-height:1.2">@propertyName</div>
                             }
+                            <div style="display:flex; gap:4px; margin-top:4px">
+                                <Tag Color="@GetDataTypeTagColor(meta?.DataType ?? string.Empty)" Style="margin:0; font-size:10px; line-height:16px">
+                                    @meta?.DataType
+                                </Tag>
+                                @if (meta?.IsRequired == true)
+                                {
+                                    <Tag Color="@TagColor.Error" Style="margin:0; font-size:10px; line-height:16px">* Required</Tag>
+                                }
+                                <Tag Style="margin:0; font-size:10px; line-height:16px">@meta?.Source</Tag>
+                            </div>
                         </div>
-                    </div>
-                    <div class="entity-tree-tags">
-                        <Tag Color="@GetDataTypeTagColor(meta?.DataType ?? string.Empty)" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">
-                            @meta?.DataType
-                        </Tag>
-                        @if (meta?.IsRequired == true)
-                        {
-                            <Tag Color="@TagColor.Error" Style="margin:0; font-size:9px; padding:0 4px; line-height:14px">* </Tag>
-                        }
-                    </div>
-                </div>
+                    </TitleTemplate>
+                    <ChildContent>
+                        <div class="entity-tree-row"
+                             draggable="@(meta != null && meta.IsDraggable && isLeaf)"
+                             data-drag-type="entity-field"
+                             data-drag-data="@meta?.Key"
+                             @ondragstart="(e) => OnFieldDragStart(e, meta)"
+                             @ondragend="OnFieldDragEnd">
+                            <div class="entity-tree-content">
+                                <Icon Type="@(node.Icon ?? IconType.Outline.FieldBinary)" Style="font-size:14px; color:#1890ff; margin-right:6px" />
+                                <span class="entity-tree-text">
+                                    <span class="entity-tree-name">@(string.IsNullOrWhiteSpace(displayName) ? propertyName : displayName)</span>
+                                    @if (showParens)
+                                    {
+                                        <span class="entity-tree-prop">(@propertyName)</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </ChildContent>
+                </Tooltip>
             </TitleTemplate>
         </Tree>
+    </div>
     </div>
 }
 
@@ -420,49 +439,40 @@ else
     .entity-tree-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 6px 4px;
+        padding: 2px 4px;
         border-radius: 4px;
-        gap: 8px;
+        width: 100%;
+        overflow: hidden;
+        height: 24px;
     }
 
     .entity-tree-row:hover {
         background: #e6f7ff;
     }
 
-    .entity-tree-title {
+    .entity-tree-content {
         display: flex;
         align-items: center;
-        gap: 8px;
         min-width: 0;
+        width: 100%;
     }
 
     .entity-tree-text {
         display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
+        align-items: baseline;
+        gap: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .entity-tree-name {
         font-size: 12px;
         color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
-    .entity-tree-display {
-        font-size: 10px;
+    .entity-tree-prop {
+        font-size: 11px;
         color: #999;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .entity-tree-tags {
-        display: flex;
-        align-items: center;
-        gap: 4px;
     }
 </style>

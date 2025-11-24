@@ -237,7 +237,7 @@
         return query.OrderBy(e => e.Code);
     }
 
-    private string GetDisplayName(Dictionary<string, string> displayName)
+    private string GetDisplayName(Dictionary<string, string?>? displayName)
     {
         if (displayName == null || displayName.Count == 0)
             return "-";

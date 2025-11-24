@@ -22,22 +22,22 @@
                     <div class="permission-tree-header">
                         <Space>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CheckSquare" OnClick="SelectAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.CheckSquare" OnClick="SelectAll">
                         @I18n.T("BTN_SELECT_ALL")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.MinusSquare" OnClick="DeselectAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.MinusSquare" OnClick="DeselectAll">
                         @I18n.T("BTN_DESELECT_ALL")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.ExpandAlt" OnClick="ExpandAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.ExpandAlt" OnClick="ExpandAll">
                         @I18n.T("BTN_EXPAND_ALL")
                     </Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.Compress" OnClick="CollapseAllAsync">
+                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.Compress" OnClick="CollapseAll">
                         @I18n.T("BTN_COLLAPSE_ALL")
                     </Button>
                 </SpaceItem>
@@ -252,28 +252,26 @@
 
     // Removed OnTreeCheck and OnTreeExpand as we use @bind-CheckedKeys and @bind-ExpandedKeys
 
-    private async Task SelectAllAsync()
+    private void SelectAll()
     {
         _checkedKeys = _functionLookup.Keys.Select(k => k.ToString()).ToArray();
         Message.Info(I18n.T("MSG_ALL_SELECTED"));
     }
 
-    private async Task DeselectAllAsync()
+    private void DeselectAll()
     {
         _checkedKeys = Array.Empty<string>();
         Message.Info(I18n.T("MSG_ALL_DESELECTED"));
     }
 
-    private async Task ExpandAllAsync()
+    private void ExpandAll()
     {
         _expandedKeys = _functionLookup.Keys.Select(k => k.ToString()).ToArray();
-        await Task.CompletedTask;
     }
 
-    private async Task CollapseAllAsync()
+    private void CollapseAll()
     {
         _expandedKeys = Array.Empty<string>();
-        await Task.CompletedTask;
     }
 
     private async Task SavePermissionsAsync()

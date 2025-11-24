@@ -34,6 +34,14 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
     private readonly AppDbContext? _db;
     private readonly ILogger<DefaultTemplateGenerator>? _logger;
 
+    private sealed record ListColumn(
+        string? field,
+        string label,
+        int width,
+        bool sortable,
+        Guid? enumDefinitionId,
+        bool isMultiSelect);
+
     public DefaultTemplateGenerator()
     {
     }
@@ -194,19 +202,23 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         if (usage == FormTemplateUsageType.List)
         {
-            var columns = fields.Take(8).Select(f => new
-            {
-                field = f.PropertyName?.ToLowerInvariant(),
-                label = ResolveLabel(f),
-                width = WIDTH_COLUMN_PX,
-                sortable = true,
-                enumDefinitionId = f.EnumDefinitionId,
-                isMultiSelect = f.IsMultiSelect
-            }).ToList();
+            var columns = fields.Take(8).Select(f => new ListColumn(
+                field: f.PropertyName?.ToLowerInvariant(),
+                label: ResolveLabel(f),
+                width: WIDTH_COLUMN_PX,
+                sortable: true,
+                enumDefinitionId: f.EnumDefinitionId,
+                isMultiSelect: f.IsMultiSelect)).ToList();
 
             if (columns.Count == 0)
             {
-                columns.Add(new { field = "name", label = "LBL_NAME", width = WIDTH_COLUMN_PX, sortable = true, enumDefinitionId = (Guid?)null, isMultiSelect = false });
+                columns.Add(new ListColumn(
+                    field: "name",
+                    label: "LBL_NAME",
+                    width: WIDTH_COLUMN_PX,
+                    sortable: true,
+                    enumDefinitionId: null,
+                    isMultiSelect: false));
             }
 
             var bulkActions = new[]

@@ -384,15 +384,11 @@ app.MapEnumDefinitionEndpoints();
 
 app.MapControllers();
 
-// 管理和调试端点（仅开发环境）
 if (app.Environment.IsDevelopment())
 {
     app.MapAdminEndpoints();
 }
 
-app.Run();
+await app.RunAsync();
 
-// Enable WebApplicationFactory<Program> from test project
 public partial class Program { }
-
-

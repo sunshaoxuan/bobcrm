@@ -4,7 +4,8 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
+using Microsoft.Data.Sqlite;
+using System.IO;
 
 namespace BobCrm.Api.Tests;
 
@@ -310,13 +311,13 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
 
     private AppDbContext CreateIsolatedContext(string databaseName)
     {
-        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        var builder = new SqliteConnectionStringBuilder
         {
-            Database = databaseName
+            DataSource = GetDatabasePath(databaseName)
         };
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(builder.ConnectionString, npg => npg.MigrationsHistoryTable("__EFMigrationsHistory", "public"))
+            .UseSqlite(builder.ConnectionString)
             .Options;
 
         return new AppDbContext(options);
@@ -324,47 +325,39 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
 
     private async Task CreateDatabaseAsync(string databaseName)
     {
-        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        var dbPath = GetDatabasePath(databaseName);
+        var directory = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
-            Database = "postgres"
-        };
+            Directory.CreateDirectory(directory);
+        }
 
-        await using var conn = new NpgsqlConnection(builder.ConnectionString);
+        if (File.Exists(dbPath))
+        {
+            File.Delete(dbPath);
+        }
+
+        await using var conn = new SqliteConnection($"Data Source={dbPath}");
         await conn.OpenAsync();
-
-        // 先终止所有连接
-        await using var terminate = new NpgsqlCommand(
-            $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @db AND pid <> pg_backend_pid();",
-            conn);
-        terminate.Parameters.AddWithValue("db", databaseName);
-        try { await terminate.ExecuteNonQueryAsync(); } catch { }
-
-        // 删除旧数据库（如果存在）
-        await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{databaseName}\";", conn);
-        await drop.ExecuteNonQueryAsync();
-
-        // 创建新数据库
-        await using var create = new NpgsqlCommand($"CREATE DATABASE \"{databaseName}\";", conn);
-        await create.ExecuteNonQueryAsync();
     }
 
-    private async Task DropDatabaseAsync(string databaseName)
+    private Task DropDatabaseAsync(string databaseName)
     {
-        var builder = new NpgsqlConnectionStringBuilder(_factory.ServerConnectionString)
+        var dbPath = GetDatabasePath(databaseName);
+        try
         {
-            Database = "postgres"
-        };
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+        }
+        catch
+        {
+        }
 
-        await using var conn = new NpgsqlConnection(builder.ConnectionString);
-        await conn.OpenAsync();
-
-        await using var terminate = new NpgsqlCommand(
-            $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @db AND pid <> pg_backend_pid();",
-            conn);
-        terminate.Parameters.AddWithValue("db", databaseName);
-        try { await terminate.ExecuteNonQueryAsync(); } catch { }
-
-        await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{databaseName}\";", conn);
-        await drop.ExecuteNonQueryAsync();
+        return Task.CompletedTask;
     }
+
+    private static string GetDatabasePath(string databaseName)
+        => Path.Combine(Path.GetTempPath(), $"{databaseName}.db");
 }

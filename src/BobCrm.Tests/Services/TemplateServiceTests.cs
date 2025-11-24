@@ -114,7 +114,11 @@ public class TemplateServiceTests
     private class FakeI18n : II18nService
     {
         public string CurrentLang => "en";
-        public event Action? OnChanged;
+        public event Action? OnChanged
+        {
+            add { }
+            remove { }
+        }
         public Task LoadAsync(string lang, bool force = false, CancellationToken ct = default) => Task.CompletedTask;
         public string T(string key) => key;
     }

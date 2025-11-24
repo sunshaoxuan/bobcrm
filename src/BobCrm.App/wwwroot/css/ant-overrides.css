@@ -90,6 +90,11 @@
   box-shadow: var(--shadow-raised);
   backdrop-filter: blur(var(--blur-elevated));
   -webkit-backdrop-filter: blur(var(--blur-elevated));
+  color: var(--text-primary);
+}
+
+.ant-tooltip-title {
+  color: var(--text-primary);
 }
 
 .ant-select-item-option-active:not(.ant-select-item-option-disabled),

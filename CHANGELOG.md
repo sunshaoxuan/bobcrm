@@ -18,6 +18,8 @@
 - 默认模板生成：模板名改用 i18n Key `TEMPLATE_NAME_{USAGE}_{ENTITY}`；List 模板 DataGrid 默认带列、搜索、刷新、分页；Edit 模板新增 Back/Cancel 按钮；生成前强制调用 `GetInitialDefinition` 补全元数据。
 - 前端设计器：初始化即加载实体/字段（带路由候选与重试），空的 List 模板自动补 DataGrid 并提示；头部新增 Cancel/Return；实体结构加载失败给出友好提示。
 - 实体结构树：改用 Ant Design Tree，支持图标/标签保留与实体引用字段懒加载；模板列表与 DataGrid 运行态：模板名/实体标签按 i18n Key 或模式翻译；无列配置时使用默认/占位列，避免空表渲染。
+- 设计器 Tooltip：统一使用语义文本色，避免浅底场景下字段标签（如 *Required）出现白底白字。
+- Form Designer：组件面板改为手风琴模式，默认只展开“实体结构”，切换分组时自动收起其他分组，减少滚动。
 
 ---
 

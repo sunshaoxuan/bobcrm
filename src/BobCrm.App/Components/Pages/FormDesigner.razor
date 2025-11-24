@@ -60,7 +60,7 @@ else
         <div class="designer-main">
             <aside class="designer-panel designer-toolbox" @onclick:stopPropagation>
                 <h3>@I18n.T("LBL_COMPONENTS")</h3>
-                <Collapse Accordion="false" DefaultActiveKey="@(new[]{ "entity", "1", "2" })">
+                <Collapse Accordion="true" DefaultActiveKey="@(new[] { "entity" })">
                     <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
                         <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
                     </Panel>
@@ -471,24 +471,24 @@ else
                 var definition = await TryLoadDefinition(candidate);
                 if (definition == null) continue;
 
-                entityFields = definition.Fields?.Select(f => new EntityFieldDto
-                {
-                    PropertyName = f.PropertyName ?? string.Empty,
-                    DisplayName = f.DisplayName,
-                    DataType = f.DataType ?? string.Empty,
+            entityFields = definition.Fields?.Select(f => new EntityFieldDto
+            {
+                PropertyName = f.PropertyName ?? string.Empty,
+                DisplayName = f.DisplayName,
+                DataType = f.DataType ?? string.Empty,
                     SortOrder = f.SortOrder,
                     IsRequired = f.IsRequired,
                     Length = f.Length,
                     EnumDefinitionId = f.EnumDefinitionId,
                     IsMultiSelect = f.IsMultiSelect
-                }).ToList() ?? new();
+            }).ToList() ?? new();
 
-                if (entityFields.Any())
-                {
-                    await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {entityFields.Count} entity fields for {candidate}");
-                    return;
-                }
+            if (entityFields.Any())
+            {
+                await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Loaded {entityFields.Count} entity fields for {candidate}");
+                return;
             }
+        }
 
             await JS.InvokeVoidAsync("console.warn", $"[FormDesigner] No entity fields found for {entity}");
         }
@@ -1594,4 +1594,21 @@ else
         return WidgetNavigationHelper.GetAllWidgets(layoutWidgets);
     }
 }
+
+<style>
+    .designer-toolbox {
+        flex-basis: 350px !important;
+        width: 350px !important;
+        min-width: 350px !important;
+    }
+
+    .compact-tooltip .ant-tooltip-inner {
+        padding: 6px 8px !important;
+        min-height: unset !important;
+    }
+    
+    .compact-tooltip .ant-tooltip-title {
+        margin-bottom: 0 !important;
+    }
+</style>
 

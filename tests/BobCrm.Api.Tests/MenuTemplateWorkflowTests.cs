@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
@@ -11,13 +11,12 @@ using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace BobCrm.Api.Tests;
 
@@ -214,31 +213,23 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
 public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
 {
-    private readonly string _serverConnectionString =
-        "Host=localhost;Port=5432;Username=postgres;Password=postgres";
-
-    private readonly string _databaseName = $"bobcrm_test_{Guid.NewGuid():N}";
-
-    public string ServerConnectionString => _serverConnectionString;
-    public string DefaultDatabaseName => _databaseName;
-    public string DefaultConnectionString => $"{_serverConnectionString};Database={_databaseName}";
-
-    private static readonly SemaphoreSlim HostSemaphore = new(1, 1);
-    private bool _lockHeld;
+    private readonly string _sqliteDbPath = Path.Combine(Path.GetTempPath(), $"bobcrm_workflow_{Guid.NewGuid():N}.db");
+    private string SqliteConnectionString => $"Data Source={_sqliteDbPath}";
+    public string DefaultConnectionString => SqliteConnectionString;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseTestServer();
         builder.UseEnvironment("Development");
 
-        // 强制使用测试数据库配置
         builder.ConfigureAppConfiguration((context, config) =>
         {
             config.Sources.Clear();
 
             var testConfig = new Dictionary<string, string?>
             {
-                ["Db:Provider"] = "postgres",
-                ["ConnectionStrings:Default"] = DefaultConnectionString,
+                ["Db:Provider"] = "sqlite",
+                ["ConnectionStrings:Default"] = SqliteConnectionString,
                 ["Db:SkipInit"] = "true",
                 ["Jwt:Key"] = "dev-secret-change-in-prod-1234567890",
                 ["Jwt:Issuer"] = "BobCrm",
@@ -250,84 +241,25 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(testConfig!);
         });
 
-        // Register TestFriendlyDDLExecutionService to fake DDL execution
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
+            services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(SqliteConnectionString));
+            services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
             services.AddScoped<DDLExecutionService, TestFriendlyDDLExecutionService>();
-        });
-    }
 
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        HostSemaphore.Wait();
-        _lockHeld = true;
-
-        // 在启动应用程序之前初始化数据库
-        var connectionString = DefaultConnectionString;
-
-        // 步骤1：强制终止所有连接并删除/创建数据库
-        var connBuilder = new NpgsqlConnectionStringBuilder(connectionString) { Database = "postgres" };
-        using (var adminConn = new NpgsqlConnection(connBuilder.ToString()))
-        {
-            adminConn.Open();
-
-            using (var cmd = new NpgsqlCommand(
-                $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{_databaseName}' AND pid <> pg_backend_pid();",
-                adminConn))
-            {
-                try { cmd.ExecuteNonQuery(); } catch { }
-            }
-            using (var cmd = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\";", adminConn))
-            {
-                cmd.ExecuteNonQuery();
-            }
-            using (var cmd = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\";", adminConn))
-            {
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        // 步骤2：应用迁移并初始化数据
-        var testDbOptions = new DbContextOptionsBuilder<AppDbContext>();
-        testDbOptions.UseNpgsql(connectionString);
-        using (var tempDb = new AppDbContext(testDbOptions.Options))
-        {
-            DatabaseInitializer.InitializeAsync(tempDb).GetAwaiter().GetResult();
-        }
-
-        IHost host;
-        try
-        {
-            host = base.CreateHost(builder);
-        }
-        catch
-        {
-            ReleaseHostLock();
-            throw;
-        }
-
-        // Seed additional test-specific data
-        using (var scope = host.Services.CreateScope())
-        {
+            using var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Database.EnsureDeleted();
+            db.Database.Migrate();
+            DatabaseInitializer.InitializeAsync(db).GetAwaiter().GetResult();
 
-            // Seed MENU_CRM_CORE_ACCOUNTS localization
             SeedLocalizationAsync(db).GetAwaiter().GetResult();
 
             var accessService = scope.ServiceProvider.GetRequiredService<AccessService>();
             accessService.SeedSystemAdministratorAsync().GetAwaiter().GetResult();
-        }
-
-        return host;
-    }
-
-    private void ReleaseHostLock()
-    {
-        if (_lockHeld)
-        {
-            HostSemaphore.Release();
-            _lockHeld = false;
-        }
+        });
     }
 
     protected override void Dispose(bool disposing)
@@ -335,39 +267,19 @@ public sealed class MenuWorkflowAppFactory : WebApplicationFactory<Program>
         base.Dispose(disposing);
         try
         {
-            DropDatabase();
-        }
-        finally
-        {
-            ReleaseHostLock();
-        }
-    }
-
-    private void DropDatabase()
-    {
-        try
-        {
-            var builder = new NpgsqlConnectionStringBuilder(ServerConnectionString)
+            if (File.Exists(_sqliteDbPath))
             {
-                Database = "postgres"
-            };
-
-            using var adminConn = new NpgsqlConnection(builder.ConnectionString);
-            adminConn.Open();
-
-            using (var terminate = new NpgsqlCommand(
-                       $"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{_databaseName}' AND pid <> pg_backend_pid();",
-                       adminConn))
-            {
-                try { terminate.ExecuteNonQuery(); } catch { }
+                File.Delete(_sqliteDbPath);
             }
-
-            using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\";", adminConn);
-            drop.ExecuteNonQuery();
         }
         catch
         {
         }
+    }
+
+    protected override TestServer CreateServer(IWebHostBuilder builder)
+    {
+        return new TestServer(builder);
     }
 
     private static async Task SeedLocalizationAsync(AppDbContext db)

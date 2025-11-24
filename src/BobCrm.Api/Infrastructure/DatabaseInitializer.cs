@@ -1,3 +1,5 @@
+using System;
+
 using BobCrm.Api.Base;
 
 using BobCrm.Api.Base.Models;
@@ -1064,31 +1066,22 @@ public static class DatabaseInitializer
 
 
 
-        var workflowEntities = await db.EntityDefinitions
-
-
-
+        var workflowQuery = db.EntityDefinitions
             .Where(ed =>
-
-
-
                 ed.Source == EntitySource.Custom &&
-
-
-
                 ed.Namespace == RuntimeWorkflowNamespace &&
+                ed.EntityName != null);
 
+        if (db.Database.IsNpgsql())
+        {
+            workflowQuery = workflowQuery.Where(ed => EF.Functions.ILike(ed.EntityName!, "Workflow%"));
+        }
+        else
+        {
+            workflowQuery = workflowQuery.Where(ed => EF.Functions.Like(ed.EntityName!, "Workflow%"));
+        }
 
-
-                ed.EntityName != null &&
-
-
-
-                EF.Functions.ILike(ed.EntityName, "Workflow%"))
-
-
-
-            .ToListAsync();
+        var workflowEntities = await workflowQuery.ToListAsync();
 
 
 
