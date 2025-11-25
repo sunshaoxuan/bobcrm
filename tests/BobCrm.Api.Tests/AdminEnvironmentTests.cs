@@ -116,6 +116,34 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
     }
 
     [Fact]
+    public async Task Admin_Regenerate_Default_Templates_Succeeds()
+    {
+        var client = _factory.CreateClient();
+        var (access, _) = await client.LoginAsAdminAsync();
+        client.UseBearer(access);
+
+        var resp = await client.PostAsync("/api/admin/templates/regenerate-defaults", null);
+        resp.EnsureSuccessStatusCode();
+
+        var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(payload.TryGetProperty("entities", out _));
+    }
+
+    [Fact]
+    public async Task Admin_Regenerate_Default_Templates_For_Entity_Succeeds()
+    {
+        var client = _factory.CreateClient();
+        var (access, _) = await client.LoginAsAdminAsync();
+        client.UseBearer(access);
+
+        var resp = await client.PostAsync("/api/admin/templates/user/regenerate", null);
+        resp.EnsureSuccessStatusCode();
+
+        var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(payload.TryGetProperty("entity", out _));
+    }
+
+    [Fact]
     public async Task Setup_Endpoints_Available_In_All_Environments()
     {
         // Setup 端点应该在所有环境中可用（用于初始化）

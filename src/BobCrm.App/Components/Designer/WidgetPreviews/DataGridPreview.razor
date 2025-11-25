@@ -1,9 +1,11 @@
 @using AntDesign
 @using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Designer
 @using System.Text.Json
 @using System.Text.Json.Serialization
 
-<div class="dg-preview" style="border:1px dashed #d9d9d9; background:#f8f9fb; padding:8px; border-radius:4px; width:100%">
+<div class="dg-preview" style="border:1px dashed #d9d9d9; background:#f8f9fb; padding:8px; border-radius:4px; width:100%"
+     @ondragover="OnDragOver" @ondragover:preventDefault @ondrop="OnDrop" @ondrop:preventDefault>
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; color:#444; font-weight:600; font-size:12px">
         <div>@(Grid.Label ?? "DataGrid")</div>
         <div style="display:flex; gap:6px; align-items:center; font-size:11px; color:#999">
@@ -20,7 +22,7 @@
 
     <div class="dg-preview-table" style="border:@(Grid.ShowBordered ? "1px solid #d9d9d9" : "1px solid transparent"); border-radius:4px; overflow:hidden; background:#fff;">
         <div style="display:flex; background:#fafafa; border-bottom:1px solid #e0e0e0;">
-            @foreach (var col in _columns)
+            @foreach (var col in _previewColumns)
             {
                 <div style="flex:@(col.Flex); padding:8px; font-size:11px; font-weight:600; color:#444; border-right:1px solid #f0f0f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
                     @col.Label
@@ -30,7 +32,7 @@
         @for (var r = 0; r < 3; r++)
         {
             <div style="display:flex; border-bottom:1px solid #f0f0f0;">
-                @foreach (var col in _columns)
+                @foreach (var col in _previewColumns)
                 {
                     <div style="flex:@(col.Flex); padding:6px 8px; font-size:10px; color:#999; border-right:1px solid #f9f9f9;">
                         —
@@ -55,22 +57,55 @@
 @code {
     [Parameter] public object? Widget { get; set; }
 
+    [CascadingParameter] public DesignerDragState? DragState { get; set; }
+
     private DataGridWidget Grid => (Widget as DataGridWidget) ?? new DataGridWidget();
 
-    private List<PreviewColumn> _columns = new();
+    private readonly JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+    private List<DataGridColumn> _columns = new();
+    private List<PreviewColumn> _previewColumns = new();
 
     protected override void OnParametersSet()
     {
         _columns = ParseColumns(Grid.ColumnsJson);
+        _previewColumns = ToPreview(_columns);
     }
 
-    private List<PreviewColumn> ParseColumns(string? columnsJson)
+    private void OnDragOver(Microsoft.AspNetCore.Components.Web.DragEventArgs e) { }
+
+    private async Task OnDrop(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
+    {
+        if (DragState?.CurrentEntityField is null)
+        {
+            return;
+        }
+
+        var cols = ParseColumns(Grid.ColumnsJson);
+        var field = DragState.CurrentEntityField;
+        var label = field.DisplayName ?? field.PropertyName ?? "Column";
+        cols.Add(new DataGridColumn
+        {
+            Field = field.PropertyName ?? $"field{cols.Count + 1}",
+            Label = label,
+            Visible = true,
+            Sortable = true,
+            Align = "left"
+        });
+
+        Grid.ColumnsJson = JsonSerializer.Serialize(cols, jsonOptions);
+        DragState.CurrentEntityField = null;
+        _columns = cols;
+        _previewColumns = ToPreview(cols);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private List<DataGridColumn> ParseColumns(string? columnsJson)
     {
         try
         {
             if (!string.IsNullOrWhiteSpace(columnsJson))
             {
-                var cols = JsonSerializer.Deserialize<List<PreviewColumn>>(columnsJson) ?? new List<PreviewColumn>();
+                var cols = JsonSerializer.Deserialize<List<DataGridColumn>>(columnsJson, jsonOptions) ?? new List<DataGridColumn>();
                 if (cols.Count > 0) return Normalize(cols);
             }
         }
@@ -79,22 +114,33 @@
             // ignore and fallback
         }
 
-        return new List<PreviewColumn>
+        return new List<DataGridColumn>
         {
-            new() { Label = "COL_1", Flex = 1 },
-            new() { Label = "COL_2", Flex = 1 },
-            new() { Label = "COL_3", Flex = 1 }
+            new() { Label = "COL_1", Field = "col1" },
+            new() { Label = "COL_2", Field = "col2" },
+            new() { Label = "COL_3", Field = "col3" }
         };
     }
 
-    private List<PreviewColumn> Normalize(List<PreviewColumn> cols)
+    private List<DataGridColumn> Normalize(List<DataGridColumn> cols)
     {
         foreach (var col in cols)
         {
-            if (col.Flex <= 0) col.Flex = 1;
+            if (string.IsNullOrWhiteSpace(col.Align)) col.Align = "left";
             if (string.IsNullOrWhiteSpace(col.Label)) col.Label = col.Field ?? "COL";
         }
         return cols;
+    }
+
+    private List<PreviewColumn> ToPreview(List<DataGridColumn> cols)
+    {
+        return cols.Where(c => c.Visible).Select(c => new PreviewColumn
+        {
+            Label = c.Label,
+            Field = c.Field,
+            Width = c.Width,
+            Flex = c.Width.HasValue && c.Width.Value > 0 ? c.Width.Value : 1
+        }).ToList();
     }
 
     private class PreviewColumn

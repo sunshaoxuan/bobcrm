@@ -26,44 +26,45 @@
 
 <script src="/js/form-designer-resize.js"></script>
 
-<AuthChecker>
-@if (loading)
-{
-    <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
-}
-else if (error != null)
-{
-    <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
-    <div style="margin-top:16px">
-        <Button OnClick="RetryLoad" Style="margin-right:8px">@I18n.T("BTN_RETRY")</Button>
-        <Button OnClick="@(() => Nav.NavigateTo("/templates"))">@I18n.T("BTN_BACK")</Button>
-    </div>
-}
-else
-{
-    <div class="designer-shell">
-        <header class="designer-header">
-            <div class="designer-header-meta">
-                <div>
-                    <p class="designer-eyebrow">@I18n.T("MODE_DESIGN")</p>
-                    <h2>@templateName</h2>
+<CascadingValue Value="dragState">
+    <AuthChecker>
+    @if (loading)
+    {
+        <div class="text-muted">@I18n.T("LBL_LOADING")...</div>
+    }
+    else if (error != null)
+    {
+        <Alert Message="@error" Type="AlertType.Error" ShowIcon="true" />
+        <div style="margin-top:16px">
+            <Button OnClick="RetryLoad" Style="margin-right:8px">@I18n.T("BTN_RETRY")</Button>
+            <Button OnClick="@(() => Nav.NavigateTo("/templates"))">@I18n.T("BTN_BACK")</Button>
+        </div>
+    }
+    else
+    {
+        <div class="designer-shell">
+            <header class="designer-header">
+                <div class="designer-header-meta">
+                    <div>
+                        <p class="designer-eyebrow">@I18n.T("MODE_DESIGN")</p>
+                        <h2>@templateName</h2>
+                    </div>
+                    <Tag Color="@TagColor.Blue">@entityType</Tag>
                 </div>
-                <Tag Color="@TagColor.Blue">@entityType</Tag>
-            </div>
-            <div class="designer-header-actions">
-                <Button OnClick="CancelAndReturn" Icon="@IconType.Outline.Left">@I18n.T("BTN_CANCEL")</Button>
-                <Button Ghost OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
-                <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
-            </div>
-        </header>
+                <div class="designer-header-actions">
+                    <Button OnClick="CancelAndReturn" Icon="@IconType.Outline.Left">@I18n.T("BTN_CANCEL")</Button>
+                    <Button Ghost OnClick="@(() => Nav.NavigateTo("/templates"))" Icon="@IconType.Outline.Close">@I18n.T("BTN_EXIT_DESIGN")</Button>
+                    <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
+                </div>
+            </header>
 
-        <div class="designer-main">
-            <aside class="designer-panel designer-toolbox" @onclick:stopPropagation>
-                <h3>@I18n.T("LBL_COMPONENTS")</h3>
-                <Collapse Accordion="true" DefaultActiveKey="@(new[] { "entity" })">
-                    <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
-                        <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
-                    </Panel>
+            <div class="designer-main">
+                <aside class="designer-panel designer-toolbox" @onclick:stopPropagation>
+                    <h3>@I18n.T("LBL_COMPONENTS")</h3>
+                    <Collapse Accordion="true" DefaultActiveKey="@(new[] { "entity" })">
+                        <Panel Header="@I18n.T("LBL_ENTITY_STRUCTURE")" Key="entity">
+                            <EntityMetadataTree EntityType="@entityType" OnFieldDragStarted="@OnEntityFieldDragStart" />
+                        </Panel>
                     <Panel Header="@I18n.T("LBL_BASIC_COMPONENTS")" Key="1">
                         <div class="designer-palette">
                             @foreach (var comp in WidgetRegistry.BasicWidgets)
@@ -88,212 +89,225 @@ else
                             }
                         </div>
                     </Panel>
+                    <Panel Header="@I18n.T("LBL_DATA_COMPONENTS")" Key="3">
+                        <div class="designer-palette">
+                            @foreach (var comp in WidgetRegistry.DataWidgets)
+                            {
+                                <div class="designer-palette-item" draggable="true" data-drag-type="component" data-drag-data="@comp.Type"
+                                     @ondragstart="@((e) => OnDragStart(e, comp))" @ondragstart:preventDefault="false" @ondragend="OnDragEnd">
+                                    <Icon Type="@comp.Icon" />
+                                    <span>@I18n.T(comp.LabelKey)</span>
+                                </div>
+                            }
+                        </div>
+                    </Panel>
                 </Collapse>
             </aside>
 
-            <section class="designer-canvas"
-                 @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault
-                 @onclick="OnCanvasBackgroundClick">
-                <div @ref="canvasRef" class="designer-canvas-content layout-widgets-container"
-                     @onclick:stopPropagation>
-                    @foreach (var widget in layoutWidgets)
-                    {
-                        @if (widget.NewLine)
+                <section class="designer-canvas"
+                     @ondrop="OnDrop" @ondrop:preventDefault @ondrop:stopPropagation @ondragover="OnDragOver" @ondragover:preventDefault
+                     @onclick="OnCanvasBackgroundClick">
+                    <div @ref="canvasRef" class="designer-canvas-content layout-widgets-container"
+                         @onclick:stopPropagation>
+                        @foreach (var widget in layoutWidgets)
                         {
-                            <div style="width:100%; height:0; flex-basis:100%"></div>
-                        }
-
-                        <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
-                             draggable="@(resizingIds.Contains(widget.Id) ? "false" : "true")"
-                             data-drag-type="widget"
-                             data-drag-data="@widget.Id"
-                             data-widget-id="@widget.Id"
-                             @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
-                             @ondragstart:preventDefault="@(resizingIds.Contains(widget.Id))"
-                             @ondragstart:stopPropagation
-                             @ondragend="OnDragEnd"
-                             @onclick="@(() => SelectWidget(widget))"
-                             style="@(WidgetStyleHelper.GetFlowWidgetStyle(widget, selectedWidget == widget))">
-
-                            @if (selectedWidget == widget)
+                            @if (widget.NewLine)
                             {
-                                <div class="resize-handle"
-                                     draggable="false"
-                                     @onmousedown="@((e) => OnResizeStart(e, widget))"
-                                     @onmousedown:stopPropagation
-                                     @onmousedown:preventDefault
-                                     @ondragstart:preventDefault="true">
-                                </div>
+                                <div style="width:100%; height:0; flex-basis:100%"></div>
                             }
 
-                            <div class="widget-content" style="width:100%; pointer-events:none">
-                                @RenderWidgetVisual(widget)
-                            </div>
-                        </div>
-                    }
-                    @if (!layoutWidgets.Any())
-                    {
-                        <div class="designer-empty-state">
-                            <Icon Type="@IconType.Outline.Inbox" Style="font-size:48px; margin-bottom:12px" />
-                            <div>@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
-                        </div>
-                    }
-                </div>
-            </section>
+                            <div class="layout-widget @(selectedWidget == widget ? "selected" : "")"
+                                 draggable="@(resizingIds.Contains(widget.Id) ? "false" : "true")"
+                                 data-drag-type="widget"
+                                 data-drag-data="@widget.Id"
+                                 data-widget-id="@widget.Id"
+                                 @ondragstart="@((e) => OnWidgetDragStart(e, widget))"
+                                 @ondragstart:preventDefault="@(resizingIds.Contains(widget.Id))"
+                                 @ondragstart:stopPropagation
+                                 @ondragend="OnDragEnd"
+                                 @onclick="@(() => SelectWidget(widget))"
+                                 style="@(WidgetStyleHelper.GetFlowWidgetStyle(widget, selectedWidget == widget))">
 
-            <aside class="designer-panel designer-properties"
-                 @onclick="OnCanvasBackgroundClick">
-                @if (selectedWidget != null)
-                {
-                    <div class="designer-section" @onclick:stopPropagation>
-                        <h3>@I18n.T("LBL_WIDGET_PROPERTIES")</h3>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_COMPONENT_TYPE")</label>
-                            <Input Value="@selectedWidget.Type" Disabled Class="field-control" />
-                        </div>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_LABEL")</label>
-                            <Input @bind-Value="selectedWidget.Label" OnChange="@((string value) => UpdateWidget())" Class="field-control" />
-                        </div>
-
-                        <div class="designer-field designer-field-inline">
-                            <div class="designer-field">
-                                <label>@I18n.T("LBL_WIDTH")</label>
-                                @{
-                                    var widthMax = selectedWidget.GetMaxWidth();
-                                }
-                                @if (widthMax.HasValue)
+                                @if (selectedWidget == widget)
                                 {
-                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="@widthMax.Value" OnChange="@(value => UpdateWidget())" />
+                                    <div class="resize-handle"
+                                         draggable="false"
+                                         @onmousedown="@((e) => OnResizeStart(e, widget))"
+                                         @onmousedown:stopPropagation
+                                         @onmousedown:preventDefault
+                                         @ondragstart:preventDefault="true">
+                                    </div>
+                                }
+
+                                <div class="widget-content" style="width:100%; pointer-events:none">
+                                    @RenderWidgetVisual(widget)
+                                </div>
+                            </div>
+                        }
+                        @if (!layoutWidgets.Any())
+                        {
+                            <div class="designer-empty-state">
+                                <Icon Type="@IconType.Outline.Inbox" Style="font-size:48px; margin-bottom:12px" />
+                                <div>@I18n.T("LBL_DRAG_COMPONENT_HERE")</div>
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <aside class="designer-panel designer-properties"
+                     @onclick="OnCanvasBackgroundClick">
+                    @if (selectedWidget != null)
+                    {
+                        <div class="designer-section" @onclick:stopPropagation>
+                            <h3>@I18n.T("LBL_WIDGET_PROPERTIES")</h3>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_COMPONENT_TYPE")</label>
+                                <Input Value="@selectedWidget.Type" Disabled Class="field-control" />
+                            </div>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_LABEL")</label>
+                                <Input @bind-Value="selectedWidget.Label" OnChange="@((string value) => UpdateWidget())" Class="field-control" />
+                            </div>
+
+                            <div class="designer-field designer-field-inline">
+                                <div class="designer-field">
+                                    <label>@I18n.T("LBL_WIDTH")</label>
+                                    @{
+                                        var widthMax = selectedWidget.GetMaxWidth();
+                                    }
+                                    @if (widthMax.HasValue)
+                                    {
+                                        <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" Max="@widthMax.Value" OnChange="@(value => UpdateWidget())" />
+                                    }
+                                    else
+                                    {
+                                        <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" OnChange="@(value => UpdateWidget())" />
+                                    }
+                                </div>
+                                <div class="designer-field">
+                                    <label>@I18n.T("LBL_WIDTH_UNIT")</label>
+                                    <Select TItemValue="string" TItem="string"
+                                            Value="@selectedWidget.WidthUnit"
+                                            OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
+                                        <SelectOptions>
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%"/>
+                                            <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px"/>
+                                        </SelectOptions>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_DATA_SOURCE")</label>
+                                <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear OnSelectedItemChanged="@(item => UpdateWidget())">
+                                    @foreach (var field in availableFields)
+                                    {
+                                        <SelectOption Value="@field.Key" Label="@field.DisplayName" />
+                                    }
+                                </Select>
+                            </div>
+
+                            <div class="designer-switch-row">
+                                <label>@I18n.T("LBL_VISIBLE")</label>
+                                <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            <div class="designer-switch-row">
+                                <label>@I18n.T("LBL_NEW_LINE")</label>
+                                <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
+                            </div>
+
+                            @RenderTypeSpecificPropertyPanel(selectedWidget)
+
+                            <hr class="designer-divider" />
+
+                            <Button Danger OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="designer-section" @onclick:stopPropagation>
+                            <h3>@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_TEMPLATE_NAME")</label>
+                                <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" Class="field-control" />
+                            </div>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_DESCRIPTION")</label>
+                                <TextArea @bind-Value="description" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_DESCRIPTION")" Rows="3" />
+                            </div>
+
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_ENTITY_TYPE")</label>
+
+                                @if (isEntityTypeLocked)
+                                {
+                                    <Input Value="@GetEntityDisplayName()" Disabled Class="field-control" />
+                                    <div class="designer-badge">
+                                        🔒 @I18n.T("LBL_ENTITY_TYPE_LOCKED")
+                                    </div>
                                 }
                                 else
                                 {
-                                    <AntDesign.InputNumber TValue="int" @bind-Value="selectedWidget.Width" Min="1" OnChange="@(value => UpdateWidget())" />
+                                    <EntitySelector TEntity="EntityTypeItem"
+                                                    @bind-Value="entityType"
+                                                    Title="@I18n.T("LBL_SELECT_ENTITY_TYPE")"
+                                                    Placeholder="@I18n.T("LBL_CLICK_TO_SELECT_ENTITY")"
+                                                    EmptyText="@I18n.T("LBL_NO_AVAILABLE_ENTITIES")"
+                                                    DataLoader="LoadAvailableEntitiesForSelector"
+                                                    ValueGetter="@(e => e.EntityType)"
+                                                    DisplayTextGetter="@(e => e.DisplayName)"
+                                                    EnableSearch="true">
+                                        <TitleRenderer>
+                                            @context.DisplayName
+                                        </TitleRenderer>
+                                        <DescriptionRenderer>
+                                            @if (!string.IsNullOrWhiteSpace(context.Description))
+                                            {
+                                                @context.Description
+                                            }
+                                        </DescriptionRenderer>
+                                        <IconRenderer>
+                                            @if (!string.IsNullOrWhiteSpace(context.Icon))
+                                            {
+                                                <Icon Type="@context.Icon" Style="font-size:28px; color:var(--primary)" />
+                                            }
+                                        </IconRenderer>
+                                        <MetadataRenderer>
+                                            <Tag Color="@TagColor.Blue">@context.EntityName</Tag>
+                                            <Tag Color="@TagColor.Default">@context.ApiEndpoint</Tag>
+                                        </MetadataRenderer>
+                                    </EntitySelector>
+                                    <div class="designer-hint">
+                                        @I18n.T("LBL_ENTITY_TYPE_HINT")
+                                    </div>
                                 }
                             </div>
+
                             <div class="designer-field">
-                                <label>@I18n.T("LBL_WIDTH_UNIT")</label>
-                                <Select TItemValue="string" TItem="string"
-                                        Value="@selectedWidget.WidthUnit"
-                                        OnSelectedItemChanged="@(value => { selectedWidget.WidthUnit = value; UpdateWidget(); })">
-                                    <SelectOptions>
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("%")" Label="%"/>
-                                        <SelectOption TItemValue="string" TItem="string" Value="@("px")" Label="px"/>
-                                    </SelectOptions>
-                                </Select>
+                                <label>@I18n.T("LBL_COMPONENTS")</label>
+                                <div class="designer-count">@layoutWidgets.Count</div>
                             </div>
+
+                            <div class="designer-hint">
+                                <Icon Type="@IconType.Outline.InfoCircle" /> @I18n.T("LBL_TEMPLATE_INFO_HINT")
+                            </div>
+
+                            <hr class="designer-divider" />
+
+                            <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
                         </div>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_DATA_SOURCE")</label>
-                            <Select TItemValue="string" TItem="string" @bind-Value="selectedWidget.DataField" AllowClear OnSelectedItemChanged="@(item => UpdateWidget())">
-                                @foreach (var field in availableFields)
-                                {
-                                    <SelectOption Value="@field.Key" Label="@field.DisplayName" />
-                                }
-                            </Select>
-                        </div>
-
-                        <div class="designer-switch-row">
-                            <label>@I18n.T("LBL_VISIBLE")</label>
-                            <Switch @bind-Value="selectedWidget.Visible" OnChange="@(value => UpdateWidget())" />
-                        </div>
-
-                        <div class="designer-switch-row">
-                            <label>@I18n.T("LBL_NEW_LINE")</label>
-                            <Switch @bind-Value="selectedWidget.NewLine" OnChange="@(value => UpdateWidget())" />
-                        </div>
-
-                        @RenderTypeSpecificPropertyPanel(selectedWidget)
-
-                        <hr class="designer-divider" />
-
-                        <Button Danger OnClick="DeleteSelectedWidget" Icon="@IconType.Outline.Delete">@I18n.T("BTN_DELETE")</Button>
-                    </div>
-                }
-                else
-                {
-                    <div class="designer-section" @onclick:stopPropagation>
-                        <h3>@I18n.T("LBL_TEMPLATE_PROPERTIES")</h3>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_TEMPLATE_NAME")</label>
-                            <Input @bind-Value="templateName" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_NAME")" Class="field-control" />
-                        </div>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_DESCRIPTION")</label>
-                            <TextArea @bind-Value="description" Placeholder="@I18n.T("LBL_ENTER_TEMPLATE_DESCRIPTION")" Rows="3" />
-                        </div>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_ENTITY_TYPE")</label>
-
-                            @if (isEntityTypeLocked)
-                            {
-                                <Input Value="@GetEntityDisplayName()" Disabled Class="field-control" />
-                                <div class="designer-badge">
-                                    🔒 @I18n.T("LBL_ENTITY_TYPE_LOCKED")
-                                </div>
-                            }
-                            else
-                            {
-                                <EntitySelector TEntity="EntityTypeItem"
-                                                @bind-Value="entityType"
-                                                Title="@I18n.T("LBL_SELECT_ENTITY_TYPE")"
-                                                Placeholder="@I18n.T("LBL_CLICK_TO_SELECT_ENTITY")"
-                                                EmptyText="@I18n.T("LBL_NO_AVAILABLE_ENTITIES")"
-                                                DataLoader="LoadAvailableEntitiesForSelector"
-                                                ValueGetter="@(e => e.EntityType)"
-                                                DisplayTextGetter="@(e => e.DisplayName)"
-                                                EnableSearch="true">
-                                    <TitleRenderer>
-                                        @context.DisplayName
-                                    </TitleRenderer>
-                                    <DescriptionRenderer>
-                                        @if (!string.IsNullOrWhiteSpace(context.Description))
-                                        {
-                                            @context.Description
-                                        }
-                                    </DescriptionRenderer>
-                                    <IconRenderer>
-                                        @if (!string.IsNullOrWhiteSpace(context.Icon))
-                                        {
-                                            <Icon Type="@context.Icon" Style="font-size:28px; color:var(--primary)" />
-                                        }
-                                    </IconRenderer>
-                                    <MetadataRenderer>
-                                        <Tag Color="@TagColor.Blue">@context.EntityName</Tag>
-                                        <Tag Color="@TagColor.Default">@context.ApiEndpoint</Tag>
-                                    </MetadataRenderer>
-                                </EntitySelector>
-                                <div class="designer-hint">
-                                    @I18n.T("LBL_ENTITY_TYPE_HINT")
-                                </div>
-                            }
-                        </div>
-
-                        <div class="designer-field">
-                            <label>@I18n.T("LBL_COMPONENTS")</label>
-                            <div class="designer-count">@layoutWidgets.Count</div>
-                        </div>
-
-                        <div class="designer-hint">
-                            <Icon Type="@IconType.Outline.InfoCircle" /> @I18n.T("LBL_TEMPLATE_INFO_HINT")
-                        </div>
-
-                        <hr class="designer-divider" />
-
-                        <Button Type="@ButtonType.Primary" OnClick="SaveLayout" Icon="@IconType.Outline.Save">@I18n.T("BTN_SAVE_LAYOUT")</Button>
-                    </div>
-                }
-            </aside>
+                    }
+                </aside>
+            </div>
         </div>
-    </div>
-}
-</AuthChecker>
+    }
+    </AuthChecker>
+</CascadingValue>
 
 @code {
     [Parameter] public string? TemplateId { get; set; }
@@ -306,6 +320,8 @@ else
     private bool isEntityTypeLocked = false; // 实体类型是否已锁定（已设置的模板不允许修改实体类型）
     private bool loading = true;
     private string? error;
+
+    private readonly DesignerDragState dragState = new(); // 共享拖拽状态
 
     private List<DraggableWidget> layoutWidgets = new();
     private DraggableWidget? selectedWidget;
@@ -1253,6 +1269,7 @@ else
     {
         dropSucceeded = false;
         draggedEntityField = field;
+        dragState.CurrentEntityField = field;
         // 注意：不调用StateHasChanged()！在drag-start中重新渲染会导致浏览器终止拖拽
     }
 
@@ -1274,6 +1291,7 @@ else
             selectedWidget = newWidget;
             dropSucceeded = true;
             draggedDefinition = null;
+            dragState.CurrentEntityField = null;
             await InvokeAsync(StateHasChanged);
         }
         else if (draggedEntityField != null)
@@ -1295,6 +1313,7 @@ else
             selectedWidget = newWidget;
             dropSucceeded = true;
             draggedEntityField = null;
+            dragState.CurrentEntityField = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -1312,6 +1331,7 @@ else
             draggedDefinition = null;
             draggedWidget = null;
             draggedEntityField = null;
+            dragState.CurrentEntityField = null;
         }
         dropSucceeded = false;
         await InvokeAsync(StateHasChanged);
@@ -1405,6 +1425,7 @@ else
                 selectedWidget = newWidget;
                 dropSucceeded = true;
                 draggedEntityField = null;
+                dragState.CurrentEntityField = null;
 
                 await JS.InvokeVoidAsync("console.log", $"[FormDesigner] Added entity field widget to container at index {insertIndex}");
                 await InvokeAsync(StateHasChanged);

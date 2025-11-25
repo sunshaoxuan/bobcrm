@@ -136,7 +136,7 @@ public class DataGridWidget : DraggableWidget
             {
                 PropertyPath = "ColumnsJson",
                 Label = "PROP_COLUMNS",
-                EditorType = PropertyEditorType.Json,
+                EditorType = PropertyEditorType.ColumnDefinition,
                 Group = "PROP_GROUP_DATA"
             },
             new WidgetPropertyMetadata

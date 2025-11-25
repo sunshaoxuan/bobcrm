@@ -69,7 +69,10 @@ public enum PropertyEditorType
     DataSetPicker,
 
     /// <summary>字段选择器</summary>
-    FieldPicker
+    FieldPicker,
+
+    /// <summary>DataGrid 列定义编辑器</summary>
+    ColumnDefinition
 }
 
 /// <summary>

@@ -2,6 +2,7 @@
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services.Widgets
 @using System.Reflection
+@using BobCrm.App.Components.Designer.PropertyEditors
 @inject BobCrm.App.Services.I18nService I18n
 
 @* 通用属性编辑器 - 根据元数据动态渲染，支持Width属性根据单位动态调整Max值 *@
@@ -125,6 +126,14 @@
                                        Placeholder="@(!string.IsNullOrEmpty(prop.Placeholder) && prop.Placeholder.StartsWith("PROP_") ? I18n.T(prop.Placeholder) : prop.Placeholder)"
                                        Rows="3"
                                        OnChange="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))" />
+                    break;
+
+                case PropertyEditorType.ColumnDefinition:
+                    {
+                        var currentValue = GetPropertyValue(Widget, prop.PropertyPath)?.ToString();
+                        <ColumnDefinitionEditor Value="currentValue"
+                                                ValueChanged="@((string? val) => { SetPropertyValue(Widget, prop.PropertyPath, val); OnPropertyChanged?.Invoke(); })" />
+                    }
                     break;
             }
             

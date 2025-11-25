@@ -1,0 +1,206 @@
+@using AntDesign
+@using System.Text.Json
+@using BobCrm.App.Models.Widgets
+
+<div class="column-editor">
+    <div class="column-list">
+        @if (!columns.Any())
+        {
+            <Empty Description="@I18n.T("LBL_NO_COLUMNS")" />
+        }
+        else
+        {
+            @for (var i = 0; i < columns.Count; i++)
+            {
+                var col = columns[i];
+                <div class="column-row @(selectedIndex == i ? "active" : "")" @onclick="@(() => SelectIndex(i))">
+                    <div class="column-row-main">
+                        <Icon Type="@IconType.Outline.Drag" Style="color:#999" />
+                        <div class="column-row-text">
+                            <div class="title">@(!string.IsNullOrWhiteSpace(col.Label) ? col.Label : col.Field)</div>
+                            <div class="subtitle">@col.Field</div>
+                        </div>
+                    </div>
+                    <div class="column-row-actions">
+                        <Switch Checked="@col.Visible" CheckedChanged="@((bool v) => UpdateColumn(i, c => c.Visible = v))" />
+                        <Button Size="ButtonSize.Small" Type="ButtonType.Text" Danger Icon="@IconType.Outline.Delete" OnClick="@(() => RemoveColumn(i))" />
+                    </div>
+                </div>
+            }
+        }
+        <Button Type="ButtonType.Dashed" Block Icon="@IconType.Outline.Plus" OnClick="AddColumn">@I18n.T("BTN_ADD_COLUMN")</Button>
+    </div>
+
+    @if (selectedIndex.HasValue && selectedIndex.Value >= 0 && selectedIndex.Value < columns.Count)
+    {
+        var current = columns[selectedIndex.Value];
+        <div class="column-detail">
+            <Divider>@I18n.T("LBL_COLUMN_DETAIL")</Divider>
+            <div class="designer-field">
+                <label>@I18n.T("LBL_FIELD")</label>
+                <Input Value="@current.Field" Disabled />
+            </div>
+            <div class="designer-field">
+                <label>@I18n.T("LBL_LABEL")</label>
+                <Input @bind-Value="current.Label" OnChange="@((string v) => UpdateColumn(selectedIndex.Value, c => c.Label = v))" />
+            </div>
+            <div class="designer-field designer-field-inline">
+                <div class="designer-field">
+                    <label>@I18n.T("LBL_WIDTH")</label>
+                    <AntDesign.InputNumber TValue="int" Value="@(current.Width ?? 0)" Min="0" OnChange="@((int v) => UpdateColumn(selectedIndex.Value, c => c.Width = v <= 0 ? null : v))" />
+                </div>
+                <div class="designer-field">
+                    <label>@I18n.T("LBL_ALIGN")</label>
+                    <Select TItemValue="string" TItem="string" Value="@current.Align" OnSelectedItemChanged="@((string v) => UpdateColumn(selectedIndex.Value, c => c.Align = v))">
+                        <SelectOption Value="@("left")" Label="Left" />
+                        <SelectOption Value="@("center")" Label="Center" />
+                        <SelectOption Value="@("right")" Label="Right" />
+                    </Select>
+                </div>
+            </div>
+            <div class="designer-field">
+                <label>@I18n.T("LBL_FORMAT")</label>
+                <Input @bind-Value="current.Format" OnChange="@((string? v) => UpdateColumn(selectedIndex.Value, c => c.Format = v))" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    [Inject] private BobCrm.App.Services.I18nService I18n { get; set; } = default!;
+
+    private readonly JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
+    private List<DataGridColumn> columns = new();
+    private int? selectedIndex;
+
+    protected override void OnParametersSet()
+    {
+        columns = Deserialize(Value);
+        if (selectedIndex.HasValue && selectedIndex.Value >= columns.Count)
+        {
+            selectedIndex = columns.Count > 0 ? columns.Count - 1 : null;
+        }
+    }
+
+    private List<DataGridColumn> Deserialize(string? json)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                var parsed = JsonSerializer.Deserialize<List<DataGridColumn>>(json, jsonOptions);
+                if (parsed != null) return parsed;
+            }
+        }
+        catch
+        {
+            // ignore and fallback
+        }
+        return new List<DataGridColumn>();
+    }
+
+    private async Task NotifyChange()
+    {
+        var json = JsonSerializer.Serialize(columns, jsonOptions);
+        await ValueChanged.InvokeAsync(json);
+    }
+
+    private async Task AddColumn()
+    {
+        var index = columns.Count + 1;
+        columns.Add(new DataGridColumn
+        {
+            Field = $"field{index}",
+            Label = $"Column {index}",
+            Visible = true,
+            Sortable = true,
+            Align = "left"
+        });
+        selectedIndex = columns.Count - 1;
+        await NotifyChange();
+    }
+
+    private async Task RemoveColumn(int index)
+    {
+        if (index < 0 || index >= columns.Count) return;
+        columns.RemoveAt(index);
+        if (selectedIndex == index)
+        {
+            selectedIndex = columns.Count > 0 ? Math.Min(index, columns.Count - 1) : null;
+        }
+        await NotifyChange();
+    }
+
+    private void SelectIndex(int index)
+    {
+        selectedIndex = index;
+    }
+
+    private async Task UpdateColumn(int index, Action<DataGridColumn> updater)
+    {
+        if (index < 0 || index >= columns.Count) return;
+        updater(columns[index]);
+        await NotifyChange();
+    }
+}
+
+<style>
+    .column-editor {
+        display: flex;
+        gap: 12px;
+    }
+
+    .column-list {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .column-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border: 1px solid #f0f0f0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .column-row.active {
+        border-color: var(--primary, #739fd6);
+        box-shadow: 0 0 0 2px rgba(115, 159, 214, 0.12);
+    }
+
+    .column-row-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .column-row-text .title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .column-row-text .subtitle {
+        font-size: 11px;
+        color: #999;
+    }
+
+    .column-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .column-detail {
+        flex: 1;
+        min-width: 280px;
+    }
+</style>

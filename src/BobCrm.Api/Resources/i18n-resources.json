@@ -114,6 +114,11 @@
     "ja": "コード生成",
     "en": "Generate Code"
   },
+  "BTN_REGENERATE_DEFAULTS": {
+    "zh": "再生成默认模板",
+    "ja": "デフォルトテンプレート再生成",
+    "en": "Regenerate Defaults"
+  },
   "BTN_GENERATE_LAYOUT": {
     "zh": "生成布局",
     "ja": "レイアウトを生成",
@@ -2493,6 +2498,16 @@
     "zh": "导入成功",
     "ja": "インポートに成功しました",
     "en": "Import successful"
+  },
+  "MSG_REGENERATE_SUCCESS": {
+    "zh": "默认模板已重新生成",
+    "ja": "デフォルトテンプレートを再生成しました",
+    "en": "Default templates regenerated"
+  },
+  "MSG_REGENERATE_FAILED": {
+    "zh": "重新生成默认模板失败",
+    "ja": "デフォルトテンプレートの再生成に失敗しました",
+    "en": "Failed to regenerate default templates"
   },
   "MSG_INVALID_IMPORT_FILE": {
     "zh": "无效的导入文件",
@@ -4918,6 +4933,16 @@
     "zh": "请输入新模板名称:",
     "ja": "新しいテンプレート名を入力してください:",
     "en": "Please enter new template name:"
+  },
+  "TPL_PROMPT_REGENERATE_TITLE": {
+    "zh": "重新生成默认模板",
+    "ja": "デフォルトテンプレート再生成",
+    "en": "Regenerate default templates"
+  },
+  "TPL_PROMPT_REGENERATE_CONTENT": {
+    "zh": "此操作将覆盖系统默认的列表/详情/编辑模板，仅管理员可执行。确认继续？",
+    "ja": "この操作はシステムのデフォルト（一覧/詳細/編集）を上書きします。管理者のみ実行可です。続行しますか？",
+    "en": "This will overwrite system default List/Detail/Edit templates. Admins only. Continue?"
   },
   "TPL_COPIED_FROM": {
     "zh": "从 '{0}' 复制",
