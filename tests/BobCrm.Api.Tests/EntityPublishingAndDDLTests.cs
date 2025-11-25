@@ -65,9 +65,10 @@ public class EntityPublishingAndDDLTests : IDisposable
             .Setup(s => s.EnsureTemplatesAsync(
                 It.IsAny<EntityDefinition>(),
                 It.IsAny<string?>(),
+                It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<EntityDefinition, string?, CancellationToken>((entity, _, ct) =>
-                _templateGenerator.EnsureTemplatesAsync(entity, ct));
+            .Returns<EntityDefinition, string?, bool, CancellationToken>((entity, _, force, ct) =>
+                _templateGenerator.EnsureTemplatesAsync(entity, force, ct));
 
         _db.RoleProfiles.Add(new RoleProfile
         {
@@ -125,6 +126,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         result.ErrorMessage.Should().Contain("expected Draft");
     }
 
+
     [Fact]
     public async Task PublishNewEntityAsync_ShouldInvokeDefaultTemplateService()
     {
@@ -163,6 +165,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             s => s.EnsureTemplatesAsync(
                 It.Is<EntityDefinition>(e => e.Id == entity.Id),
                 "publisher",
+                It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce());
     }
@@ -539,6 +542,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             x => x.EnsureTemplatesAsync(
                 It.Is<EntityDefinition>(e => e.Id == entityId),
                 "test-user",
+                It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
