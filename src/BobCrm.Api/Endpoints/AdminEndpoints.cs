@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Services;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -168,6 +169,88 @@ public static class AdminEndpoints
         .WithName("AdminResetPassword")
         .WithSummary("重置管理员密码")
         .WithDescription("重置管理员账户密码（仅开发环境）");
+
+        // 重新生成默认模板（系统/现有实体）
+        group.MapPost("/templates/regenerate-defaults", async (
+            AppDbContext db,
+            IDefaultTemplateService templateService,
+            TemplateBindingService bindingService,
+            ILogger<Program> logger) =>
+        {
+            logger.LogInformation("[Admin] Regenerate-defaults called for all entities");
+            var entities = await db.EntityDefinitions
+                .Include(e => e.Fields)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var updated = 0;
+            foreach (var entity in entities)
+            {
+                var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
+                foreach (var kv in result.Templates)
+                {
+                    await bindingService.UpsertBindingAsync(
+                        entity.EntityRoute ?? entity.EntityName,
+                        kv.Key,
+                        kv.Value.Id,
+                        isSystem: true,
+                        updatedBy: "admin",
+                        requiredFunctionCode: null);
+                }
+
+                updated += result.Created.Count + result.Updated.Count;
+            }
+
+            logger.LogInformation("[Admin] Regenerated default templates for {Count} entities, changes={Updated}", entities.Count, updated);
+            return Results.Ok(new { entities = entities.Count, updated });
+        })
+        .WithName("RegenerateDefaultTemplates")
+        .WithSummary("重新生成默认模板")
+        .WithDescription("为所有实体重新生成系统默认模板，并更新绑定（仅开发环境）");
+
+        // 针对指定实体重新生成默认模板
+        group.MapPost("/templates/{entityRoute}/regenerate", async (
+            string entityRoute,
+            AppDbContext db,
+            IDefaultTemplateService templateService,
+            TemplateBindingService bindingService,
+            ILogger<Program> logger) =>
+        {
+            logger.LogInformation("[Admin] Regenerate defaults requested for entityRoute={EntityRoute}", entityRoute);
+            var entity = await db.EntityDefinitions
+                .Include(e => e.Fields)
+                .FirstOrDefaultAsync(e => e.EntityRoute == entityRoute || e.EntityName == entityRoute);
+
+            if (entity == null)
+            {
+                return Results.NotFound(new { error = $"Entity '{entityRoute}' not found" });
+            }
+
+            var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
+            foreach (var kv in result.Templates)
+            {
+                await bindingService.UpsertBindingAsync(
+                    entity.EntityRoute ?? entity.EntityName,
+                    kv.Key,
+                    kv.Value.Id,
+                    isSystem: true,
+                    updatedBy: "admin",
+                    requiredFunctionCode: null);
+            }
+
+            logger.LogInformation("[Admin] Regenerated templates for {Entity} created={Created} updated={Updated}",
+                entityRoute, result.Created.Count, result.Updated.Count);
+
+            return Results.Ok(new
+            {
+                entity = entityRoute,
+                created = result.Created.Count,
+                updated = result.Updated.Count
+            });
+        })
+        .WithName("RegenerateDefaultTemplatesForEntity")
+        .WithSummary("为指定实体重新生成默认模板")
+        .WithDescription("仅开发环境，管理员可对单个实体重新生成系统默认模板并更新绑定。");
 
         return app;
     }
