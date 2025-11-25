@@ -1,8 +1,8 @@
 @page "/templates"
-@rendermode RenderMode.InteractiveServer
 @using AppModels = BobCrm.App.Models
 @using BobCrm.Api.Contracts.DTOs
 @using BobCrm.Api.Base
+@using System.Text.Json
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
 @inject IJSRuntime JS
@@ -76,7 +76,17 @@
             @foreach (var group in groupedTemplates)
             {
                 <div class="template-section">
-                    <h3 class="section-title">@GetEntityDisplayName(group.EntityType)</h3>
+                    <div class="section-title-row">
+                        <h3 class="section-title">@GetEntityDisplayName(group.EntityType)</h3>
+                        @if (isAdmin)
+                        {
+                            <button class="btn btn-ghost btn-sm"
+                                    disabled="@regenerating"
+                                    @onclick="() => ConfirmRegenerate(group.EntityType)">
+                                🔄 @I18n.T("BTN_REGENERATE_DEFAULTS")
+                            </button>
+                        }
+                    </div>
                     <div style="display:grid; gap:12px">
                         @foreach (var template in group.Templates)
                         {
@@ -118,6 +128,13 @@
 <style>
     .template-section {
         margin-bottom: 32px;
+    }
+
+    .section-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
     }
 
     .section-title {
@@ -214,7 +231,9 @@
     private string message = "";
     private bool messageSuccess = false;
     private string? error = null;
-    private string groupBy = "none";
+    private string groupBy = "entity";
+    private bool isAdmin;
+    private bool regenerating;
 
     // 筛选器
     private string filterUsageType = "";
@@ -237,6 +256,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        await LoadMe();
         await LoadTemplates();
     }
 
@@ -367,6 +387,29 @@
         await LoadTemplates();
     }
 
+    private async Task LoadMe()
+    {
+        try
+        {
+            var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
+            if (!resp.IsSuccessStatusCode) return;
+            var me = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            if (me.TryGetProperty("roles", out var roles) && roles.ValueKind == JsonValueKind.Array)
+            {
+                isAdmin = roles.EnumerateArray().Any(r => string.Equals(r.GetString(), "admin", StringComparison.OrdinalIgnoreCase));
+            }
+            else if (me.TryGetProperty("role", out var roleProp))
+            {
+                var role = roleProp.GetString();
+                isAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        catch
+        {
+            isAdmin = false;
+        }
+    }
+
     private bool HasActiveFilters()
     {
         return !string.IsNullOrWhiteSpace(filterUsageType) ||
@@ -468,6 +511,51 @@
         }
     }
 
+    private async Task ConfirmRegenerate(string entityType)
+    {
+        if (regenerating) return;
+
+        var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+        {
+            Title = I18n.T("TPL_PROMPT_REGENERATE_TITLE"),
+            Content = I18n.T("TPL_PROMPT_REGENERATE_CONTENT"),
+            OkText = I18n.T("BTN_OK"),
+            CancelText = I18n.T("BTN_CANCEL")
+        });
+
+        if (!confirm) return;
+
+        await Regenerate(entityType);
+    }
+
+    private async Task Regenerate(string entityType)
+    {
+        regenerating = true;
+        try
+        {
+            var client = await Auth.CreateClientWithAuthAsync();
+            var resp = await client.PostAsync($"/api/admin/templates/{entityType}/regenerate", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowMessage(I18n.T("MSG_REGENERATE_SUCCESS"), true);
+                await LoadTemplates();
+            }
+            else
+            {
+                var err = await resp.Content.ReadAsStringAsync();
+                ShowMessage($"{I18n.T("MSG_REGENERATE_FAILED")}: {err}", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"{I18n.T("MSG_REGENERATE_FAILED")}: {ex.Message}", false);
+        }
+        finally
+        {
+            regenerating = false;
+        }
+    }
+
     private async Task DeleteTemplate(int templateId)
     {
         try
@@ -566,7 +654,8 @@
         // 元数据
         builder.OpenElement(21, "div");
         builder.AddAttribute(22, "class", "template-meta");
-        builder.AddContent(23, $"{I18n.T("LBL_UPDATED_AT")} {template.UpdatedAt:yyyy-MM-dd HH:mm}");
+        var localUpdated = DateTime.SpecifyKind(template.UpdatedAt, DateTimeKind.Utc).ToLocalTime();
+        builder.AddContent(23, $"{I18n.T("LBL_UPDATED_AT")} {localUpdated:yyyy-MM-dd HH:mm}");
         builder.CloseElement();
 
         builder.CloseElement(); // template-info
