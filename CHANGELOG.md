@@ -9,6 +9,24 @@
 
 ## [未发布] - 进行中
 
+### Fixed
+- **Template Regeneration**: Fixed "Regenerate Defaults" button unresponsiveness and timestamp behavior
+  - Added missing `<AntContainer />` component to `MainLayout.razor` to enable Ant Design modals
+  - Fixed i18n key from non-existent `BTN_CONFIRM` to `BTN_OK` in confirmation modal
+  - **Refactored force update logic**: Added `force` parameter to `IDefaultTemplateGenerator.EnsureTemplatesAsync()`
+    - System startup: Templates only update if content actually changed (timestamps preserved)
+    - Manual regeneration: Passing `force: true` ensures timestamps update even if content unchanged
+    - `AdminEndpoints` now explicitly passes `force: true` for user-triggered regeneration
+  - Resolved issue where template timestamps incorrectly matched service restart time
+  - Files modified:
+    - `src/BobCrm.Application/Templates/IDefaultTemplateGenerator.cs`
+    - `src/BobCrm.Api/Services/DefaultTemplateGenerator.cs`
+    - `src/BobCrm.Api/Services/DefaultTemplateService.cs`
+    - `src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
+    - `src/BobCrm.App/Components/Layout/MainLayout.razor`
+    - `src/BobCrm.App/Components/Pages/Templates.razor`
+    - `tests/BobCrm.Api.Tests/EntityPublishingAndDDLTests.cs`
+
 ### Added
 - 公共端点 `/api/entities/{entityType}/definition`：返回实体字段与接口投影，支持大小写、`entity_` 前缀、单复数候选；供 Form Designer/实体树加载系统实体。
 - 文档：新增《GUIDE-07 模板默认与设计器更新说明》（模板生成、设计器、多语展示的更新要点与验证清单）。
@@ -20,6 +38,7 @@
 - 实体结构树：改用 Ant Design Tree，支持图标/标签保留与实体引用字段懒加载；模板列表与 DataGrid 运行态：模板名/实体标签按 i18n Key 或模式翻译；无列配置时使用默认/占位列，避免空表渲染。
 - 设计器 Tooltip：统一使用语义文本色，避免浅底场景下字段标签（如 *Required）出现白底白字。
 - Form Designer：组件面板改为手风琴模式，默认只展开“实体结构”，切换分组时自动收起其他分组，减少滚动。
+- 模板列表页：默认按实体分组，管理员可在每个实体分组处一键再生成默认模板（前端确认，后端管理端点支持单实体/全量重建并更新绑定）。
 
 ---
 
