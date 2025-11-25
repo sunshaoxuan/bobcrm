@@ -157,8 +157,11 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     template.Name = nameKey;
                     result.Updated.Add(template);
                 }
-                if (template.LayoutJson != layoutJson || force)
+                
+                // Check force flag first to prevent unnecessary updates
+                if (force)
                 {
+                    // Force update requested (manual regeneration)
                     if (template.LayoutJson != layoutJson)
                     {
                         template.LayoutJson = layoutJson;
@@ -169,6 +172,17 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                         result.Updated.Add(template);
                     }
                 }
+                else if (template.LayoutJson != layoutJson)
+                {
+                    // Content actually changed, update layout and timestamp
+                    template.LayoutJson = layoutJson;
+                    template.UpdatedAt = DateTime.UtcNow;
+                    if (!result.Updated.Contains(template))
+                    {
+                        result.Updated.Add(template);
+                    }
+                }
+                // If force=false and content same, preserve existing timestamps
             }
 
             result.Templates[usage] = template;

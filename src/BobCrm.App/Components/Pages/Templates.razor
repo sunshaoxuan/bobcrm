@@ -534,7 +534,13 @@
         try
         {
             var client = await Auth.CreateClientWithAuthAsync();
-            var resp = await client.PostAsync($"/api/admin/templates/{entityType}/regenerate", null);
+            var url = $"/api/admin/templates/{entityType}/regenerate";
+            Console.WriteLine($"[Templates] Calling regenerate API: {url}");
+            
+            var resp = await client.PostAsync(url, null);
+            var content = await resp.Content.ReadAsStringAsync();
+            Console.WriteLine($"[Templates] Response status: {resp.StatusCode}, body: {content}");
+            
             if (resp.IsSuccessStatusCode)
             {
                 ShowMessage(I18n.T("MSG_REGENERATE_SUCCESS"), true);
@@ -542,12 +548,12 @@
             }
             else
             {
-                var err = await resp.Content.ReadAsStringAsync();
-                ShowMessage($"{I18n.T("MSG_REGENERATE_FAILED")}: {err}", false);
+                ShowMessage($"{I18n.T("MSG_REGENERATE_FAILED")}: {content}", false);
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[Templates] Exception: {ex}");
             ShowMessage($"{I18n.T("MSG_REGENERATE_FAILED")}: {ex.Message}", false);
         }
         finally
