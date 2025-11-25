@@ -15,6 +15,7 @@ public interface IDefaultTemplateGenerator
 
     Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entityDefinition,
+        bool force = false,
         CancellationToken cancellationToken = default);
 }
 

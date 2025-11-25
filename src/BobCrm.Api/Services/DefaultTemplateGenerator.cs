@@ -20,7 +20,8 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNamingPolicy = null
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
     // Design tokens for layout generation
@@ -88,6 +89,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
     public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entity,
+        bool force = false,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -155,9 +157,12 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     template.Name = nameKey;
                     result.Updated.Add(template);
                 }
-                if (template.LayoutJson != layoutJson)
+                if (template.LayoutJson != layoutJson || force)
                 {
-                    template.LayoutJson = layoutJson;
+                    if (template.LayoutJson != layoutJson)
+                    {
+                        template.LayoutJson = layoutJson;
+                    }
                     template.UpdatedAt = DateTime.UtcNow;
                     if (!result.Updated.Contains(template))
                     {

@@ -16,6 +16,7 @@ public interface IDefaultTemplateService
     Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entityDefinition,
         string? updatedBy,
+        bool force = false,
         CancellationToken ct = default);
 
     Task<FormTemplate> GetDefaultTemplateAsync(
@@ -44,11 +45,12 @@ public class DefaultTemplateService : IDefaultTemplateService
     public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entityDefinition,
         string? updatedBy,
+        bool force = false,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entityDefinition);
 
-        var result = await _generator.EnsureTemplatesAsync(entityDefinition, ct);
+        var result = await _generator.EnsureTemplatesAsync(entityDefinition, force: force, ct);
 
         if (result.Created.Count > 0 || result.Updated.Count > 0)
         {
