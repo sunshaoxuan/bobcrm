@@ -121,6 +121,13 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         foreach (var usage in usages)
         {
+            var fieldsForUsage = force
+                ? (entity.Fields?.ToList() ?? new List<FieldMetadata>())
+                : PrepareFields(entity);
+            if (fieldsForUsage.Count == 0)
+            {
+                continue;
+            }
             var nameKey = BuildTemplateNameKey(entity, usage);
             var template = await _db.FormTemplates
                 .FirstOrDefaultAsync(
@@ -129,7 +136,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                          t.UsageType == usage,
                     ct);
 
-            var layoutJson = BuildLayoutJson(entity, fields, usage);
+            var layoutJson = BuildLayoutJson(entity, fieldsForUsage, usage);
 
             if (template == null)
             {
@@ -157,32 +164,21 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     template.Name = nameKey;
                     result.Updated.Add(template);
                 }
-                
-                // Check force flag first to prevent unnecessary updates
-                if (force)
+
+                var existingFieldCount = CountDataFields(template.LayoutJson ?? string.Empty);
+                var shouldRegenerate = force || existingFieldCount != fieldsForUsage.Count;
+
+                // Manual regeneration or detected schema drift -> refresh layout & timestamp.
+                // Startup ensure with no schema drift -> preserve existing layout/timestamp.
+                if (shouldRegenerate)
                 {
-                    // Force update requested (manual regeneration)
-                    if (template.LayoutJson != layoutJson)
-                    {
-                        template.LayoutJson = layoutJson;
-                    }
+                    template.LayoutJson = EnsureAllFieldsPresent(layoutJson, fieldsForUsage, usage);
                     template.UpdatedAt = DateTime.UtcNow;
                     if (!result.Updated.Contains(template))
                     {
                         result.Updated.Add(template);
                     }
                 }
-                else if (template.LayoutJson != layoutJson)
-                {
-                    // Content actually changed, update layout and timestamp
-                    template.LayoutJson = layoutJson;
-                    template.UpdatedAt = DateTime.UtcNow;
-                    if (!result.Updated.Contains(template))
-                    {
-                        result.Updated.Add(template);
-                    }
-                }
-                // If force=false and content same, preserve existing timestamps
             }
 
             result.Templates[usage] = template;
@@ -414,6 +410,77 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 };
                 widgets.Add(permTreeWidget);
             }
+        }
+
+        return JsonSerializer.Serialize(widgets, JsonOptions);
+    }
+
+    private static int CountDataFields(string layoutJson)
+    {
+        if (string.IsNullOrWhiteSpace(layoutJson)) return 0;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(layoutJson);
+            var count = 0;
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    if (el.TryGetProperty("dataField", out _))
+                    {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string EnsureAllFieldsPresent(string layoutJson, IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
+    {
+        // 针对 Detail/Edit：确保新增字段也出现在布局中；List 的列保持生成逻辑，不在此补列。
+        if (usage == FormTemplateUsageType.List)
+        {
+            return layoutJson;
+        }
+
+        List<Dictionary<string, object?>> widgets;
+        try
+        {
+            widgets = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(layoutJson, JsonOptions)
+                      ?? new List<Dictionary<string, object?>>();
+        }
+        catch
+        {
+            widgets = new List<Dictionary<string, object?>>();
+        }
+
+        var existing = new HashSet<string>(
+            widgets.Select(w => w.TryGetValue("dataField", out var v) ? v?.ToString() ?? string.Empty : string.Empty),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in fields)
+        {
+            if (string.IsNullOrWhiteSpace(field.PropertyName)) continue;
+            if (existing.Contains(field.PropertyName)) continue;
+
+            var widgetType = ResolveWidgetType(field, usage);
+            widgets.Add(new Dictionary<string, object?>
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = widgetType,
+                ["label"] = ResolveLabel(field),
+                ["dataField"] = field.PropertyName,
+                ["required"] = field.IsRequired,
+                ["width"] = WIDTH_FIELD_PCT,
+                ["widthUnit"] = "%",
+                ["visible"] = true
+            });
         }
 
         return JsonSerializer.Serialize(widgets, JsonOptions);
