@@ -165,8 +165,12 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     result.Updated.Add(template);
                 }
 
-                var existingFieldCount = CountDataFields(template.LayoutJson ?? string.Empty);
-                var shouldRegenerate = force || existingFieldCount != fieldsForUsage.Count;
+                var expectedCount = usage == FormTemplateUsageType.List
+                    ? Math.Min(fieldsForUsage.Count, 8) // 列表模板只取前 8 个字段生成列
+                    : fieldsForUsage.Count;
+
+                var existingFieldCount = CountDataFields(template.LayoutJson ?? string.Empty, usage);
+                var shouldRegenerate = force || existingFieldCount != expectedCount;
 
                 // Manual regeneration or detected schema drift -> refresh layout & timestamp.
                 // Startup ensure with no schema drift -> preserve existing layout/timestamp.
@@ -415,13 +419,44 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         return JsonSerializer.Serialize(widgets, JsonOptions);
     }
 
-    private static int CountDataFields(string layoutJson)
+    private static int CountDataFields(string layoutJson, FormTemplateUsageType usage)
     {
         if (string.IsNullOrWhiteSpace(layoutJson)) return 0;
 
         try
         {
             using var doc = JsonDocument.Parse(layoutJson);
+            if (usage == FormTemplateUsageType.List)
+            {
+                // List 模板：解析 DataGrid 的 columnsJson，计算列数量，避免每次启动都被误判为需要重建
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in doc.RootElement.EnumerateArray())
+                    {
+                        if (el.TryGetProperty("columnsJson", out var colsJsonElement) &&
+                            colsJsonElement.ValueKind == JsonValueKind.String)
+                        {
+                            var colsJson = colsJsonElement.GetString();
+                            if (!string.IsNullOrWhiteSpace(colsJson))
+                            {
+                                try
+                                {
+                                    using var colsDoc = JsonDocument.Parse(colsJson);
+                                    if (colsDoc.RootElement.ValueKind == JsonValueKind.Array)
+                                    {
+                                        return colsDoc.RootElement.GetArrayLength();
+                                    }
+                                }
+                                catch
+                                {
+                                    // ignore parse errors and fallback below
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             var count = 0;
             if (doc.RootElement.ValueKind == JsonValueKind.Array)
             {
