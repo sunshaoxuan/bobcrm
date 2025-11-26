@@ -216,14 +216,26 @@ public static class AdminEndpoints
             TemplateBindingService bindingService,
             ILogger<Program> logger) =>
         {
-            logger.LogInformation("[Admin] Regenerate defaults requested for entityRoute={EntityRoute}", entityRoute);
+            var normalized = entityRoute?.Trim() ?? string.Empty;
+            logger.LogInformation("[Admin] Regenerate defaults requested for entityRoute={EntityRoute}", normalized);
+
+            // Case-insensitive match to avoid 404 when the client sends lower-case entity codes
+            var normalizedLower = normalized.ToLowerInvariant();
             var entity = await db.EntityDefinitions
                 .Include(e => e.Fields)
-                .FirstOrDefaultAsync(e => e.EntityRoute == entityRoute || e.EntityName == entityRoute);
+                .FirstOrDefaultAsync(e =>
+                    (e.EntityRoute ?? string.Empty).ToLower() == normalizedLower ||
+                    (e.EntityName ?? string.Empty).ToLower() == normalizedLower);
 
             if (entity == null)
             {
-                return Results.NotFound(new { error = $"Entity '{entityRoute}' not found" });
+                var available = await db.EntityDefinitions
+                    .Select(e => new { e.EntityRoute, e.EntityName })
+                    .ToListAsync();
+                logger.LogWarning("[Admin] Regenerate failed: entity {EntityRoute} not found. Available: {Available}",
+                    normalized,
+                    string.Join(", ", available.Select(a => a.EntityRoute ?? a.EntityName ?? string.Empty)));
+                return Results.NotFound(new { error = $"Entity '{normalized}' not found" });
             }
 
             var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
@@ -239,11 +251,11 @@ public static class AdminEndpoints
             }
 
             logger.LogInformation("[Admin] Regenerated templates for {Entity} created={Created} updated={Updated}",
-                entityRoute, result.Created.Count, result.Updated.Count);
+                normalized, result.Created.Count, result.Updated.Count);
 
             return Results.Ok(new
             {
-                entity = entityRoute,
+                entity = normalized,
                 created = result.Created.Count,
                 updated = result.Updated.Count
             });
