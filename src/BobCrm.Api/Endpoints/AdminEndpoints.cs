@@ -217,15 +217,16 @@ public static class AdminEndpoints
             ILogger<Program> logger) =>
         {
             var normalized = entityRoute?.Trim() ?? string.Empty;
+            var normalizedLower = normalized.ToLowerInvariant();
             logger.LogInformation("[Admin] Regenerate defaults requested for entityRoute={EntityRoute}", normalized);
 
-            // Case-insensitive match to avoid 404 when the client sends lower-case entity codes
-            var normalizedLower = normalized.ToLowerInvariant();
+            // Accept entityRoute, EntityName, or fully-qualified Namespace.EntityName (all case-insensitive)
             var entity = await db.EntityDefinitions
                 .Include(e => e.Fields)
                 .FirstOrDefaultAsync(e =>
                     (e.EntityRoute ?? string.Empty).ToLower() == normalizedLower ||
-                    (e.EntityName ?? string.Empty).ToLower() == normalizedLower);
+                    (e.EntityName ?? string.Empty).ToLower() == normalizedLower ||
+                    ((e.Namespace ?? string.Empty) + "." + (e.EntityName ?? string.Empty)).ToLower() == normalizedLower);
 
             if (entity == null)
             {
