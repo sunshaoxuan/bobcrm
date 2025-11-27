@@ -88,7 +88,16 @@ public class EntityPublishingService : IEntityPublishingService
             // 4. 应用接口字段（Base, Archive, Audit等）
             await ApplyInterfaceFieldsAsync(entity);
 
-            // 5. 生成CREATE TABLE DDL
+            // 5. 验证枚举引用
+            var enumValidation = await ValidateEnumReferencesAsync(entity);
+            if (!enumValidation.IsValid)
+            {
+                result.Success = false;
+                result.ErrorMessage = enumValidation.ErrorMessage;
+                return result;
+            }
+
+            // 6. 生成CREATE TABLE DDL
             var createScript = _ddlGenerator.GenerateCreateTableScript(entity);
             result.DDLScript = createScript;
 
@@ -177,7 +186,16 @@ public class EntityPublishingService : IEntityPublishingService
                 return result;
             }
 
-            // 4. 分析变更
+            // 4. 验证枚举引用
+            var enumValidation = await ValidateEnumReferencesAsync(entity);
+            if (!enumValidation.IsValid)
+            {
+                result.Success = false;
+                result.ErrorMessage = enumValidation.ErrorMessage;
+                return result;
+            }
+
+            // 5. 分析变更
             var changeAnalysis = await AnalyzeChangesAsync(entity);
             result.ChangeAnalysis = changeAnalysis;
 
@@ -430,6 +448,64 @@ public class EntityPublishingService : IEntityPublishingService
         }
     }
 
+    /// <summary>
+    /// 验证实体中所有枚举字段的引用是否有效
+    /// </summary>
+    private async Task<EnumValidationResult> ValidateEnumReferencesAsync(EntityDefinition entity)
+    {
+        var result = new EnumValidationResult { IsValid = true };
+
+        // 获取所有枚举字段
+        var enumFields = entity.Fields
+            .Where(f => f.DataType == FieldDataType.Enum && !f.IsDeleted)
+            .ToList();
+
+        if (enumFields.Count == 0)
+        {
+            return result; // 没有枚举字段，无需验证
+        }
+
+        // 加载所有枚举定义
+        var enumIds = enumFields
+            .Where(f => f.EnumDefinitionId.HasValue)
+            .Select(f => f.EnumDefinitionId!.Value)
+            .Distinct()
+            .ToList();
+
+        var existingEnums = await _db.EnumDefinitions
+            .Where(e => enumIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, e => e);
+
+        // 验证每个枚举字段
+        foreach (var field in enumFields)
+        {
+            if (!field.EnumDefinitionId.HasValue)
+            {
+                result.IsValid = false;
+                result.ErrorMessage = $"Field '{field.PropertyName}' has DataType=Enum but EnumDefinitionId is null. Please select an enum definition.";
+                return result;
+            }
+
+            if (!existingEnums.TryGetValue(field.EnumDefinitionId.Value, out var enumDef))
+            {
+                result.IsValid = false;
+                result.ErrorMessage = $"Field '{field.PropertyName}' references enum '{field.EnumDefinitionId.Value}' which does not exist. Please select a valid enum definition.";
+                return result;
+            }
+
+            if (!enumDef.IsEnabled)
+            {
+                result.IsValid = false;
+                var enumName = enumDef.DisplayName.TryGetValue("zh", out var name) ? name : enumDef.Code;
+                result.ErrorMessage = $"Field '{field.PropertyName}' references enum '{enumName}' which is disabled. Please enable the enum or select a different one.";
+                return result;
+            }
+        }
+
+        _logger.LogInformation("[Publish] ✓ Enum reference validation passed for {Count} enum fields", enumFields.Count);
+        return result;
+    }
+
     private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
     {
         var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
@@ -438,6 +514,15 @@ public class EntityPublishingService : IEntityPublishingService
             $"{baseCode}.DETAIL",
             $"{baseCode}.EDIT");
     }
+}
+
+/// <summary>
+/// 枚举引用验证结果
+/// </summary>
+public class EnumValidationResult
+{
+    public bool IsValid { get; set; }
+    public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
