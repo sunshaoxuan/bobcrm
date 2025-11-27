@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Base;
 
 /// <summary>
-/// 表单模板 - 支持每个实体多个命名模板
-/// 每个用户可以有一个默认模板，系统也可以有一个默认模板
+/// 表单模板
+/// 一个模板可以被多个视图状态共享
+/// 通过 TemplateStateBinding 表实现模板与状态的 N:M 关系
 /// </summary>
 public class FormTemplate
 {
@@ -40,18 +42,16 @@ public class FormTemplate
     /// <summary>模板版本号（用于跟踪变更）</summary>
     [NotMapped]
     public int Version { get; set; } = 1;
-
+    
     /// <summary>布局JSON（Widget树）</summary>
     public string? LayoutJson { get; set; }
-
-    /// <summary>使用场景</summary>
-    public BobCrm.Api.Base.FormTemplateUsageType UsageType { get; set; } = BobCrm.Api.Base.FormTemplateUsageType.Detail;
-
+    
     /// <summary>标签集合</summary>
     public List<string>? Tags { get; set; }
-
+    
     /// <summary>访问所需功能编码</summary>
     public string? RequiredFunctionCode { get; set; }
+    
     /// <summary>模板描述（可选）</summary>
     public string? Description { get; set; }
 
@@ -93,4 +93,12 @@ public class FormTemplate
     /// 用于判断模板是否可以删除
     /// </summary>
     public bool IsInUse { get; set; } = false;
+    
+    // ========== 导航属性 ==========
+    
+    /// <summary>
+    /// 此模板绑定的状态列表
+    /// 一个模板可以被多个状态共享
+    /// </summary>
+    public List<TemplateStateBinding> StateBindings { get; set; } = new();
 }
