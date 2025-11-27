@@ -1,68 +1,155 @@
 @using System.Net.Http.Json
+@using BobCrm.Api.Contracts.DTOs
+@using AntDesign
 @inject HttpClient Http
 @inject BobCrm.App.Services.ToastService Toast
+@inject I18nService I18n
 
 @*
     EnumSelector - 枚举选择器组件
-    动态加载枚举选项的下拉选择器
+    动态加载枚举选项的下拉选择器，使用 Ant Design 组件
 *@
 
 @if (_isLoading)
 {
-    <p>加载中...</p>
+    <Spin Size="@SpinSize.Small" />
 }
 else if (_error != null)
 {
-    <p style="color: red;">@_error</p>
+    <Alert Type="@AlertType.Error" Message="@_error" ShowIcon />
 }
 else if (MultiSelect)
 {
-    <select multiple @onchange="HandleMultiChange" style="width: 100%; padding: 8px;">
-        @foreach (var option in _options)
-        {
-            <option value="@option.Value" selected="@(_selectedValues?.Contains(option.Value) ?? false)">
-                @GetDisplayName(option)
-            </option>
-        }
-    </select>
+    <Select Mode="multiple"
+            Value="_selectedValues"
+            OnSelectedItemsChanged="HandleMultiSelectChangeAsync"
+            Placeholder="@Placeholder"
+            AllowClear
+            ShowSearch
+            Disabled="@Disabled"
+            Style="width: 100%;">
+        <SelectOptions>
+            @foreach (var option in _options)
+            {
+                <SelectOption TItemValue="string" TItem="string" Value="@option.Value" Label="@GetDisplayName(option)">
+                    @if (!string.IsNullOrEmpty(option.ColorTag))
+                    {
+                        <Tag Color="@option.ColorTag">
+                            @if (!string.IsNullOrEmpty(option.Icon))
+                            {
+                                <Icon Type="@option.Icon" Theme="outline" />
+                                <span> </span>
+                            }
+                            @GetDisplayName(option)
+                        </Tag>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(option.Icon))
+                        {
+                            <Icon Type="@option.Icon" Theme="outline" />
+                            <span> </span>
+                        }
+                        @GetDisplayName(option)
+                    }
+                </SelectOption>
+            }
+        </SelectOptions>
+    </Select>
 }
 else
 {
-    <select @bind="@_selectedValue" @bind:after="HandleSingleChange" style="width: 100%; padding: 8px;">
-        <option value="">@Placeholder</option>
-        @foreach (var option in _options)
-        {
-            <option value="@option.Value">
-                @GetDisplayName(option)
-            </option>
-        }
-    </select>
+    <Select Value="@_selectedValue"
+            OnSelectedItemChanged="HandleSingleSelectChangeAsync"
+            Placeholder="@Placeholder"
+            AllowClear
+            ShowSearch
+            Disabled="@Disabled"
+            Style="width: 100%;">
+        <SelectOptions>
+            @foreach (var option in _options)
+            {
+                <SelectOption TItemValue="string" TItem="string" Value="@option.Value" Label="@GetDisplayName(option)">
+                    @if (!string.IsNullOrEmpty(option.ColorTag))
+                    {
+                        <Tag Color="@option.ColorTag">
+                            @if (!string.IsNullOrEmpty(option.Icon))
+                            {
+                                <Icon Type="@option.Icon" Theme="outline" />
+                                <span> </span>
+                            }
+                            @GetDisplayName(option)
+                        </Tag>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(option.Icon))
+                        {
+                            <Icon Type="@option.Icon" Theme="outline" />
+                            <span> </span>
+                        }
+                        @GetDisplayName(option)
+                    }
+                </SelectOption>
+            }
+        </SelectOptions>
+    </Select>
 }
 
 @code {
+    /// <summary>
+    /// 枚举代码（用于加载枚举定义）
+    /// </summary>
     [Parameter, EditorRequired]
     public string EnumCode { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 单选模式的值
+    /// </summary>
     [Parameter]
     public string? Value { get; set; }
 
+    /// <summary>
+    /// 单选值变更回调
+    /// </summary>
     [Parameter]
     public EventCallback<string?> ValueChanged { get; set; }
 
+    /// <summary>
+    /// 多选模式的值
+    /// </summary>
     [Parameter]
     public IEnumerable<string>? Values { get; set; }
 
+    /// <summary>
+    /// 多选值变更回调
+    /// </summary>
     [Parameter]
     public EventCallback<IEnumerable<string>?> ValuesChanged { get; set; }
 
+    /// <summary>
+    /// 是否多选模式
+    /// </summary>
     [Parameter]
     public bool MultiSelect { get; set; } = false;
 
+    /// <summary>
+    /// 占位符文本
+    /// </summary>
     [Parameter]
     public string Placeholder { get; set; } = "请选择...";
 
+    /// <summary>
+    /// 当前语言
+    /// </summary>
     [Parameter]
     public string CurrentLanguage { get; set; } = "zh";
+
+    /// <summary>
+    /// 是否禁用
+    /// </summary>
+    [Parameter]
+    public bool Disabled { get; set; } = false;
 
     private bool _isLoading = true;
     private string? _error;
@@ -79,16 +166,48 @@ else
 
     protected override void OnParametersSet()
     {
-        if (MultiSelect && Values != null)
+        base.OnParametersSet();
+
+        // Sync local state with parameters when they change externally
+        if (MultiSelect)
         {
             _selectedValues = Values;
         }
-        else if (!MultiSelect && Value != null)
+        else
         {
             _selectedValue = Value;
         }
     }
 
+    /// <summary>
+    /// 处理单选值变更
+    /// </summary>
+    private async Task HandleSingleSelectChangeAsync(string value)
+    {
+        _selectedValue = value;
+
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    /// <summary>
+    /// 处理多选值变更
+    /// </summary>
+    private async Task HandleMultiSelectChangeAsync(IEnumerable<string> values)
+    {
+        _selectedValues = values;
+
+        if (ValuesChanged.HasDelegate)
+        {
+            await ValuesChanged.InvokeAsync(values);
+        }
+    }
+
+    /// <summary>
+    /// 加载枚举选项
+    /// </summary>
     private async Task LoadOptionsAsync()
     {
         _isLoading = true;
@@ -97,7 +216,7 @@ else
         try
         {
             var response = await Http.GetAsync($"/api/enums/by-code/{EnumCode}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var enumDef = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
@@ -111,12 +230,12 @@ else
             }
             else
             {
-                _error = $"无法加载枚举 '{EnumCode}'";
+                _error = $"{I18n.T("MSG_ENUM_LOAD_FAILED")} '{EnumCode}'";
             }
         }
         catch (Exception ex)
         {
-            _error = $"加载枚举选项时出错: {ex.Message}";
+            _error = $"{I18n.T("MSG_ERROR")}: {ex.Message}";
         }
         finally
         {
@@ -124,51 +243,16 @@ else
         }
     }
 
+    /// <summary>
+    /// 获取枚举选项的显示名称
+    /// </summary>
     private string GetDisplayName(EnumOptionDto option)
     {
         if (option.DisplayName.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrEmpty(name))
         {
             return name;
         }
-        
+
         return option.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? option.Value;
-    }
-
-    private async Task HandleSingleChange()
-    {
-        if (ValueChanged.HasDelegate)
-        {
-            await ValueChanged.InvokeAsync(_selectedValue);
-        }
-    }
-
-    private async Task HandleMultiChange(ChangeEventArgs e)
-    {
-        if (e.Value is string[] values)
-        {
-            _selectedValues = values;
-            if (ValuesChanged.HasDelegate)
-            {
-                await ValuesChanged.InvokeAsync(values);
-            }
-        }
-    }
-
-    private class EnumDefinitionDto
-    {
-        public Guid Id { get; set; }
-        public string Code { get; set; } = string.Empty;
-        public List<EnumOptionDto> Options { get; set; } = new();
-    }
-
-    private class EnumOptionDto
-    {
-        public Guid Id { get; set; }
-        public string Value { get; set; } = string.Empty;
-        public Dictionary<string, string?> DisplayName { get; set; } = new();
-        public int SortOrder { get; set; }
-        public bool IsEnabled { get; set; }
-        public string? ColorTag { get; set; }
-        public string? Icon { get; set; }
     }
 }
