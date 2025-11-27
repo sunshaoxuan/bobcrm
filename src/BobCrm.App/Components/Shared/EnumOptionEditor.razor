@@ -1,0 +1,262 @@
+@using BobCrm.Api.Contracts.DTOs
+@using AntDesign
+@inject I18nService I18n
+@inject ToastService Toast
+
+@*
+    EnumOptionEditor - 枚举选项编辑器
+    用于管理枚举的所有选项：增删改、排序、启用/禁用
+*@
+
+<div class="enum-option-editor">
+    <div class="editor-header">
+        <h3>@I18n.T("LBL_ENUM_OPTIONS")</h3>
+        <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" Size="@ButtonSize.Small" OnClick="AddNewOption">
+            @I18n.T("BTN_ADD_OPTION")
+        </Button>
+    </div>
+
+    @if (Options.Count == 0)
+    {
+        <Empty Description="@I18n.T("LBL_NO_ENUM_OPTIONS")" />
+    }
+    else
+    {
+        <div class="options-list">
+            @foreach (var (option, index) in Options.Select((o, i) => (o, i)))
+            {
+                <div class="option-item @(_expandedOptionId == option.Id ? "expanded" : "")">
+                    <div class="option-header" @onclick="() => ToggleExpand(option.Id)">
+                        <div class="option-drag-handle">
+                            <Icon Type="@IconType.Outline.Drag" />
+                        </div>
+                        <div class="option-info">
+                            <Tag Color="@(option.IsEnabled ? "blue" : "default")">@option.Value</Tag>
+                            <span class="option-display-name">@GetDisplayName(option.DisplayName)</span>
+                            @if (!string.IsNullOrEmpty(option.ColorTag))
+                            {
+                                <Tag Color="@option.ColorTag">@option.ColorTag</Tag>
+                            }
+                        </div>
+                        <div class="option-actions">
+                            <Button Size="@ButtonSize.Small" Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp"
+                                    Disabled="@(index == 0)" OnClick="@(() => MoveUp(index))" />
+                            <Button Size="@ButtonSize.Small" Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowDown"
+                                    Disabled="@(index == Options.Count - 1)" OnClick="@(() => MoveDown(index))" />
+                            <Button Size="@ButtonSize.Small" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Delete"
+                                    OnClick="@(() => DeleteOption(index))" />
+                        </div>
+                    </div>
+
+                    @if (_expandedOptionId == option.Id)
+                    {
+                        <div class="option-details">
+                            <Form Model="option" LabelCol="new ColLayoutParam { Span = 6 }" WrapperCol="new ColLayoutParam { Span = 18 }">
+                                <FormItem Label="@I18n.T("LBL_OPTION_VALUE")">
+                                    <Input @bind-Value="option.Value" Placeholder="@I18n.T("PH_OPTION_VALUE")" MaxLength="64" />
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
+                                    <MultilingualInput @bind-Translations="option.DisplayName"
+                                                       Languages="@_supportedLanguages"
+                                                       Required="true" />
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
+                                    <MultilingualInput @bind-Translations="option.Description"
+                                                       Languages="@_supportedLanguages"
+                                                       InputType="textarea" />
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_SORT_ORDER")">
+                                    <AntDesign.InputNumber @bind-Value="option.SortOrder" Min="0" />
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_COLOR_TAG")">
+                                    <Select @bind-Value="option.ColorTag" AllowClear>
+                                        <SelectOptions>
+                                            <SelectOption Value="red" Label="Red">
+                                                <Tag Color="red">Red</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="orange" Label="Orange">
+                                                <Tag Color="orange">Orange</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="yellow" Label="Yellow">
+                                                <Tag Color="yellow">Yellow</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="green" Label="Green">
+                                                <Tag Color="green">Green</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="blue" Label="Blue">
+                                                <Tag Color="blue">Blue</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="purple" Label="Purple">
+                                                <Tag Color="purple">Purple</Tag>
+                                            </SelectOption>
+                                            <SelectOption Value="magenta" Label="Magenta">
+                                                <Tag Color="magenta">Magenta</Tag>
+                                            </SelectOption>
+                                        </SelectOptions>
+                                    </Select>
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_ICON")">
+                                    <Input @bind-Value="option.Icon" Placeholder="e.g., check-circle" MaxLength="64" />
+                                    @if (!string.IsNullOrEmpty(option.Icon))
+                                    {
+                                        <div style="margin-top: 8px;">
+                                            <span>@I18n.T("LBL_PREVIEW"): </span>
+                                            <Icon Type="@option.Icon" Theme="outline" />
+                                        </div>
+                                    }
+                                </FormItem>
+
+                                <FormItem Label="@I18n.T("LBL_ENABLED")">
+                                    <Switch @bind-Checked="option.IsEnabled" />
+                                </FormItem>
+                            </Form>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// 枚举选项列表
+    /// </summary>
+    [Parameter, EditorRequired]
+    public List<EnumOptionDto> Options { get; set; } = new();
+
+    /// <summary>
+    /// 选项变更回调
+    /// </summary>
+    [Parameter]
+    public EventCallback<List<EnumOptionDto>> OptionsChanged { get; set; }
+
+    private Guid? _expandedOptionId;
+    private readonly string[] _supportedLanguages = new[] { "zh", "en", "ja" };
+
+    /// <summary>
+    /// 添加新选项
+    /// </summary>
+    private async Task AddNewOption()
+    {
+        var newOption = new EnumOptionDto
+        {
+            Id = Guid.NewGuid(),
+            Value = $"OPTION_{Options.Count + 1}",
+            DisplayName = new Dictionary<string, string?>
+            {
+                { "zh", "" },
+                { "en", "" },
+                { "ja", "" }
+            },
+            Description = new Dictionary<string, string?>
+            {
+                { "zh", "" },
+                { "en", "" },
+                { "ja", "" }
+            },
+            SortOrder = Options.Count,
+            IsEnabled = true
+        };
+
+        Options.Add(newOption);
+        _expandedOptionId = newOption.Id;
+
+        if (OptionsChanged.HasDelegate)
+        {
+            await OptionsChanged.InvokeAsync(Options);
+        }
+    }
+
+    /// <summary>
+    /// 删除选项
+    /// </summary>
+    private async Task DeleteOption(int index)
+    {
+        Options.RemoveAt(index);
+
+        // 重新计算SortOrder
+        for (int i = 0; i < Options.Count; i++)
+        {
+            Options[i].SortOrder = i;
+        }
+
+        if (OptionsChanged.HasDelegate)
+        {
+            await OptionsChanged.InvokeAsync(Options);
+        }
+
+        Toast.Success(I18n.T("MSG_OPTION_DELETED"));
+    }
+
+    /// <summary>
+    /// 向上移动选项
+    /// </summary>
+    private async Task MoveUp(int index)
+    {
+        if (index > 0)
+        {
+            (Options[index], Options[index - 1]) = (Options[index - 1], Options[index]);
+
+            // 更新SortOrder
+            Options[index].SortOrder = index;
+            Options[index - 1].SortOrder = index - 1;
+
+            if (OptionsChanged.HasDelegate)
+            {
+                await OptionsChanged.InvokeAsync(Options);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 向下移动选项
+    /// </summary>
+    private async Task MoveDown(int index)
+    {
+        if (index < Options.Count - 1)
+        {
+            (Options[index], Options[index + 1]) = (Options[index + 1], Options[index]);
+
+            // 更新SortOrder
+            Options[index].SortOrder = index;
+            Options[index + 1].SortOrder = index + 1;
+
+            if (OptionsChanged.HasDelegate)
+            {
+                await OptionsChanged.InvokeAsync(Options);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 切换选项展开/收起
+    /// </summary>
+    private void ToggleExpand(Guid optionId)
+    {
+        _expandedOptionId = _expandedOptionId == optionId ? null : optionId;
+    }
+
+    /// <summary>
+    /// 获取显示名称
+    /// </summary>
+    private string GetDisplayName(Dictionary<string, string?> displayName)
+    {
+        var langOrder = new[] { I18n.CurrentLang, "zh", "en", "ja" };
+
+        foreach (var lang in langOrder)
+        {
+            if (displayName.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                return value!;
+            }
+        }
+
+        return displayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+    }
+}

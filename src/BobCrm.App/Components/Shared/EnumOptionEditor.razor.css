@@ -1,0 +1,81 @@
+.enum-option-editor {
+    padding: 16px;
+    background: var(--bg-color);
+    border-radius: var(--border-radius);
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.editor-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.option-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+    transition: all 0.3s;
+}
+
+.option-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.option-item.expanded {
+    border-color: var(--primary-color);
+}
+
+.option-header {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    cursor: pointer;
+    gap: 12px;
+}
+
+.option-drag-handle {
+    cursor: move;
+    color: var(--text-color-secondary);
+    display: flex;
+    align-items: center;
+}
+
+.option-drag-handle:hover {
+    color: var(--primary-color);
+}
+
+.option-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.option-display-name {
+    font-weight: 500;
+}
+
+.option-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.option-details {
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-color-secondary);
+}

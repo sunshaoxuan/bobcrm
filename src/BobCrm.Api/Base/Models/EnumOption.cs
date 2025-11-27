@@ -42,6 +42,12 @@ public class EnumOption
     public bool IsEnabled { get; set; } = true;
     
     /// <summary>
+    /// 是否系统必需选项
+    /// 系统选项不可通过UI删除或修改，启动时检查并自动重建
+    /// </summary>
+    public bool IsSystem { get; set; } = false;
+    
+    /// <summary>
     /// 颜色标记（可选，用于UI显示）
     /// 例如: "red", "green", "blue", "#FF5733"
     /// </summary>

@@ -1,0 +1,157 @@
+@using BobCrm.Api.Contracts.DTOs
+@using AntDesign
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject I18nService I18n
+
+@*
+    EnumDisplay - 枚举值只读显示组件
+    用于在表单或列表中以只读方式显示枚举值
+*@
+
+@if (_isLoading)
+{
+    <Spin Size="@SpinSize.Small" />
+}
+else if (_error != null)
+{
+    <span style="color: red;">@_error</span>
+}
+else if (_displayValue != null)
+{
+    @if (!string.IsNullOrEmpty(_option?.ColorTag))
+    {
+        <Tag Color="@_option.ColorTag">
+            @if (!string.IsNullOrEmpty(_option.Icon))
+            {
+                <Icon Type="@_option.Icon" Theme="outline" />
+                <span> </span>
+            }
+            @_displayValue
+        </Tag>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(_option?.Icon))
+        {
+            <Icon Type="@_option.Icon" Theme="outline" />
+            <span> </span>
+        }
+        <span>@_displayValue</span>
+    }
+}
+else
+{
+    <span style="color: #999;">-</span>
+}
+
+@code {
+    /// <summary>
+    /// 枚举代码（用于加载枚举定义）
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string EnumCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 枚举选项值
+    /// </summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>
+    /// 当前语言
+    /// </summary>
+    [Parameter]
+    public string CurrentLanguage { get; set; } = "zh";
+
+    /// <summary>
+    /// 是否显示为Tag（带颜色和图标）
+    /// </summary>
+    [Parameter]
+    public bool AsTag { get; set; } = true;
+
+    private bool _isLoading = true;
+    private string? _error;
+    private string? _displayValue;
+    private EnumOptionDto? _option;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDisplayValueAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(Value))
+        {
+            _displayValue = null;
+            _option = null;
+            _isLoading = false;
+            return;
+        }
+
+        await LoadDisplayValueAsync();
+    }
+
+    /// <summary>
+    /// 加载枚举选项的显示值
+    /// </summary>
+    private async Task LoadDisplayValueAsync()
+    {
+        if (string.IsNullOrEmpty(EnumCode) || string.IsNullOrEmpty(Value))
+        {
+            _isLoading = false;
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            var response = await Http.GetAsync($"/api/enums/by-code/{EnumCode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var enumDef = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+                if (enumDef != null)
+                {
+                    _option = enumDef.Options.FirstOrDefault(o => o.Value == Value);
+                    if (_option != null)
+                    {
+                        _displayValue = GetDisplayName(_option.DisplayName);
+                    }
+                    else
+                    {
+                        _displayValue = Value; // Fallback to raw value
+                    }
+                }
+            }
+            else
+            {
+                _error = $"{I18n.T("MSG_ENUM_LOAD_FAILED")} '{EnumCode}'";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"{I18n.T("MSG_ERROR")}: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 获取枚举选项的显示名称
+    /// </summary>
+    private string GetDisplayName(Dictionary<string, string?> displayName)
+    {
+        if (displayName.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrEmpty(name))
+        {
+            return name;
+        }
+
+        return displayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? Value ?? string.Empty;
+    }
+}

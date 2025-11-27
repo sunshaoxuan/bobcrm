@@ -5003,5 +5003,50 @@
     "zh": "创建失败",
     "ja": "作成に失敗しました",
     "en": "Create failed"
+  },
+  "TITLE_CREATE_ENUM": {
+    "zh": "创建枚举",
+    "ja": "列挙型を作成",
+    "en": "Create Enum"
+  },
+  "TITLE_EDIT_ENUM": {
+    "zh": "编辑枚举",
+    "ja": "列挙型を編集",
+    "en": "Edit Enum"
+  },
+  "MSG_OPTION_DELETED": {
+    "zh": "选项已删除",
+    "ja": "オプションが削除されました",
+    "en": "Option deleted"
+  },
+  "PH_ENUM_CODE": {
+    "zh": "例如: customer_type",
+    "ja": "例: customer_type",
+    "en": "e.g., customer_type"
+  },
+  "HELP_ENUM_CODE": {
+    "zh": "枚举代码用于在系统中唯一标识此枚举，创建后不可修改",
+    "ja": "列挙型コードはシステム内でこの列挙型を一意に識別するために使用され、作成後は変更できません",
+    "en": "Enum code is used to uniquely identify this enum in the system and cannot be modified after creation"
+  },
+  "MSG_SYSTEM_ENUM_WARNING": {
+    "zh": "这是系统内置枚举，只能修改显示名称和描述，不能删除",
+    "ja": "これはシステム組み込みの列挙型であり、表示名と説明のみ変更可能で、削除はできません",
+    "en": "This is a system built-in enum. Only display name and description can be modified, cannot be deleted"
+  },
+  "LBL_NO_ENUM_OPTIONS": {
+    "zh": "暂无枚举选项",
+    "ja": "列挙オプションがありません",
+    "en": "No enum options"
+  },
+  "PH_OPTION_VALUE": {
+    "zh": "例如: ENTERPRISE",
+    "ja": "例: ENTERPRISE",
+    "en": "e.g., ENTERPRISE"
+  },
+  "LBL_PREVIEW": {
+    "zh": "预览",
+    "ja": "プレビュー",
+    "en": "Preview"
   }
 }

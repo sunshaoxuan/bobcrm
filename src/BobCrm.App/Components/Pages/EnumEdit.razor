@@ -1,0 +1,243 @@
+@page "/system/enums/create"
+@page "/system/enums/edit/{Id:guid}"
+@using BobCrm.Api.Contracts.DTOs
+@using AntDesign
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject EnumDefinitionService EnumService
+@inject I18nService I18n
+@inject NavigationManager Nav
+@inject ToastService Toast
+
+<PageTitle>@(_isCreateMode ? I18n.T("TITLE_CREATE_ENUM") : I18n.T("TITLE_EDIT_ENUM"))</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@(_isCreateMode ? I18n.T("TITLE_CREATE_ENUM") : I18n.T("TITLE_EDIT_ENUM"))"
+                OnBack="NavigateBack">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Button OnClick="NavigateBack">
+                        @I18n.T("BTN_CANCEL")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Save" Loading="_saving" OnClick="SaveAsync">
+                        @I18n.T("BTN_SAVE")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <div style="padding: 24px; max-width: 1200px; margin: 0 auto;">
+        @if (_loading)
+        {
+            <Spin Tip="@I18n.T("LBL_LOADING")" />
+        }
+        else if (_enumDef != null)
+        {
+            <Card>
+                <Form Model="_enumDef" LabelCol="new ColLayoutParam { Span = 4 }" WrapperCol="new ColLayoutParam { Span = 20 }">
+                    <FormItem Label="@I18n.T("LBL_ENUM_CODE")" Required>
+                        <Input @bind-Value="_enumDef.Code"
+                               Placeholder="@I18n.T("PH_ENUM_CODE")"
+                               MaxLength="128"
+                               Disabled="@(!_isCreateMode)" />
+                        <div style="margin-top: 4px; font-size: 12px; color: #999;">
+                            @I18n.T("HELP_ENUM_CODE")
+                        </div>
+                    </FormItem>
+
+                    <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")" Required>
+                        <MultilingualInput @bind-Translations="_enumDef.DisplayName"
+                                           Languages="@_supportedLanguages"
+                                           Required="true" />
+                    </FormItem>
+
+                    <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
+                        <MultilingualInput @bind-Translations="_enumDef.Description"
+                                           Languages="@_supportedLanguages"
+                                           InputType="textarea" />
+                    </FormItem>
+
+                    <FormItem Label="@I18n.T("LBL_ENABLED")">
+                        <Switch @bind-Checked="_enumDef.IsEnabled" />
+                    </FormItem>
+
+                    @if (_enumDef.IsSystem)
+                    {
+                        <FormItem Label="@I18n.T("LBL_SYSTEM")">
+                            <Alert Type="@AlertType.Info" Message="@I18n.T("MSG_SYSTEM_ENUM_WARNING")" ShowIcon />
+                        </FormItem>
+                    }
+                </Form>
+            </Card>
+
+            <div style="margin-top: 24px;">
+                <Card>
+                    <EnumOptionEditor @bind-Options="_enumDef.Options" />
+                </Card>
+            </div>
+        }
+    </div>
+</AuthChecker>
+
+@code {
+    /// <summary>
+    /// 枚举ID（编辑模式时使用）
+    /// </summary>
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private EnumDefinitionDto? _enumDef;
+    private bool _loading = true;
+    private bool _saving = false;
+    private bool _isCreateMode => !Id.HasValue;
+    private readonly string[] _supportedLanguages = new[] { "zh", "en", "ja" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    /// <summary>
+    /// 加载枚举定义
+    /// </summary>
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _loading = true;
+
+            if (_isCreateMode)
+            {
+                // 创建模式：初始化新枚举
+                _enumDef = new EnumDefinitionDto
+                {
+                    Id = Guid.NewGuid(),
+                    Code = string.Empty,
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        { "zh", "" },
+                        { "en", "" },
+                        { "ja", "" }
+                    },
+                    Description = new Dictionary<string, string?>
+                    {
+                        { "zh", "" },
+                        { "en", "" },
+                        { "ja", "" }
+                    },
+                    IsEnabled = true,
+                    IsSystem = false,
+                    Options = new List<EnumOptionDto>()
+                };
+            }
+            else
+            {
+                // 编辑模式：加载现有枚举
+                _enumDef = await EnumService.GetByIdAsync(Id!.Value);
+
+                if (_enumDef == null)
+                {
+                    Toast.Error(I18n.T("MSG_ENUM_NOT_FOUND"));
+                    NavigateBack();
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("MSG_ENUM_LOAD_FAILED")}: {ex.Message}");
+            NavigateBack();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    /// <summary>
+    /// 保存枚举定义
+    /// </summary>
+    private async Task SaveAsync()
+    {
+        if (_enumDef == null) return;
+
+        // 验证
+        if (string.IsNullOrWhiteSpace(_enumDef.Code))
+        {
+            Toast.Error(I18n.T("MSG_ENUM_CODE_REQUIRED"));
+            return;
+        }
+
+        if (!_enumDef.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+        {
+            Toast.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
+            return;
+        }
+
+        try
+        {
+            _saving = true;
+
+            if (_isCreateMode)
+            {
+                // 创建新枚举
+                var request = new CreateEnumDefinitionRequest
+                {
+                    Code = _enumDef.Code,
+                    DisplayName = _enumDef.DisplayName,
+                    Description = _enumDef.Description,
+                    IsEnabled = _enumDef.IsEnabled,
+                    Options = _enumDef.Options.Select(o => new CreateEnumOptionRequest
+                    {
+                        Value = o.Value,
+                        DisplayName = o.DisplayName,
+                        Description = o.Description,
+                        SortOrder = o.SortOrder,
+                        ColorTag = o.ColorTag,
+                        Icon = o.Icon
+                    }).ToList()
+                };
+
+                await EnumService.CreateAsync(request);
+                Toast.Success(I18n.T("MSG_ENUM_CREATE_SUCCESS"));
+            }
+            else
+            {
+                // 更新现有枚举
+                var request = new UpdateEnumDefinitionRequest
+                {
+                    DisplayName = _enumDef.DisplayName,
+                    Description = _enumDef.Description,
+                    IsEnabled = _enumDef.IsEnabled,
+                    Options = _enumDef.Options
+                };
+
+                await EnumService.UpdateAsync(Id!.Value, request);
+                Toast.Success(I18n.T("MSG_ENUM_UPDATE_SUCCESS"));
+            }
+
+            // 保存成功后返回列表页
+            NavigateBack();
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("MSG_ENUM_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    /// <summary>
+    /// 返回枚举管理页
+    /// </summary>
+    private void NavigateBack()
+    {
+        Nav.NavigateTo("/system/enums");
+    }
+}
