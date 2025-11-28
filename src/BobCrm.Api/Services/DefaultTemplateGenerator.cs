@@ -32,6 +32,24 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
     private const int WIDTH_FIELD_PCT = 48;
     private const int WIDTH_COLUMN_PX = 150;
 
+    private static string MapUsageToViewState(FormTemplateUsageType usageType) =>
+        usageType switch
+        {
+            FormTemplateUsageType.List => "List",
+            FormTemplateUsageType.Edit => "DetailEdit",
+            FormTemplateUsageType.Combined => "Create",
+            _ => "DetailView"
+        };
+
+    private static FormTemplateUsageType MapViewStateToUsage(string viewState) =>
+        viewState switch
+        {
+            "List" => FormTemplateUsageType.List,
+            "DetailEdit" => FormTemplateUsageType.Edit,
+            "Create" => FormTemplateUsageType.Combined,
+            _ => FormTemplateUsageType.Detail
+        };
+
     private readonly AppDbContext? _db;
     private readonly ILogger<DefaultTemplateGenerator>? _logger;
 
@@ -55,7 +73,16 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
     public Task<FormTemplate> GenerateAsync(
         EntityDefinition entity,
-        FormTemplateUsageType usageType = FormTemplateUsageType.Detail,
+        FormTemplateUsageType usageType,
+        CancellationToken cancellationToken = default)
+    {
+        var viewState = MapUsageToViewState(usageType);
+        return GenerateAsync(entity, viewState, cancellationToken);
+    }
+
+    public Task<FormTemplate> GenerateAsync(
+        EntityDefinition entity,
+        string viewState = "DetailView",
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -70,15 +97,15 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         var template = new FormTemplate
         {
-            Name = BuildTemplateNameKey(entity, usageType),
+            Name = BuildTemplateNameKey(entity, viewState),
             EntityType = entity.EntityRoute,
             UserId = "__system__",
             IsSystemDefault = true,
             IsUserDefault = false,
             IsInUse = true,
-            LayoutJson = BuildLayoutJson(entity, fields, usageType),
-            UsageType = usageType,
-            Description = $"Auto generated {usageType} template for {entity.EntityName}",
+            UsageType = MapViewStateToUsage(viewState),
+            LayoutJson = BuildLayoutJson(entity, fields, viewState),
+            Description = $"Auto generated {viewState} template for {entity.EntityName}",
             Tags = new List<string> { "auto-generated" },
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -112,14 +139,9 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         }
 
         var result = new DefaultTemplateGenerationResult();
-        var usages = new[]
-        {
-            FormTemplateUsageType.Detail,
-            FormTemplateUsageType.Edit,
-            FormTemplateUsageType.List
-        };
+        var viewStates = new[] { "List", "DetailView", "DetailEdit" };
 
-        foreach (var usage in usages)
+        foreach (var viewState in viewStates)
         {
             var fieldsForUsage = force
                 ? (entity.Fields?.ToList() ?? new List<FieldMetadata>())
@@ -128,33 +150,52 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             {
                 continue;
             }
-            var nameKey = BuildTemplateNameKey(entity, usage);
-            var template = await _db.FormTemplates
+                var nameKey = BuildTemplateNameKey(entity, viewState);
+
+                // 查询通过 TemplateStateBinding 关联的模板
+                var binding = await _db.TemplateStateBindings
+                    .Include(b => b.Template)
                 .FirstOrDefaultAsync(
-                    t => t.EntityType == entityType &&
-                         t.IsSystemDefault &&
-                         t.UsageType == usage,
+                    b => b.EntityType == entityType &&
+                         b.ViewState == viewState &&
+                         b.IsDefault,
                     ct);
 
-            var layoutJson = BuildLayoutJson(entity, fieldsForUsage, usage);
+            FormTemplate? template = binding?.Template;
 
-            if (template == null)
-            {
-                template = new FormTemplate
+            var layoutJson = BuildLayoutJson(entity, fieldsForUsage, viewState);
+
+                if (template == null)
                 {
-                    Name = nameKey,
-                    EntityType = entityType,
-                    UserId = "__system__",
-                    IsSystemDefault = true,
-                    LayoutJson = layoutJson,
-                    UsageType = usage,
-                    Description = $"Auto generated {usage} template for {entity.EntityName}",
-                    Tags = new List<string> { "auto-generated" },
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
+                    // 创建新模板
+                    template = new FormTemplate
+                    {
+                        Name = nameKey,
+                        EntityType = entityType,
+                        UserId = "__system__",
+                        IsSystemDefault = true,
+                        UsageType = MapViewStateToUsage(viewState),
+                        LayoutJson = layoutJson,
+                        Description = $"Auto generated {viewState} template for {entity.EntityName}",
+                        Tags = new List<string> { "auto-generated" },
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
 
                 _db.FormTemplates.Add(template);
+                await _db.SaveChangesAsync(ct); // 保存以获取 TemplateId
+
+                // 创建默认绑定
+                var newBinding = new TemplateStateBinding
+                {
+                    EntityType = entityType,
+                    ViewState = viewState,
+                    TemplateId = template.Id,
+                    IsDefault = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _db.TemplateStateBindings.Add(newBinding);
+
                 result.Created.Add(template);
             }
             else
@@ -165,18 +206,20 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     result.Updated.Add(template);
                 }
 
-                var expectedCount = usage == FormTemplateUsageType.List
+                template.UsageType = MapViewStateToUsage(viewState);
+
+                var expectedCount = viewState == "List"
                     ? Math.Min(fieldsForUsage.Count, 8) // 列表模板只取前 8 个字段生成列
                     : fieldsForUsage.Count;
 
-                var existingFieldCount = CountDataFields(template.LayoutJson ?? string.Empty, usage);
+                var existingFieldCount = CountDataFields(template.LayoutJson ?? string.Empty, viewState);
                 var shouldRegenerate = force || existingFieldCount != expectedCount;
 
                 // Manual regeneration or detected schema drift -> refresh layout & timestamp.
                 // Startup ensure with no schema drift -> preserve existing layout/timestamp.
                 if (shouldRegenerate)
                 {
-                    template.LayoutJson = EnsureAllFieldsPresent(layoutJson, fieldsForUsage, usage);
+                    template.LayoutJson = EnsureAllFieldsPresent(layoutJson, fieldsForUsage, viewState);
                     template.UpdatedAt = DateTime.UtcNow;
                     if (!result.Updated.Contains(template))
                     {
@@ -185,13 +228,42 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 }
             }
 
-            result.Templates[usage] = template;
+            result.Templates[viewState] = template;
         }
 
         if (result.Created.Count > 0 || result.Updated.Count > 0)
         {
             await _db.SaveChangesAsync(ct);
         }
+
+        // 保持旧的 TemplateBindings 表与当前模板同步，便于兼容现有流程
+        foreach (var kvp in result.Templates)
+        {
+            var usage = MapViewStateToUsage(kvp.Key);
+            var binding = await _db.TemplateBindings
+                .FirstOrDefaultAsync(b => b.EntityType == entityType && b.UsageType == usage && b.IsSystem, ct);
+
+            if (binding == null)
+            {
+                binding = new TemplateBinding
+                {
+                    EntityType = entityType,
+                    UsageType = usage,
+                    IsSystem = true,
+                    TemplateId = kvp.Value.Id,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedBy = "system"
+                };
+                _db.TemplateBindings.Add(binding);
+            }
+            else
+            {
+                binding.TemplateId = kvp.Value.Id;
+                binding.UpdatedAt = DateTime.UtcNow;
+                _db.TemplateBindings.Update(binding);
+            }
+        }
+        await _db.SaveChangesAsync(ct);
 
         return result;
     }
@@ -206,20 +278,20 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                ?? new List<FieldMetadata>();
     }
 
-    private static string BuildTemplateNameKey(EntityDefinition entity, FormTemplateUsageType usage)
+    private static string BuildTemplateNameKey(EntityDefinition entity, string viewState)
     {
         var entityToken = (entity.EntityRoute ?? entity.EntityName ?? "ENTITY")
             .Replace("-", "_")
             .ToUpperInvariant();
-        var usageToken = usage.ToString().ToUpperInvariant();
-        return $"TEMPLATE_NAME_{usageToken}_{entityToken}";
+        var stateToken = viewState.ToUpperInvariant();
+        return $"TEMPLATE_NAME_{stateToken}_{entityToken}";
     }
 
-    private static string BuildLayoutJson(EntityDefinition entity, IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
+    private static string BuildLayoutJson(EntityDefinition entity, IReadOnlyList<FieldMetadata> fields, string viewState)
     {
         var widgets = new List<Dictionary<string, object?>>();
 
-        if (usage == FormTemplateUsageType.List)
+        if (viewState == "List")
         {
             var columns = fields.Take(8).Select(f => new ListColumn(
                 field: f.PropertyName?.ToLowerInvariant(),
@@ -282,8 +354,8 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             // For Detail/Edit, we create a Card to group field widgets
             var fieldWidgets = new List<Dictionary<string, object?>>();
 
-            // Add action buttons at the top for Edit mode
-            if (usage == FormTemplateUsageType.Edit)
+            // Add action buttons at the top for Edit mode (DetailEdit or Create)
+            if (viewState == "DetailEdit" || viewState == "Create")
             {
                 var buttonSection = new Dictionary<string, object?>
                 {
@@ -341,7 +413,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 var propertyName = field.PropertyName?.Trim();
                 if (string.IsNullOrWhiteSpace(propertyName)) continue;
 
-                var widgetType = ResolveWidgetType(field, usage);
+                var widgetType = ResolveWidgetType(field, viewState);
                 var label = ResolveLabel(field);
 
                 var widget = new Dictionary<string, object?>
@@ -419,14 +491,14 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         return JsonSerializer.Serialize(widgets, JsonOptions);
     }
 
-    private static int CountDataFields(string layoutJson, FormTemplateUsageType usage)
+    private static int CountDataFields(string layoutJson, string viewState)
     {
         if (string.IsNullOrWhiteSpace(layoutJson)) return 0;
 
         try
         {
             using var doc = JsonDocument.Parse(layoutJson);
-            if (usage == FormTemplateUsageType.List)
+            if (viewState == "List")
             {
                 // List 模板：解析 DataGrid 的 columnsJson，计算列数量，避免每次启动都被误判为需要重建
                 if (doc.RootElement.ValueKind == JsonValueKind.Array)
@@ -476,10 +548,10 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         }
     }
 
-    private static string EnsureAllFieldsPresent(string layoutJson, IReadOnlyList<FieldMetadata> fields, FormTemplateUsageType usage)
+    private static string EnsureAllFieldsPresent(string layoutJson, IReadOnlyList<FieldMetadata> fields, string viewState)
     {
         // 针对 Detail/Edit：确保新增字段也出现在布局中；List 的列保持生成逻辑，不在此补列。
-        if (usage == FormTemplateUsageType.List)
+        if (viewState == "List")
         {
             return layoutJson;
         }
@@ -504,7 +576,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             if (string.IsNullOrWhiteSpace(field.PropertyName)) continue;
             if (existing.Contains(field.PropertyName)) continue;
 
-            var widgetType = ResolveWidgetType(field, usage);
+            var widgetType = ResolveWidgetType(field, viewState);
             widgets.Add(new Dictionary<string, object?>
             {
                 ["id"] = Guid.NewGuid().ToString(),
@@ -521,9 +593,9 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
         return JsonSerializer.Serialize(widgets, JsonOptions);
     }
 
-    private static string ResolveWidgetType(FieldMetadata field, FormTemplateUsageType usage)
+    private static string ResolveWidgetType(FieldMetadata field, string viewState)
     {
-        if (usage == FormTemplateUsageType.List) return "label"; // Not used for DataGrid columns directly
+        if (viewState == "List") return "label"; // Not used for DataGrid columns directly
 
         if (IsLongText(field)) return "textarea";
 

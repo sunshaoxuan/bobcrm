@@ -49,7 +49,8 @@ public class TemplateService : ITemplateService
         }
 
         // 按用途过滤
-        if (!string.IsNullOrWhiteSpace(usageType) && Enum.TryParse<FormTemplateUsageType>(usageType, true, out var parsedUsageType))
+        if (!string.IsNullOrWhiteSpace(usageType) &&
+            Enum.TryParse<FormTemplateUsageType>(usageType, true, out var parsedUsageType))
         {
             query = query.Where(t => t.UsageType == parsedUsageType);
         }
@@ -85,7 +86,7 @@ public class TemplateService : ITemplateService
                         t.Id,
                         t.Name,
                         t.EntityType,
-                        t.UsageType,
+                        usageType = t.UsageType,
                         t.IsUserDefault,
                         t.IsSystemDefault,
                         t.Description,
@@ -109,7 +110,7 @@ public class TemplateService : ITemplateService
                         t.Id,
                         t.Name,
                         t.EntityType,
-                        t.UsageType,
+                        usageType = t.UsageType,
                         t.IsUserDefault,
                         t.IsSystemDefault,
                         t.Description,
@@ -129,7 +130,7 @@ public class TemplateService : ITemplateService
                 t.Id,
                 t.Name,
                 t.EntityType,
-                t.UsageType,
+                usageType = t.UsageType,
                 t.IsUserDefault,
                 t.IsSystemDefault,
                 t.Description,
@@ -163,7 +164,7 @@ public class TemplateService : ITemplateService
         // 如果设置为用户默认模板，需要取消同一实体类型下的其他用户默认模板
         if (request.IsUserDefault && !string.IsNullOrWhiteSpace(request.EntityType))
         {
-            await ClearExistingUserDefaultsAsync(userId, request.EntityType, null);
+            await ClearExistingUserDefaultsAsync(userId, request.EntityType, FormTemplateUsageType.Detail, null);
         }
 
         var template = new FormTemplate
@@ -173,6 +174,7 @@ public class TemplateService : ITemplateService
             UserId = userId,
             IsUserDefault = request.IsUserDefault,
             IsSystemDefault = false, // 只有管理员可以设置系统默认
+            UsageType = FormTemplateUsageType.Detail,
             LayoutJson = request.LayoutJson,
             Description = request.Description,
             CreatedAt = DateTime.UtcNow,
@@ -215,7 +217,7 @@ public class TemplateService : ITemplateService
         // 如果设置为用户默认模板，需要取消同一实体类型下的其他用户默认模板
         if (request.IsUserDefault == true && !string.IsNullOrWhiteSpace(template.EntityType))
         {
-            await ClearExistingUserDefaultsAsync(userId, template.EntityType, templateId);
+            await ClearExistingUserDefaultsAsync(userId, template.EntityType, template.UsageType, templateId);
         }
 
         // 更新字段
@@ -391,7 +393,7 @@ public class TemplateService : ITemplateService
             }
         }
 
-        // 取消同一实体类型和用途下的其他用户默认模板
+        // 取消同一实体类型下的其他用户默认模板
         var existingDefaults = _repo.Query(t => t.UserId == userId &&
             t.EntityType == template.EntityType &&
             t.UsageType == template.UsageType &&
@@ -463,10 +465,11 @@ public class TemplateService : ITemplateService
     /// <summary>
     /// 清除同一实体类型下的其他用户默认模板
     /// </summary>
-    private async Task ClearExistingUserDefaultsAsync(string userId, string entityType, int? excludeTemplateId)
+    private async Task ClearExistingUserDefaultsAsync(string userId, string entityType, FormTemplateUsageType usageType, int? excludeTemplateId)
     {
         var existingDefaults = _repo.Query(t => t.UserId == userId &&
             t.EntityType == entityType &&
+            t.UsageType == usageType &&
             t.IsUserDefault).ToList();
 
         if (excludeTemplateId.HasValue)

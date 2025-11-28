@@ -11,14 +11,28 @@ using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
 
+/// <summary>
+/// 默认模板服务接口
+/// </summary>
 public interface IDefaultTemplateService
 {
+    /// <summary>
+    /// 确保实体的所有默认模板存在
+    /// </summary>
     Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entityDefinition,
         string? updatedBy,
         bool force = false,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// 获取实体的默认模板
+    /// </summary>
+    /// <param name="entityDefinition">实体定义</param>
+    /// <param name="usageType">模板用途</param>
+    /// <param name="requestedBy">请求人</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>默认模板</returns>
     Task<FormTemplate> GetDefaultTemplateAsync(
         EntityDefinition entityDefinition,
         FormTemplateUsageType usageType,
@@ -52,6 +66,43 @@ public class DefaultTemplateService : IDefaultTemplateService
 
         var result = await _generator.EnsureTemplatesAsync(entityDefinition, force: force, ct);
 
+        var entityType = entityDefinition.EntityRoute ?? entityDefinition.EntityName ?? string.Empty;
+        var now = DateTime.UtcNow;
+        foreach (var kvp in result.Templates)
+        {
+            var usage = MapViewStateToUsage(kvp.Key);
+            var binding = await _db.TemplateBindings
+                .FirstOrDefaultAsync(b => b.EntityType == entityType && b.UsageType == usage && b.IsSystem, ct);
+
+            if (binding == null)
+            {
+                binding = new TemplateBinding
+                {
+                    EntityType = entityType,
+                    UsageType = usage,
+                    IsSystem = true,
+                    TemplateId = kvp.Value.Id,
+                    UpdatedAt = now,
+                    UpdatedBy = updatedBy ?? "system",
+                    RequiredFunctionCode = kvp.Value.RequiredFunctionCode
+                };
+                _db.TemplateBindings.Add(binding);
+            }
+            else
+            {
+                binding.TemplateId = kvp.Value.Id;
+                binding.RequiredFunctionCode ??= kvp.Value.RequiredFunctionCode;
+                binding.UpdatedAt = now;
+                binding.UpdatedBy = updatedBy ?? "system";
+                _db.TemplateBindings.Update(binding);
+            }
+        }
+
+        if (result.Templates.Count > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+
         if (result.Created.Count > 0 || result.Updated.Count > 0)
         {
             _logger.LogInformation(
@@ -73,35 +124,69 @@ public class DefaultTemplateService : IDefaultTemplateService
     {
         ArgumentNullException.ThrowIfNull(entityDefinition);
 
+        var viewState = MapUsageToViewState(usageType);
         var entityType = entityDefinition.EntityRoute
                          ?? throw new InvalidOperationException("EntityDefinition must specify EntityRoute");
 
-        var template = await _db.FormTemplates
+        // 查询通过 TemplateStateBinding 关联的默认模板
+        var binding = await _db.TemplateStateBindings
             .AsNoTracking()
+            .Include(b => b.Template)
             .FirstOrDefaultAsync(
-                t => t.EntityType == entityType &&
-                     t.IsSystemDefault &&
-                     t.UsageType == usageType,
+                b => b.EntityType == entityType &&
+                     b.ViewState == viewState &&
+                     b.IsDefault,
                 ct);
 
-        if (template != null)
+        if (binding?.Template != null)
         {
-            return template;
+            binding.Template.UsageType = usageType;
+            return binding.Template;
         }
 
-        var generated = await _generator.GenerateAsync(entityDefinition, usageType, ct);
+        // 如果不存在，生成新模板并创建绑定
+        var generated = await _generator.GenerateAsync(entityDefinition, viewState, ct);
+        generated.UsageType = usageType;
         generated.EntityType ??= entityType;
 
         _db.FormTemplates.Add(generated);
         await _db.SaveChangesAsync(ct);
 
+        // 创建默认绑定
+        var newBinding = new TemplateStateBinding
+        {
+            EntityType = entityType,
+            ViewState = viewState,
+            TemplateId = generated.Id,
+            IsDefault = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.TemplateStateBindings.Add(newBinding);
+        await _db.SaveChangesAsync(ct);
+
         _logger.LogInformation(
-            "Generated default template {TemplateId} for {EntityType} ({UsageType}) via GetDefaultTemplateAsync requested by {RequestedBy}",
+            "Generated default template {TemplateId} for {EntityType} ({ViewState}) via GetDefaultTemplateAsync requested by {RequestedBy}",
             generated.Id,
             entityType,
-            usageType,
+            MapViewStateToUsage(viewState),
             requestedBy ?? "system");
 
         return generated;
     }
+
+    private static string MapUsageToViewState(FormTemplateUsageType usage) => usage switch
+    {
+        FormTemplateUsageType.List => "List",
+        FormTemplateUsageType.Edit => "DetailEdit",
+        FormTemplateUsageType.Combined => "Create",
+        _ => "DetailView"
+    };
+
+    private static FormTemplateUsageType MapViewStateToUsage(string viewState) => viewState switch
+    {
+        "List" => FormTemplateUsageType.List,
+        "DetailEdit" => FormTemplateUsageType.Edit,
+        "Create" => FormTemplateUsageType.Combined,
+        _ => FormTemplateUsageType.Detail
+    };
 }

@@ -38,13 +38,25 @@ public class FunctionNode
     public int SortOrder { get; set; } = 100;
 
     /// <summary>
-    /// 关联的模板（可选）
+    /// 关联的模板（可选，已废弃）
     /// </summary>
+    [System.Obsolete("Use TemplateStateBinding instead")]
     public int? TemplateId { get; set; }
     public FormTemplate? Template { get; set; }
 
     public List<RoleFunctionPermission> Roles { get; set; } = new();
 
+    /// <summary>
+    /// 旧的模板绑定（已废弃）
+    /// </summary>
+    [System.Obsolete("Use TemplateStateBindingId instead")]
     public int? TemplateBindingId { get; set; }
     public TemplateBinding? TemplateBinding { get; set; }
+
+    /// <summary>
+    /// 新的模板状态绑定
+    /// 链接到支持多视图状态的 TemplateStateBinding
+    /// </summary>
+    public int? TemplateStateBindingId { get; set; }
+    public TemplateStateBinding? TemplateStateBinding { get; set; }
 }

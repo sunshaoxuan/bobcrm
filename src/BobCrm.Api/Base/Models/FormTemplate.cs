@@ -39,6 +39,11 @@ public class FormTemplate
     /// </summary>
     public bool IsSystemDefault { get; set; } = false;
 
+    /// <summary>
+    /// 模板用途（详情/编辑/列表等）
+    /// </summary>
+    public FormTemplateUsageType UsageType { get; set; } = FormTemplateUsageType.Detail;
+
     /// <summary>模板版本号（用于跟踪变更）</summary>
     [NotMapped]
     public int Version { get; set; } = 1;

@@ -197,18 +197,37 @@ public class EntityDefinitionSynchronizer
             }
 
             // For each usage type, upsert binding
+            // 为每个视图状态创建或更新 TemplateStateBinding
             foreach (var kvp in result.Templates)
             {
-                var usage = kvp.Key;
+                var viewState = kvp.Key; // string: "List", "DetailView", "DetailEdit", "Create"
                 var template = kvp.Value;
-                await _bindingService.UpsertBindingAsync(
-                    entityDef.EntityRoute ?? entityDef.EntityName,
-                    usage,
-                    template.Id,
-                    isSystem: true,
-                    updatedBy: "system",
-                    requiredFunctionCode: null);
+
+                var binding = await _db.TemplateStateBindings
+                    .FirstOrDefaultAsync(b =>
+                        b.EntityType == (entityDef.EntityRoute ?? entityDef.EntityName) &&
+                        b.ViewState == viewState &&
+                        b.IsDefault);
+
+                if (binding == null)
+                {
+                    binding = new TemplateStateBinding
+                    {
+                        EntityType = entityDef.EntityRoute ?? entityDef.EntityName,
+                        ViewState = viewState,
+                        TemplateId = template.Id,
+                        IsDefault = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _db.TemplateStateBindings.Add(binding);
+                }
+                else
+                {
+                    binding.TemplateId = template.Id;
+                }
             }
+
+            await _db.SaveChangesAsync();
         }
         catch (Exception ex)
         {

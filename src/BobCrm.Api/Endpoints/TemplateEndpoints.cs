@@ -172,7 +172,7 @@ public static class TemplateEndpoints
                         template.Id,
                         template.Name,
                         template.EntityType,
-                        template.UsageType,
+                        usageType = "Unknown", // FormTemplate 不再包含 UsageType，需通过 TemplateStateBinding 查询
                         template.IsUserDefault,
                         template.IsSystemDefault
                     }
@@ -216,7 +216,7 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             AppDbContext db,
             ILogger<Program> logger,
-            FormTemplateUsageType? usageType,
+            string? viewState,
             CancellationToken ct) =>
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -225,7 +225,7 @@ public static class TemplateEndpoints
                 return Results.Unauthorized();
             }
 
-            var resolvedUsage = usageType ?? FormTemplateUsageType.Detail;
+            var resolvedViewState = viewState ?? "DetailView";
             var now = DateTime.UtcNow;
 
             // Get system default language for display name resolution
@@ -259,13 +259,13 @@ public static class TemplateEndpoints
 
             var menuNodes = await db.FunctionNodes
                 .AsNoTracking()
-                .Include(fn => fn.TemplateBinding!)
-                .ThenInclude(tb => tb.Template)
-                .Where(fn => fn.TemplateBindingId != null && accessibleFunctionIds.Contains(fn.Id))
+                .Include(fn => fn.TemplateStateBinding!)
+                .ThenInclude(tsb => tsb.Template)
+                .Where(fn => fn.TemplateStateBindingId != null && accessibleFunctionIds.Contains(fn.Id))
                 .ToListAsync(ct);
 
             var filteredNodes = menuNodes
-                .Where(fn => fn.TemplateBinding != null && fn.TemplateBinding.UsageType == resolvedUsage)
+                .Where(fn => fn.TemplateStateBinding != null && fn.TemplateStateBinding.ViewState == resolvedViewState)
                 .OrderBy(fn => fn.SortOrder)
                 .ToList();
 
@@ -275,7 +275,7 @@ public static class TemplateEndpoints
             }
 
             var entityTypes = filteredNodes
-                .Select(fn => fn.TemplateBinding!.EntityType)
+                .Select(fn => fn.TemplateStateBinding!.EntityType)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -306,8 +306,15 @@ public static class TemplateEndpoints
             var result = new List<object>(filteredNodes.Count);
             foreach (var node in filteredNodes)
             {
-                var binding = node.TemplateBinding!;
+                var binding = node.TemplateStateBinding!;
                 var key = binding.EntityType;
+                var usageType = binding.ViewState switch
+                {
+                    "List" => FormTemplateUsageType.List,
+                    "DetailEdit" => FormTemplateUsageType.Edit,
+                    "Create" => FormTemplateUsageType.Combined,
+                    _ => FormTemplateUsageType.Detail
+                };
                 templatesByEntity.TryGetValue(key, out var templateList);
                 templateList ??= new List<FormTemplate>();
 
@@ -355,7 +362,16 @@ public static class TemplateEndpoints
                 var entry = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["Menu"] = menuPayload,
-                    ["Binding"] = binding.ToDto(),
+                    ["Binding"] = new
+                    {
+                        binding.Id,
+                        binding.EntityType,
+                        viewState = binding.ViewState,
+                        usageType,
+                        binding.TemplateId,
+                        isDefault = binding.IsDefault,
+                        requiredPermission = binding.RequiredPermission
+                    },
                     ["Templates"] = templates
                 };
 

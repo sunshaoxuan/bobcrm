@@ -59,6 +59,13 @@ public class EntityMenuRegistrar
             var entityNode = await EnsureEntityNodeAsync(entity, moduleNode, ct);
             var binding = await EnsureTemplateBindingAsync(entity, entityNode.Code, publishedBy, ct);
 
+            // 链接 TemplateStateBinding 到 FunctionNode
+            if (binding != null && entityNode.TemplateStateBindingId != binding.Id)
+            {
+                entityNode.TemplateStateBindingId = binding.Id;
+                entityNode.TemplateStateBinding = binding;
+            }
+
             if (_db.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
             {
                 await using var transaction = await _db.Database.BeginTransactionAsync(ct);
@@ -226,7 +233,7 @@ public class EntityMenuRegistrar
         return entityNode;
     }
 
-    private async Task<TemplateBinding?> EnsureTemplateBindingAsync(
+    private async Task<TemplateStateBinding?> EnsureTemplateBindingAsync(
         EntityDefinition entity,
         string functionCode,
         string? publishedBy,
@@ -241,16 +248,17 @@ public class EntityMenuRegistrar
             return null;
         }
 
-        if (!string.Equals(binding.RequiredFunctionCode, functionCode, StringComparison.Ordinal))
+        // 更新 RequiredPermission 如果需要
+        if (!string.Equals(binding.RequiredPermission, functionCode, StringComparison.Ordinal))
         {
-            binding.RequiredFunctionCode = functionCode;
+            binding.RequiredPermission = functionCode;
+            await _db.SaveChangesAsync(ct);
         }
-        binding.UpdatedAt = DateTime.UtcNow;
-        binding.UpdatedBy = string.IsNullOrWhiteSpace(publishedBy) ? "system" : publishedBy;
+
         return binding;
     }
 
-    private async Task<TemplateBinding?> FindTemplateBindingAsync(EntityDefinition entity, CancellationToken ct)
+    private async Task<TemplateStateBinding?> FindTemplateBindingAsync(EntityDefinition entity, CancellationToken ct)
     {
         var candidates = new List<string?>
         {
@@ -261,9 +269,10 @@ public class EntityMenuRegistrar
 
         foreach (var candidate in candidates.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var binding = await _db.TemplateBindings
+            // 查找 List 视图的默认绑定（用于菜单显示）
+            var binding = await _db.TemplateStateBindings
                 .FirstOrDefaultAsync(
-                    b => b.EntityType == candidate && b.UsageType == FormTemplateUsageType.Detail,
+                    b => b.EntityType == candidate && b.ViewState == "List" && b.IsDefault,
                     ct);
             if (binding != null)
             {
