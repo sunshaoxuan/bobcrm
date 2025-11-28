@@ -448,6 +448,115 @@ feat(template): add state-driven template system
 Closes #123
 ```
 
+
+---
+
+## 13. 文档命名与组织规范
+
+### 13.1 文档命名格式
+
+所有文档必须遵循以下命名规范：
+
+**格式:** `{类别前缀}-{序号}-{描述}.md`
+
+**示例:**
+- `ARCH-01-实体自定义与发布系统设计文档.md`
+- `GUIDE-05-动态枚举系统使用指南.md`
+- `PHASE2-COMPLETION-REPORT.md`
+
+### 13.2 类别前缀定义
+
+| 前缀 | 含义 | 目录 | 示例 |
+|------|------|------|------|
+| `ARCH` | 架构设计 | `design/` | `ARCH-01-实体自定义与发布系统设计文档.md` |
+| `PROD` | 产品设计 | `design/` | `PROD-01-客户信息管理系统设计文档.md` |
+| `UI` | UI/UX 设计 | `design/` | `UI-01-UIUE设计说明书.md` |
+| `GUIDE` | 使用指南 | `guides/` | `GUIDE-05-动态枚举系统使用指南.md` |
+| `DEV` | 开发指南 | `guides/` | `DEV-02-Roslyn环境配置.md` |
+| `TEST` | 测试文档 | `guides/` | `TEST-01-测试指南.md` |
+| `I18N` | 国际化 | `guides/` | `I18N-01-多语机制设计文档.md` |
+| `OPS` | 运维文档 | `guides/` | `OPS-01-容器问题-设计说明.md` |
+| `EX` | 示例代码 | `examples/` | `EX-01-订单管理示例.md` |
+| `PROC` | 流程规范 | `process/` | `PROC-01-PR检查清单.md` |
+| `PHASE` | 阶段报告 | `history/` | `PHASE2-COMPLETION-REPORT.md` |
+| `AUDIT` | 审计报告 | `history/` | `AUDIT-01-文档代码差距审计报告-2025-11.md` |
+| `GAP` | 差距分析 | `history/` | `GAP-01-架构与功能差距记录.md` |
+| `MIGRATION` | 迁移记录 | `history/` | `MIGRATION-01-系统实体模板化迁移记录.md` |
+| `REVIEW` | 代码审查 | `reviews/` | `REVIEW-01-Phase3代码审查.md` |
+| `PLAN` | 实施计划 | `plans/` | `PLAN-01-模板系统重构计划.md` |
+| `REF` | 参考文档 | `reference/` | `REF-01-EF-Core最佳实践.md` |
+
+### 13.3 特殊文档例外
+
+以下文档可以不使用前缀编号：
+- ✅ `README.md` - 各目录索引文件
+- ✅ `CHANGELOG.md` - 变更日志
+- ✅ `ROADMAP.md` - 产品路线图
+- ✅ `AI_DEVELOPMENT_PROMPT.md` - AI 开发提示
+
+### 13.4 文档目录结构
+
+```
+docs/
+├── design/           # 架构与设计文档 (ARCH, PROD, UI)
+├── guides/           # 使用指南 (GUIDE, DEV, TEST, I18N, OPS)
+├── examples/         # 示例代码 (EX)
+├── development/      # 开发文档 (coding-standards.md 等)
+├── process/          # 流程规范 (PROC)
+├── history/          # 历史记录 (PHASE, AUDIT, GAP, MIGRATION)
+├── reviews/          # 代码审查 (REVIEW)
+├── plans/            # 实施计划 (PLAN)
+├── reference/        # 参考文档 (REF)
+└── migrations/       # 迁移脚本文档
+```
+
+### 13.5 文档内容规范
+
+每个文档必须包含：
+- ✅ **标题**: 清晰描述文档主题
+- ✅ **元数据**: 版本号、创建/更新日期、作者
+- ✅ **目录**: 超过 3 个章节时必须包含
+- ✅ **章节结构**: 使用 Markdown 标题层级
+- ✅ **代码示例**: 使用代码块并指定语言
+- ✅ **架构图**: 使用 Mermaid 图表
+- ✅ **更新记录**: 重要修改需在文档末尾记录
+
+**文档模板示例:**
+```markdown
+# {文档标题}
+
+> **版本**: 1.0  
+> **创建日期**: 2025-11-28  
+> **最后更新**: 2025-11-28  
+> **作者**: BobCRM Team
+
+## 目录
+- [概述](#概述)
+- [详细说明](#详细说明)
+- [示例](#示例)
+
+## 概述
+...
+
+## 详细说明
+...
+
+## 示例
+```csharp
+// 代码示例
+```
+
+## 更新记录
+- 2025-11-28: 创建文档
+```
+
+### 13.6 文档维护规范
+
+- ✅ **同步更新**: 代码变更时必须同步更新相关文档
+- ✅ **定期审查**: 每季度审查文档准确性
+- ✅ **版本管理**: 重大变更时更新版本号
+- ✅ **归档过时文档**: 移动到 `history/` 目录并标注废弃
+
 ---
 
 ## 附录：常用工具
@@ -470,3 +579,4 @@ Closes #123
 ---
 
 **严格遵守以上规范，确保代码质量和项目可维护性！**
+
