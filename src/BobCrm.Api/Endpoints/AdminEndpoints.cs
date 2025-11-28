@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
 
@@ -187,17 +188,38 @@ public static class AdminEndpoints
             foreach (var entity in entities)
             {
                 var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
+
+                // 为每个视图状态创建或更新 TemplateStateBinding
                 foreach (var kv in result.Templates)
                 {
-                    await bindingService.UpsertBindingAsync(
-                        entity.EntityRoute ?? entity.EntityName,
-                        kv.Key,
-                        kv.Value.Id,
-                        isSystem: true,
-                        updatedBy: "admin",
-                        requiredFunctionCode: null);
+                    var viewState = kv.Key; // string: "List", "DetailView", "DetailEdit", "Create"
+                    var template = kv.Value;
+
+                    var binding = await db.TemplateStateBindings
+                        .FirstOrDefaultAsync(b =>
+                            b.EntityType == (entity.EntityRoute ?? entity.EntityName) &&
+                            b.ViewState == viewState &&
+                            b.IsDefault);
+
+                    if (binding == null)
+                    {
+                        binding = new TemplateStateBinding
+                        {
+                            EntityType = entity.EntityRoute ?? entity.EntityName,
+                            ViewState = viewState,
+                            TemplateId = template.Id,
+                            IsDefault = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        db.TemplateStateBindings.Add(binding);
+                    }
+                    else
+                    {
+                        binding.TemplateId = template.Id;
+                    }
                 }
 
+                await db.SaveChangesAsync();
                 updated += result.Created.Count + result.Updated.Count;
             }
 
@@ -240,16 +262,38 @@ public static class AdminEndpoints
             }
 
             var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
+
+            // 为每个视图状态创建或更新 TemplateStateBinding
             foreach (var kv in result.Templates)
             {
-                await bindingService.UpsertBindingAsync(
-                    entity.EntityRoute ?? entity.EntityName,
-                    kv.Key,
-                    kv.Value.Id,
-                    isSystem: true,
-                    updatedBy: "admin",
-                    requiredFunctionCode: null);
+                var viewState = kv.Key; // string: "List", "DetailView", "DetailEdit", "Create"
+                var template = kv.Value;
+
+                var binding = await db.TemplateStateBindings
+                    .FirstOrDefaultAsync(b =>
+                        b.EntityType == (entity.EntityRoute ?? entity.EntityName) &&
+                        b.ViewState == viewState &&
+                        b.IsDefault);
+
+                if (binding == null)
+                {
+                    binding = new TemplateStateBinding
+                    {
+                        EntityType = entity.EntityRoute ?? entity.EntityName,
+                        ViewState = viewState,
+                        TemplateId = template.Id,
+                        IsDefault = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    db.TemplateStateBindings.Add(binding);
+                }
+                else
+                {
+                    binding.TemplateId = template.Id;
+                }
             }
+
+            await db.SaveChangesAsync();
 
             logger.LogInformation("[Admin] Regenerated templates for {Entity} created={Created} updated={Updated}",
                 normalized, result.Created.Count, result.Updated.Count);

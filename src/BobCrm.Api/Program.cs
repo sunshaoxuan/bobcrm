@@ -201,6 +201,7 @@ builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
 builder.Services.AddScoped<FieldFilterService>();
 builder.Services.AddScoped<TemplateBindingService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
+builder.Services.AddScoped<ViewStateSeeder>();
 
 // Data Source Services (数据源与数据集管理)
 builder.Services.AddScoped<BobCrm.Api.Abstractions.IDataSourceHandler, BobCrm.Api.Services.DataSources.EntityDataSourceHandler>();
@@ -356,6 +357,10 @@ using (var scope = app.Services.CreateScope())
                 app.Logger.LogError(ex, "[Init] Failed to seed test data");
             }
         }
+
+        var viewStateSeeder = scope.ServiceProvider.GetRequiredService<ViewStateSeeder>();
+        await viewStateSeeder.EnsureViewStatesAsync();
+        app.Logger.LogInformation("[Init] View states seeded successfully");
     }
 }
 

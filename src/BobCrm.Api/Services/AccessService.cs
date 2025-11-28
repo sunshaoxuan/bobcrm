@@ -518,9 +518,16 @@ public class AccessService
         return assignment;
     }
 
-    public async Task<IReadOnlyDictionary<FormTemplateUsageType, FunctionNode>> EnsureEntityMenuAsync(
+    /// <summary>
+    /// 为实体确保菜单节点存在
+    /// </summary>
+    /// <param name="entity">实体定义</param>
+    /// <param name="bindings">模板状态绑定字典，Key 为视图状态</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>ViewState -> FunctionNode 的映射</returns>
+    public async Task<IReadOnlyDictionary<string, FunctionNode>> EnsureEntityMenuAsync(
         EntityDefinition entity,
-        IReadOnlyDictionary<FormTemplateUsageType, TemplateBinding> bindings,
+        IReadOnlyDictionary<string, TemplateStateBinding> bindings,
         CancellationToken ct = default)
     {
         if (entity == null)
@@ -533,7 +540,10 @@ public class AccessService
             throw new ArgumentNullException(nameof(bindings));
         }
 
-        var result = new Dictionary<FormTemplateUsageType, FunctionNode>();
+        var result = new Dictionary<string, FunctionNode>();
+        var legacyBindings = await _db.TemplateBindings
+            .Where(b => b.EntityType == entity.EntityRoute && b.IsSystem)
+            .ToDictionaryAsync(b => b.UsageType, b => b, ct);
 
         var root = await EnsureFunctionNodeAsync(
             code: "APP.ROOT",
@@ -567,13 +577,14 @@ public class AccessService
             isMenu: true,
             sortOrder: 500 + entity.Order,
             ct);
-        if (bindings.TryGetValue(FormTemplateUsageType.List, out var listBinding))
+        if (bindings.TryGetValue("List", out var listBinding))
         {
-            AttachBinding(listNode, listBinding);
+            AttachStateBinding(listNode, listBinding);
+            AttachLegacyBinding(listNode, "List", legacyBindings);
         }
-        result[FormTemplateUsageType.List] = listNode;
+        result["List"] = listNode;
 
-        if (bindings.TryGetValue(FormTemplateUsageType.Detail, out _))
+        if (bindings.TryGetValue("DetailView", out _))
         {
             var detailNode = await EnsureFunctionNodeAsync(
                 codes.DetailCode,
@@ -584,14 +595,15 @@ public class AccessService
                 isMenu: false,
                 sortOrder: listNode.SortOrder + 1,
                 ct);
-            if (bindings.TryGetValue(FormTemplateUsageType.Detail, out var detailBinding))
+            if (bindings.TryGetValue("DetailView", out var detailBinding))
             {
-                AttachBinding(detailNode, detailBinding);
+                AttachStateBinding(detailNode, detailBinding);
+                AttachLegacyBinding(detailNode, "DetailView", legacyBindings);
             }
-            result[FormTemplateUsageType.Detail] = detailNode;
+            result["DetailView"] = detailNode;
         }
 
-        if (bindings.TryGetValue(FormTemplateUsageType.Edit, out _))
+        if (bindings.TryGetValue("DetailEdit", out _))
         {
             var editNode = await EnsureFunctionNodeAsync(
                 codes.EditCode,
@@ -602,11 +614,31 @@ public class AccessService
                 isMenu: false,
                 sortOrder: listNode.SortOrder + 2,
                 ct);
-            if (bindings.TryGetValue(FormTemplateUsageType.Edit, out var editBinding))
+            if (bindings.TryGetValue("DetailEdit", out var editBinding))
             {
-                AttachBinding(editNode, editBinding);
+                AttachStateBinding(editNode, editBinding);
+                AttachLegacyBinding(editNode, "DetailEdit", legacyBindings);
             }
-            result[FormTemplateUsageType.Edit] = editNode;
+            result["DetailEdit"] = editNode;
+        }
+
+        if (bindings.TryGetValue("Create", out _))
+        {
+            var createNode = await EnsureFunctionNodeAsync(
+                $"{codes.EditCode}.CREATE",
+                $"{displayName} Create",
+                listNode.Id,
+                null,
+                entity.Icon ?? "profile",
+                isMenu: false,
+                sortOrder: listNode.SortOrder + 3,
+                ct);
+            if (bindings.TryGetValue("Create", out var createBinding))
+            {
+                AttachStateBinding(createNode, createBinding);
+                AttachLegacyBinding(createNode, "Create", legacyBindings);
+            }
+            result["Create"] = createNode;
         }
 
         await _db.SaveChangesAsync(ct);
@@ -617,9 +649,9 @@ public class AccessService
 
         if (adminRole != null)
         {
-            foreach (var (usage, node) in result)
+            foreach (var (viewState, node) in result)
             {
-                if (!bindings.TryGetValue(usage, out var binding))
+                if (!bindings.TryGetValue(viewState, out var binding))
                 {
                     continue;
                 }
@@ -631,14 +663,15 @@ public class AccessService
                     permission = new RoleFunctionPermission
                     {
                         RoleId = adminRole.Id,
-                        FunctionId = node.Id,
-                        TemplateBindingId = binding.Id
+                        FunctionId = node.Id
                     };
                     adminRole.Functions.Add(permission);
                 }
-                else if (permission.TemplateBindingId != binding.Id)
+
+                var usage = MapViewStateToUsage(viewState);
+                if (legacyBindings.TryGetValue(usage, out var legacy))
                 {
-                    permission.TemplateBindingId = binding.Id;
+                    permission.TemplateBindingId = legacy.Id;
                 }
             }
 
@@ -648,11 +681,36 @@ public class AccessService
         return result;
     }
 
-    private static void AttachBinding(FunctionNode node, TemplateBinding binding)
+    /// <summary>
+    /// 关联模板状态绑定到功能节点
+    /// </summary>
+    private static void AttachStateBinding(FunctionNode node, TemplateStateBinding binding)
     {
-        node.TemplateBindingId = binding.Id;
-        node.TemplateBinding = binding;
+        node.TemplateStateBindingId = binding.Id;
+        node.TemplateStateBinding = binding;
     }
+
+    private static void AttachLegacyBinding(
+        FunctionNode node,
+        string viewState,
+        IReadOnlyDictionary<FormTemplateUsageType, TemplateBinding> legacyBindings)
+    {
+        var usage = MapViewStateToUsage(viewState);
+        if (legacyBindings.TryGetValue(usage, out var legacy))
+        {
+            node.TemplateBindingId = legacy.Id;
+            node.TemplateId = legacy.TemplateId;
+        }
+    }
+
+    private static FormTemplateUsageType MapViewStateToUsage(string viewState) =>
+        viewState switch
+        {
+            "List" => FormTemplateUsageType.List,
+            "DetailEdit" => FormTemplateUsageType.Edit,
+            "Create" => FormTemplateUsageType.Combined,
+            _ => FormTemplateUsageType.Detail
+        };
 
     public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
     {

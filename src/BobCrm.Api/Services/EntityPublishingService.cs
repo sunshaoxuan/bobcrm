@@ -170,30 +170,30 @@ public class EntityPublishingService : IEntityPublishingService
 
             // 2. 验证实体状态
             if (entity.Status != EntityStatus.Modified)
-            {
-                result.Success = false;
-                result.ErrorMessage = $"Entity status is {entity.Status}, expected Modified";
-                return result;
-            }
+        {
+            result.Success = false;
+            result.ErrorMessage = $"Entity status is {entity.Status}, expected Modified";
+            return result;
+        }
 
-            // 3. 检查表是否存在
-            var tableName = entity.DefaultTableName;
-            var tableExists = await _ddlExecutor.TableExistsAsync(tableName);
-            if (!tableExists)
-            {
-                result.Success = false;
-                result.ErrorMessage = $"Table '{tableName}' does not exist. Use PublishNewEntity instead.";
-                return result;
-            }
+        // 3. 验证枚举引用
+        var enumValidation = await ValidateEnumReferencesAsync(entity);
+        if (!enumValidation.IsValid)
+        {
+            result.Success = false;
+            result.ErrorMessage = enumValidation.ErrorMessage;
+            return result;
+        }
 
-            // 4. 验证枚举引用
-            var enumValidation = await ValidateEnumReferencesAsync(entity);
-            if (!enumValidation.IsValid)
-            {
-                result.Success = false;
-                result.ErrorMessage = enumValidation.ErrorMessage;
-                return result;
-            }
+        // 4. 检查表是否存在
+        var tableName = entity.DefaultTableName;
+        var tableExists = await _ddlExecutor.TableExistsAsync(tableName);
+        if (!tableExists)
+        {
+            result.Success = false;
+            result.ErrorMessage = $"Table '{tableName}' does not exist. Use PublishNewEntity instead.";
+            return result;
+        }
 
             // 5. 分析变更
             var changeAnalysis = await AnalyzeChangesAsync(entity);
@@ -375,62 +375,100 @@ public class EntityPublishingService : IEntityPublishingService
             result.Templates.Add(new PublishedTemplateInfo(template.Key, template.Value.Id, template.Value.Name));
         }
 
-        var bindingMap = new Dictionary<FormTemplateUsageType, TemplateBinding>();
+        var bindingMap = new Dictionary<string, TemplateStateBinding>();
         var codes = BuildFunctionCodes(entity.EntityRoute);
         var updatedBy = string.IsNullOrWhiteSpace(publishedBy) ? "system" : publishedBy!;
 
-        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.Detail, out var detailTemplate))
+        foreach (var template in generatorResult.Templates)
         {
-            var binding = await _templateBindingService.UpsertBindingAsync(
-                entity.EntityRoute,
-                FormTemplateUsageType.Detail,
-                detailTemplate.Id,
-                isSystem: true,
-                updatedBy,
-                codes.DetailCode);
+            var usage = MapViewStateToUsage(template.Key);
+            var requiredCode = usage switch
+            {
+                FormTemplateUsageType.List => codes.ListCode,
+                FormTemplateUsageType.Edit => codes.EditCode,
+                FormTemplateUsageType.Combined => codes.EditCode,
+                _ => codes.DetailCode
+            };
 
-            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
-                FormTemplateUsageType.Detail,
-                binding.Id,
-                binding.TemplateId,
-                binding.RequiredFunctionCode ?? string.Empty));
-            bindingMap[FormTemplateUsageType.Detail] = binding;
+            await _templateBindingService.UpsertBindingAsync(
+                entity.EntityRoute,
+                usage,
+                template.Value.Id,
+                true,
+                updatedBy,
+                requiredCode);
         }
 
-        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.Edit, out var editTemplate))
+        // List 视图
+        if (generatorResult.Templates.TryGetValue("List", out var listTemplate))
         {
-            var binding = await _templateBindingService.UpsertBindingAsync(
+            var binding = await EnsureTemplateStateBindingAsync(
                 entity.EntityRoute,
-                FormTemplateUsageType.Edit,
-                editTemplate.Id,
-                isSystem: true,
-                updatedBy,
-                codes.EditCode);
-
-            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
-                FormTemplateUsageType.Edit,
-                binding.Id,
-                binding.TemplateId,
-                binding.RequiredFunctionCode ?? string.Empty));
-            bindingMap[FormTemplateUsageType.Edit] = binding;
-        }
-
-        if (generatorResult.Templates.TryGetValue(FormTemplateUsageType.List, out var listTemplate))
-        {
-            var binding = await _templateBindingService.UpsertBindingAsync(
-                entity.EntityRoute,
-                FormTemplateUsageType.List,
+                "List",
                 listTemplate.Id,
-                isSystem: true,
-                updatedBy,
                 codes.ListCode);
 
             result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                "List",
                 FormTemplateUsageType.List,
                 binding.Id,
                 binding.TemplateId,
-                binding.RequiredFunctionCode ?? string.Empty));
-            bindingMap[FormTemplateUsageType.List] = binding;
+                binding.RequiredPermission ?? string.Empty));
+            bindingMap["List"] = binding;
+        }
+
+        // DetailView 视图
+        if (generatorResult.Templates.TryGetValue("DetailView", out var detailTemplate))
+        {
+            var binding = await EnsureTemplateStateBindingAsync(
+                entity.EntityRoute,
+                "DetailView",
+                detailTemplate.Id,
+                codes.DetailCode);
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                "DetailView",
+                FormTemplateUsageType.Detail,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredPermission ?? string.Empty));
+            bindingMap["DetailView"] = binding;
+        }
+
+        // DetailEdit 视图
+        if (generatorResult.Templates.TryGetValue("DetailEdit", out var editTemplate))
+        {
+            var binding = await EnsureTemplateStateBindingAsync(
+                entity.EntityRoute,
+                "DetailEdit",
+                editTemplate.Id,
+                codes.EditCode);
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                "DetailEdit",
+                FormTemplateUsageType.Edit,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredPermission ?? string.Empty));
+            bindingMap["DetailEdit"] = binding;
+        }
+
+        // Create 视图
+        if (generatorResult.Templates.TryGetValue("Create", out var createTemplate))
+        {
+            var binding = await EnsureTemplateStateBindingAsync(
+                entity.EntityRoute,
+                "Create",
+                createTemplate.Id,
+                codes.EditCode); // Create 使用和 Edit 相同的权限
+
+            result.TemplateBindings.Add(new PublishedTemplateBindingInfo(
+                "Create",
+                FormTemplateUsageType.Combined,
+                binding.Id,
+                binding.TemplateId,
+                binding.RequiredPermission ?? string.Empty));
+            bindingMap["Create"] = binding;
         }
 
         if (bindingMap.Count > 0)
@@ -443,9 +481,48 @@ public class EntityPublishingService : IEntityPublishingService
                     node.Value.Id,
                     node.Value.ParentId,
                     node.Value.Route,
-                    node.Key));
+                    node.Key,
+                    MapViewStateToUsage(node.Key)));
             }
         }
+    }
+
+    /// <summary>
+    /// 确保 TemplateStateBinding 存在
+    /// </summary>
+    private async Task<TemplateStateBinding> EnsureTemplateStateBindingAsync(
+        string entityType,
+        string viewState,
+        int templateId,
+        string? requiredPermission)
+    {
+        var binding = await _db.TemplateStateBindings
+            .FirstOrDefaultAsync(b =>
+                b.EntityType == entityType &&
+                b.ViewState == viewState &&
+                b.IsDefault);
+
+        if (binding == null)
+        {
+            binding = new TemplateStateBinding
+            {
+                EntityType = entityType,
+                ViewState = viewState,
+                TemplateId = templateId,
+                IsDefault = true,
+                RequiredPermission = requiredPermission,
+                CreatedAt = DateTime.UtcNow
+            };
+            _db.TemplateStateBindings.Add(binding);
+        }
+        else
+        {
+            binding.TemplateId = templateId;
+            binding.RequiredPermission = requiredPermission;
+        }
+
+        await _db.SaveChangesAsync();
+        return binding;
     }
 
     /// <summary>
@@ -506,6 +583,15 @@ public class EntityPublishingService : IEntityPublishingService
         return result;
     }
 
+    private static FormTemplateUsageType MapViewStateToUsage(string viewState) =>
+        viewState switch
+        {
+            "List" => FormTemplateUsageType.List,
+            "DetailEdit" => FormTemplateUsageType.Edit,
+            "Create" => FormTemplateUsageType.Combined,
+            _ => FormTemplateUsageType.Detail
+        };
+
     private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
     {
         var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
@@ -553,8 +639,17 @@ public class ChangeAnalysis
     public bool HasDestructiveChanges { get; set; }
 }
 
-public record PublishedTemplateInfo(FormTemplateUsageType UsageType, int TemplateId, string TemplateName);
+/// <summary>
+/// 已发布的模板信息
+/// </summary>
+public record PublishedTemplateInfo(string ViewState, int TemplateId, string TemplateName);
 
-public record PublishedTemplateBindingInfo(FormTemplateUsageType UsageType, int BindingId, int TemplateId, string RequiredFunctionCode);
+/// <summary>
+/// 已发布的模板绑定信息
+/// </summary>
+public record PublishedTemplateBindingInfo(string ViewState, FormTemplateUsageType UsageType, int BindingId, int TemplateId, string RequiredFunctionCode);
 
-public record PublishedMenuInfo(string Code, Guid NodeId, Guid? ParentId, string? Route, FormTemplateUsageType UsageType);
+/// <summary>
+/// 已发布的菜单信息
+/// </summary>
+public record PublishedMenuInfo(string Code, Guid NodeId, Guid? ParentId, string? Route, string ViewState, FormTemplateUsageType UsageType);

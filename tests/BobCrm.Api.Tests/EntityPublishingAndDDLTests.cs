@@ -84,7 +84,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     public async Task PublishNewEntityAsync_ShouldFail_WhenEntityNotFound()
     {
         // Arrange
-        var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object, tableExists: true);
         var service = CreatePublishingService(ddlExecutor);
 
         var nonExistentId = Guid.NewGuid();
@@ -101,7 +101,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     public async Task PublishNewEntityAsync_ShouldFail_WhenEntityNotDraft()
     {
         // Arrange
-        var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
         var service = CreatePublishingService(ddlExecutor);
 
         var entityId = Guid.NewGuid();
@@ -174,7 +174,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     public async Task PublishEntityChangesAsync_ShouldFail_WhenEntityNotFound()
     {
         // Arrange
-        var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
         var service = CreatePublishingService(ddlExecutor);
 
         var nonExistentId = Guid.NewGuid();
@@ -191,7 +191,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     public async Task PublishEntityChangesAsync_ShouldFail_WhenEntityNotModified()
     {
         // Arrange
-        var ddlExecutor = new DDLExecutionService(_db, _mockDDLLogger.Object);
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
         var service = CreatePublishingService(ddlExecutor);
 
         var entityId = Guid.NewGuid();
@@ -731,9 +731,12 @@ public class EntityPublishingAndDDLTests : IDisposable
 
     private sealed class NoOpDDLExecutionService : DDLExecutionService
     {
-        public NoOpDDLExecutionService(AppDbContext db, ILogger<DDLExecutionService> logger)
+        private readonly bool _tableExists;
+
+        public NoOpDDLExecutionService(AppDbContext db, ILogger<DDLExecutionService> logger, bool tableExists = false)
             : base(db, logger)
         {
+            _tableExists = tableExists;
         }
 
         public override Task<DDLScript> ExecuteDDLAsync(
@@ -757,7 +760,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         }
 
         public override Task<bool> TableExistsAsync(string tableName)
-            => Task.FromResult(false);
+            => Task.FromResult(_tableExists);
     }
 
     private EntityPublishingService CreatePublishingService(DDLExecutionService ddlExecutor)
@@ -878,6 +881,294 @@ public class EntityPublishingAndDDLTests : IDisposable
                 .Should().BeTrue($"template should include field '{fieldName}'");
         }
     }
+
+    #region Enum Validation Tests
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenEnumFieldHasNullEnumDefinitionId()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ProductWithInvalidEnum",
+            Status = "Draft",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ProductType",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = null, // Invalid: null
+                    IsRequired = true
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("ProductType");
+        result.ErrorMessage.Should().Contain("EnumDefinitionId is null");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenEnumFieldReferencesNonExistentEnum()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var nonExistentEnumId = Guid.NewGuid();
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ProductWithMissingEnum",
+            Status = "Draft",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ProductType",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = nonExistentEnumId, // Does not exist
+                    IsRequired = true
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("ProductType");
+        result.ErrorMessage.Should().Contain("does not exist");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenEnumFieldReferencesDisabledEnum()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        // Create a disabled enum
+        var disabledEnum = new EnumDefinition
+        {
+            Code = $"disabled_enum_{Guid.NewGuid():N}",
+            DisplayName = new() { { "zh", "禁用枚举" } },
+            IsEnabled = false,
+            IsSystem = false
+        };
+        await _db.EnumDefinitions.AddAsync(disabledEnum);
+        await _db.SaveChangesAsync();
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ProductWithDisabledEnum",
+            Status = "Draft",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ProductType",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = disabledEnum.Id,
+                    IsRequired = true
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("ProductType");
+        result.ErrorMessage.Should().Contain("disabled");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldSucceed_WhenEnumFieldReferencesValidEnum()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        // Create a valid enabled enum
+        var validEnum = new EnumDefinition
+        {
+            Code = $"valid_enum_{Guid.NewGuid():N}",
+            DisplayName = new() { { "zh", "有效枚举" } },
+            IsEnabled = true,
+            IsSystem = false,
+            Options = new List<EnumOption>
+            {
+                new() { Value = "OPT1", DisplayName = new() { { "zh", "选项1" } }, SortOrder = 0 }
+            }
+        };
+        await _db.EnumDefinitions.AddAsync(validEnum);
+        await _db.SaveChangesAsync();
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ProductWithValidEnum",
+            Status = "Draft",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ProductType",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = validEnum.Id,
+                    IsRequired = true,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeTrue($"enum validation should pass for valid enum: {result.ErrorMessage}");
+    }
+
+    [Fact]
+    public async Task PublishEntityChangesAsync_ShouldFail_WhenAddingInvalidEnumField()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        // Create a published entity first
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ExistingProduct",
+            Status = "Published",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "Name",
+                    DataType = FieldDataType.String,
+                    IsRequired = true,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Now modify it by adding an invalid enum field
+        entity.Status = "Modified";
+        entity.Fields.Add(new FieldMetadata
+        {
+            PropertyName = "Category",
+            DataType = FieldDataType.Enum,
+            EnumDefinitionId = null, // Invalid
+            IsRequired = false,
+            Source = "Custom"
+        });
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishEntityChangesAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Category");
+        result.ErrorMessage.Should().Contain("EnumDefinitionId is null");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldValidateMultipleEnumFields()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        // Create valid enums
+        var enum1 = new EnumDefinition
+        {
+            Code = $"enum1_{Guid.NewGuid():N}",
+            DisplayName = new() { { "zh", "枚举1" } },
+            IsEnabled = true
+        };
+        var enum2 = new EnumDefinition
+        {
+            Code = $"enum2_{Guid.NewGuid():N}",
+            DisplayName = new() { { "zh", "枚举2" } },
+            IsEnabled = true
+        };
+        await _db.EnumDefinitions.AddRangeAsync(enum1, enum2);
+        await _db.SaveChangesAsync();
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ProductWithMultipleEnums",
+            Status = "Draft",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "Type",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = enum1.Id,
+                    IsRequired = true,
+                    Source = "Custom"
+                },
+                new()
+                {
+                    PropertyName = "Category",
+                    DataType = FieldDataType.Enum,
+                    EnumDefinitionId = enum2.Id,
+                    IsRequired = false,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        // Assert
+        result.Success.Should().BeTrue("all enum fields reference valid enums");
+    }
+
+    #endregion
 }
 
 /// <summary>
