@@ -175,9 +175,43 @@ public class EnumSeeder
         }, new (string Value, Dictionary<string, string?> DisplayName, int SortOrder, string? ColorTag)[]
         {
             ("ACTIVE", new Dictionary<string, string?> { { "zh", "激活" }, { "en", "Active" }, { "ja", "有効" } }, 0, "green"),
-            ("INACTIVE", new Dictionary<string, string?> { { "zh", "未激活" }, { "en", "Inactive" }, { "ja", "无效" } }, 1, "gray"),
+            ("INACTIVE", new Dictionary<string, string?> { { "zh", "未激活" }, { "en", "Inactive" }, { "ja", "無効" } }, 1, "gray"),
             ("PENDING", new Dictionary<string, string?> { { "zh", "待处理" }, { "en", "Pending" }, { "ja", "保留中" } }, 2, "blue"),
             ("ARCHIVED", new Dictionary<string, string?> { { "zh", "已归档" }, { "en", "Archived" }, { "ja", "アーカイブ済み" } }, 3, "gray")
+        });
+
+        // 9. 客户类型枚举（示例业务枚举）
+        await EnsureEnumAsync("customer_type", new Dictionary<string, string?>
+        {
+            { "zh", "客户类型" },
+            { "en", "Customer Type" },
+            { "ja", "顧客タイプ" }
+        }, new (string Value, Dictionary<string, string?> DisplayName, int SortOrder, string? ColorTag)[]
+        {
+            ("INDIVIDUAL", new Dictionary<string, string?>
+            {
+                { "zh", "个人客户" },
+                { "en", "Individual" },
+                { "ja", "個人顧客" }
+            }, 0, "blue"),
+            ("ENTERPRISE", new Dictionary<string, string?>
+            {
+                { "zh", "企业客户" },
+                { "en", "Enterprise" },
+                { "ja", "企業顧客" }
+            }, 1, "purple"),
+            ("PARTNER", new Dictionary<string, string?>
+            {
+                { "zh", "合作伙伴" },
+                { "en", "Partner" },
+                { "ja", "パートナー" }
+            }, 2, "green"),
+            ("VIP", new Dictionary<string, string?>
+            {
+                { "zh", "VIP客户" },
+                { "en", "VIP Customer" },
+                { "ja", "VIP顧客" }
+            }, 3, "gold")
         });
 
         await _db.SaveChangesAsync();
@@ -211,6 +245,7 @@ public class EnumSeeder
                     DisplayName = optDisplayName,
                     SortOrder = sortOrder,
                     IsEnabled = true,
+                    IsSystem = true,
                     ColorTag = colorTag
                 });
             }
@@ -235,6 +270,7 @@ public class EnumSeeder
                         DisplayName = optDisplayName,
                         SortOrder = sortOrder,
                         IsEnabled = true,
+                        IsSystem = true,
                         ColorTag = colorTag
                     });
                 }
@@ -243,6 +279,7 @@ public class EnumSeeder
                     // 更新现有选项
                     existingOption.DisplayName = optDisplayName;
                     existingOption.SortOrder = sortOrder;
+                    existingOption.IsSystem = true;
                     if (!string.IsNullOrEmpty(colorTag))
                     {
                         existingOption.ColorTag = colorTag;

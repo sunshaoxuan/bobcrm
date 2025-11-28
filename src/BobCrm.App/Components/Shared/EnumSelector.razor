@@ -16,13 +16,15 @@
 }
 else if (_error != null)
 {
-    <Alert Type="@AlertType.Error" Message="@_error" ShowIcon />
+    <Alert Type="@AlertType.Error" Message="@_error" ShowIcon="true" />
 }
 else if (MultiSelect)
 {
-    <Select Mode="multiple"
-            Value="_selectedValues"
-            OnSelectedItemsChanged="HandleMultiSelectChangeAsync"
+    <Select TItemValue="string"
+            TItem="string"
+            Mode="@SelectMode.Multiple"
+            Values="@_selectedValues"
+            ValuesChanged="@(EventCallback.Factory.Create<IEnumerable<string>>(this, HandleMultiSelectChangeAsync))"
             Placeholder="@Placeholder"
             AllowClear
             ShowSearch
@@ -37,7 +39,7 @@ else if (MultiSelect)
                         <Tag Color="@option.ColorTag">
                             @if (!string.IsNullOrEmpty(option.Icon))
                             {
-                                <Icon Type="@option.Icon" Theme="outline" />
+                                <Icon Type="@option.Icon" Theme="@IconThemeType.Outline" />
                                 <span> </span>
                             }
                             @GetDisplayName(option)
@@ -47,7 +49,7 @@ else if (MultiSelect)
                     {
                         @if (!string.IsNullOrEmpty(option.Icon))
                         {
-                            <Icon Type="@option.Icon" Theme="outline" />
+                            <Icon Type="@option.Icon" Theme="@IconThemeType.Outline" />
                             <span> </span>
                         }
                         @GetDisplayName(option)
@@ -59,8 +61,10 @@ else if (MultiSelect)
 }
 else
 {
-    <Select Value="@_selectedValue"
-            OnSelectedItemChanged="HandleSingleSelectChangeAsync"
+    <Select TItemValue="string"
+            TItem="string"
+            Value="@_selectedValue"
+            OnSelectedItemChanged="@(EventCallback.Factory.Create<string>(this, HandleSingleSelectChangeAsync))"
             Placeholder="@Placeholder"
             AllowClear
             ShowSearch
@@ -75,7 +79,7 @@ else
                         <Tag Color="@option.ColorTag">
                             @if (!string.IsNullOrEmpty(option.Icon))
                             {
-                                <Icon Type="@option.Icon" Theme="outline" />
+                                <Icon Type="@option.Icon" Theme="@IconThemeType.Outline" />
                                 <span> </span>
                             }
                             @GetDisplayName(option)
@@ -85,7 +89,7 @@ else
                     {
                         @if (!string.IsNullOrEmpty(option.Icon))
                         {
-                            <Icon Type="@option.Icon" Theme="outline" />
+                            <Icon Type="@option.Icon" Theme="@IconThemeType.Outline" />
                             <span> </span>
                         }
                         @GetDisplayName(option)

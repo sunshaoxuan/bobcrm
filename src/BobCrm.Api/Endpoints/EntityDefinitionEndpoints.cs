@@ -1234,16 +1234,18 @@ public static class EntityDefinitionEndpoints
                 ddlScript = result.DDLScript,
                 templates = result.Templates.Select(t => new
                 {
-                    usage = t.UsageType,
+                    viewState = t.ViewState,
                     templateId = t.TemplateId,
                     templateName = t.TemplateName
                 }),
                 bindings = result.TemplateBindings.Select(b => new
                 {
+                    viewState = b.ViewState,
                     usage = b.UsageType,
+                    usageType = b.UsageType,
                     bindingId = b.BindingId,
                     templateId = b.TemplateId,
-                    functionCode = b.RequiredFunctionCode
+                    requiredPermission = b.RequiredFunctionCode
                 }),
                 menus = result.MenuNodes.Select(m => new
                 {
@@ -1251,7 +1253,9 @@ public static class EntityDefinitionEndpoints
                     nodeId = m.NodeId,
                     parentId = m.ParentId,
                     m.Route,
-                    usage = m.UsageType
+                    viewState = m.ViewState,
+                    usage = m.UsageType,
+                    usageType = m.UsageType
                 }),
                 message = "实体发布成功"
             });
@@ -1320,16 +1324,18 @@ public static class EntityDefinitionEndpoints
 
                 templates = result.Templates.Select(t => new
                 {
-                    usage = t.UsageType,
+                    viewState = t.ViewState,
                     templateId = t.TemplateId,
                     templateName = t.TemplateName
                 }),
                 bindings = result.TemplateBindings.Select(b => new
                 {
+                    viewState = b.ViewState,
                     usage = b.UsageType,
+                    usageType = b.UsageType,
                     bindingId = b.BindingId,
                     templateId = b.TemplateId,
-                    functionCode = b.RequiredFunctionCode
+                    requiredPermission = b.RequiredFunctionCode
                 }),
                 menus = result.MenuNodes.Select(m => new
                 {
@@ -1337,7 +1343,9 @@ public static class EntityDefinitionEndpoints
                     nodeId = m.NodeId,
                     parentId = m.ParentId,
                     m.Route,
-                    usage = m.UsageType
+                    viewState = m.ViewState,
+                    usage = m.UsageType,
+                    usageType = m.UsageType
                 }),
 
                 message = "实体修改发布成功"
@@ -2104,4 +2112,3 @@ public record CompileBatchDto
     public List<Guid> EntityIds { get; init; } = new();
 
 }
-

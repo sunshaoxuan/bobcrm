@@ -51,7 +51,10 @@
                     @if (_expandedOptionId == option.Id)
                     {
                         <div class="option-details">
-                            <Form Model="option" LabelCol="new ColLayoutParam { Span = 6 }" WrapperCol="new ColLayoutParam { Span = 18 }">
+                            <Form Model="option"
+                                  Context="formContext"
+                                  LabelCol="new ColLayoutParam { Span = 6 }"
+                                  WrapperCol="new ColLayoutParam { Span = 18 }">
                                 <FormItem Label="@I18n.T("LBL_OPTION_VALUE")">
                                     <Input @bind-Value="option.Value" Placeholder="@I18n.T("PH_OPTION_VALUE")" MaxLength="64" />
                                 </FormItem>
@@ -73,28 +76,28 @@
                                 </FormItem>
 
                                 <FormItem Label="@I18n.T("LBL_COLOR_TAG")">
-                                    <Select @bind-Value="option.ColorTag" AllowClear>
+                                    <Select TItemValue="string" TItem="string" @bind-Value="option.ColorTag" AllowClear>
                                         <SelectOptions>
-                                            <SelectOption Value="red" Label="Red">
-                                                <Tag Color="red">Red</Tag>
+                                            <SelectOption Value="@PresetColor.Red.ToString()" Label="Red">
+                                                <Tag Color="@PresetColor.Red.ToString()">Red</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="orange" Label="Orange">
-                                                <Tag Color="orange">Orange</Tag>
+                                            <SelectOption Value="@PresetColor.Orange.ToString()" Label="Orange">
+                                                <Tag Color="@PresetColor.Orange.ToString()">Orange</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="yellow" Label="Yellow">
-                                                <Tag Color="yellow">Yellow</Tag>
+                                            <SelectOption Value="@PresetColor.Yellow.ToString()" Label="Yellow">
+                                                <Tag Color="@PresetColor.Yellow.ToString()">Yellow</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="green" Label="Green">
-                                                <Tag Color="green">Green</Tag>
+                                            <SelectOption Value="@PresetColor.Green.ToString()" Label="Green">
+                                                <Tag Color="@PresetColor.Green.ToString()">Green</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="blue" Label="Blue">
-                                                <Tag Color="blue">Blue</Tag>
+                                            <SelectOption Value="@PresetColor.Blue.ToString()" Label="Blue">
+                                                <Tag Color="@PresetColor.Blue.ToString()">Blue</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="purple" Label="Purple">
-                                                <Tag Color="purple">Purple</Tag>
+                                            <SelectOption Value="@PresetColor.Purple.ToString()" Label="Purple">
+                                                <Tag Color="@PresetColor.Purple.ToString()">Purple</Tag>
                                             </SelectOption>
-                                            <SelectOption Value="magenta" Label="Magenta">
-                                                <Tag Color="magenta">Magenta</Tag>
+                                            <SelectOption Value="@PresetColor.Magenta.ToString()" Label="Magenta">
+                                                <Tag Color="@PresetColor.Magenta.ToString()">Magenta</Tag>
                                             </SelectOption>
                                         </SelectOptions>
                                     </Select>
@@ -106,7 +109,7 @@
                                     {
                                         <div style="margin-top: 8px;">
                                             <span>@I18n.T("LBL_PREVIEW"): </span>
-                                            <Icon Type="@option.Icon" Theme="outline" />
+                                            <Icon Type="@option.Icon" Theme="@IconThemeType.Outline" />
                                         </div>
                                     }
                                 </FormItem>

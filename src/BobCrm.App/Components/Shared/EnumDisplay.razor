@@ -24,7 +24,7 @@ else if (_displayValue != null)
         <Tag Color="@_option.ColorTag">
             @if (!string.IsNullOrEmpty(_option.Icon))
             {
-                <Icon Type="@_option.Icon" Theme="outline" />
+                <Icon Type="@_option.Icon" Theme="@IconThemeType.Outline" />
                 <span> </span>
             }
             @_displayValue
@@ -34,7 +34,7 @@ else if (_displayValue != null)
     {
         @if (!string.IsNullOrEmpty(_option?.Icon))
         {
-            <Icon Type="@_option.Icon" Theme="outline" />
+            <Icon Type="@_option.Icon" Theme="@IconThemeType.Outline" />
             <span> </span>
         }
         <span>@_displayValue</span>
