@@ -1,22 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Select-String -Pattern \"(SystemSettings|relation|does not exist|42P01|Exception|Error)\" -Context 2,2)",
-      "Bash(git commit:*)",
-      "Bash(Select-String -Pattern \"(Failed|失敗)\" -Context 2,2)",
-      "Bash(git rm:*)",
-      "Bash(dotnet test:*)",
+      "Bash(Select-String -Pattern \"(Failed|成功|error|warning)\" -Context 0,2)",
+      "Bash(cat:*)",
+      "Bash(Select-Object -First 10)",
+      "Bash(Select-String -Pattern \"(succeeded|failed|error)\" -Context 0,2)",
+      "Bash(git push:*)",
       "Bash(dotnet build:*)",
-      "Bash(git add:*)",
-      "Bash(git revert:*)",
-      "Bash(git reset:*)",
-      "Bash(pwsh -Command:*)",
-      "Bash(Select-String -Pattern \"失敗|成功\")",
-      "Bash(Select-Object -Last 1)",
-      "Bash(dotnet ef migrations list:*)",
-      "Bash(dotnet ef database update:*)",
-      "Bash(Out-String -Stream)",
-      "Bash(Select-Object -Last 80)"
+      "Bash(Select-String -Pattern \"(error|warning)\" -Context 0,2)",
+      "Bash(Select-Object -First 50)",
+      "Bash(dotnet ef migrations add:*)"
     ],
     "deny": [],
     "ask": []
