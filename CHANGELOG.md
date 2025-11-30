@@ -26,6 +26,7 @@
     - `src/BobCrm.App/Components/Layout/MainLayout.razor`
     - `src/BobCrm.App/Components/Pages/Templates.razor`
     - `tests/BobCrm.Api.Tests/EntityPublishingAndDDLTests.cs`
+- **模板重置链路**：硬重置/全量重置现在覆盖单复数路由匹配（如 user/users），删除全量模板与绑定并重建系统双模板，返回/日志包含当前模板明细（Id/用途/来源/更新时间），便于核对是否生效；前端硬重置改用顶部消息提示结果。
 
 ### Added
 - 公共端点 `/api/entities/{entityType}/definition`：返回实体字段与接口投影，支持大小写、`entity_` 前缀、单复数候选；供 Form Designer/实体树加载系统实体。

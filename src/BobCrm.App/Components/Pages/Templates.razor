@@ -8,10 +8,11 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject ModalService Modal
+@inject AntDesign.IMessageService MessageService
 
 <PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
 
-<div style="max-width:1200px; margin:0 auto; padding:24px">
+<div style="max-width:1440px; min-width:1200px; width:100%; margin:0 auto; padding:24px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
         <h2 style="margin:0; color:var(--text); font-size:24px; font-weight:600">@I18n.T("TPL_PAGE_TITLE")</h2>
         <button @onclick="CreateNewTemplate" class="btn btn-primary">
@@ -84,6 +85,12 @@
                                     disabled="@regenerating"
                                     @onclick="() => ConfirmRegenerate(group.EntityType)">
                                 🔄 @I18n.T("BTN_REGENERATE_DEFAULTS")
+                            </button>
+                            <button class="btn btn-ghost btn-sm"
+                                    style="margin-left: 8px;"
+                                    disabled="@regenerating"
+                                    @onclick="() => ConfirmReset(group.EntityType)">
+                                🗑️ @I18n.T("BTN_RESET_TEMPLATES")
                             </button>
                         }
                     </div>
@@ -562,6 +569,58 @@
         }
     }
 
+    private async Task ConfirmReset(string entityType)
+    {
+        if (regenerating) return;
+
+        var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+        {
+            Title = I18n.T("TPL_PROMPT_RESET_TITLE"),
+            Content = I18n.T("TPL_PROMPT_RESET_CONTENT"),
+            OkText = I18n.T("BTN_OK"),
+            CancelText = I18n.T("BTN_CANCEL"),
+            OkType = ButtonType.Primary
+        });
+
+        if (!confirm) return;
+
+        await Reset(entityType);
+    }
+
+    private async Task Reset(string entityType)
+    {
+        regenerating = true;
+        try
+        {
+            var client = await Auth.CreateClientWithAuthAsync();
+            var url = $"/api/admin/templates/{entityType}/reset";
+            Console.WriteLine($"[Templates] Calling reset API: {url}");
+            
+            var resp = await client.PostAsync(url, null);
+            var content = await resp.Content.ReadAsStringAsync();
+            Console.WriteLine($"[Templates] Response status: {resp.StatusCode}, body: {content}");
+            
+            if (resp.IsSuccessStatusCode)
+            {
+                MessageService.Success(I18n.T("MSG_RESET_SUCCESS"));
+                await LoadTemplates();
+            }
+            else
+            {
+                MessageService.Error($"{I18n.T("MSG_RESET_FAILED")}: {content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Templates] Exception: {ex}");
+            MessageService.Error($"{I18n.T("MSG_RESET_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            regenerating = false;
+        }
+    }
+
     private async Task DeleteTemplate(int templateId)
     {
         try
@@ -597,6 +656,13 @@
         }
     }
 
+    private static bool IsTestTemplate(AppModels.FormTemplate template)
+    {
+        var userId = template.UserId?.Trim() ?? string.Empty;
+        return userId.Equals("test", StringComparison.OrdinalIgnoreCase) ||
+               userId.Equals("__test__", StringComparison.OrdinalIgnoreCase);
+    }
+
     private RenderFragment RenderTemplateCard(AppModels.FormTemplate template) => builder =>
     {
         builder.OpenElement(0, "div");
@@ -629,6 +695,20 @@
             builder.OpenElement(12, "span");
             builder.AddAttribute(13, "class", "badge badge-info");
             builder.AddContent(14, $"🔒 {I18n.T("LBL_SYSTEM_TEMPLATE")}");
+            builder.CloseElement();
+        }
+        else if (IsTestTemplate(template))
+        {
+            builder.OpenElement(12, "span");
+            builder.AddAttribute(13, "class", "badge badge-warning");
+            builder.AddContent(14, $"🧪 {I18n.T("LBL_TEST_TEMPLATE")}");
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(12, "span");
+            builder.AddAttribute(13, "class", "badge badge-success");
+            builder.AddContent(14, $"👤 {I18n.T("LBL_USER_TEMPLATE")}");
             builder.CloseElement();
         }
 

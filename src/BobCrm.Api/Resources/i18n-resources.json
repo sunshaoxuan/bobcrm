@@ -5048,5 +5048,45 @@
     "zh": "预览",
     "ja": "プレビュー",
     "en": "Preview"
+  },
+  "BTN_RESET_TEMPLATES": {
+    "zh": "硬重置",
+    "ja": "ハードリセット",
+    "en": "Hard Reset"
+  },
+  "TPL_PROMPT_RESET_TITLE": {
+    "zh": "硬重置模板",
+    "ja": "テンプレートをハードリセット",
+    "en": "Hard Reset Templates"
+  },
+  "TPL_PROMPT_RESET_CONTENT": {
+    "zh": "这将删除所有现有模板和绑定，然后重新创建。此操作不可逆！确认继续？",
+    "ja": "すべての既存テンプレートとバインディングを削除し、再作成します。この操作は元に戻せません！続行しますか？",
+    "en": "This will delete all existing templates and bindings, then recreate them. This operation is irreversible! Continue?"
+  },
+  "MSG_RESET_SUCCESS": {
+    "zh": "模板已重置并重新创建",
+    "ja": "テンプレートがリセットされ、再作成されました",
+    "en": "Templates reset and recreated"
+  },
+  "MSG_RESET_FAILED": {
+    "zh": "重置失败",
+    "ja": "リセットに失敗しました",
+    "en": "Reset failed"
+  },
+  "LBL_TEST_TEMPLATE": {
+    "zh": "测试模板",
+    "ja": "テストテンプレート",
+    "en": "Test Template"
+  },
+  "ADMIN_TEMPLATE_RESET_SUMMARY": {
+    "zh": "硬重置系统模板",
+    "ja": "システムテンプレートをハードリセット",
+    "en": "Hard reset system templates"
+  },
+  "ADMIN_TEMPLATE_RESET_DESCRIPTION": {
+    "zh": "删除并重建指定实体的系统默认模板和绑定（仅开发环境）",
+    "ja": "指定エンティティのシステム既定テンプレートとバインディングを削除・再作成します（開発環境のみ）",
+    "en": "Delete and recreate system default templates and bindings for the specified entity (dev only)"
   }
 }

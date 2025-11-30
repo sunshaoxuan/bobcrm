@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Tests;
 
@@ -141,6 +145,41 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
 
         var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(payload.TryGetProperty("entity", out _));
+    }
+
+    [Fact]
+    public async Task Admin_Reset_All_Templates_And_Regenerate_Succeeds()
+    {
+        var client = _factory.CreateClient();
+        var (access, _) = await client.LoginAsAdminAsync();
+        client.UseBearer(access);
+
+        // 1) 删除所有模板/绑定并重建系统默认模板
+        var reset = await client.PostAsync("/api/admin/templates/reset-all", null);
+        reset.EnsureSuccessStatusCode();
+
+        var payload = await reset.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(payload.TryGetProperty("entities", out var entities));
+        Assert.True(payload.TryGetProperty("created", out _));
+
+        // 2) 直接检查数据库中每个实体的系统模板（仅系统实体/有字段的实体应有双模板）
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var entitiesWithFields = await db.EntityDefinitions
+            .Include(e => e.Fields)
+            .Where(e => e.Fields != null && e.Fields.Count > 0)
+            .ToListAsync();
+
+        foreach (var entity in entitiesWithFields)
+        {
+            var templates = await db.FormTemplates
+                .Where(t => t.EntityType == entity.EntityRoute && t.IsSystemDefault)
+                .ToListAsync();
+
+            Assert.Contains(templates, t => t.UsageType == FormTemplateUsageType.List);
+            Assert.Contains(templates, t => t.UsageType == FormTemplateUsageType.Detail);
+            Assert.True(templates.Count >= 2, "System templates should include at least List and Detail.");
+        }
     }
 
     [Fact]
