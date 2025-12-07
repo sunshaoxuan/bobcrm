@@ -8,6 +8,7 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject IWebHostEnvironment Env
 @using System.Linq
+@using BobCrm.App.Services
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
            HeroSubtitle='@I18n.T("TXT_AUTH_HERO_SUBTITLE")'
@@ -319,7 +320,7 @@
                 StateHasChanged();
                 return;
             }
-            var json = await resp.Content.ReadFromJsonAsync<LoginResult>();
+            var json = await ApiResponseHelper.ReadDataAsync<LoginResult>(resp);
             if (json is null)
             {
                 error = I18n.T("ERR_PARSE_RESPONSE"); return;

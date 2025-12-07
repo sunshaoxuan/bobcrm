@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base.Models;
@@ -41,10 +42,13 @@ public static class UserEndpoints
             string id,
             UserManager<IdentityUser> um,
             AppDbContext db,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var user = await um.FindByIdAsync(id);
-            if (user == null) return Results.NotFound(new { error = "User not found" });
+            if (user == null) return Results.NotFound(new ErrorResponse(loc.T("ERR_USER_NOT_FOUND", lang), "USER_NOT_FOUND"));
 
             var roles = await db.RoleAssignments
                 .AsNoTracking()
@@ -60,15 +64,18 @@ public static class UserEndpoints
             CreateUserRequest request,
             UserManager<IdentityUser> um,
             AppDbContext db,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var userName = request.UserName.Trim();
             var email = request.Email.Trim();
 
             if (await um.FindByNameAsync(userName) != null)
             {
-                return Results.BadRequest(new { error = "Username already exists." });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_USERNAME_EXISTS", lang), "USERNAME_EXISTS"));
             }
 
             var user = new IdentityUser
@@ -81,7 +88,8 @@ public static class UserEndpoints
             var create = await um.CreateAsync(user);
             if (!create.Succeeded)
             {
-                return Results.BadRequest(new { error = string.Join("; ", create.Errors.Select(e => e.Description)) });
+                var errors = string.Join("; ", create.Errors.Select(e => e.Description));
+                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_USER_CREATE_FAILED", lang), errors), "USER_CREATE_FAILED"));
             }
 
             if (!string.IsNullOrWhiteSpace(request.Password))
@@ -90,7 +98,8 @@ public static class UserEndpoints
                 if (!addPwd.Succeeded)
                 {
                     await um.DeleteAsync(user);
-                    return Results.BadRequest(new { error = string.Join("; ", addPwd.Errors.Select(e => e.Description)) });
+                    var errors = string.Join("; ", addPwd.Errors.Select(e => e.Description));
+                    return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_USER_ADD_PASSWORD_FAILED", lang), errors), "USER_CREATE_FAILED"));
                 }
             }
 
@@ -106,10 +115,13 @@ public static class UserEndpoints
             UpdateUserRequest request,
             UserManager<IdentityUser> um,
             AppDbContext db,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var user = await um.FindByIdAsync(id);
-            if (user == null) return Results.NotFound(new { error = "User not found" });
+            if (user == null) return Results.NotFound(new ErrorResponse(loc.T("ERR_USER_NOT_FOUND", lang), "USER_NOT_FOUND"));
 
             var email = request.Email?.Trim();
             if (!string.IsNullOrWhiteSpace(email))
@@ -140,7 +152,8 @@ public static class UserEndpoints
             var update = await um.UpdateAsync(user);
             if (!update.Succeeded)
             {
-                return Results.BadRequest(new { error = string.Join("; ", update.Errors.Select(e => e.Description)) });
+                var errors = string.Join("; ", update.Errors.Select(e => e.Description));
+                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_USER_UPDATE_FAILED", lang), errors), "USER_UPDATE_FAILED"));
             }
 
             if (!string.IsNullOrWhiteSpace(request.Password))
@@ -150,14 +163,16 @@ public static class UserEndpoints
                     var remove = await um.RemovePasswordAsync(user);
                     if (!remove.Succeeded)
                     {
-                        return Results.BadRequest(new { error = string.Join("; ", remove.Errors.Select(e => e.Description)) });
+                        var errors = string.Join("; ", remove.Errors.Select(e => e.Description));
+                        return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_USER_REMOVE_PASSWORD_FAILED", lang), errors), "USER_UPDATE_FAILED"));
                     }
                 }
 
                 var add = await um.AddPasswordAsync(user, request.Password);
                 if (!add.Succeeded)
                 {
-                    return Results.BadRequest(new { error = string.Join("; ", add.Errors.Select(e => e.Description)) });
+                    var errors = string.Join("; ", add.Errors.Select(e => e.Description));
+                    return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_USER_ADD_PASSWORD_FAILED", lang), errors), "USER_UPDATE_FAILED"));
                 }
             }
 
@@ -170,10 +185,13 @@ public static class UserEndpoints
             UpdateUserRolesRequest request,
             UserManager<IdentityUser> um,
             AppDbContext db,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var user = await um.FindByIdAsync(id);
-            if (user == null) return Results.NotFound(new { error = "User not found" });
+            if (user == null) return Results.NotFound(new ErrorResponse(loc.T("ERR_USER_NOT_FOUND", lang), "USER_NOT_FOUND"));
 
             await UpdateAssignmentsAsync(id, request.Roles, db, ct);
             var roles = await db.RoleAssignments.AsNoTracking().Include(a => a.Role).Where(a => a.UserId == id).ToListAsync(ct);

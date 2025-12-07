@@ -240,7 +240,46 @@ if ((Test-Path "tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj")) {
 }
 
 # ========================================
-# 步骤 7: 总结
+# 步骤 7: I18n 多语言合规性检查
+# ========================================
+Write-Section "I18n 多语言合规性检查"
+
+if (Test-Path "scripts/check-i18n.ps1") {
+    Write-Host "正在检查硬编码字符串...`n" -ForegroundColor Gray
+    
+    # 运行 i18n 检查，仅检查 ERROR 级别
+    try {
+        # 生成 i18n 日志文件路径
+        $i18nLogFile = "$logDir/i18n-check-$timestamp.log"
+        
+        # 捕获输出并检查退出码
+        $i18nOutput = & "scripts/check-i18n.ps1" -Severity ERROR -CI -LogFile $i18nLogFile 2>&1
+        $i18nSuccess = $LASTEXITCODE -eq 0
+        
+        # 显示输出（包含统计信息）
+        Write-Host $i18nOutput
+        
+        if ($i18nSuccess) {
+            Write-Check "I18n 合规性（ERROR 级别）" $true "无 ERROR 级别违规"
+        } else {
+            Write-Check "I18n 合规性（ERROR 级别）" $false "发现 ERROR 级别违规（硬编码字符串）"
+            Write-Host "`n  💡 修复建议：" -ForegroundColor Yellow
+            Write-Host "     1. 运行: pwsh scripts/check-i18n.ps1 --Fix" -ForegroundColor Gray
+            Write-Host "     2. 查看: docs/process/STD-05-多语言开发规范.md" -ForegroundColor Gray
+            Write-Host "     3. 导出清单: pwsh scripts/check-i18n.ps1 --Output violations.csv" -ForegroundColor Gray
+            Write-Host "     4. 查看详细日志: $i18nLogFile`n" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Warn "I18n 检查执行失败" $_.Exception.Message
+    }
+} else {
+    Write-Warn "未找到 I18n 检查脚本" "跳过多语言检查"
+}
+
+# ========================================
+# 步骤 8: 总结
+# ========================================
+Write-Section "验证总结"
 # ========================================
 Write-Section "验证总结"
 

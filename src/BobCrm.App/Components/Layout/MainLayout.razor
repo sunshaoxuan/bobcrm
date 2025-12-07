@@ -39,7 +39,7 @@
                                         @action.Label
                                     </Button>
                                 }
-                                <Button Ghost OnClick="HideSticky">关闭</Button>
+                                <Button Ghost OnClick="HideSticky">@I18n.T("BTN_CLOSE")</Button>
                             </div>
                         </div>
                     }
@@ -63,12 +63,12 @@
                 {
                     <aside class="layout-right-panel">
                         <div class="right-panel-header">
-                            <span>工作栏</span>
+                            <span>@I18n.T("LBL_WORKSPACE")</span>
                             <button class="panel-close" @onclick="ToggleRightPanel">
                                 <Icon Type="@IconType.Outline.Close" />
                             </button>
                         </div>
-                        <p class="text-muted">此区域预留给提醒、批量操作或时间线等上下文信息。</p>
+                        <p class="text-muted">@I18n.T("TXT_RIGHT_PANEL_HINT")</p>
                     </aside>
                 }
             </div>
@@ -92,7 +92,7 @@
     [Parameter] public RenderFragment? Body { get; set; }
     [CascadingParameter] public int I18nRenderVersion { get; set; }
 
-    private string _railTagline = "体验中枢";
+    private string _railTagline = string.Empty;
     private int _lastI18nVersion = -1;
 
     protected override void OnInitialized()
@@ -132,7 +132,7 @@
             var resp = await Auth.GetWithRefreshAsync("/api/access/functions/me");
             if (!resp.IsSuccessStatusCode)
             {
-                _menuError = "菜单加载失败";
+                _menuError = I18n.T("MSG_LOAD_FAILED");
                 _domains.Clear();
                 _activeDomain = null;
             }
@@ -214,7 +214,7 @@
     private void UpdateRailTagline()
     {
         var tagline = I18n.T("TXT_RAIL_TAGLINE");
-        _railTagline = string.IsNullOrWhiteSpace(tagline) ? "体验中枢" : tagline!;
+        _railTagline = string.IsNullOrWhiteSpace(tagline) ? "Experience Hub" : tagline!;
     }
 
     private static string NormalizeRelative(string relative)

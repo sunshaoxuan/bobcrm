@@ -68,7 +68,9 @@ else
                                 {
                                     <Tag Color="@TagColor.Error" Style="margin:0; font-size:10px; line-height:16px">* Required</Tag>
                                 }
-                                <Tag Style="margin:0; font-size:10px; line-height:16px">@meta?.Source</Tag>
+                                <Tag Color="@GetSourceTagColor(meta?.Source)" Style="margin:0; font-size:10px; line-height:16px">
+                                    @GetSourceDisplayName(meta?.Source)
+                                </Tag>
                             </div>
                         </div>
                     </TitleTemplate>
@@ -163,40 +165,51 @@ else
     private List<EntityFieldTreeNode> BuildTreeNodes(EntityDefinitionDto definition)
     {
         var list = new List<EntityFieldTreeNode>();
-        var fieldGroups = (definition.Fields ?? new()).GroupBy(f => f.Source ?? "Custom").OrderBy(g => GetSourceOrder(g.Key));
+        var fieldInfos = (definition.Fields ?? new())
+            .Select(f => new
+            {
+                Field = f,
+                Info = GetSourceInfo(f.Source, f.PropertyName)
+            })
+            .ToList();
+
+        var fieldGroups = fieldInfos
+            .GroupBy(f => f.Info.Key)
+            .OrderBy(g => g.First().Info.Order);
 
         foreach (var group in fieldGroups)
         {
+            var info = group.First().Info;
             var groupNode = new EntityFieldTreeNode
             {
-                Key = $"group-{group.Key}",
-                PropertyName = GetSourceDisplayName(group.Key),
+                Key = $"group-{info.Key}",
+                PropertyName = info.DisplayName,
                 DisplayName = string.Empty,
-                DataType = group.Key,
-                Source = group.Key,
+                DataType = info.Key,
+                Source = info.Key,
                 IsRequired = false,
                 IsDraggable = false,
                 IsGroup = true,
-                Icon = IconType.Outline.FolderOpen,
+                Icon = info.Icon,
                 Children = new List<EntityFieldTreeNode>()
             };
 
-            foreach (var field in group.OrderBy(f => f.SortOrder).ThenBy(f => f.PropertyName))
+            foreach (var field in group.OrderBy(f => f.Field.SortOrder).ThenBy(f => f.Field.PropertyName))
             {
-                var isComplex = field.IsEntityRef || string.Equals(field.DataType, "EntityRef", StringComparison.OrdinalIgnoreCase);
+                var isComplex = field.Field.IsEntityRef || string.Equals(field.Field.DataType, "EntityRef", StringComparison.OrdinalIgnoreCase);
                 var meta = new EntityFieldTreeNode
                 {
-                    Key = $"{definition.EntityRoute}:{field.PropertyName}",
-                    PropertyName = field.PropertyName,
-                    DisplayName = ResolveDisplay(field.DisplayName?.ToDictionary(k => k.Key, v => v.Value), field.PropertyName),
-                    DataType = field.DataType,
-                    IsRequired = field.IsRequired,
-                    Source = group.Key,
+                    Key = $"{definition.EntityRoute}:{field.Field.PropertyName}",
+                    PropertyName = field.Field.PropertyName,
+                    DisplayName = ResolveDisplay(field.Field.DisplayName?.ToDictionary(k => k.Key, v => v.Value), field.Field.PropertyName),
+                    DataType = field.Field.DataType,
+                    IsRequired = field.Field.IsRequired,
+                    Source = info.Key,
                     IsDraggable = true,
-                    Icon = GetFieldIcon(field.DataType),
+                    Icon = GetFieldIcon(field.Field.DataType),
                     IsComplex = isComplex,
-                    ReferencedEntityId = field.ReferencedEntityId,
-                    ReferencedEntityRoute = field.TableName,
+                    ReferencedEntityId = field.Field.ReferencedEntityId,
+                    ReferencedEntityRoute = field.Field.TableName,
                     ChildrenLoaded = false,
                     Children = new List<EntityFieldTreeNode>()
                 };
@@ -328,31 +341,11 @@ else
         };
     }
 
-    private int GetSourceOrder(string source)
-    {
-        return source switch
-        {
-            "Custom" => 1,
-            "Base" => 2,
-            "Archive" => 3,
-            "Audit" => 4,
-            "Tree" => 5,
-            _ => 99
-        };
-    }
+    private TagColor GetSourceTagColor(string? source)
+        => GetSourceInfo(source, string.Empty).Color;
 
-    private string GetSourceDisplayName(string source)
-    {
-        return source switch
-        {
-            "Custom" => I18n.T("LBL_CUSTOM_FIELDS"),
-            "Base" => I18n.T("LBL_BASE_FIELDS"),
-            "Archive" => I18n.T("LBL_ARCHIVE_FIELDS"),
-            "Audit" => I18n.T("LBL_AUDIT_FIELDS"),
-            "Tree" => I18n.T("LBL_TREE_FIELDS"),
-            _ => source
-        };
-    }
+    private string GetSourceDisplayName(string? source)
+        => GetSourceInfo(source, string.Empty).DisplayName;
 
     private string GetSuggestedWidgetType(string dataType, int? length, bool isRequired)
     {
@@ -380,15 +373,13 @@ else
         var response = await Auth.GetWithRefreshAsync($"/api/entity-definitions/by-type/{Uri.EscapeDataString(candidate)}");
         if (response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+            return await ApiResponseHelper.ReadDataAsync<EntityDefinitionDto>(response);
         }
 
         response = await Auth.GetWithRefreshAsync($"/api/entities/{Uri.EscapeDataString(candidate)}/definition");
         if (response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<EntityDefinitionDto>(content, options);
+            return await ApiResponseHelper.ReadDataAsync<EntityDefinitionDto>(response);
         }
 
         await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {candidate}: {response.StatusCode}");
@@ -415,6 +406,32 @@ else
             yield return $"{cleaned}s";
         }
     }
+
+    private SourceInfo GetSourceInfo(string? source, string propertyName)
+    {
+        var normalized = (source ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            normalized = BaseFieldNames.Contains(propertyName, StringComparer.OrdinalIgnoreCase) ? "Base" : "Custom";
+        }
+
+        return normalized.ToLowerInvariant() switch
+        {
+            "system" or "base" => new SourceInfo("Base", I18n.T("LBL_BASE_FIELDS"), TagColor.Processing, IconType.Outline.Database, 1),
+            "archive" => new SourceInfo("Archive", I18n.T("LBL_ARCHIVE_FIELDS"), TagColor.Purple, IconType.Outline.FolderOpen, 2),
+            "audit" => new SourceInfo("Audit", I18n.T("LBL_AUDIT_FIELDS"), TagColor.Orange, IconType.Outline.SecurityScan, 3),
+            "tree" => new SourceInfo("Tree", I18n.T("LBL_TREE_FIELDS"), TagColor.Cyan, IconType.Outline.Apartment, 4),
+            "interface" => new SourceInfo("Interface", I18n.T("LBL_INTERFACE_FIELDS"), TagColor.Blue, IconType.Outline.Cluster, 5),
+            _ => new SourceInfo("Custom", I18n.T("LBL_CUSTOM_FIELDS"), TagColor.Success, IconType.Outline.PlusCircle, 10)
+        };
+    }
+
+    private static readonly HashSet<string> BaseFieldNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Id", "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy", "IsDeleted", "DeletedAt", "DeletedBy"
+    };
+
+    private record SourceInfo(string Key, string DisplayName, TagColor Color, string Icon, int Order);
 
     private class EntityFieldTreeNode
     {

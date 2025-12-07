@@ -8,22 +8,22 @@
 @inject TemplateRuntimeClient TemplateRuntime
 @inject IServiceProvider ServiceProvider
 
-<PageTitle>模板绑定 - OneCRM</PageTitle>
+<PageTitle>@I18n.T("TB_PAGE_TITLE")</PageTitle>
 
 <div class="template-bindings-page">
-    <h2 class="page-title">模板绑定管理</h2>
+    <h2 class="page-title">@I18n.T("TB_TITLE")</h2>
 
     @if (_loading)
     {
-        <div class="loading-state">加载中...</div>
+        <div class="loading-state">@I18n.T("TB_LOADING")</div>
     }
     else if (!_hasPermission)
     {
         <div class="permission-denied">
             <div class="permission-icon">🚫</div>
             <div>
-                <div class="permission-title">没有权限访问模板绑定</div>
-                <div class="permission-hint">需要功能权限 <code>SYS.TEMPLATE.ASSIGN</code> 才能调整绑定。</div>
+                <div class="permission-title">@I18n.T("TB_NO_PERMISSION_TITLE")</div>
+                <div class="permission-hint">@I18n.T("TB_NO_PERMISSION_HINT")</div>
             </div>
         </div>
     }
@@ -32,8 +32,8 @@
         <div class="empty-state">
             <div class="empty-icon">🗂️</div>
             <div>
-                <div class="empty-title">当前账号没有可绑定的模板</div>
-                <div class="empty-hint">请先在模板中心创建实体模板后再进行绑定。</div>
+                <div class="empty-title">@I18n.T("TB_EMPTY_TITLE")</div>
+                <div class="empty-hint">@I18n.T("TB_EMPTY_HINT")</div>
             </div>
         </div>
     }
@@ -41,7 +41,7 @@
     {
         <div class="filters">
             <label>
-                <span>实体类型</span>
+                <span>@I18n.T("TB_LABEL_ENTITY_TYPE")</span>
                 <select data-testid="entity-select" value="@(_selectedEntity ?? string.Empty)" @onchange="HandleEntityChanged">
                     @foreach (var entity in _entityOptions)
                     {
@@ -50,7 +50,7 @@
                 </select>
             </label>
             <label>
-                <span>用途</span>
+                <span>@I18n.T("TB_LABEL_USAGE")</span>
                 <select data-testid="usage-select" value="@((int)_selectedUsage)" @onchange="HandleUsageChanged">
                     @foreach (var usage in _usageOptions)
                     {
@@ -65,27 +65,27 @@
                     class="toggle-button @( _useSystemBinding ? "active" : string.Empty )"
                     data-testid="binding-scope-system"
                     @onclick="() => ChangeBindingScope(true)">
-                系统绑定
+                @I18n.T("TB_SCOPE_SYSTEM")
             </button>
             <button type="button"
                     class="toggle-button @( !_useSystemBinding ? "active" : string.Empty )"
                     data-testid="binding-scope-user"
                     @onclick="() => ChangeBindingScope(false)">
-                用户绑定
+                @I18n.T("TB_SCOPE_USER")
             </button>
         </div>
 
         @if (_templatesLoading)
         {
-            <div class="loading-state">正在加载模板...</div>
+            <div class="loading-state">@I18n.T("TB_TEMPLATES_LOADING")</div>
         }
         else if (!GetVisibleTemplates().Any())
         {
             <div class="empty-state subtle">
                 <div class="empty-icon">📄</div>
                 <div>
-                    <div class="empty-title">当前没有可用的模板</div>
-                    <div class="empty-hint">请切换用途或在模板中心创建对应的模板。</div>
+                    <div class="empty-title">@I18n.T("TB_NO_TEMPLATES_TITLE")</div>
+                    <div class="empty-hint">@I18n.T("TB_NO_TEMPLATES_HINT")</div>
                 </div>
             </div>
         }
@@ -108,18 +108,18 @@
                                 <span class="badge usage">@GetUsageLabel(template.UsageType)</span>
                                 @if (template.IsSystemDefault)
                                 {
-                                    <span class="badge system">系统默认</span>
+                                    <span class="badge system">@I18n.T("TB_BADGE_SYSTEM_DEFAULT")</span>
                                 }
                                 else if (template.IsUserDefault)
                                 {
-                                    <span class="badge user">用户默认</span>
+                                    <span class="badge user">@I18n.T("TB_BADGE_USER_DEFAULT")</span>
                                 }
                             </div>
                             @if (!string.IsNullOrWhiteSpace(template.Description))
                             {
                                 <div class="template-desc">@template.Description</div>
                             }
-                            <div class="template-meta">更新于 @template.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+                            <div class="template-meta">@($"{I18n.T("TB_UPDATED_AT")} {template.UpdatedAt.ToLocalTime():yyyy-MM-dd HH:mm}")</div>
                         </div>
                     </label>
                 }
@@ -127,20 +127,20 @@
         }
 
         <div class="function-config">
-            <label for="function-code-input">功能编码要求（可选）</label>
+            <label for="function-code-input">@I18n.T("TB_LABEL_FUNCTION_CODE_OPTIONAL")</label>
             <div class="function-row">
                 <input id="function-code-input"
                        class="field-control"
                        data-testid="function-code-input"
                        value="@(_functionCode ?? string.Empty)"
-                       placeholder="填写访问该模板所需的功能编码"
+                       placeholder='@I18n.T("TB_PLACEHOLDER_FUNCTION_CODE")'
                        @oninput="HandleFunctionCodeInput" />
                 <button type="button"
                         class="btn ghost"
                         data-testid="apply-template-function"
                         @onclick="ApplyTemplateFunctionCode"
                         disabled="@(!_selectedTemplateId.HasValue)">
-                    使用模板默认
+                    @I18n.T("TB_BTN_USE_TEMPLATE_DEFAULT")
                 </button>
             </div>
         </div>
@@ -150,13 +150,13 @@
                     data-testid="save-binding"
                     disabled="@(!_selectedTemplateId.HasValue || _saving)"
                     @onclick="SaveBindingAsync">
-                @(_saving ? "保存中..." : "保存绑定")
+                @(_saving ? I18n.T("TB_BTN_SAVING_BINDING") : I18n.T("TB_BTN_SAVE_BINDING"))
             </button>
             <button class="btn secondary"
                     data-testid="refresh-binding"
                     disabled="@_loading"
                     @onclick="ReloadAsync">
-                重新加载
+                @I18n.T("TB_BTN_RELOAD")
             </button>
         </div>
 
@@ -168,12 +168,12 @@
         @if (_runtimeContext != null)
         {
             <div class="runtime-panel">
-                <div class="runtime-title">当前运行态</div>
-                <div class="runtime-item"><strong>模板：</strong>@_runtimeContext.Template.Name (@GetUsageLabel(_runtimeContext.Template.UsageType))</div>
-                <div class="runtime-item"><strong>访问级别：</strong>@(_runtimeContext.HasFullAccess ? "完全访问" : "受限")</div>
+                <div class="runtime-title">@I18n.T("TB_RUNTIME_TITLE")</div>
+                <div class="runtime-item"><strong>@I18n.T("TB_RUNTIME_TEMPLATE")</strong>@_runtimeContext.Template.Name (@GetUsageLabel(_runtimeContext.Template.UsageType))</div>
+                <div class="runtime-item"><strong>@I18n.T("TB_RUNTIME_ACCESS")</strong>@(_runtimeContext.HasFullAccess ? I18n.T("TB_ACCESS_FULL") : I18n.T("TB_ACCESS_LIMITED"))</div>
                 @if (_runtimeContext.AppliedScopes?.Count > 0)
                 {
-                    <div class="runtime-item"><strong>已应用的数据范围：</strong></div>
+                    <div class="runtime-item"><strong>@I18n.T("TB_RUNTIME_SCOPES")</strong></div>
                     <ul class="scope-list">
                         @foreach (var scope in _runtimeContext.AppliedScopes)
                         {
@@ -509,14 +509,12 @@
     private CancellationTokenSource? _loadCts;
 
     private I18nService? _i18n;
+    private I18nService I18n => _i18n ?? (_i18n = ServiceProvider.GetRequiredService<I18nService>());
 
     protected override void OnInitialized()
     {
-        _i18n ??= ServiceProvider.GetService<I18nService>();
-        if (_i18n is not null)
-        {
-            _i18n.OnChanged += HandleI18nChanged;
-        }
+        var i18n = I18n;
+        i18n.OnChanged += HandleI18nChanged;
     }
 
     private void HandleI18nChanged()
@@ -618,7 +616,7 @@
         }
         catch
         {
-            _statusMessage = "模板加载失败";
+            _statusMessage = I18n.T("TB_STATUS_LOAD_FAILED");
             _statusSuccess = false;
         }
         finally
@@ -689,7 +687,7 @@
     {
         if (!_selectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_selectedEntity))
         {
-            _statusMessage = "请选择要绑定的模板";
+            _statusMessage = I18n.T("TB_STATUS_SELECT_TEMPLATE");
             _statusSuccess = false;
             await InvokeAsync(StateHasChanged);
             return;
@@ -710,14 +708,14 @@
 
         if (binding is null)
         {
-            _statusMessage = "保存失败，请重试";
+            _statusMessage = I18n.T("TB_STATUS_SAVE_FAILED");
             _statusSuccess = false;
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         _currentBinding = binding;
-        _statusMessage = "绑定已保存";
+        _statusMessage = I18n.T("TB_STATUS_SAVE_SUCCESS");
         _statusSuccess = true;
         _functionCode = binding.RequiredFunctionCode;
         _functionCodeDirty = false;
@@ -823,10 +821,11 @@
     {
         return usage switch
         {
-            AppModels.TemplateUsageType.List => "列表",
-            AppModels.TemplateUsageType.Detail => "详情",
-            AppModels.TemplateUsageType.Edit => "编辑",
+            AppModels.TemplateUsageType.List => I18n.T("TB_USAGE_LIST"),
+            AppModels.TemplateUsageType.Detail => I18n.T("TB_USAGE_DETAIL"),
+            AppModels.TemplateUsageType.Edit => I18n.T("TB_USAGE_EDIT"),
             _ => usage.ToString()
         };
     }
 }
+

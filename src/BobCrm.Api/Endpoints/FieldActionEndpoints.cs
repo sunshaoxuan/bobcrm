@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Utils;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,32 +19,36 @@ public static class FieldActionEndpoints
             .WithTags("FieldActions")
             .WithOpenApi();
 
-        // RDP文件下载
-        group.MapPost("/rdp/download", DownloadRdp)
+        // RDP file download
+        group.MapPost("/rdp/download", (RdpDownloadRequest request, ILocalization loc, HttpContext http) => DownloadRdp(request, loc, http))
             .WithName("DownloadRdp")
-            .WithSummary("生成并下载RDP文件");
+            .WithSummary("Generate and download RDP file");
 
-        // 文件路径验证
-        group.MapPost("/file/validate", ValidateFilePath)
+        // File path validation
+        group.MapPost("/file/validate", (FileValidationRequest request, ILocalization loc, HttpContext http) => ValidateFilePath(request, loc, http))
             .WithName("ValidateFilePath")
-            .WithSummary("验证文件路径是否存在");
+            .WithSummary("Validate whether a file path exists");
 
-        // Mailto链接生成
-        group.MapPost("/mailto/generate", GenerateMailtoLink)
+        // Mailto link generation
+        group.MapPost("/mailto/generate", (MailtoRequest request, ILocalization loc, HttpContext http) => GenerateMailtoLink(request, loc, http))
             .WithName("GenerateMailtoLink")
-            .WithSummary("生成mailto链接");
+            .WithSummary("Generate mailto link");
     }
 
     /// <summary>
     /// 生成并返回RDP文件
     /// </summary>
-    private static IResult DownloadRdp([FromBody] RdpDownloadRequest request)
+    private static IResult DownloadRdp(
+        [FromBody] RdpDownloadRequest request,
+        ILocalization loc,
+        HttpContext http)
     {
+        var lang = LangHelper.GetLang(http);
         try
         {
             // 验证必填字段
             if (string.IsNullOrWhiteSpace(request.Host))
-                return Results.BadRequest(new { code = "ERR_RDP_HOST_REQUIRED", message = "主机地址不能为空" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_RDP_HOST_REQUIRED", lang), "ERR_RDP_HOST_REQUIRED"));
 
             var rdpContent = GenerateRdpContent(request);
             var fileName = $"{FileNameHelper.SanitizeFileName(request.Host)}_{DateTime.Now:yyyyMMddHHmmss}.rdp";
@@ -53,7 +59,7 @@ public static class FieldActionEndpoints
         }
         catch (Exception ex)
         {
-            return Results.BadRequest(new { code = "ERR_RDP_GENERATE_FAILED", message = $"生成RDP文件失败: {ex.Message}" });
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_RDP_GENERATE_FAILED", lang), ex.Message), "ERR_RDP_GENERATE_FAILED"));
         }
     }
 
@@ -183,21 +189,25 @@ public static class FieldActionEndpoints
     /// <summary>
     /// 验证文件路径
     /// </summary>
-    private static IResult ValidateFilePath([FromBody] FileValidationRequest request)
+    private static IResult ValidateFilePath(
+        [FromBody] FileValidationRequest request,
+        ILocalization loc,
+        HttpContext http)
     {
+        var lang = LangHelper.GetLang(http);
         try
         {
             if (string.IsNullOrWhiteSpace(request.Path))
-                return Results.BadRequest(new { code = "ERR_PATH_REQUIRED", message = "文件路径不能为空" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_PATH_REQUIRED", lang), "ERR_PATH_REQUIRED"));
 
             // 安全检查：只允许验证本地文件路径
             if (request.Path.StartsWith("http://") || request.Path.StartsWith("https://"))
-                return Results.Ok(new { exists = true, type = "url", message = "URL路径" });
+                return Results.Ok(new { exists = true, type = "url", message = loc.T("MSG_PATH_IS_URL", lang) });
 
             // 检查路径格式
             if (!Uri.TryCreate(request.Path, UriKind.Absolute, out var uri) && 
                 !Path.IsPathRooted(request.Path))
-                return Results.BadRequest(new { code = "ERR_INVALID_PATH", message = "无效的文件路径格式" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PATH", lang), "ERR_INVALID_PATH"));
 
             // 检查文件是否存在
             var exists = File.Exists(request.Path);
@@ -221,24 +231,28 @@ public static class FieldActionEndpoints
             }
             else
             {
-                return Results.Ok(new { exists = false, type = "notfound", message = "文件或目录不存在" });
+                return Results.Ok(new { exists = false, type = "notfound", message = loc.T("ERR_PATH_NOT_FOUND", lang) });
             }
         }
         catch (Exception ex)
         {
-            return Results.BadRequest(new { code = "ERR_VALIDATION_FAILED", message = $"验证失败: {ex.Message}" });
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_VALIDATION_FAILED", lang), ex.Message), "ERR_VALIDATION_FAILED"));
         }
     }
 
     /// <summary>
     /// 生成mailto链接
     /// </summary>
-    private static IResult GenerateMailtoLink([FromBody] MailtoRequest request)
+    private static IResult GenerateMailtoLink(
+        [FromBody] MailtoRequest request,
+        ILocalization loc,
+        HttpContext http)
     {
+        var lang = LangHelper.GetLang(http);
         try
         {
             if (string.IsNullOrWhiteSpace(request.Email))
-                return Results.BadRequest(new { code = "ERR_EMAIL_REQUIRED", message = "邮箱地址不能为空" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_EMAIL_REQUIRED", lang), "ERR_EMAIL_REQUIRED"));
 
             var mailto = $"mailto:{Uri.EscapeDataString(request.Email)}";
             var queryParts = new List<string>();
@@ -262,7 +276,7 @@ public static class FieldActionEndpoints
         }
         catch (Exception ex)
         {
-            return Results.BadRequest(new { code = "ERR_MAILTO_FAILED", message = $"生成mailto链接失败: {ex.Message}" });
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_MAILTO_FAILED", lang), ex.Message), "ERR_MAILTO_FAILED"));
         }
     }
 }

@@ -1,282 +1,281 @@
-# Endpoint Analysis Summary Table
+# 端点分析摘要表
 
-## Quick Reference by Endpoint File
+## 按端点文件快速参考
 
-### 1. AccessEndpoints.cs (12 endpoints)
+### 1. AccessEndpoints.cs (12 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Functions Tree | GET | /api/access/functions | ANONYMOUS (Results.Ok) | HIGH | None |
-| Get User Functions | GET | /api/access/functions/me | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Create Function | POST | /api/access/functions | FunctionNodeDto (Results.Ok) | LOW | CreateFunctionRequest |
-| Get Roles | GET | /api/access/roles | RoleProfile (Results.Ok) | MEDIUM | None |
-| Create Role | POST | /api/access/roles | RoleProfile (Results.Ok) | MEDIUM | CreateRoleRequest |
-| Get Role Detail | GET | /api/access/roles/{roleId} | ANONYMOUS (Results.Json) | HIGH | None |
-| Update Role | PUT | /api/access/roles/{roleId} | ANONYMOUS (Results.Ok) | HIGH | UpdateRoleRequest |
-| Delete Role | DELETE | /api/access/roles/{roleId} | NoContent | LOW | None |
-| Update Permissions | PUT | /api/access/roles/{roleId}/permissions | ANONYMOUS (Results.Ok) | HIGH | UpdatePermissionsRequest |
-| Create Assignment | POST | /api/access/assignments | RoleAssignment (Results.Ok) | MEDIUM | AssignRoleRequest |
-| Get User Assignments | GET | /api/access/assignments/user/{userId} | ANONYMOUS (Results.Ok) | HIGH | None |
-| Delete Assignment | DELETE | /api/access/assignments/{assignmentId} | NoContent | LOW | None |
+| 获取功能树 | GET | /api/access/functions | 匿名 (Results.Ok) | 高 | 无 |
+| 获取用户功能 | GET | /api/access/functions/me | 匿名 (Results.Ok) | 中 | 无 |
+| 创建功能 | POST | /api/access/functions | FunctionNodeDto (Results.Ok) | 低 | CreateFunctionRequest |
+| 获取角色 | GET | /api/access/roles | RoleProfile (Results.Ok) | 中 | 无 |
+| 创建角色 | POST | /api/access/roles | RoleProfile (Results.Ok) | 中 | CreateRoleRequest |
+| 获取角色详情 | GET | /api/access/roles/{roleId} | 匿名 (Results.Json) | 高 | 无 |
+| 更新角色 | PUT | /api/access/roles/{roleId} | 匿名 (Results.Ok) | 高 | UpdateRoleRequest |
+| 删除角色 | DELETE | /api/access/roles/{roleId} | NoContent | 低 | 无 |
+| 更新权限 | PUT | /api/access/roles/{roleId}/permissions | 匿名 (Results.Ok) | 高 | UpdatePermissionsRequest |
+| 创建分配 | POST | /api/access/assignments | RoleAssignment (Results.Ok) | 中 | AssignRoleRequest |
+| 获取用户分配 | GET | /api/access/assignments/user/{userId} | 匿名 (Results.Ok) | 高 | 无 |
+| 删除分配 | DELETE | /api/access/assignments/{assignmentId} | NoContent | 低 | 无 |
 
 ---
 
-### 2. AdminEndpoints.cs (5 endpoints)
+### 2. AdminEndpoints.cs (5 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| DB Health Check | GET | /api/admin/db/health | ANONYMOUS (Results.Json) | HIGH | None |
-| Recreate Database | POST | /api/admin/db/recreate | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Debug List Users | GET | /api/debug/users | ANONYMOUS (Results.Ok) | HIGH | None |
-| Debug Reset Setup | POST | /api/debug/reset-setup | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Reset Password | POST | /api/admin/reset-password | ANONYMOUS (Results.Ok) | HIGH | ResetPasswordDto |
+| 数据库健康检查 | GET | /api/admin/db/health | 匿名 (Results.Json) | 高 | 无 |
+| 重建数据库 | POST | /api/admin/db/recreate | 匿名 (Results.Ok) | 中 | 无 |
+| 调试列出用户 | GET | /api/debug/users | 匿名 (Results.Ok) | 高 | 无 |
+| 调试重置设置 | POST | /api/debug/reset-setup | 匿名 (Results.Ok) | 中 | 无 |
+| 重置密码 | POST | /api/admin/reset-password | 匿名 (Results.Ok) | 高 | ResetPasswordDto |
 
 ---
 
-### 3. AuthEndpoints.cs (8 endpoints)
+### 3. AuthEndpoints.cs (8 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Register | POST | /api/auth/register | ANONYMOUS (Results.Ok) | MEDIUM | RegisterDto |
-| Activate | GET | /api/auth/activate | ANONYMOUS (Results.Ok) | MEDIUM | None (query params) |
-| Login | POST | /api/auth/login | ANONYMOUS (Results.Json) | HIGH | LoginDto |
-| Refresh Token | POST | /api/auth/refresh | ANONYMOUS (Results.Json) | HIGH | RefreshDto |
-| Logout | POST | /api/auth/logout | ANONYMOUS (Results.Ok) | MEDIUM | LogoutDto |
-| Session Check | GET | /api/auth/session | ANONYMOUS (Results.Ok) | HIGH | None |
-| Get Current User | GET | /api/auth/me | ANONYMOUS (Results.Ok) | HIGH | None |
-| Change Password | POST | /api/auth/change-password | ANONYMOUS (Results.Ok) | HIGH | ChangePasswordDto |
+| 注册 | POST | /api/auth/register | 匿名 (Results.Ok) | 中 | RegisterDto |
+| 激活 | GET | /api/auth/activate | 匿名 (Results.Ok) | 中 | 无 (查询参数) |
+| 登录 | POST | /api/auth/login | 匿名 (Results.Json) | 高 | LoginDto |
+| 刷新令牌 | POST | /api/auth/refresh | 匿名 (Results.Json) | 高 | RefreshDto |
+| 登出 | POST | /api/auth/logout | 匿名 (Results.Ok) | 中 | LogoutDto |
+| 会话检查 | GET | /api/auth/session | 匿名 (Results.Ok) | 高 | 无 |
+| 获取当前用户 | GET | /api/auth/me | 匿名 (Results.Ok) | 高 | 无 |
+| 修改密码 | POST | /api/auth/change-password | 匿名 (Results.Ok) | 高 | ChangePasswordDto |
 
 ---
 
-### 4. CustomerEndpoints.cs (6 endpoints)
+### 4. CustomerEndpoints.cs (6 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| List Customers | GET | /api/customers | Results.Json (IQuery) | MEDIUM | None |
-| Get Customer | GET | /api/customers/{id} | Results.Json (IQuery) | MEDIUM | None |
-| Create Customer | POST | /api/customers | ANONYMOUS (Results.Json) | HIGH | CreateCustomerDto |
-| Update Customer | PUT | /api/customers/{id} | ANONYMOUS (Results.Json) | HIGH | UpdateCustomerDto |
-| Get Access List | GET | /api/customers/{id}/access | ANONYMOUS (Results.Json) | HIGH | None |
-| Upsert Access | POST | /api/customers/{id}/access | ANONYMOUS (Results.Ok) | MEDIUM | AccessUpsertDto |
+| 列出客户 | GET | /api/customers | Results.Json (IQuery) | 中 | 无 |
+| 获取客户 | GET | /api/customers/{id} | Results.Json (IQuery) | 中 | 无 |
+| 创建客户 | POST | /api/customers | 匿名 (Results.Json) | 高 | CreateCustomerDto |
+| 更新客户 | PUT | /api/customers/{id} | 匿名 (Results.Json) | 高 | UpdateCustomerDto |
+| 获取访问列表 | GET | /api/customers/{id}/access | 匿名 (Results.Json) | 高 | 无 |
+| 更新访问 | POST | /api/customers/{id}/access | 匿名 (Results.Ok) | 中 | AccessUpsertDto |
 
 ---
 
-### 5. DynamicEntityEndpoints.cs (7 endpoints)
+### 5. DynamicEntityEndpoints.cs (7 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Query Entities | POST | /api/dynamic-entities/{type}/query | ANONYMOUS (Results.Ok) | HIGH | QueryRequest |
-| Get by ID | GET | /api/dynamic-entities/{type}/{id} | Dynamic (Results.Ok) | MEDIUM | None |
-| Raw Query | POST | /api/dynamic-entities/raw/{table}/query | ANONYMOUS (Results.Ok) | HIGH | QueryRequest |
-| Create | POST | /api/dynamic-entities/{type} | Dynamic (Results.Created) | MEDIUM | Dictionary<string,object> |
-| Update | PUT | /api/dynamic-entities/{type}/{id} | Dynamic (Results.Ok) | MEDIUM | Dictionary<string,object> |
-| Delete | DELETE | /api/dynamic-entities/{type}/{id} | NoContent | LOW | None |
-| Count | POST | /api/dynamic-entities/{type}/count | ANONYMOUS (Results.Ok) | HIGH | CountRequest |
+| 查询实体 | POST | /api/dynamic-entities/{type}/query | 匿名 (Results.Ok) | 高 | QueryRequest |
+| 按 ID 获取 | GET | /api/dynamic-entities/{type}/{id} | 动态 (Results.Ok) | 中 | 无 |
+| 原始查询 | POST | /api/dynamic-entities/raw/{table}/query | 匿名 (Results.Ok) | 高 | QueryRequest |
+| 创建 | POST | /api/dynamic-entities/{type} | 动态 (Results.Created) | 中 | Dictionary<string,object> |
+| 更新 | PUT | /api/dynamic-entities/{type}/{id} | 动态 (Results.Ok) | 中 | Dictionary<string,object> |
+| 删除 | DELETE | /api/dynamic-entities/{type}/{id} | NoContent | 低 | 无 |
+| 计数 | POST | /api/dynamic-entities/{type}/count | 匿名 (Results.Ok) | 高 | CountRequest |
 
 ---
 
-### 6. EntityAggregateEndpoints.cs (6 endpoints)
+### 6. EntityAggregateEndpoints.cs (6 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Aggregate | GET | /api/entity-aggregates/{id} | ANONYMOUS (Results.Ok) | HIGH | None |
-| Save Aggregate | POST | /api/entity-aggregates | ANONYMOUS (Results.Ok) | HIGH | SaveEntityDefinitionAggregateRequest |
-| Validate Aggregate | POST | /api/entity-aggregates/validate | ANONYMOUS (Results.Ok) | HIGH | SaveEntityDefinitionAggregateRequest |
-| Delete SubEntity | DELETE | /api/entity-aggregates/sub-entities/{id} | NoContent | LOW | None |
-| Preview Metadata | GET | /api/entity-aggregates/{id}/metadata-preview | Results.Content (JSON) | MEDIUM | None |
-| Preview Code | GET | /api/entity-aggregates/{id}/code-preview | ANONYMOUS (Results.Ok) | HIGH | None |
+| 获取聚合 | GET | /api/entity-aggregates/{id} | 匿名 (Results.Ok) | 高 | 无 |
+| 保存聚合 | POST | /api/entity-aggregates | 匿名 (Results.Ok) | 高 | SaveEntityDefinitionAggregateRequest |
+| 验证聚合 | POST | /api/entity-aggregates/validate | 匿名 (Results.Ok) | 高 | SaveEntityDefinitionAggregateRequest |
+| 删除子实体 | DELETE | /api/entity-aggregates/sub-entities/{id} | NoContent | 低 | 无 |
+| 预览元数据 | GET | /api/entity-aggregates/{id}/metadata-preview | Results.Content (JSON) | 中 | 无 |
+| 预览代码 | GET | /api/entity-aggregates/{id}/code-preview | 匿名 (Results.Ok) | 高 | 无 |
 
 ---
 
-### 7. EntityDefinitionEndpoints.cs (25 endpoints)
+### 7. EntityDefinitionEndpoints.cs (25 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Available | GET | /api/entities | ANONYMOUS (Results.Json) | HIGH | None |
-| Get All | GET | /api/entities/all | ANONYMOUS (Results.Json) | HIGH | None |
-| Validate Route | GET | /api/entities/{route}/validate | ANONYMOUS (Results.Json) | HIGH | None |
-| List Definitions | GET | /api/entity-definitions | ANONYMOUS (Results.Json) | HIGH | None |
-| Get Definition | GET | /api/entity-definitions/{id} | ANONYMOUS (Results.Json) | HIGH | None |
-| Get by Type | GET | /api/entity-definitions/by-type/{type} | EntityDefinition (Results.Json) | MEDIUM | None |
-| Check Referenced | GET | /api/entity-definitions/{id}/referenced | ANONYMOUS (Results.Json) | HIGH | None |
-| Create | POST | /api/entity-definitions | EntityDefinition (Results.Created) | MEDIUM | CreateEntityDefinitionDto |
-| Update | PUT | /api/entity-definitions/{id} | EntityDefinition (Results.Ok) | MEDIUM | UpdateEntityDefinitionDto |
-| Delete | DELETE | /api/entity-definitions/{id} | NoContent | LOW | None |
-| Publish | POST | /api/entity-definitions/{id}/publish | ANONYMOUS (Results.Ok) | HIGH | None |
-| Publish Changes | POST | /api/entity-definitions/{id}/publish-changes | ANONYMOUS (Results.Ok) | HIGH | None |
-| Preview DDL | GET | /api/entity-definitions/{id}/preview-ddl | ANONYMOUS (Results.Ok) | HIGH | None |
-| Get DDL History | GET | /api/entity-definitions/{id}/ddl-history | ANONYMOUS (Results.Ok) | HIGH | None |
-| Generate Code | GET | /api/entity-definitions/{id}/generate-code | ANONYMOUS (Results.Ok) | HIGH | None |
-| Compile | POST | /api/entity-definitions/{id}/compile | ANONYMOUS (Results.Ok) | HIGH | None |
-| Compile Batch | POST | /api/entity-definitions/compile-batch | ANONYMOUS (Results.Ok) | HIGH | CompileBatchDto |
-| Validate Code | GET | /api/entity-definitions/{id}/validate-code | ANONYMOUS (Results.Ok) | HIGH | None |
-| Get Loaded | GET | /api/entity-definitions/loaded-entities | ANONYMOUS (Results.Ok) | HIGH | None |
-| Get Type Info | GET | /api/entity-definitions/type-info/{type} | ANONYMOUS (Results.Ok) | HIGH | None |
-| Unload | DELETE | /api/entity-definitions/loaded-entities/{type} | ANONYMOUS (Results.Ok) | HIGH | None |
-| Recompile | POST | /api/entity-definitions/{id}/recompile | ANONYMOUS (Results.Ok) | HIGH | None |
+| 获取可用 | GET | /api/entities | 匿名 (Results.Json) | 高 | 无 |
+| 获取所有 | GET | /api/entities/all | 匿名 (Results.Json) | 高 | 无 |
+| 验证路由 | GET | /api/entities/{route}/validate | 匿名 (Results.Json) | 高 | 无 |
+| 列出定义 | GET | /api/entity-definitions | 匿名 (Results.Json) | 高 | 无 |
+| 获取定义 | GET | /api/entity-definitions/{id} | 匿名 (Results.Json) | 高 | 无 |
+| 按类型获取 | GET | /api/entity-definitions/by-type/{type} | EntityDefinition (Results.Json) | 中 | 无 |
+| 检查引用 | GET | /api/entity-definitions/{id}/referenced | 匿名 (Results.Json) | 高 | 无 |
+| 创建 | POST | /api/entity-definitions | EntityDefinition (Results.Created) | 中 | CreateEntityDefinitionDto |
+| 更新 | PUT | /api/entity-definitions/{id} | EntityDefinition (Results.Ok) | 中 | UpdateEntityDefinitionDto |
+| 删除 | DELETE | /api/entity-definitions/{id} | NoContent | 低 | 无 |
+| 发布 | POST | /api/entity-definitions/{id}/publish | 匿名 (Results.Ok) | 高 | 无 |
+| 发布变更 | POST | /api/entity-definitions/{id}/publish-changes | 匿名 (Results.Ok) | 高 | 无 |
+| 预览 DDL | GET | /api/entity-definitions/{id}/preview-ddl | 匿名 (Results.Ok) | 高 | 无 |
+| 获取 DDL 历史 | GET | /api/entity-definitions/{id}/ddl-history | 匿名 (Results.Ok) | 高 | 无 |
+| 生成代码 | GET | /api/entity-definitions/{id}/generate-code | 匿名 (Results.Ok) | 高 | 无 |
+| 编译 | POST | /api/entity-definitions/{id}/compile | 匿名 (Results.Ok) | 高 | 无 |
+| 批量编译 | POST | /api/entity-definitions/compile-batch | 匿名 (Results.Ok) | 高 | CompileBatchDto |
+| 验证代码 | GET | /api/entity-definitions/{id}/validate-code | 匿名 (Results.Ok) | 高 | 无 |
+| 获取已加载 | GET | /api/entity-definitions/loaded-entities | 匿名 (Results.Ok) | 高 | 无 |
+| 获取类型信息 | GET | /api/entity-definitions/type-info/{type} | 匿名 (Results.Ok) | 高 | 无 |
+| 卸载 | DELETE | /api/entity-definitions/loaded-entities/{type} | 匿名 (Results.Ok) | 高 | 无 |
+| 重新编译 | POST | /api/entity-definitions/{id}/recompile | 匿名 (Results.Ok) | 高 | 无 |
 
 ---
 
-### 8. FieldActionEndpoints.cs (3 endpoints)
+### 8. FieldActionEndpoints.cs (3 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Download RDP | POST | /api/actions/rdp/download | File (application/x-rdp) | LOW | RdpDownloadRequest |
-| Validate File | POST | /api/actions/file/validate | ANONYMOUS (Results.Ok) | HIGH | FileValidationRequest |
-| Generate Mailto | POST | /api/actions/mailto/generate | ANONYMOUS (Results.Ok) | HIGH | MailtoRequest |
+| 下载 RDP | POST | /api/actions/rdp/download | File (application/x-rdp) | 低 | RdpDownloadRequest |
+| 验证文件 | POST | /api/actions/file/validate | 匿名 (Results.Ok) | 高 | FileValidationRequest |
+| 生成 Mailto | POST | /api/actions/mailto/generate | 匿名 (Results.Ok) | 高 | MailtoRequest |
 
 ---
 
-### 9. FileEndpoints.cs (3 endpoints)
+### 9. FileEndpoints.cs (3 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Upload | POST | /api/files/upload | ANONYMOUS (Results.Ok) | HIGH | Form file |
-| Download | GET | /api/files/{*key} | Stream | LOW | None |
-| Delete | DELETE | /api/files/{*key} | NoContent | LOW | None |
+| 上传 | POST | /api/files/upload | 匿名 (Results.Ok) | 高 | Form file |
+| 下载 | GET | /api/files/{*key} | Stream | 低 | 无 |
+| 删除 | DELETE | /api/files/{*key} | NoContent | 低 | 无 |
 
 ---
 
-### 10. I18nEndpoints.cs (4 endpoints)
+### 10. I18nEndpoints.cs (4 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Version | GET | /api/i18n/version | ANONYMOUS (Results.Json) | HIGH | None |
-| Get Resources | GET | /api/i18n/resources | List<LocalizationResource> | MEDIUM | None |
-| Get Dictionary | GET | /api/i18n/{lang} | Dictionary<string,string> | MEDIUM | None |
-| Get Languages | GET | /api/i18n/languages | ANONYMOUS (Results.Json) | HIGH | None |
+| 获取版本 | GET | /api/i18n/version | 匿名 (Results.Json) | 高 | 无 |
+| 获取资源 | GET | /api/i18n/resources | List<LocalizationResource> | 中 | 无 |
+| 获取字典 | GET | /api/i18n/{lang} | Dictionary<string,string> | 中 | 无 |
+| 获取语言 | GET | /api/i18n/languages | 匿名 (Results.Json) | 高 | 无 |
 
 ---
 
-### 11. LayoutEndpoints.cs (14 endpoints) [6 DEPRECATED]
+### 11. LayoutEndpoints.cs (14 个端点) [6 个已废弃]
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Field Defs | GET | /api/fields | Results.Json (IQuery) | MEDIUM | None |
-| Get Field Tags | GET | /api/fields/tags | ANONYMOUS (Results.Json) | HIGH | None |
-| Get Layout [DEPRECATED] | GET | /api/layout/{id} | Results.Json (IQuery) | MEDIUM | None |
-| Save Layout [DEPRECATED] | POST | /api/layout/{id} | ANONYMOUS (Results.Ok) | MEDIUM | JsonElement |
-| Delete Layout [DEPRECATED] | DELETE | /api/layout/{id} | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Get Layout | GET | /api/layout | Results.Json (IQuery) | MEDIUM | None |
-| Get Layout Alias | GET | /api/layout/customer | Results.Json (IQuery) | MEDIUM | None |
-| Save Layout | POST | /api/layout | ANONYMOUS (Results.Ok) | MEDIUM | JsonElement |
-| Save Layout Alias | POST | /api/layout/customer | ANONYMOUS (Results.Ok) | MEDIUM | JsonElement |
-| Delete Layout | DELETE | /api/layout | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Delete Layout Alias | DELETE | /api/layout/customer | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Get by Entity | GET | /api/layout/entity/{type} | Results.Json (IQuery) | MEDIUM | None |
-| Save by Entity | POST | /api/layout/entity/{type} | ANONYMOUS (Results.Ok) | MEDIUM | JsonElement |
-| Delete by Entity | DELETE | /api/layout/entity/{type} | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Generate | POST | /api/layout/{id}/generate | ANONYMOUS (Results.Json) | HIGH | GenerateLayoutRequest |
+| 获取字段定义 | GET | /api/fields | Results.Json (IQuery) | 中 | 无 |
+| 获取字段标签 | GET | /api/fields/tags | 匿名 (Results.Json) | 高 | 无 |
+| 获取布局 [已废弃] | GET | /api/layout/{id} | Results.Json (IQuery) | 中 | 无 |
+| 保存布局 [已废弃] | POST | /api/layout/{id} | 匿名 (Results.Ok) | 中 | JsonElement |
+| 删除布局 [已废弃] | DELETE | /api/layout/{id} | 匿名 (Results.Ok) | 中 | 无 |
+| 获取布局 | GET | /api/layout | Results.Json (IQuery) | 中 | 无 |
+| 获取布局别名 | GET | /api/layout/customer | Results.Json (IQuery) | 中 | 无 |
+| 保存布局 | POST | /api/layout | 匿名 (Results.Ok) | 中 | JsonElement |
+| 保存布局别名 | POST | /api/layout/customer | 匿名 (Results.Ok) | 中 | JsonElement |
+| 删除布局 | DELETE | /api/layout | 匿名 (Results.Ok) | 中 | 无 |
+| 删除布局别名 | DELETE | /api/layout/customer | 匿名 (Results.Ok) | 中 | 无 |
+| 按实体获取 | GET | /api/layout/entity/{type} | Results.Json (IQuery) | 中 | 无 |
+| 按实体保存 | POST | /api/layout/entity/{type} | 匿名 (Results.Ok) | 中 | JsonElement |
+| 按实体删除 | DELETE | /api/layout/entity/{type} | 匿名 (Results.Ok) | 中 | 无 |
+| 生成 | POST | /api/layout/{id}/generate | 匿名 (Results.Json) | 高 | GenerateLayoutRequest |
 
 ---
 
-### 12. OrganizationEndpoints.cs (4 endpoints)
+### 12. OrganizationEndpoints.cs (4 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Tree | GET | /api/organizations/tree | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Create | POST | /api/organizations | ANONYMOUS (Results.Ok) | MEDIUM | CreateOrganizationRequest |
-| Update | PUT | /api/organizations/{id} | ANONYMOUS (Results.Ok) | MEDIUM | UpdateOrganizationRequest |
-| Delete | DELETE | /api/organizations/{id} | Results.Ok | MEDIUM | None |
+| 获取树 | GET | /api/organizations/tree | 匿名 (Results.Ok) | 中 | 无 |
+| 创建 | POST | /api/organizations | 匿名 (Results.Ok) | 中 | CreateOrganizationRequest |
+| 更新 | PUT | /api/organizations/{id} | 匿名 (Results.Ok) | 中 | UpdateOrganizationRequest |
+| 删除 | DELETE | /api/organizations/{id} | Results.Ok | 中 | 无 |
 
 ---
 
-### 13. SettingsEndpoints.cs (4 endpoints)
+### 13. SettingsEndpoints.cs (4 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get System Settings | GET | /api/settings/system | SystemSettingsDto (Results.Ok) | LOW | None |
-| Update System Settings | PUT | /api/settings/system | SystemSettingsDto (Results.Ok) | LOW | UpdateSystemSettingsRequest |
-| Get User Settings | GET | /api/settings/user | UserSettingsSnapshot (Results.Ok) | LOW | None |
-| Update User Settings | PUT | /api/settings/user | UserSettingsSnapshot (Results.Ok) | LOW | UpdateUserSettingsRequest |
+| 获取系统设置 | GET | /api/settings/system | SystemSettingsDto (Results.Ok) | 低 | 无 |
+| 更新系统设置 | PUT | /api/settings/system | SystemSettingsDto (Results.Ok) | 低 | UpdateSystemSettingsRequest |
+| 获取用户设置 | GET | /api/settings/user | UserSettingsSnapshot (Results.Ok) | 低 | 无 |
+| 更新用户设置 | PUT | /api/settings/user | UserSettingsSnapshot (Results.Ok) | 低 | UpdateUserSettingsRequest |
 
 ---
 
-### 14. SetupEndpoints.cs (2 endpoints)
+### 14. SetupEndpoints.cs (2 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Admin Info | GET | /api/setup/admin | ANONYMOUS (Results.Ok) | HIGH | None |
-| Setup Admin | POST | /api/setup/admin | ANONYMOUS (Results.Ok) | MEDIUM | AdminSetupDto |
+| 获取管理员信息 | GET | /api/setup/admin | 匿名 (Results.Ok) | 高 | 无 |
+| 设置管理员 | POST | /api/setup/admin | 匿名 (Results.Ok) | 中 | AdminSetupDto |
 
 ---
 
-### 15. TemplateEndpoints.cs (9 endpoints)
+### 15. TemplateEndpoints.cs (9 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| List Templates | GET | /api/templates | ANONYMOUS (Results.Json) | HIGH | None |
-| Get Template | GET | /api/templates/{id} | FormTemplate (Results.Json) | MEDIUM | None |
-| Create | POST | /api/templates | FormTemplate (Results.Created) | MEDIUM | CreateTemplateRequest |
-| Update | PUT | /api/templates/{id} | FormTemplate (Results.Ok) | MEDIUM | UpdateTemplateRequest |
-| Delete | DELETE | /api/templates/{id} | ANONYMOUS (Results.Ok) | MEDIUM | None |
-| Get Effective | GET | /api/templates/effective/{type} | FormTemplate (Results.Json) | MEDIUM | None |
-| Get Binding | GET | /api/templates/bindings/{type} | TemplateBinding (ToDto) | MEDIUM | None |
-| Upsert Binding | PUT | /api/templates/bindings | TemplateBinding (ToDto) | MEDIUM | UpsertTemplateBindingRequest |
-| Build Runtime | POST | /api/templates/runtime/{type} | ANONYMOUS (Results.Ok) | HIGH | TemplateRuntimeRequest |
+| 列出模板 | GET | /api/templates | 匿名 (Results.Json) | 高 | 无 |
+| 获取模板 | GET | /api/templates/{id} | FormTemplate (Results.Json) | 中 | 无 |
+| 创建 | POST | /api/templates | FormTemplate (Results.Created) | 中 | CreateTemplateRequest |
+| 更新 | PUT | /api/templates/{id} | FormTemplate (Results.Ok) | 中 | UpdateTemplateRequest |
+| 删除 | DELETE | /api/templates/{id} | 匿名 (Results.Ok) | 中 | 无 |
+| 获取有效 | GET | /api/templates/effective/{type} | FormTemplate (Results.Json) | 中 | 无 |
+| 获取绑定 | GET | /api/templates/bindings/{type} | TemplateBinding (ToDto) | 中 | 无 |
+| 更新绑定 | PUT | /api/templates/bindings | TemplateBinding (ToDto) | 中 | UpsertTemplateBindingRequest |
+| 构建运行时 | POST | /api/templates/runtime/{type} | 匿名 (Results.Ok) | 高 | TemplateRuntimeRequest |
 
 ---
 
-### 16. UserEndpoints.cs (5 endpoints)
+### 16. UserEndpoints.cs (5 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| List Users | GET | /api/users | Mapped (Results.Ok) | MEDIUM | None |
-| Get User | GET | /api/users/{id} | UserDetailDto (Results.Ok) | LOW | None |
-| Create | POST | /api/users | UserDetailDto (Results.Ok) | LOW | CreateUserRequest |
-| Update | PUT | /api/users/{id} | UserDetailDto (Results.Ok) | LOW | UpdateUserRequest |
-| Update Roles | PUT | /api/users/{id}/roles | ANONYMOUS (Results.Ok) | HIGH | UpdateUserRolesRequest |
+| 列出用户 | GET | /api/users | Mapped (Results.Ok) | 中 | 无 |
+| 获取用户 | GET | /api/users/{id} | UserDetailDto (Results.Ok) | 低 | 无 |
+| 创建 | POST | /api/users | UserDetailDto (Results.Ok) | 低 | CreateUserRequest |
+| 更新 | PUT | /api/users/{id} | UserDetailDto (Results.Ok) | 低 | UpdateUserRequest |
+| 更新角色 | PUT | /api/users/{id}/roles | 匿名 (Results.Ok) | 高 | UpdateUserRolesRequest |
 
 ---
 
-### 17. EntityAdvancedFeaturesController.cs (6 endpoints)
+### 17. EntityAdvancedFeaturesController.cs (6 个端点)
 
-| Endpoint | Method | Route | Return Type | Risk Level | Request DTO |
+| 端点 | 方法 | 路由 | 返回类型 | 风险等级 | 请求 DTO |
 |----------|--------|-------|-------------|-----------|-------------|
-| Get Children | GET | /api/entity-advanced/{id}/children | ANONYMOUS (Ok()) | HIGH | None |
-| Configure Master Detail | POST | /api/entity-advanced/{id}/configure-master-detail | ANONYMOUS (Ok()) | HIGH | MasterDetailConfigRequest |
-| Generate AggVO | POST | /api/entity-advanced/{id}/generate-aggvo | ANONYMOUS (Ok()) | HIGH | None |
-| Evaluate Migration | POST | /api/entity-advanced/{id}/evaluate-migration | ANONYMOUS (Ok()) | HIGH | List<FieldMetadata> |
-| Get Master Candidates | GET | /api/entity-advanced/master-candidates | ANONYMOUS (Ok()) | HIGH | None |
-| Get Detail Candidates | GET | /api/entity-advanced/detail-candidates | ANONYMOUS (Ok()) | HIGH | None |
+| 获取子项 | GET | /api/entity-advanced/{id}/children | 匿名 (Ok()) | 高 | 无 |
+| 配置主从 | POST | /api/entity-advanced/{id}/configure-master-detail | 匿名 (Ok()) | 高 | MasterDetailConfigRequest |
+| 生成 AggVO | POST | /api/entity-advanced/{id}/generate-aggvo | 匿名 (Ok()) | 高 | 无 |
+| 评估迁移 | POST | /api/entity-advanced/{id}/evaluate-migration | 匿名 (Ok()) | 高 | List<FieldMetadata> |
+| 获取主候选 | GET | /api/entity-advanced/master-candidates | 匿名 (Ok()) | 高 | 无 |
+| 获取从候选 | GET | /api/entity-advanced/detail-candidates | 匿名 (Ok()) | 高 | 无 |
 
 ---
 
-## Statistics Summary
+## 统计摘要
 
-| Metric | Count | Percentage |
+| 指标 | 计数 | 百分比 |
 |--------|-------|-----------|
-| **Total Endpoints** | 90 | 100% |
-| **High Risk (Anonymous Objects)** | 45 | 50% |
-| **Medium Risk (Dynamic/Mixed)** | 30 | 33% |
-| **Low Risk (Typed DTOs)** | 15 | 17% |
-| **With Request DTOs** | 55 | 61% |
-| **Without Request DTOs** | 35 | 39% |
-| **Deprecated Endpoints** | 6 | 7% |
-| **NoContent Responses** | 8 | 9% |
+| **端点总数** | 90 | 100% |
+| **高风险 (匿名对象)** | 45 | 50% |
+| **中风险 (动态/混合)** | 30 | 33% |
+| **低风险 (类型化 DTO)** | 15 | 17% |
+| **有请求 DTO** | 55 | 61% |
+| **无请求 DTO** | 35 | 39% |
+| **已废弃端点** | 6 | 7% |
+| **NoContent 响应** | 8 | 9% |
 
 ---
 
-## Risk Distribution by File
+## 按文件风险分布
 
-### CRITICAL PRIORITY
-- **AuthEndpoints.cs**: 75% high risk (6/8)
-- **EntityDefinitionEndpoints.cs**: 90% high risk (18/20)
-- **AccessEndpoints.cs**: 67% high risk (8/12)
-- **EntityAggregateEndpoints.cs**: 83% high risk (5/6)
-- **EntityAdvancedFeaturesController.cs**: 100% high risk (6/6)
+### 严重优先级
+- **AuthEndpoints.cs**: 75% 高风险 (6/8)
+- **EntityDefinitionEndpoints.cs**: 90% 高风险 (18/20)
+- **AccessEndpoints.cs**: 67% 高风险 (8/12)
+- **EntityAggregateEndpoints.cs**: 83% 高风险 (5/6)
+- **EntityAdvancedFeaturesController.cs**: 100% 高风险 (6/6)
 
-### HIGH PRIORITY
-- **CustomerEndpoints.cs**: 67% high risk (4/6)
-- **DynamicEntityEndpoints.cs**: 57% high risk (4/7)
-- **FieldActionEndpoints.cs**: 67% high risk (2/3)
+### 高优先级
+- **CustomerEndpoints.cs**: 67% 高风险 (4/6)
+- **DynamicEntityEndpoints.cs**: 57% 高风险 (4/7)
+- **FieldActionEndpoints.cs**: 67% 高风险 (2/3)
 
-### MEDIUM PRIORITY
-- **TemplateEndpoints.cs**: 33% high risk (3/9)
-- **LayoutEndpoints.cs**: 21% high risk (3/14)
-- **AdminEndpoints.cs**: 60% high risk (3/5)
+### 中优先级
+- **TemplateEndpoints.cs**: 33% 高风险 (3/9)
+- **LayoutEndpoints.cs**: 21% 高风险 (3/14)
+- **AdminEndpoints.cs**: 60% 高风险 (3/5)
 
-### LOW PRIORITY
-- **UserEndpoints.cs**: 20% high risk (1/5)
-- **SettingsEndpoints.cs**: 0% high risk (0/4)
-
+### 低优先级
+- **UserEndpoints.cs**: 20% 高风险 (1/5)
+- **SettingsEndpoints.cs**: 0% 高风险 (0/4)

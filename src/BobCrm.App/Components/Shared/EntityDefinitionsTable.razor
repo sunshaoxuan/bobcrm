@@ -2,28 +2,29 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Services.Multilingual
 @inject IMultilingualTextResolver MultilingualResolver
+@inject BobCrm.App.Services.I18nService I18n
 
 <Table TItem="EntityDefinitionDto" DataSource="@Entities" Loading="@false" PageSize="20">
-    <PropertyColumn Property="e => e.EntityName" Title="实体名" Sortable>
+    <PropertyColumn Property="e => e.EntityName" Title="@I18n.T("EDT_COL_ENTITY_NAME")" Sortable>
         <a @onclick="() => OnEdit.InvokeAsync(context.Id)" style="cursor: pointer;">
             @context.EntityName
         </a>
     </PropertyColumn>
-    <Column TData="string" Title="显示名">
+    <Column TData="string" Title="@I18n.T("EDT_COL_DISPLAY_NAME")">
         @MultilingualResolver.Resolve(context.DisplayName, context.EntityName)
     </Column>
-    <PropertyColumn Property="e => e.Namespace" Title="命名空间" />
-    <PropertyColumn Property="e => e.Source" Title="来源">
+    <PropertyColumn Property="e => e.Namespace" Title="@I18n.T("EDT_COL_NAMESPACE")" />
+    <PropertyColumn Property="e => e.Source" Title="@I18n.T("EDT_COL_SOURCE")">
         <Tag Color="@GetSourceTagColor(context.Source)">
             @context.Source
         </Tag>
     </PropertyColumn>
-    <PropertyColumn Property="e => e.Status" Title="状态">
+    <PropertyColumn Property="e => e.Status" Title="@I18n.T("EDT_COL_STATUS")">
         <Tag Color="@GetStatusTagColor(context.Status)">
             @GetStatusText(context.Status)
         </Tag>
     </PropertyColumn>
-    <PropertyColumn Property="e => e.IsLocked" Title="锁定">
+    <PropertyColumn Property="e => e.IsLocked" Title="@I18n.T("EDT_COL_LOCKED")">
         @if (context.IsLocked)
         {
             <Icon Type="lock" Theme="@IconThemeType.Outline" />
@@ -33,29 +34,29 @@
             <Icon Type="unlock" Theme="@IconThemeType.Outline" />
         }
     </PropertyColumn>
-    <PropertyColumn Property="e => e.FieldCount" Title="字段数" />
-    <PropertyColumn Property="e => e.UpdatedAt" Title="更新时间" Format="yyyy-MM-dd HH:mm" />
-    <ActionColumn Title="操作">
+    <PropertyColumn Property="e => e.FieldCount" Title="@I18n.T("EDT_COL_FIELD_COUNT")" />
+    <PropertyColumn Property="e => e.UpdatedAt" Title="@I18n.T("EDT_COL_UPDATED_AT")" Format="yyyy-MM-dd HH:mm" />
+    <ActionColumn Title="@I18n.T("LBL_ACTIONS")">
         <Space>
             <SpaceItem>
                 <Button Size="@ButtonSize.Small" OnClick="() => OnEdit.InvokeAsync(context.Id)">
-                    编辑
+                    @I18n.T("BTN_EDIT")
                 </Button>
             </SpaceItem>
             @if (context.Status == EntityStatus.Draft || context.Status == EntityStatus.Modified)
             {
                 <SpaceItem>
                     <Button Type="@ButtonType.Primary" Size="@ButtonSize.Small" OnClick="() => OnPublish.InvokeAsync(context.Id)">
-                        发布
+                        @I18n.T("EDT_BTN_PUBLISH")
                     </Button>
                 </SpaceItem>
             }
             @if (context.Source == EntitySource.Custom && context.Status == EntityStatus.Draft)
             {
                 <SpaceItem>
-                    <Popconfirm Title="确认发布?" OnConfirm="() => OnDelete.InvokeAsync(context.Id)">
+                    <Popconfirm Title="@I18n.T("EDT_CONFIRM_DELETE")" OnConfirm="() => OnDelete.InvokeAsync(context.Id)">
                         <Button Danger Size="@ButtonSize.Small">
-                            删除
+                            @I18n.T("BTN_DELETE")
                         </Button>
                     </Popconfirm>
                 </SpaceItem>
@@ -86,10 +87,9 @@
 
     private string GetStatusText(string? status) => (status ?? string.Empty) switch
     {
-        EntityStatus.Draft => "草稿",
-        EntityStatus.Published => "已发布",
-        EntityStatus.Modified => "已修改",
+        EntityStatus.Draft => I18n.T("LBL_STATUS_DRAFT"),
+        EntityStatus.Published => I18n.T("LBL_STATUS_PUBLISHED"),
+        EntityStatus.Modified => I18n.T("LBL_STATUS_MODIFIED"),
         _ => status ?? string.Empty
     };
 }
-

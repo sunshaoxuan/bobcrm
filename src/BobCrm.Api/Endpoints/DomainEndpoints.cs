@@ -32,8 +32,8 @@ public static class DomainEndpoints
             return Results.Json(domains);
         })
         .WithName("GetEntityDomains")
-        .WithSummary("获取实体领域列表")
-        .WithDescription("返回可用的实体领域信息，包含多语言名称。");
+        .WithSummary("Get entity domain list")
+        .WithDescription("Return available entity domains with multilingual names.");
 
         return app;
     }

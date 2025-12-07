@@ -38,8 +38,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var manageResponse = await adminClient.GetAsync("/api/access/functions/manage");
         manageResponse.EnsureSuccessStatusCode();
-        using var manageDoc = JsonDocument.Parse(await manageResponse.Content.ReadAsStringAsync());
-        Assert.True(TryFindFunctionNode(manageDoc.RootElement, "CRM.CORE.ACCOUNTS", out var accountsNode));
+        var manageRoot = (await manageResponse.ReadAsJsonAsync()).UnwrapData();
+        Assert.True(TryFindFunctionNode(manageRoot, "CRM.CORE.ACCOUNTS", out var accountsNode));
         var translations = accountsNode.GetProperty("displayNameTranslations");
         Assert.Equal("Customer Accounts", translations.GetProperty("en").GetString());
         Assert.Equal("顧客マスタ", translations.GetProperty("ja").GetString());
@@ -48,14 +48,12 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var publishResponse = await adminClient.PostAsync($"/api/entity-definitions/{entity.Id}/publish", null);
         publishResponse.EnsureSuccessStatusCode();
-        using var publishDoc = JsonDocument.Parse(await publishResponse.Content.ReadAsStringAsync());
-        var publishRoot = publishDoc.RootElement;
-        Assert.True(publishRoot.GetProperty("success").GetBoolean());
+        var publishRoot = (await publishResponse.ReadAsJsonAsync()).UnwrapData();
 
         var menuNodes = publishRoot.GetProperty("menus").EnumerateArray().ToList();
         Assert.NotEmpty(menuNodes);
-        var listNode = menuNodes.First(n => n.GetProperty("usage").GetInt32() == (int)FormTemplateUsageType.List);
-        var detailNode = menuNodes.First(n => n.GetProperty("usage").GetInt32() == (int)FormTemplateUsageType.Detail);
+        var listNode = menuNodes.First(n => GetUsageValue(n.GetProperty("usage")) == (int)FormTemplateUsageType.List);
+        var detailNode = menuNodes.First(n => GetUsageValue(n.GetProperty("usage")) == (int)FormTemplateUsageType.Detail);
         var menuNodeIds = new[]
         {
             listNode.GetProperty("nodeId").GetGuid(),
@@ -63,7 +61,7 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         };
 
         var bindings = publishRoot.GetProperty("bindings").EnumerateArray().ToList();
-        Assert.Contains(bindings, b => b.GetProperty("usage").GetInt32() == (int)FormTemplateUsageType.Detail);
+        Assert.Contains(bindings, b => GetUsageValue(b.GetProperty("usage")) == (int)FormTemplateUsageType.Detail);
 
         var roleResponse = await adminClient.PostAsJsonAsync("/api/access/roles", new
         {
@@ -74,8 +72,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
             functionIds = menuNodeIds
         });
         roleResponse.EnsureSuccessStatusCode();
-        using var roleDoc = JsonDocument.Parse(await roleResponse.Content.ReadAsStringAsync());
-        var roleId = roleDoc.RootElement.GetProperty("id").GetGuid();
+        var roleDoc = (await roleResponse.ReadAsJsonAsync()).UnwrapData();
+        var roleId = roleDoc.GetProperty("id").GetGuid();
 
         var userClient = _factory.CreateClient();
         var (userId, _, userAccess) = await userClient.CreateAndLoginUserAsync(_factory.Services);
@@ -83,8 +81,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var initialBindings = await userClient.GetAsync("/api/templates/menu-bindings?usageType=Detail");
         initialBindings.EnsureSuccessStatusCode();
-        using var emptyDoc = JsonDocument.Parse(await initialBindings.Content.ReadAsStringAsync());
-        Assert.Equal(0, emptyDoc.RootElement.GetArrayLength());
+        var emptyDoc = (await initialBindings.ReadAsJsonAsync()).UnwrapData();
+        Assert.Equal(0, emptyDoc.GetArrayLength());
 
         var assignResponse = await adminClient.PostAsJsonAsync("/api/access/assignments", new
         {
@@ -96,8 +94,8 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var menuBindingResponse = await userClient.GetAsync("/api/templates/menu-bindings?usageType=Detail");
         menuBindingResponse.EnsureSuccessStatusCode();
-        using var bindingDoc = JsonDocument.Parse(await menuBindingResponse.Content.ReadAsStringAsync());
-        var items = bindingDoc.RootElement.EnumerateArray().ToList();
+        var bindingDoc = (await menuBindingResponse.ReadAsJsonAsync()).UnwrapData();
+        var items = bindingDoc.EnumerateArray().ToList();
         Assert.NotEmpty(items);
         var workflowEntry = items.First(entry =>
             entry.GetProperty("Binding").GetProperty("entityType").GetString() == entity.EntityRoute);
@@ -112,7 +110,7 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         Assert.Equal(expectedRoute, menuInfo.GetProperty("route").GetString());
 
         var bindingInfo = workflowEntry.GetProperty("Binding");
-        Assert.Equal((int)FormTemplateUsageType.Detail, bindingInfo.GetProperty("usageType").GetInt32());
+        Assert.Equal((int)FormTemplateUsageType.Detail, GetUsageValue(bindingInfo.GetProperty("usageType")));
 
         var templateList = workflowEntry.GetProperty("Templates");
         Assert.True(templateList.GetArrayLength() > 0);
@@ -171,6 +169,30 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         await db.EntityDefinitions.AddAsync(entity);
         await db.SaveChangesAsync();
         return entity;
+    }
+
+    private static int GetUsageValue(JsonElement usageElement)
+    {
+        switch (usageElement.ValueKind)
+        {
+            case JsonValueKind.Number:
+                return usageElement.GetInt32();
+            case JsonValueKind.String:
+                var usageString = usageElement.GetString();
+                if (int.TryParse(usageString, out var numericUsage))
+                {
+                    return numericUsage;
+                }
+
+                if (Enum.TryParse<FormTemplateUsageType>(usageString, true, out var enumUsage))
+                {
+                    return (int)enumUsage;
+                }
+
+                break;
+        }
+
+        throw new InvalidOperationException($"无法解析 usage 值: {usageElement}");
     }
 
     private static bool TryFindFunctionNode(JsonElement element, string code, out JsonElement node)

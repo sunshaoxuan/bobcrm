@@ -130,7 +130,8 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         resp.EnsureSuccessStatusCode();
 
         var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(payload.TryGetProperty("entities", out _));
+        Assert.True(payload.GetProperty("success").GetBoolean());
+        Assert.True(payload.GetProperty("data").TryGetProperty("entities", out _));
     }
 
     [Fact]
@@ -144,7 +145,8 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         resp.EnsureSuccessStatusCode();
 
         var payload = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(payload.TryGetProperty("entity", out _));
+        Assert.True(payload.GetProperty("success").GetBoolean());
+        Assert.True(payload.GetProperty("data").TryGetProperty("entity", out _));
     }
 
     [Fact]

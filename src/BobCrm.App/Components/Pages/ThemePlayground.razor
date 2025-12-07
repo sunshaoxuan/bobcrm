@@ -2,16 +2,18 @@
 @rendermode RenderMode.InteractiveServer
 @using AntDesign
 @using BobCrm.App.Services
+@implements IDisposable
 @inject ThemeState ThemeState
+@inject I18nService I18n
 
-<PageTitle>Calm Theme Playground</PageTitle>
+<PageTitle>@I18n.T("TP_PAGE_TITLE")</PageTitle>
 
 <div class="tp-root">
     <header class="tp-header">
         <div>
             <p class="tp-eyebrow">Calm Neumorphic Glass CRM</p>
             <h1>Theme Playground</h1>
-            <p class="tp-subtitle">设计 Token、Light / Dark 主题与 Ant Design 覆写的可视校验页。</p>
+            <p class="tp-subtitle">@I18n.T("TP_SUBTITLE")</p>
         </div>
         <div class="tp-theme-switch">
             <span>Theme</span>
@@ -24,12 +26,12 @@
         @foreach (var metric in Metrics)
         {
             <article class="tp-card card metric-card">
-                <p class="tp-label">@metric.Label</p>
+                <p class="tp-label">@I18n.T(metric.LabelKey)</p>
                 <div class="tp-metric">
                     <span>@metric.Value</span>
-                    <span class="tp-chip @metric.Tone">@metric.Change</span>
+                    <span class="tp-chip @metric.Tone">@I18n.T(metric.ChangeKey)</span>
                 </div>
-                <p class="tp-meta">@metric.Meta</p>
+                <p class="tp-meta">@I18n.T(metric.MetaKey)</p>
             </article>
         }
     </section>
@@ -66,10 +68,10 @@
             <table class="tp-table">
                 <thead>
                     <tr>
-                        <th>客户</th>
-                        <th>阶段</th>
-                        <th>负责人</th>
-                        <th>更新时间</th>
+                        <th>@I18n.T("TP_TABLE_CUSTOMER")</th>
+                        <th>@I18n.T("TP_TABLE_STAGE")</th>
+                        <th>@I18n.T("TP_TABLE_OWNER")</th>
+                        <th>@I18n.T("TP_TABLE_UPDATED")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,7 +83,7 @@
                                 <span class="tp-pill @row.Stage">@row.StageLabel</span>
                             </td>
                             <td>@row.Owner</td>
-                            <td>@row.Updated</td>
+                            <td>@I18n.T(row.UpdatedKey)</td>
                         </tr>
                     }
                 </tbody>
@@ -96,10 +98,10 @@
                         <div class="tp-dot"></div>
                         <div class="tp-timeline-content">
                             <div class="tp-timeline-head">
-                                <strong>@log.Title</strong>
-                                <span>@log.Time</span>
+                                <strong>@I18n.T(log.TitleKey)</strong>
+                                <span>@I18n.T(log.TimeKey)</span>
                             </div>
-                            <p>@log.Description</p>
+                            <p>@I18n.T(log.DescriptionKey)</p>
                         </div>
                     </li>
                 }
@@ -116,25 +118,25 @@
                 <span class="tp-chip danger">Failed</span>
                 <span class="tp-chip info">Info</span>
             </div>
-            <Alert Message="成功同步客户数据" Type="AlertType.Success" ShowIcon="true" />
-            <Alert Message="待审核的模板" Type="AlertType.Warning" ShowIcon="true" />
-            <Alert Message="导入失败，请重试" Type="AlertType.Error" ShowIcon="true" />
+            <Alert Message='@I18n.T("TP_ALERT_SYNC_SUCCESS")' Type="AlertType.Success" ShowIcon="true" />
+            <Alert Message='@I18n.T("TP_ALERT_PENDING_TEMPLATES")' Type="AlertType.Warning" ShowIcon="true" />
+            <Alert Message='@I18n.T("TP_ALERT_IMPORT_FAILED")' Type="AlertType.Error" ShowIcon="true" />
         </article>
         <article class="tp-card card">
             <h2>Form Layout (mock)</h2>
             <div class="tp-form">
-                <label>客户名称</label>
+                <label>@I18n.T("TP_LABEL_CUSTOMER_NAME")</label>
                 <Input TValue="string" Placeholder="ACME Inc." Class="field-control" />
-                <label>负责人</label>
+                <label>@I18n.T("TP_LABEL_OWNER")</label>
                 <select class="tp-html-select">
                     <option>Alice</option>
                     <option>Bob</option>
                 </select>
-                <label>备注</label>
-                <Input TValue="string" TextArea Rows="3" Placeholder="内部备注..." Class="field-control field-textarea" />
+                <label>@I18n.T("TP_LABEL_NOTE")</label>
+                <Input TValue="string" TextArea Rows="3" Placeholder='@I18n.T("TP_PLACEHOLDER_INTERNAL_NOTE")' Class="field-control field-textarea" />
                 <div class="tp-form-actions">
-                    <Button Ghost>取消</Button>
-                    <Button Type="@ButtonType.Primary">保存</Button>
+                    <Button Ghost>@I18n.T("TP_BTN_CANCEL")</Button>
+                    <Button Type="@ButtonType.Primary">@I18n.T("TP_BTN_SAVE")</Button>
                 </div>
             </div>
         </article>
@@ -143,41 +145,41 @@
     <section class="tp-grid tp-grid-2">
         <article class="tp-card card">
             <h2>Overlay Tokens</h2>
-            <p class="tp-meta">Calm Modal / Drawer 统一阴影、玻璃与分隔。</p>
+            <p class="tp-meta">@I18n.T("TP_OVERLAY_META")</p>
             <div class="tp-overlay-actions">
-                <Button Type="@ButtonType.Primary" OnClick="OpenOverlayModal">打开 Modal</Button>
-                <Button Ghost OnClick="OpenOverlayDrawer">打开 Drawer</Button>
+                <Button Type="@ButtonType.Primary" OnClick="OpenOverlayModal">@I18n.T("TP_BTN_OPEN_MODAL")</Button>
+                <Button Ghost OnClick="OpenOverlayDrawer">@I18n.T("TP_BTN_OPEN_DRAWER")</Button>
             </div>
             <ul class="tp-overlay-hints">
-                <li>Modal 自 72px 顶部偏移，保持与 Header 间距。</li>
-                <li>遮罩使用 `--overlay-backdrop` + blur，Light/Dark 自动切换。</li>
-                <li>Footer 统一右对齐，按钮间距 `var(--spacing-3)`。</li>
+                <li>@I18n.T("TP_HINT_MODAL_OFFSET")</li>
+                <li>@I18n.T("TP_HINT_OVERLAY_BACKDROP")</li>
+                <li>@I18n.T("TP_HINT_FOOTER_SPACING")</li>
             </ul>
         </article>
         <article class="tp-card card">
             <h2>Popover & Context Menu</h2>
             <div class="tp-overlay-stack">
-                <Popover Title="提醒" OverlayClassName="calm-popover" Trigger="@(new[] { Trigger.Hover, Trigger.Click })">
+                <Popover Title='@I18n.T("TP_POPOVER_TITLE")' OverlayClassName="calm-popover" Trigger="@(new[] { Trigger.Hover, Trigger.Click })">
                     <ContentTemplate>
                         <div class="tp-popover-content">
-                            <p>使用 Calm 语义色变量，不写死 #hex。</p>
-                            <p class="tp-popover-meta">Hover / Click 均可触发。</p>
+                            <p>@I18n.T("TP_POPOVER_BODY1")</p>
+                            <p class="tp-popover-meta">@I18n.T("TP_POPOVER_BODY2")</p>
                         </div>
                     </ContentTemplate>
                     <ChildContent>
-                        <Button Type="@ButtonType.Link">查看 Popover</Button>
+                        <Button Type="@ButtonType.Link">@I18n.T("TP_BTN_VIEW_POPOVER")</Button>
                     </ChildContent>
                 </Popover>
                 <Dropdown OverlayClassName="calm-dropdown" Trigger="@(new[] { Trigger.Click })">
                     <ChildContent>
-                        <Button>快捷菜单</Button>
+                        <Button>@I18n.T("TP_BTN_QUICK_MENU")</Button>
                     </ChildContent>
                     <Overlay>
                         <div class="calm-dropdown-panel">
                             <div class="calm-dropdown-menu">
-                                <button type="button">指派拥有者<span>同步表单设计器</span></button>
-                                <button type="button">生成共享链接<span>有效期 48 小时</span></button>
-                                <button type="button">存为模板<span>保存当前布局</span></button>
+                                <button type="button">@I18n.T("TP_MENU_ASSIGN_OWNER")<span>@I18n.T("TP_MENU_ASSIGN_OWNER_DESC")</span></button>
+                                <button type="button">@I18n.T("TP_MENU_SHARE_LINK")<span>@I18n.T("TP_MENU_SHARE_LINK_DESC")</span></button>
+                                <button type="button">@I18n.T("TP_MENU_SAVE_TEMPLATE")<span>@I18n.T("TP_MENU_SAVE_TEMPLATE_DESC")</span></button>
                             </div>
                         </div>
                     </Overlay>
@@ -185,15 +187,15 @@
                 <Dropdown OverlayClassName="calm-dropdown" Trigger="@(new[] { Trigger.ContextMenu })">
                     <ChildContent>
                         <div class="tp-context-target" tabindex="0">
-                            右键/长按此处预览 Context Menu
+                            @I18n.T("TP_CONTEXT_HINT")
                         </div>
                     </ChildContent>
                     <Overlay>
                         <div class="calm-dropdown-panel">
                             <div class="calm-dropdown-menu">
-                                <button type="button">复制链接<span>Copy link</span></button>
-                                <button type="button">标记为关注<span>Follow updates</span></button>
-                                <button type="button">删除草稿<span>Move to archive</span></button>
+                                <button type="button">@I18n.T("TP_CONTEXT_COPY_LINK")<span>Copy link</span></button>
+                                <button type="button">@I18n.T("TP_CONTEXT_FOLLOW")<span>Follow updates</span></button>
+                                <button type="button">@I18n.T("TP_CONTEXT_DELETE_DRAFT")<span>Move to archive</span></button>
                             </div>
                         </div>
                     </Overlay>
@@ -202,19 +204,19 @@
         </article>
     </section>
 
-    <Modal Title="Calm Modal 示例"
+    <Modal Title='@I18n.T("TP_MODAL_TITLE")'
            WrapClassName="calm-modal"
            @bind-Visible="_overlayModalVisible"
            OnOk="CloseOverlayModal"
            OnCancel="CloseOverlayModal"
-           OkText="@_modalOkText"
-           CancelText="@_modalCancelText">
+           OkText="@ModalOkText"
+           CancelText="@ModalCancelText">
         <div class="tp-modal-body">
-            <p>Modal 内容区遵循 24px 垂直节奏，支持分段文本、说明以及表单元素。</p>
+            <p>@I18n.T("TP_MODAL_BODY")</p>
             <ul>
-                <li>背景使用 `--surface-elevated`，可透出底层玻璃。</li>
-                <li>标题 / 内容 / Metadata 分别映射 Title/SubBody/Meta 字体。</li>
-                <li>默认禁止 mask 点击关闭，避免误触。</li>
+                <li>@I18n.T("TP_MODAL_HINT_BG")</li>
+                <li>@I18n.T("TP_MODAL_HINT_TYPEFACE")</li>
+                <li>@I18n.T("TP_MODAL_HINT_MASK")</li>
             </ul>
         </div>
     </Modal>
@@ -228,31 +230,31 @@
                     <div class="ant-drawer-content">
                         <div class="ant-drawer-wrapper-body">
                             <div class="ant-drawer-header">
-                                <div class="ant-drawer-title">Calm Drawer 示例</div>
+                                <div class="ant-drawer-title">@I18n.T("TP_DRAWER_TITLE")</div>
                                 <button type="button" class="ant-drawer-close" @onclick="CloseOverlayDrawer">
                                     <Icon Type="close" />
                                 </button>
                             </div>
                             <div class="ant-drawer-body">
                                 <div class="tp-drawer-section">
-                                    <h3>属性字段</h3>
-                                    <p>Drawer 主体建议使用栅格或列表，便于在 Form Designer 中重用。</p>
+                                    <h3>@I18n.T("TP_DRAWER_SECTION_TITLE")</h3>
+                                    <p>@I18n.T("TP_DRAWER_SECTION_DESC")</p>
                                     <div class="tp-drawer-fields">
                                         <div>
-                                            <label>区块标题</label>
-                                            <Input TValue="string" Placeholder="如：客户标签" Class="field-control" />
+                                            <label>@I18n.T("TP_LABEL_BLOCK_TITLE")</label>
+                                            <Input TValue="string" Placeholder='@I18n.T("TP_PLACEHOLDER_BLOCK_TITLE")' Class="field-control" />
                                         </div>
                                         <div>
-                                            <label>显示密度</label>
+                                            <label>@I18n.T("TP_LABEL_DENSITY")</label>
                                             <Select TItem="string" TItemValue="string" TValue="string" Class="field-control" @bind-Value="_drawerDensity">
-                                                <SelectOption TItem="string" TItemValue="string" Value="@("comfortable")" Label="舒适" />
-                                                <SelectOption TItem="string" TItemValue="string" Value="@("compact")" Label="紧凑" />
+                                                <SelectOption TItem="string" TItemValue="string" Value="@("comfortable")" Label='@I18n.T("TP_DENSITY_COMFORTABLE")' />
+                                                <SelectOption TItem="string" TItemValue="string" Value="@("compact")" Label='@I18n.T("TP_DENSITY_COMPACT")' />
                                             </Select>
                                         </div>
                                     </div>
                                     <div class="tp-drawer-footer">
-                                        <Button Ghost OnClick="CloseOverlayDrawer">取消</Button>
-                                        <Button Type="@ButtonType.Primary">保存配置</Button>
+                                        <Button Ghost OnClick="CloseOverlayDrawer">@I18n.T("TP_BTN_CANCEL")</Button>
+                                        <Button Type="@ButtonType.Primary">@I18n.T("TP_BTN_SAVE_CONFIG")</Button>
                                     </div>
                                 </div>
                             </div>
@@ -265,30 +267,46 @@
 </div>
 
 @code {
-    private record MetricItem(string Label, string Value, string Change, string Tone, string Meta);
-    private record CustomerRow(string Name, string Stage, string StageLabel, string Owner, string Updated);
-    private record TimelineEntry(string Title, string Description, string Time);
+    private record MetricItem(string LabelKey, string Value, string ChangeKey, string Tone, string MetaKey);
+    private record CustomerRow(string Name, string Stage, string StageLabel, string Owner, string UpdatedKey);
+    private record TimelineEntry(string TitleKey, string DescriptionKey, string TimeKey);
 
     private List<MetricItem> Metrics { get; } =
     [
-        new("Total ARR", "¥ 2.18M", "+8.4% MoM", "success", "本月新增 12 个合同"),
-        new("Active Deals", "54", "+3 环比", "info", "平均周期 23 天"),
-        new("Support Tickets", "17", "-2 QoQ", "warning", "3 个 SLA 即将到期")
+        new("TP_METRIC_LABEL_ARR", "¥ 2.18M", "TP_METRIC_CHANGE_ARR", "success", "TP_METRIC_META_ARR"),
+        new("TP_METRIC_LABEL_DEALS", "54", "TP_METRIC_CHANGE_DEALS", "info", "TP_METRIC_META_DEALS"),
+        new("TP_METRIC_LABEL_TICKETS", "17", "TP_METRIC_CHANGE_TICKETS", "warning", "TP_METRIC_META_TICKETS")
     ];
 
     private List<CustomerRow> Customers { get; } =
     [
-        new("ACME Holdings", "success", "Won", "Alice", "今天 09:30"),
-        new("Helios Labs", "warning", "Negotiation", "Bob", "昨天 17:10"),
-        new("Nova Retail", "danger", "Escalated", "Carol", "两天前")
+        new("ACME Holdings", "success", "Won", "Alice", "TP_UPDATED_TODAY_0930"),
+        new("Helios Labs", "warning", "Negotiation", "Bob", "TP_UPDATED_YESTERDAY_1710"),
+        new("Nova Retail", "danger", "Escalated", "Carol", "TP_UPDATED_TWO_DAYS_AGO")
     ];
 
     private List<TimelineEntry> Timeline { get; } =
     [
-        new("创建商机", "Alice 创建了 ACME 商机并分配给销售团队。", "今天 08:40"),
-        new("报价审批", "Bob 上传新版报价并完成审批流程。", "昨天 15:25"),
-        new("客户回访", "Carol 与 Nova 客户完成季度回访。", "本周一")
+        new("TP_TIMELINE_CREATE", "TP_TIMELINE_CREATE_DESC", "TP_TIMELINE_TIME_TODAY"),
+        new("TP_TIMELINE_APPROVAL", "TP_TIMELINE_APPROVAL_DESC", "TP_TIMELINE_TIME_YESTERDAY"),
+        new("TP_TIMELINE_FOLLOWUP", "TP_TIMELINE_FOLLOWUP_DESC", "TP_TIMELINE_TIME_MONDAY")
     ];
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        I18n.OnChanged += HandleI18nChanged;
+    }
+
+    private void HandleI18nChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        I18n.OnChanged -= HandleI18nChanged;
+    }
 
     private async Task SwitchTheme(string theme)
     {
@@ -299,12 +317,14 @@
     private bool _overlayModalVisible;
     private bool _overlayDrawerVisible;
     private string _drawerDensity = "comfortable";
-    private readonly string _modalOkText = "确认";
-    private readonly string _modalCancelText = "取消";
+    private string ModalOkText => I18n.T("TP_BTN_CONFIRM");
+    private string ModalCancelText => I18n.T("TP_BTN_CANCEL");
 
     private void OpenOverlayModal() => _overlayModalVisible = true;
     private void CloseOverlayModal() => _overlayModalVisible = false;
     private void OpenOverlayDrawer() => _overlayDrawerVisible = true;
     private void CloseOverlayDrawer() => _overlayDrawerVisible = false;
 }
+
+
 

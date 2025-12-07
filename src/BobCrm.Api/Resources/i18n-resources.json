@@ -1,4 +1,169 @@
 {
+  "ERR_ACCOUNT_NOT_FOUND": {
+    "zh": "用户未找到",
+    "ja": "ユーザーが見つかりません",
+    "en": "User not found"
+  },
+  "ERR_INVALID_CREDENTIALS": {
+    "zh": "用户名或密码错误",
+    "ja": "ユーザー名またはパスワードが正しくありません",
+    "en": "Invalid username or password"
+  },
+  "ERR_REFRESH_TOKEN_INVALID": {
+    "zh": "刷新令牌无效",
+    "ja": "リフレッシュトークンが無効です",
+    "en": "Invalid refresh token"
+  },
+  "ERR_REGISTER_FAILED": {
+    "zh": "注册失败",
+    "ja": "登録に失敗しました",
+    "en": "Registration failed"
+  },
+  "ERR_USERNAME_REQUIRED": {
+    "zh": "用户名不能为空",
+    "ja": "ユーザー名は必須です",
+    "en": "Username is required"
+  },
+  "MSG_ACCOUNT_ACTIVATED": {
+    "zh": "账户激活成功",
+    "ja": "アカウントが有効化されました",
+    "en": "Account activated successfully"
+  },
+  "MSG_LOGOUT_SUCCESS": {
+    "zh": "登出成功",
+    "ja": "ログアウトしました",
+    "en": "Logged out successfully"
+  },
+  "MSG_DB_RECREATED": {
+    "zh": "数据库已重建",
+    "ja": "データベースを再作成しました",
+    "en": "Database has been recreated"
+  },
+  "MSG_ADMIN_DELETED": {
+    "zh": "管理员用户已删除，可以重新初始化",
+    "ja": "管理者ユーザーを削除しました。再初期化できます",
+    "en": "Admin user deleted, you can re-initialize"
+  },
+  "ERR_ADMIN_DELETE_FAILED": {
+    "zh": "删除管理员用户失败",
+    "ja": "管理者ユーザーの削除に失敗しました",
+    "en": "Failed to delete admin user"
+  },
+  "MSG_ADMIN_NOT_FOUND_INIT": {
+    "zh": "未找到管理员用户，可以进行初始化",
+    "ja": "管理者ユーザーが見つかりません。初期化できます",
+    "en": "No admin user found; you can initialize now"
+  },
+  "ERR_ADMIN_ROLE_NOT_FOUND": {
+    "zh": "管理员角色未找到",
+    "ja": "管理者ロールが見つかりません",
+    "en": "Admin role not found"
+  },
+  "ERR_ADMIN_USER_NOT_FOUND": {
+    "zh": "管理员用户未找到",
+    "ja": "管理者ユーザーが見つかりません",
+    "en": "Admin user not found"
+  },
+  "ERR_ADMIN_REMOVE_PWD_FAILED": {
+    "zh": "移除旧密码失败",
+    "ja": "旧パスワードの削除に失敗しました",
+    "en": "Failed to remove old password"
+  },
+  "ERR_ADMIN_SET_PWD_FAILED": {
+    "zh": "设置新密码失败",
+    "ja": "新しいパスワードの設定に失敗しました",
+    "en": "Failed to set new password"
+  },
+  "MSG_ADMIN_PASSWORD_RESET_OK": {
+    "zh": "管理员密码已重置",
+    "ja": "管理者パスワードをリセットしました",
+    "en": "Admin password reset successfully"
+  },
+  "MSG_REGENERATE_DEFAULT_TEMPLATES": {
+    "zh": "已重新生成默认模板",
+    "ja": "デフォルトテンプレートを再生成しました",
+    "en": "Default templates regenerated"
+  },
+  "ERR_ENTITY_ROUTE_HINT": {
+    "zh": "模板中的实体类型必须匹配实体路由（单复数均可）",
+    "ja": "テンプレートの EntityType は EntityDefinition.EntityRoute と一致する必要があります（単数/複数形を受け付けます）",
+    "en": "The EntityType in templates must match an EntityDefinition.EntityRoute (singular/plural accepted)"
+  },
+  "ERR_FUNCTION_CREATE_FAILED": {
+    "zh": "创建功能失败: {0}",
+    "ja": "機能の作成に失敗しました: {0}",
+    "en": "Failed to create function: {0}"
+  },
+  "ERR_FUNCTION_UPDATE_FAILED": {
+    "zh": "更新功能失败: {0}",
+    "ja": "機能の更新に失敗しました: {0}",
+    "en": "Failed to update function: {0}"
+  },
+  "ERR_FUNCTION_DELETE_FAILED": {
+    "zh": "删除功能失败: {0}",
+    "ja": "機能の削除に失敗しました: {0}",
+    "en": "Failed to delete function: {0}"
+  },
+  "MSG_FUNCTIONS_REORDERED": {
+    "zh": "菜单顺序已更新",
+    "ja": "メニューの順序を更新しました",
+    "en": "Menu order updated"
+  },
+  "ERR_FUNCTION_REORDER_FAILED": {
+    "zh": "更新菜单顺序失败: {0}",
+    "ja": "メニュー順序の更新に失敗しました: {0}",
+    "en": "Failed to reorder functions: {0}"
+  },
+  "ERR_FUNCTION_CODE_CONFLICT": {
+    "zh": "功能码冲突",
+    "ja": "機能コードが競合しています",
+    "en": "Function code conflict"
+  },
+  "ERR_FUNCTION_CODE_CONFLICT_HINT": {
+    "zh": "请选择合并策略：replace（替换现有）或 skip（跳过冲突）",
+    "ja": "マージ戦略を選択してください: replace（既存を置換）または skip（競合をスキップ）",
+    "en": "Choose merge strategy: replace existing or skip conflicts"
+  },
+  "MSG_FUNCTION_IMPORT_SUCCESS": {
+    "zh": "导入完成，新增 {0} 条，跳过 {1} 条",
+    "ja": "インポート完了。追加 {0} 件、スキップ {1} 件",
+    "en": "Import completed: {0} added, {1} skipped"
+  },
+  "ERR_FUNCTION_IMPORT_FAILED": {
+    "zh": "导入失败: {0}",
+    "ja": "インポートに失敗しました: {0}",
+    "en": "Import failed: {0}"
+  },
+  "ERR_ROLE_NOT_FOUND": {
+    "zh": "角色不存在",
+    "ja": "ロールが見つかりません",
+    "en": "Role not found"
+  },
+  "ERR_ROLE_SYSTEM_IMMUTABLE": {
+    "zh": "系统角色不可修改",
+    "ja": "システムロールは変更できません",
+    "en": "System role cannot be modified"
+  },
+  "ERR_ROLE_HAS_ASSIGNMENTS": {
+    "zh": "角色已有分配，无法删除",
+    "ja": "ロールは割り当て済みのため削除できません",
+    "en": "Role has assignments and cannot be deleted"
+  },
+  "MSG_ROLE_PERMISSIONS_UPDATED": {
+    "zh": "权限已更新",
+    "ja": "権限を更新しました",
+    "en": "Permissions updated successfully"
+  },
+  "ERR_ASSIGNMENT_NOT_FOUND": {
+    "zh": "分配记录不存在",
+    "ja": "割り当てが見つかりません",
+    "en": "Assignment not found"
+  },
+  "MSG_PASSWORD_CHANGED": {
+    "zh": "密码修改成功",
+    "ja": "パスワードを変更しました",
+    "en": "Password changed successfully"
+  },
   "BTN_ACTIVATE": {
     "zh": "激活",
     "ja": "有効化",
@@ -21,7 +186,7 @@
   },
   "BTN_ADD_OPTION": {
     "zh": "添加选项",
-    "ja": "オプションを追加",
+    "ja": "オプション追加",
     "en": "Add Option"
   },
   "BTN_BACK": {
@@ -166,7 +331,7 @@
   },
   "BTN_NEW_ENUM": {
     "zh": "新建枚举",
-    "ja": "新規列挙型",
+    "ja": "列挙新規作成",
     "en": "New Enum"
   },
   "BTN_NEW_TEMPLATE": {
@@ -668,11 +833,6 @@
     "zh": "更新失败",
     "ja": "更新に失敗しました",
     "en": "Update failed"
-  },
-  "ERR_USERNAME_REQUIRED": {
-    "zh": "用户名不能为空",
-    "ja": "ユーザー名は必須です",
-    "en": "Username is required"
   },
   "ERR_VALIDATION_FAILED": {
     "zh": "校验失败",
@@ -1281,17 +1441,17 @@
   },
   "LBL_ENUM_DEFINITION": {
     "zh": "枚举定义",
-    "ja": "列挙型定義",
+    "ja": "列挙定義",
     "en": "Enum Definition"
   },
   "LBL_ENUM_CODE": {
     "zh": "枚举代码",
-    "ja": "列挙型コード",
+    "ja": "列挙コード",
     "en": "Enum Code"
   },
   "LBL_ENUM_OPTIONS": {
     "zh": "枚举选项",
-    "ja": "列挙型オプション",
+    "ja": "列挙オプション",
     "en": "Enum Options"
   },
   "MSG_ENUM_CODE_PLACEHOLDER": {
@@ -1316,12 +1476,12 @@
   },
   "LBL_CREATE_ENUM": {
     "zh": "创建枚举",
-    "ja": "列挙型を作成",
+    "ja": "列挙作成",
     "en": "Create Enum"
   },
   "LBL_EDIT_ENUM": {
     "zh": "编辑枚举",
-    "ja": "列挙型を編集",
+    "ja": "列挙編集",
     "en": "Edit Enum"
   },
   "LBL_FIELDS": {
@@ -1340,9 +1500,9 @@
     "en": "Field Definitions"
   },
   "LBL_FIELD_NAME": {
-    "zh": "字段名",
-    "ja": "フィールド名",
-    "en": "Field Name"
+    "zh": "名称",
+    "ja": "名称",
+    "en": "Name"
   },
   "LBL_FIELD_PERMISSIONS": {
     "zh": "字段权限",
@@ -1821,7 +1981,7 @@
   },
   "LBL_ROLE": {
     "zh": "角色",
-    "ja": "役割",
+    "ja": "ロール",
     "en": "Role"
   },
   "LBL_SAVE_FAILED": {
@@ -2401,17 +2561,17 @@
   },
   "MSG_ENUM_CREATE_SUCCESS": {
     "zh": "枚举创建成功",
-    "ja": "列挙型の作成に成功しました",
+    "ja": "列挙を作成しました",
     "en": "Enum created successfully"
   },
   "MSG_ENUM_UPDATE_SUCCESS": {
     "zh": "枚举更新成功",
-    "ja": "列挙型の更新に成功しました",
+    "ja": "列挙を更新しました",
     "en": "Enum updated successfully"
   },
   "MSG_ENUM_DELETE_SUCCESS": {
     "zh": "枚举删除成功",
-    "ja": "列挙型の削除に成功しました",
+    "ja": "列挙を削除しました",
     "en": "Enum deleted successfully"
   },
   "MSG_ENUM_LOAD_FAILED": {
@@ -2436,7 +2596,7 @@
   },
   "MSG_ENUM_CODE_REQUIRED": {
     "zh": "枚举代码不能为空",
-    "ja": "列挙型コードは必須です",
+    "ja": "列挙コードは必須です",
     "en": "Enum code is required"
   },
   "MSG_OPTION_VALUE_REQUIRED": {
@@ -3145,9 +3305,9 @@
     "en": "Define fields, layouts and entity behaviors."
   },
   "TXT_ENTITY_NAME_HINT": {
-    "zh": "将用作C#类名，如: Product",
-    "ja": "C#クラス名として使用されます。例：Product",
-    "en": "Will be used as C# class name, e.g.: Product"
+    "zh": "英文标识符，如 Product、Order 等",
+    "ja": "Product、Order などの英語識別子",
+    "en": "English identifier, such as Product, Order, etc."
   },
   "TXT_HEADER_SUBTITLE": {
     "zh": "洞察、协作与成长的一体化入口",
@@ -3364,21 +3524,6 @@
     "ja": "エンティティ定義を編集",
     "en": "Edit Entity Definition"
   },
-  "LBL_NAMESPACE": {
-    "zh": "命名空间",
-    "ja": "名前空間",
-    "en": "Namespace"
-  },
-  "LBL_ENTITY_NAME": {
-    "zh": "实体名称",
-    "ja": "エンティティ名",
-    "en": "Entity Name"
-  },
-  "TXT_ENTITY_NAME_HINT": {
-    "zh": "英文标识符，如 Product、Order 等",
-    "ja": "Product、Order などの英語識別子",
-    "en": "English identifier, such as Product, Order, etc."
-  },
   "TXT_MULTILINGUAL_DISPLAY_NAME_HINT": {
     "zh": "为不同语言提供显示名称",
     "ja": "各言語の表示名を入力してください",
@@ -3399,11 +3544,6 @@
     "ja": "翻訳内容",
     "en": "Translation"
   },
-  "LBL_STRUCTURE_TYPE": {
-    "zh": "结构类型",
-    "ja": "構造タイプ",
-    "en": "Structure Type"
-  },
   "LBL_SINGLE_ENTITY": {
     "zh": "单实体",
     "ja": "単一エンティティ",
@@ -3418,11 +3558,6 @@
     "zh": "主子孙实体",
     "ja": "マスター・詳細・孫エンティティ",
     "en": "Master-Detail-Grandchild Entity"
-  },
-  "LBL_INTERFACES": {
-    "zh": "接口",
-    "ja": "インターフェース",
-    "en": "Interfaces"
   },
   "TXT_AUDIT_FIELDS": {
     "zh": "CreatedAt, CreatedBy, UpdatedAt, UpdatedBy",
@@ -3574,11 +3709,6 @@
     "ja": "コード",
     "en": "Code"
   },
-  "LBL_FIELD_NAME": {
-    "zh": "名称",
-    "ja": "名称",
-    "en": "Name"
-  },
   "LBL_FIELD_CREATED_AT": {
     "zh": "创建时间",
     "ja": "作成日時",
@@ -3658,11 +3788,6 @@
     "zh": "新建字段",
     "ja": "フィールドを新規作成",
     "en": "Create Field"
-  },
-  "LBL_EDIT_FIELD": {
-    "zh": "编辑字段",
-    "ja": "フィールドを編集",
-    "en": "Edit Field"
   },
   "TXT_FOR_STRING_TYPE": {
     "zh": "用于字符串类型",
@@ -4089,11 +4214,6 @@
     "ja": "すべての機能とデータ権限を持つ",
     "en": "Has every function and data scope"
   },
-  "LBL_ROLE": {
-    "zh": "角色",
-    "ja": "ロール",
-    "en": "Role"
-  },
   "LBL_USER_INFO": {
     "zh": "用户信息",
     "ja": "ユーザー情報",
@@ -4139,20 +4259,10 @@
     "ja": "権限タイプ",
     "en": "Scope Type"
   },
-  "LBL_ENTITY_NAME": {
-    "zh": "实体名称",
-    "ja": "エンティティ名",
-    "en": "Entity Name"
-  },
   "LBL_FILTER_EXPRESSION": {
     "zh": "过滤表达式",
     "ja": "フィルタ式",
     "en": "Filter Expression"
-  },
-  "LBL_FUNCTION_PERMISSIONS": {
-    "zh": "功能权限",
-    "ja": "機能権限",
-    "en": "Function Permissions"
   },
   "LBL_DATA_SCOPES": {
     "zh": "数据权限",
@@ -4169,11 +4279,6 @@
     "ja": "終了日",
     "en": "Valid To"
   },
-  "LBL_STATUS": {
-    "zh": "状态",
-    "ja": "ステータス",
-    "en": "Status"
-  },
   "LBL_ACTIVE": {
     "zh": "生效中",
     "ja": "有効",
@@ -4188,16 +4293,6 @@
     "zh": "全局",
     "ja": "グローバル",
     "en": "Global"
-  },
-  "LBL_USERNAME": {
-    "zh": "用户名",
-    "ja": "ユーザー名",
-    "en": "Username"
-  },
-  "LBL_EMAIL": {
-    "zh": "邮箱",
-    "ja": "メール",
-    "en": "Email"
   },
   "LBL_SYSTEM_ROLE": {
     "zh": "系统角色",
@@ -4699,80 +4794,10 @@
     "ja": "エラー",
     "en": "Error"
   },
-  "LBL_ENUM_DEFINITION": {
-    "zh": "枚举定义",
-    "ja": "列挙定義",
-    "en": "Enum Definition"
-  },
-  "LBL_CREATE_ENUM": {
-    "zh": "创建枚举",
-    "ja": "列挙作成",
-    "en": "Create Enum"
-  },
-  "LBL_EDIT_ENUM": {
-    "zh": "编辑枚举",
-    "ja": "列挙編集",
-    "en": "Edit Enum"
-  },
-  "LBL_ENUM_CODE": {
-    "zh": "枚举代码",
-    "ja": "列挙コード",
-    "en": "Enum Code"
-  },
-  "LBL_ENUM_OPTIONS": {
-    "zh": "枚举选项",
-    "ja": "列挙オプション",
-    "en": "Enum Options"
-  },
-  "LBL_OPTION_VALUE": {
-    "zh": "选项值",
-    "ja": "オプション値",
-    "en": "Option Value"
-  },
-  "LBL_COLOR_TAG": {
-    "zh": "颜色标签",
-    "ja": "カラータグ",
-    "en": "Color Tag"
-  },
-  "BTN_NEW_ENUM": {
-    "zh": "新建枚举",
-    "ja": "列挙新規作成",
-    "en": "New Enum"
-  },
-  "BTN_ADD_OPTION": {
-    "zh": "添加选项",
-    "ja": "オプション追加",
-    "en": "Add Option"
-  },
-  "MSG_ENUM_CODE_REQUIRED": {
-    "zh": "枚举代码不能为空",
-    "ja": "列挙コードは必須です",
-    "en": "Enum code is required"
-  },
   "MSG_ENUM_OPTIONS_REQUIRED": {
     "zh": "至少需要一个枚举选项",
     "ja": "少なくとも1つのオプションが必要です",
     "en": "At least one enum option is required"
-  },
-  "MSG_ENUM_CREATE_SUCCESS": {
-    "zh": "枚举创建成功",
-    "ja": "列挙を作成しました",
-    "en": "Enum created successfully"
-  },
-  "MSG_ENUM_UPDATE_SUCCESS": {
-    "zh": "枚举更新成功",
-    "ja": "列挙を更新しました",
-    "en": "Enum updated successfully"
-  },
-  "MSG_ENUM_DELETE_SUCCESS": {
-    "zh": "枚举删除成功",
-    "ja": "列挙を削除しました",
-    "en": "Enum deleted successfully"
-  },
-  "MSG_OPTION_VALUE_REQUIRED": {
-    "zh": "选项值不能为空",
-    "ja": "オプション値は必須です",
-    "en": "Option value is required"
   },
   "TXT_ENUM_CODE_HINT": {
     "zh": "用于引用的唯一标识，如: customer_type",
@@ -4813,21 +4838,6 @@
     "zh": "系统模板",
     "ja": "システムテンプレート",
     "en": "System Template"
-  },
-  "LBL_FLAT_LIST": {
-    "zh": "平铺列表",
-    "ja": "フラットリスト",
-    "en": "Flat List"
-  },
-  "LBL_GROUP_BY_ENTITY": {
-    "zh": "按实体分组",
-    "ja": "エンティティ別にグループ化",
-    "en": "Group by Entity"
-  },
-  "LBL_UPDATED_AT": {
-    "zh": "更新于",
-    "ja": "更新日時",
-    "en": "Updated at"
   },
   "LBL_COPY_SUFFIX": {
     "zh": " (副本)",
@@ -4933,6 +4943,111 @@
     "zh": "请输入新模板名称:",
     "ja": "新しいテンプレート名を入力してください:",
     "en": "Please enter new template name:"
+  },
+  "EDT_COL_ENTITY_NAME": {
+    "zh": "实体名",
+    "ja": "エンティティ名",
+    "en": "Entity Name"
+  },
+  "EDT_COL_DISPLAY_NAME": {
+    "zh": "显示名",
+    "ja": "表示名",
+    "en": "Display Name"
+  },
+  "EDT_COL_NAMESPACE": {
+    "zh": "命名空间",
+    "ja": "名前空間",
+    "en": "Namespace"
+  },
+  "EDT_COL_SOURCE": {
+    "zh": "来源",
+    "ja": "ソース",
+    "en": "Source"
+  },
+  "EDT_COL_STATUS": {
+    "zh": "状态",
+    "ja": "ステータス",
+    "en": "Status"
+  },
+  "EDT_COL_LOCKED": {
+    "zh": "锁定",
+    "ja": "ロック",
+    "en": "Locked"
+  },
+  "EDT_COL_FIELD_COUNT": {
+    "zh": "字段数",
+    "ja": "フィールド数",
+    "en": "Field count"
+  },
+  "EDT_COL_UPDATED_AT": {
+    "zh": "更新时间",
+    "ja": "更新時間",
+    "en": "Updated at"
+  },
+  "EDT_BTN_PUBLISH": {
+    "zh": "发布",
+    "ja": "公開",
+    "en": "Publish"
+  },
+  "EDT_CONFIRM_DELETE": {
+    "zh": "确认删除？",
+    "ja": "削除してよいですか？",
+    "en": "Confirm delete?"
+  },
+  "TAB_ALL": {
+    "zh": "全部",
+    "ja": "全て",
+    "en": "All"
+  },
+  "TAB_SYSTEM_ENTITIES": {
+    "zh": "系统实体",
+    "ja": "システムエンティティ",
+    "en": "System Entities"
+  },
+  "TAB_CUSTOM_ENTITIES": {
+    "zh": "自定义实体",
+    "ja": "カスタムエンティティ",
+    "en": "Custom Entities"
+  },
+  "TAB_DRAFT": {
+    "zh": "草稿",
+    "ja": "下書き",
+    "en": "Draft"
+  },
+  "ED_MSG_LOAD_FAILED": {
+    "zh": "加载失败",
+    "ja": "読み込み失敗",
+    "en": "Load failed"
+  },
+  "ED_CONFIRM_DELETE_TITLE": {
+    "zh": "确认删除",
+    "ja": "削除確認",
+    "en": "Confirm Delete"
+  },
+  "ED_CONFIRM_DELETE_CONTENT": {
+    "zh": "确定要删除此实体定义吗？此操作不可恢复。",
+    "ja": "このエンティティ定義を削除してもよろしいですか？この操作は元に戻せません。",
+    "en": "Are you sure you want to delete this entity definition? This action cannot be undone."
+  },
+  "TPL_STATUS_APPLIED": {
+    "zh": "已应用",
+    "ja": "適用済み",
+    "en": "Applied"
+  },
+  "PL_LOAD_DATA_FAILED": {
+    "zh": "加载数据失败: {0}",
+    "ja": "データの読み込みに失敗しました: {0}",
+    "en": "Failed to load data: {0}"
+  },
+  "PL_LOAD_EXCEPTION": {
+    "zh": "加载发生异常: {0}",
+    "ja": "読み込み中に例外が発生しました: {0}",
+    "en": "Exception while loading: {0}"
+  },
+  "PL_SAVE_FAILED": {
+    "zh": "保存失败: {0}",
+    "ja": "保存に失敗しました: {0}",
+    "en": "Failed to save: {0}"
   },
   "TPL_PROMPT_REGENERATE_TITLE": {
     "zh": "重新生成默认模板",
@@ -5088,5 +5203,1280 @@
     "zh": "删除并重建指定实体的系统默认模板和绑定（仅开发环境）",
     "ja": "指定エンティティのシステム既定テンプレートとバインディングを削除・再作成します（開発環境のみ）",
     "en": "Delete and recreate system default templates and bindings for the specified entity (dev only)"
+  },
+  "ERR_NAMESPACE_REQUIRED": {
+    "zh": "命名空间不能为空",
+    "ja": "ネームスペースは必須です",
+    "en": "Namespace is required"
+  },
+  "ERR_ENTITY_NAME_REQUIRED": {
+    "zh": "实体名不能为空",
+    "ja": "エンティティ名は必須です",
+    "en": "Entity name is required"
+  },
+  "ERR_DISPLAY_NAME_REQUIRED": {
+    "zh": "显示名至少需要提供一种语言的文本",
+    "ja": "表示名は少なくとも1つの言語で入力してください",
+    "en": "Display name must be provided in at least one language"
+  },
+  "ERR_ENTITY_EXISTS": {
+    "zh": "实体已存在",
+    "ja": "エンティティは既に存在します",
+    "en": "Entity already exists"
+  },
+  "ERR_FIELD_DISPLAY_NAME_REQUIRED": {
+    "zh": "字段 {0} 的显示名至少需要提供一种语言的文本",
+    "ja": "フィールド {0} の表示名は少なくとも1つの言語で入力してください",
+    "en": "Display name for field {0} must be provided in at least one language"
+  },
+  "ERR_ENTITY_LOCKED_NAMESPACE": {
+    "zh": "实体已被引用，不能修改命名空间",
+    "ja": "参照されているエンティティのネームスペースは変更できません",
+    "en": "Entity is referenced and namespace cannot be changed"
+  },
+  "ERR_ENTITY_LOCKED_NAME": {
+    "zh": "实体已被引用，不能修改实体名",
+    "ja": "参照されているエンティティ名は変更できません",
+    "en": "Entity is referenced and name cannot be changed"
+  },
+  "ERR_ENTITY_LOCKED_DELETE_FIELD": {
+    "zh": "实体已被引用，不能删除字段",
+    "ja": "参照されているエンティティのフィールドは削除できません",
+    "en": "Entity is referenced and fields cannot be deleted"
+  },
+  "ERR_FIELD_LOCKED_TYPE_CHANGE": {
+    "zh": "字段 {0} 已被引用，不能修改数据类型",
+    "ja": "フィールド {0} は参照されているためデータ型を変更できません",
+    "en": "Field {0} is referenced and its data type cannot be changed"
+  },
+  "ERR_FIELD_LOCKED_LENGTH_DECREASE": {
+    "zh": "字段 {0} 的长度只能增大，不能缩小",
+    "ja": "フィールド {0} の長さは縮小できず、増やすことのみ可能です",
+    "en": "Length of field {0} can only be increased, not decreased"
+  },
+  "ERR_ENTITY_LOCKED_DELETE_INTERFACE": {
+    "zh": "实体已被引用，不能删除已锁定的接口",
+    "ja": "参照されているエンティティのロックされたインターフェースは削除できません",
+    "en": "Entity is referenced and locked interfaces cannot be removed"
+  },
+  "ERR_SYSTEM_FIELD_DELETE": {
+    "zh": "系统字段 {0} 不能删除",
+    "ja": "システムフィールド {0} は削除できません",
+    "en": "System field {0} cannot be deleted"
+  },
+  "ERR_INTERFACE_FIELD_DELETE": {
+    "zh": "接口字段 {0} 不能删除，请移除相应的接口",
+    "ja": "インターフェースフィールド {0} は削除できません。該当インターフェースを先に削除してください",
+    "en": "Interface field {0} cannot be deleted. Remove the corresponding interface first"
+  },
+  "ERR_ENTITY_PUBLISHED_DELETE": {
+    "zh": "已发布的实体不能直接删除，请先撤销发布",
+    "ja": "公開済みエンティティは直接削除できません。まず公開を取り消してください",
+    "en": "Published entities cannot be deleted directly. Please unpublish first"
+  },
+  "ERR_ENTITY_REFERENCED_DELETE": {
+    "zh": "实体已被模板引用，不能删除",
+    "ja": "エンティティはテンプレートで参照されているため削除できません",
+    "en": "Entity is referenced by templates and cannot be deleted"
+  },
+  "MSG_ENTITY_DELETE_SUCCESS": {
+    "zh": "实体删除成功",
+    "ja": "エンティティを削除しました",
+    "en": "Entity deleted successfully"
+  },
+  "MSG_ENTITY_PUBLISH_SUCCESS": {
+    "zh": "实体发布成功",
+    "ja": "エンティティを公開しました",
+    "en": "Entity published successfully"
+  },
+  "MSG_ENTITY_CHANGE_PUBLISH_SUCCESS": {
+    "zh": "实体修改发布成功",
+    "ja": "エンティティの変更を公開しました",
+    "en": "Entity changes published successfully"
+  },
+  "MSG_NO_CHANGES": {
+    "zh": "-- 无变更",
+    "ja": "-- 変更なし",
+    "en": "-- No changes"
+  },
+  "MSG_NO_PENDING_CHANGES": {
+    "zh": "-- 实体已发布，无待发布的变更",
+    "ja": "-- エンティティは公開済みで、未公開の変更はありません",
+    "en": "-- Entity is published with no pending changes"
+  },
+  "ERR_CODE_GENERATION_FAILED": {
+    "zh": "代码生成失败：{0}",
+    "ja": "コード生成に失敗しました: {0}",
+    "en": "Code generation failed: {0}"
+  },
+  "ERR_COMPILE_FAILED": {
+    "zh": "编译失败",
+    "ja": "コンパイルに失敗しました",
+    "en": "Compilation failed"
+  },
+  "ERR_COMPILE_FAILED_DETAIL": {
+    "zh": "编译失败：{0}",
+    "ja": "コンパイルに失敗しました: {0}",
+    "en": "Compilation failed: {0}"
+  },
+  "MSG_ENTITY_COMPILE_SUCCESS": {
+    "zh": "实体编译成功",
+    "ja": "エンティティのコンパイルに成功しました",
+    "en": "Entity compiled successfully"
+  },
+  "ERR_COMPILE_BATCH_FAILED": {
+    "zh": "批量编译失败",
+    "ja": "一括コンパイルに失敗しました",
+    "en": "Batch compilation failed"
+  },
+  "ERR_VALIDATION_FAILED_DETAIL": {
+    "zh": "验证失败：{0}",
+    "ja": "検証に失敗しました: {0}",
+    "en": "Validation failed: {0}"
+  },
+  "MSG_COMPILE_BATCH_SUCCESS": {
+    "zh": "成功编译{0}个实体",
+    "ja": "{0}件のエンティティをコンパイルしました",
+    "en": "Compiled {0} entities successfully"
+  },
+  "ERR_TYPE_NOT_LOADED": {
+    "zh": "实体类型未加载",
+    "ja": "エンティティタイプが読み込まれていません",
+    "en": "Entity type not loaded"
+  },
+  "MSG_ENTITY_UNLOADED": {
+    "zh": "实体 {0} 已卸载",
+    "ja": "エンティティ {0} をアンロードしました",
+    "en": "Entity {0} has been unloaded"
+  },
+  "ERR_RECOMPILE_FAILED": {
+    "zh": "重新编译失败",
+    "ja": "再コンパイルに失敗しました",
+    "en": "Recompile failed"
+  },
+  "MSG_ENTITY_RECOMPILE_SUCCESS": {
+    "zh": "实体重新编译成功",
+    "ja": "エンティティの再コンパイルに成功しました",
+    "en": "Entity recompiled successfully"
+  },
+  "MSG_TEMPLATE_APPLIED_DEFAULT": {
+    "zh": "模板已应用为默认模板",
+    "ja": "テンプレートをデフォルトとして適用しました",
+    "en": "Template applied as default"
+  },
+  "ERR_CUSTOMER_NOT_FOUND": {
+    "zh": "客户不存在",
+    "ja": "顧客が見つかりません",
+    "en": "Customer not found"
+  },
+  "MSG_CUSTOMER_ACCESS_UPDATED": {
+    "zh": "权限设置成功",
+    "ja": "権限を更新しました",
+    "en": "Access permissions updated"
+  },
+  "ERR_DYNAMIC_QUERY_FAILED": {
+    "zh": "动态实体查询失败：{0}",
+    "ja": "動的エンティティのクエリに失敗しました: {0}",
+    "en": "Dynamic entity query failed: {0}"
+  },
+  "ERR_DYNAMIC_RAW_QUERY_FAILED": {
+    "zh": "原始查询失败：{0}",
+    "ja": "Raw クエリに失敗しました: {0}",
+    "en": "Raw query failed: {0}"
+  },
+  "ERR_DYNAMIC_ENTITY_NOT_FOUND": {
+    "zh": "未找到ID为 {0} 的实体",
+    "ja": "ID {0} のエンティティが見つかりません",
+    "en": "Entity with ID {0} not found"
+  },
+  "ERR_DYNAMIC_CREATE_FAILED": {
+    "zh": "创建动态实体失败：{0}",
+    "ja": "動的エンティティの作成に失敗しました: {0}",
+    "en": "Failed to create dynamic entity: {0}"
+  },
+  "ERR_DYNAMIC_UPDATE_FAILED": {
+    "zh": "更新动态实体失败：{0}",
+    "ja": "動的エンティティの更新に失敗しました: {0}",
+    "en": "Failed to update dynamic entity: {0}"
+  },
+  "ERR_DYNAMIC_DELETE_FAILED": {
+    "zh": "删除动态实体失败：{0}",
+    "ja": "動的エンティティの削除に失敗しました: {0}",
+    "en": "Failed to delete dynamic entity: {0}"
+  },
+  "ERR_DYNAMIC_COUNT_FAILED": {
+    "zh": "统计动态实体失败：{0}",
+    "ja": "動的エンティティの集計に失敗しました: {0}",
+    "en": "Failed to count dynamic entities: {0}"
+  },
+  "ERR_USER_NOT_FOUND": {
+    "zh": "用户不存在",
+    "ja": "ユーザーが見つかりません",
+    "en": "User not found"
+  },
+  "ERR_USERNAME_EXISTS": {
+    "zh": "用户名已存在",
+    "ja": "ユーザー名は既に存在します",
+    "en": "Username already exists"
+  },
+  "ERR_USER_CREATE_FAILED": {
+    "zh": "创建用户失败：{0}",
+    "ja": "ユーザーの作成に失敗しました: {0}",
+    "en": "Failed to create user: {0}"
+  },
+  "ERR_USER_ADD_PASSWORD_FAILED": {
+    "zh": "设置密码失败：{0}",
+    "ja": "パスワードの設定に失敗しました: {0}",
+    "en": "Failed to set password: {0}"
+  },
+  "ERR_USER_UPDATE_FAILED": {
+    "zh": "更新用户失败：{0}",
+    "ja": "ユーザーの更新に失敗しました: {0}",
+    "en": "Failed to update user: {0}"
+  },
+  "ERR_USER_REMOVE_PASSWORD_FAILED": {
+    "zh": "移除密码失败：{0}",
+    "ja": "パスワードの削除に失敗しました: {0}",
+    "en": "Failed to remove password: {0}"
+  },
+  "ERR_ENUM_NOT_FOUND": {
+    "zh": "枚举定义不存在",
+    "ja": "列挙定義が見つかりません",
+    "en": "Enum definition not found"
+  },
+  "ERR_ENUM_OPERATION_FAILED": {
+    "zh": "枚举操作失败：{0}",
+    "ja": "列挙操作に失敗しました: {0}",
+    "en": "Enum operation failed: {0}"
+  },
+  "MSG_LAYOUT_SAVED": {
+    "zh": "布局已保存",
+    "ja": "レイアウトを保存しました",
+    "en": "Layout saved"
+  },
+  "MSG_LAYOUT_DELETED": {
+    "zh": "布局已删除",
+    "ja": "レイアウトを削除しました",
+    "en": "Layout deleted"
+  },
+  "ERR_TEMPLATE_OPERATION_FAILED": {
+    "zh": "模板操作失败：{0}",
+    "ja": "テンプレート操作に失敗しました: {0}",
+    "en": "Template operation failed: {0}"
+  },
+  "ERR_TEMPLATE_BINDING_NOT_FOUND": {
+    "zh": "模板绑定不存在",
+    "ja": "テンプレートバインディングが見つかりません",
+    "en": "Template binding not found"
+  },
+  "ERR_SETUP_CREATE_ADMIN_FAILED": {
+    "zh": "创建管理员用户失败",
+    "ja": "管理者ユーザーの作成に失敗しました",
+    "en": "Failed to create admin user"
+  },
+  "MSG_SETUP_ADMIN_CREATED": {
+    "zh": "管理员账户创建成功",
+    "ja": "管理者アカウントを作成しました",
+    "en": "Admin account created successfully"
+  },
+  "ERR_SETUP_UPDATE_ADMIN_FAILED": {
+    "zh": "更新管理员用户失败",
+    "ja": "管理者ユーザーの更新に失敗しました",
+    "en": "Failed to update admin user"
+  },
+  "ERR_SETUP_REMOVE_PASSWORD_FAILED": {
+    "zh": "移除旧密码失败",
+    "ja": "旧パスワードの削除に失敗しました",
+    "en": "Failed to remove old password"
+  },
+  "ERR_SETUP_SET_PASSWORD_FAILED": {
+    "zh": "设置新密码失败",
+    "ja": "新しいパスワードの設定に失敗しました",
+    "en": "Failed to set new password"
+  },
+  "MSG_SETUP_ADMIN_UPDATED": {
+    "zh": "管理员账户更新成功",
+    "ja": "管理者アカウントを更新しました",
+    "en": "Admin account updated successfully"
+  },
+  "ERR_DATASET_NOT_FOUND_BY_ID": {
+    "zh": "数据集不存在",
+    "ja": "データセットが見つかりません",
+    "en": "Data set not found"
+  },
+  "ERR_DATASET_NOT_FOUND_BY_CODE": {
+    "zh": "指定的数据集不存在",
+    "ja": "指定のデータセットが見つかりません",
+    "en": "Data set not found for the given code"
+  },
+  "ERR_AGGREGATE_VALIDATION_FAILED": {
+    "zh": "验证失败",
+    "ja": "検証に失敗しました",
+    "en": "Validation failed"
+  },
+  "ERR_AGGREGATE_SAVE_FAILED": {
+    "zh": "保存聚合失败",
+    "ja": "集約の保存に失敗しました",
+    "en": "Failed to save aggregate"
+  },
+  "MSG_AGGREGATE_VALID": {
+    "zh": "验证通过",
+    "ja": "検証を通過しました",
+    "en": "Validation passed"
+  },
+  "ERR_RDP_HOST_REQUIRED": {
+    "zh": "主机地址不能为空",
+    "ja": "ホスト名は必須です",
+    "en": "Host is required"
+  },
+  "ERR_RDP_GENERATE_FAILED": {
+    "zh": "生成RDP文件失败: {0}",
+    "ja": "RDPファイルの生成に失敗しました: {0}",
+    "en": "Failed to generate RDP file: {0}"
+  },
+  "ERR_PATH_REQUIRED": {
+    "zh": "文件路径不能为空",
+    "ja": "パスは必須です",
+    "en": "Path is required"
+  },
+  "MSG_PATH_IS_URL": {
+    "zh": "URL路径",
+    "ja": "URL パス",
+    "en": "URL path"
+  },
+  "ERR_INVALID_PATH": {
+    "zh": "无效的文件路径格式",
+    "ja": "無効なパス形式です",
+    "en": "Invalid path format"
+  },
+  "ERR_PATH_NOT_FOUND": {
+    "zh": "文件或目录不存在",
+    "ja": "ファイルまたはディレクトリが存在しません",
+    "en": "File or directory does not exist"
+  },
+  "ERR_EMAIL_REQUIRED": {
+    "zh": "邮箱地址不能为空",
+    "ja": "メールアドレスは必須です",
+    "en": "Email is required"
+  },
+  "ERR_MAILTO_FAILED": {
+    "zh": "生成mailto链接失败: {0}",
+    "ja": "mailto リンクの生成に失敗しました: {0}",
+    "en": "Failed to generate mailto link: {0}"
+  },
+  "MSG_FIELD_PERMISSIONS_BULK_UPSERT": {
+    "zh": "字段权限批量更新成功",
+    "ja": "フィールド権限の一括更新が完了しました",
+    "en": "Field permissions updated successfully"
+  },
+  "MSG_FIELD_PERMISSION_DELETED": {
+    "zh": "字段权限已删除",
+    "ja": "フィールド権限を削除しました",
+    "en": "Field permission deleted"
+  },
+  "MSG_FIELD_PERMISSIONS_DELETED_ALL": {
+    "zh": "已删除角色的所有字段权限",
+    "ja": "ロールのフィールド権限をすべて削除しました",
+    "en": "All field permissions for the role were deleted"
+  },
+  "ERR_FILE_FORM_REQUIRED": {
+    "zh": "需要 multipart/form-data",
+    "ja": "multipart/form-data が必要です",
+    "en": "multipart/form-data is required"
+  },
+  "ERR_FILE_MISSING": {
+    "zh": "缺少文件",
+    "ja": "ファイルがありません",
+    "en": "Missing file"
+  },
+  "ERR_ORG_OPERATION_FAILED": {
+    "zh": "组织操作失败：{0}",
+    "ja": "組織操作に失敗しました: {0}",
+    "en": "Organization operation failed: {0}"
+  },
+  "TB_PAGE_TITLE": {
+    "zh": "模板绑定",
+    "ja": "テンプレートのバインド",
+    "en": "Template bindings"
+  },
+  "TB_TITLE": {
+    "zh": "模板绑定",
+    "ja": "テンプレートバインド",
+    "en": "Template bindings"
+  },
+  "TB_LOADING": {
+    "zh": "加载中...",
+    "ja": "読み込み中...",
+    "en": "Loading..."
+  },
+  "TB_NO_PERMISSION_TITLE": {
+    "zh": "没有权限访问模板绑定",
+    "ja": "テンプレートのバインドにアクセスする権限がありません",
+    "en": "No permission to access template bindings"
+  },
+  "TB_NO_PERMISSION_HINT": {
+    "zh": "需要功能权限 SYS.TEMPLATE.ASSIGN 才能调整绑定。",
+    "ja": "バインドを変更するには権限 SYS.TEMPLATE.ASSIGN が必要です。",
+    "en": "You need permission SYS.TEMPLATE.ASSIGN to change bindings."
+  },
+  "TB_EMPTY_TITLE": {
+    "zh": "当前账号没有可绑定的模板",
+    "ja": "バインドできるテンプレートがありません",
+    "en": "No templates available for binding"
+  },
+  "TB_EMPTY_HINT": {
+    "zh": "请先在模板中心创建实体模板后再进行绑定。",
+    "ja": "テンプレートセンターでエンティティテンプレートを作成してからバインドしてください。",
+    "en": "Create entity templates in the template center before binding."
+  },
+  "TB_LABEL_ENTITY_TYPE": {
+    "zh": "实体类型",
+    "ja": "エンティティ種別",
+    "en": "Entity type"
+  },
+  "TB_LABEL_USAGE": {
+    "zh": "用途",
+    "ja": "用途",
+    "en": "Usage"
+  },
+  "TB_SCOPE_SYSTEM": {
+    "zh": "系统绑定",
+    "ja": "システムバインド",
+    "en": "System binding"
+  },
+  "TB_SCOPE_USER": {
+    "zh": "用户绑定",
+    "ja": "ユーザーバインド",
+    "en": "User binding"
+  },
+  "TB_TEMPLATES_LOADING": {
+    "zh": "正在加载模板...",
+    "ja": "テンプレートを読み込み中...",
+    "en": "Loading templates..."
+  },
+  "TB_NO_TEMPLATES_TITLE": {
+    "zh": "当前没有可用的模板",
+    "ja": "利用可能なテンプレートがありません",
+    "en": "No templates available"
+  },
+  "TB_NO_TEMPLATES_HINT": {
+    "zh": "请切换用途或在模板中心创建对应的模板。",
+    "ja": "用途を切り替えるか、テンプレートセンターで対応するテンプレートを作成してください。",
+    "en": "Switch usage or create templates in the template center."
+  },
+  "TB_BADGE_SYSTEM_DEFAULT": {
+    "zh": "系统默认",
+    "ja": "システムデフォルト",
+    "en": "System default"
+  },
+  "TB_BADGE_USER_DEFAULT": {
+    "zh": "用户默认",
+    "ja": "ユーザーデフォルト",
+    "en": "User default"
+  },
+  "TB_UPDATED_AT": {
+    "zh": "更新于",
+    "ja": "更新日時",
+    "en": "Updated at"
+  },
+  "TB_LABEL_FUNCTION_CODE_OPTIONAL": {
+    "zh": "功能编码要求（可选）",
+    "ja": "必要な機能コード（任意）",
+    "en": "Required function code (optional)"
+  },
+  "TB_PLACEHOLDER_FUNCTION_CODE": {
+    "zh": "填写访问该模板所需的功能编码",
+    "ja": "このテンプレートに必要な機能コードを入力してください",
+    "en": "Enter the function code required for this template"
+  },
+  "TB_BTN_USE_TEMPLATE_DEFAULT": {
+    "zh": "使用模板默认",
+    "ja": "テンプレートのデフォルトを使用",
+    "en": "Use template default"
+  },
+  "TB_BTN_SAVING_BINDING": {
+    "zh": "保存中...",
+    "ja": "保存中...",
+    "en": "Saving..."
+  },
+  "TB_BTN_SAVE_BINDING": {
+    "zh": "保存绑定",
+    "ja": "バインドを保存",
+    "en": "Save binding"
+  },
+  "TB_BTN_RELOAD": {
+    "zh": "重新加载",
+    "ja": "再読み込み",
+    "en": "Reload"
+  },
+  "TB_RUNTIME_TITLE": {
+    "zh": "当前运行态",
+    "ja": "現在のランタイム",
+    "en": "Current runtime"
+  },
+  "TB_RUNTIME_TEMPLATE": {
+    "zh": "模板：",
+    "ja": "テンプレート：",
+    "en": "Template: "
+  },
+  "TB_RUNTIME_ACCESS": {
+    "zh": "访问级别：",
+    "ja": "アクセスレベル：",
+    "en": "Access level: "
+  },
+  "TB_ACCESS_FULL": {
+    "zh": "完全访问",
+    "ja": "フルアクセス",
+    "en": "Full access"
+  },
+  "TB_ACCESS_LIMITED": {
+    "zh": "受限",
+    "ja": "制限付き",
+    "en": "Limited"
+  },
+  "TB_RUNTIME_SCOPES": {
+    "zh": "已应用的数据范围：",
+    "ja": "適用されたデータ範囲：",
+    "en": "Applied data scopes:"
+  },
+  "TB_STATUS_LOAD_FAILED": {
+    "zh": "模板加载失败",
+    "ja": "テンプレートの読み込みに失敗しました",
+    "en": "Failed to load templates"
+  },
+  "TB_STATUS_SELECT_TEMPLATE": {
+    "zh": "请选择要绑定的模板",
+    "ja": "バインドするテンプレートを選択してください",
+    "en": "Select a template to bind"
+  },
+  "TB_STATUS_SAVE_FAILED": {
+    "zh": "保存失败，请重试",
+    "ja": "保存に失敗しました。もう一度お試しください。",
+    "en": "Save failed, please try again"
+  },
+  "TB_STATUS_SAVE_SUCCESS": {
+    "zh": "绑定已保存",
+    "ja": "バインドを保存しました",
+    "en": "Binding saved"
+  },
+  "TB_USAGE_LIST": {
+    "zh": "列表",
+    "ja": "リスト",
+    "en": "List"
+  },
+  "TB_USAGE_DETAIL": {
+    "zh": "详情",
+    "ja": "詳細",
+    "en": "Detail"
+  },
+  "TB_USAGE_EDIT": {
+    "zh": "编辑",
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "TP_PAGE_TITLE": {
+    "zh": "主题游乐场",
+    "ja": "テーマプレイグラウンド",
+    "en": "Calm Theme Playground"
+  },
+  "TP_SUBTITLE": {
+    "zh": "设计 Token、Light / Dark 主题与 Ant Design 覆写的可视校验页。",
+    "ja": "トークンとライト/ダークテーマ、Ant Design のオーバーライドを検証するビジュアルサンドボックスです。",
+    "en": "Visual sandbox for tokens, light/dark themes, and Ant Design overrides."
+  },
+  "TP_TABLE_CUSTOMER": {
+    "zh": "客户",
+    "ja": "顧客",
+    "en": "Customer"
+  },
+  "TP_TABLE_STAGE": {
+    "zh": "阶段",
+    "ja": "ステージ",
+    "en": "Stage"
+  },
+  "TP_TABLE_OWNER": {
+    "zh": "负责人",
+    "ja": "担当者",
+    "en": "Owner"
+  },
+  "TP_TABLE_UPDATED": {
+    "zh": "更新时间",
+    "ja": "更新日時",
+    "en": "Updated"
+  },
+  "TP_ALERT_SYNC_SUCCESS": {
+    "zh": "成功同步客户数据",
+    "ja": "顧客データを同期しました",
+    "en": "Customer data synced successfully"
+  },
+  "TP_ALERT_PENDING_TEMPLATES": {
+    "zh": "待审核的模板",
+    "ja": "審査待ちのテンプレート",
+    "en": "Templates pending review"
+  },
+  "TP_ALERT_IMPORT_FAILED": {
+    "zh": "导入失败，请重试",
+    "ja": "インポートに失敗しました。再試行してください",
+    "en": "Import failed, please retry"
+  },
+  "TP_LABEL_CUSTOMER_NAME": {
+    "zh": "客户名称",
+    "ja": "顧客名",
+    "en": "Customer name"
+  },
+  "TP_LABEL_OWNER": {
+    "zh": "负责人",
+    "ja": "担当者",
+    "en": "Owner"
+  },
+  "TP_LABEL_NOTE": {
+    "zh": "备注",
+    "ja": "備考",
+    "en": "Notes"
+  },
+  "TP_PLACEHOLDER_INTERNAL_NOTE": {
+    "zh": "内部备注...",
+    "ja": "内部メモ...",
+    "en": "Internal notes..."
+  },
+  "TP_BTN_CANCEL": {
+    "zh": "取消",
+    "ja": "キャンセル",
+    "en": "Cancel"
+  },
+  "TP_BTN_SAVE": {
+    "zh": "保存",
+    "ja": "保存",
+    "en": "Save"
+  },
+  "TP_BTN_OPEN_MODAL": {
+    "zh": "打开 Modal",
+    "ja": "モーダルを開く",
+    "en": "Open modal"
+  },
+  "TP_BTN_OPEN_DRAWER": {
+    "zh": "打开 Drawer",
+    "ja": "ドロワーを開く",
+    "en": "Open drawer"
+  },
+  "TP_OVERLAY_META": {
+    "zh": "Calm Modal / Drawer 统一阴影、玻璃与分隔。",
+    "ja": "Calm のモーダル/ドロワーは影・ガラス感・セパレーターを統一しています。",
+    "en": "Calm modal/drawer unify shadow, glass, and dividers."
+  },
+  "TP_HINT_MODAL_OFFSET": {
+    "zh": "Modal 自 72px 顶部偏移，保持与 Header 间距。",
+    "ja": "モーダルはヘッダーとの間隔を保つため、上部から 72px に配置します。",
+    "en": "Modals offset 72px from the top to keep spacing from the header."
+  },
+  "TP_HINT_OVERLAY_BACKDROP": {
+    "zh": "遮罩使用 `--overlay-backdrop` + blur，Light/Dark 自动切换。",
+    "ja": "バックドロップは `--overlay-backdrop` とぼかしを使用し、ライト/ダークを自動で切り替えます。",
+    "en": "Backdrop uses `--overlay-backdrop` with blur and auto light/dark switching."
+  },
+  "TP_HINT_FOOTER_SPACING": {
+    "zh": "Footer 统一右对齐，按钮间距 `var(--spacing-3)`。",
+    "ja": "フッターは右寄せで、ボタン間隔は `var(--spacing-3)` を使用します。",
+    "en": "Footers are right-aligned with button spacing of `var(--spacing-3)`."
+  },
+  "TP_POPOVER_TITLE": {
+    "zh": "提醒",
+    "ja": "リマインダー",
+    "en": "Reminder"
+  },
+  "TP_POPOVER_BODY1": {
+    "zh": "使用 Calm 语义色变量，不写死 #hex。",
+    "ja": "Calm のセマンティックカラー変数を使い、#hex をハードコードしません。",
+    "en": "Use Calm semantic color tokens instead of hardcoded hex values."
+  },
+  "TP_POPOVER_BODY2": {
+    "zh": "Hover / Click 均可触发。",
+    "ja": "ホバー/クリックのどちらでも発火します。",
+    "en": "Triggers on hover or click."
+  },
+  "TP_BTN_VIEW_POPOVER": {
+    "zh": "查看 Popover",
+    "ja": "ポップオーバーを表示",
+    "en": "View popover"
+  },
+  "TP_BTN_QUICK_MENU": {
+    "zh": "快捷菜单",
+    "ja": "クイックメニュー",
+    "en": "Quick menu"
+  },
+  "TP_MENU_ASSIGN_OWNER": {
+    "zh": "指派拥有者",
+    "ja": "所有者を割り当て",
+    "en": "Assign owner"
+  },
+  "TP_MENU_ASSIGN_OWNER_DESC": {
+    "zh": "同步表单设计器",
+    "ja": "フォームデザイナーと同期",
+    "en": "Sync form designer"
+  },
+  "TP_MENU_SHARE_LINK": {
+    "zh": "生成共享链接",
+    "ja": "共有リンクを生成",
+    "en": "Generate share link"
+  },
+  "TP_MENU_SHARE_LINK_DESC": {
+    "zh": "有效期 48 小时",
+    "ja": "有効期限 48 時間",
+    "en": "Valid for 48 hours"
+  },
+  "TP_MENU_SAVE_TEMPLATE": {
+    "zh": "存为模板",
+    "ja": "テンプレートとして保存",
+    "en": "Save as template"
+  },
+  "TP_MENU_SAVE_TEMPLATE_DESC": {
+    "zh": "保存当前布局",
+    "ja": "現在のレイアウトを保存",
+    "en": "Save the current layout"
+  },
+  "TP_CONTEXT_HINT": {
+    "zh": "右键/长按此处预览 Context Menu",
+    "ja": "ここを右クリック/長押ししてコンテキストメニューを表示",
+    "en": "Right-click or long press here to preview the context menu"
+  },
+  "TP_CONTEXT_COPY_LINK": {
+    "zh": "复制链接",
+    "ja": "リンクをコピー",
+    "en": "Copy link"
+  },
+  "TP_CONTEXT_FOLLOW": {
+    "zh": "标记为关注",
+    "ja": "フォローする",
+    "en": "Follow updates"
+  },
+  "TP_CONTEXT_DELETE_DRAFT": {
+    "zh": "删除草稿",
+    "ja": "下書きを削除",
+    "en": "Delete draft"
+  },
+  "TP_MODAL_TITLE": {
+    "zh": "Calm Modal 示例",
+    "ja": "Calm モーダルのデモ",
+    "en": "Calm modal demo"
+  },
+  "TP_MODAL_BODY": {
+    "zh": "Modal 内容区遵循 24px 垂直节奏，支持分段文本、说明以及表单元素。",
+    "ja": "モーダル本文は 24px の縦リズムに従い、段落テキストや説明、フォーム要素を配置します。",
+    "en": "Modal body follows a 24px vertical rhythm for text, descriptions, and form elements."
+  },
+  "TP_MODAL_HINT_BG": {
+    "zh": "背景使用 `--surface-elevated`，可透出底层玻璃。",
+    "ja": "背景は `--surface-elevated` を使い、下層のガラス感を透かします。",
+    "en": "Background uses `--surface-elevated` to let the glass layer show through."
+  },
+  "TP_MODAL_HINT_TYPEFACE": {
+    "zh": "标题 / 内容 / Metadata 分别映射 Title/SubBody/Meta 字体。",
+    "ja": "タイトル/本文/メタ情報はそれぞれ Title/SubBody/Meta のフォントを使用します。",
+    "en": "Title, body, and metadata map to the Title/SubBody/Meta type styles."
+  },
+  "TP_MODAL_HINT_MASK": {
+    "zh": "默认禁止 mask 点击关闭，避免误触。",
+    "ja": "誤操作を避けるため、デフォルトではマスククリックで閉じません。",
+    "en": "Mask clicks are disabled by default to prevent accidental closes."
+  },
+  "TP_DRAWER_TITLE": {
+    "zh": "Calm Drawer 示例",
+    "ja": "Calm ドロワーのデモ",
+    "en": "Calm drawer demo"
+  },
+  "TP_DRAWER_SECTION_TITLE": {
+    "zh": "属性字段",
+    "ja": "属性フィールド",
+    "en": "Attribute fields"
+  },
+  "TP_DRAWER_SECTION_DESC": {
+    "zh": "Drawer 主体建议使用栅格或列表，便于在 Form Designer 中重用。",
+    "ja": "ドロワー本体はグリッドやリストを使うと、Form Designer で再利用しやすくなります。",
+    "en": "Use grids or lists in the drawer body for reuse in the Form Designer."
+  },
+  "TP_LABEL_BLOCK_TITLE": {
+    "zh": "区块标题",
+    "ja": "ブロックタイトル",
+    "en": "Block title"
+  },
+  "TP_PLACEHOLDER_BLOCK_TITLE": {
+    "zh": "如：客户标签",
+    "ja": "例: 顧客タグ",
+    "en": "e.g., customer tags"
+  },
+  "TP_LABEL_DENSITY": {
+    "zh": "显示密度",
+    "ja": "表示密度",
+    "en": "Display density"
+  },
+  "TP_DENSITY_COMFORTABLE": {
+    "zh": "舒适",
+    "ja": "ゆったり",
+    "en": "Comfortable"
+  },
+  "TP_DENSITY_COMPACT": {
+    "zh": "紧凑",
+    "ja": "コンパクト",
+    "en": "Compact"
+  },
+  "TP_BTN_SAVE_CONFIG": {
+    "zh": "保存配置",
+    "ja": "設定を保存",
+    "en": "Save configuration"
+  },
+  "TP_BTN_CONFIRM": {
+    "zh": "确认",
+    "ja": "確認",
+    "en": "Confirm"
+  },
+  "TP_METRIC_LABEL_ARR": {
+    "zh": "总 ARR",
+    "ja": "総ARR",
+    "en": "Total ARR"
+  },
+  "TP_METRIC_CHANGE_ARR": {
+    "zh": "+8.4% 环比",
+    "ja": "+8.4% 前月比",
+    "en": "+8.4% MoM"
+  },
+  "TP_METRIC_META_ARR": {
+    "zh": "本月新增 12 个合同",
+    "ja": "今月 12 件の契約を追加",
+    "en": "12 contracts added this month"
+  },
+  "TP_METRIC_LABEL_DEALS": {
+    "zh": "活跃商机",
+    "ja": "進行中の案件",
+    "en": "Active deals"
+  },
+  "TP_METRIC_CHANGE_DEALS": {
+    "zh": "+3 环比",
+    "ja": "+3 前月比",
+    "en": "+3 MoM"
+  },
+  "TP_METRIC_META_DEALS": {
+    "zh": "平均周期 23 天",
+    "ja": "平均サイクル 23 日",
+    "en": "Average cycle 23 days"
+  },
+  "TP_METRIC_LABEL_TICKETS": {
+    "zh": "支持工单",
+    "ja": "サポートチケット",
+    "en": "Support tickets"
+  },
+  "TP_METRIC_CHANGE_TICKETS": {
+    "zh": "-2 QoQ",
+    "ja": "-2 前四半期比",
+    "en": "-2 QoQ"
+  },
+  "TP_METRIC_META_TICKETS": {
+    "zh": "3 个 SLA 即将到期",
+    "ja": "3 件の SLA がまもなく期限切れ",
+    "en": "3 SLAs about to expire"
+  },
+  "TP_UPDATED_TODAY_0930": {
+    "zh": "今天 09:30",
+    "ja": "本日 09:30",
+    "en": "Today 09:30"
+  },
+  "TP_UPDATED_YESTERDAY_1710": {
+    "zh": "昨天 17:10",
+    "ja": "昨日 17:10",
+    "en": "Yesterday 17:10"
+  },
+  "TP_UPDATED_TWO_DAYS_AGO": {
+    "zh": "两天前",
+    "ja": "2日前",
+    "en": "Two days ago"
+  },
+  "TP_TIMELINE_CREATE": {
+    "zh": "创建商机",
+    "ja": "商談を作成",
+    "en": "Created opportunity"
+  },
+  "TP_TIMELINE_CREATE_DESC": {
+    "zh": "Alice 创建了 ACME 商机并分配给销售团队。",
+    "ja": "Alice が ACME の商談を作成し、営業チームに割り当てました。",
+    "en": "Alice created the ACME opportunity and assigned it to the sales team."
+  },
+  "TP_TIMELINE_TIME_TODAY": {
+    "zh": "今天 08:40",
+    "ja": "本日 08:40",
+    "en": "Today 08:40"
+  },
+  "TP_TIMELINE_APPROVAL": {
+    "zh": "报价审批",
+    "ja": "見積もり承認",
+    "en": "Quote approval"
+  },
+  "TP_TIMELINE_APPROVAL_DESC": {
+    "zh": "Bob 上传新版报价并完成审批流程。",
+    "ja": "Bob が新版の見積もりをアップロードし、承認フローを完了しました。",
+    "en": "Bob uploaded a new quote and completed the approval flow."
+  },
+  "TP_TIMELINE_TIME_YESTERDAY": {
+    "zh": "昨天 15:25",
+    "ja": "昨日 15:25",
+    "en": "Yesterday 15:25"
+  },
+  "TP_TIMELINE_FOLLOWUP": {
+    "zh": "客户回访",
+    "ja": "顧客フォロー",
+    "en": "Customer follow-up"
+  },
+  "TP_TIMELINE_FOLLOWUP_DESC": {
+    "zh": "Carol 与 Nova 客户完成季度回访。",
+    "ja": "Carol が Nova の顧客と四半期のフォローを完了しました。",
+    "en": "Carol completed the quarterly follow-up with the Nova customer."
+  },
+  "TP_TIMELINE_TIME_MONDAY": {
+    "zh": "本周一",
+    "ja": "今週月曜",
+    "en": "This Monday"
+  },
+  "FG_COL_CODE": {
+    "zh": "字段编码",
+    "ja": "フィールドコード",
+    "en": "Field code"
+  },
+  "FG_PLACEHOLDER_CODE": {
+    "zh": "例如: ProductCode",
+    "ja": "例: ProductCode",
+    "en": "e.g., ProductCode"
+  },
+  "FG_COL_DISPLAY_NAME": {
+    "zh": "显示名称",
+    "ja": "表示名",
+    "en": "Display name"
+  },
+  "FG_COL_DATA_TYPE": {
+    "zh": "数据类型",
+    "ja": "データ型",
+    "en": "Data type"
+  },
+  "FG_COL_LENGTH": {
+    "zh": "长度",
+    "ja": "長さ",
+    "en": "Length"
+  },
+  "FG_PLACEHOLDER_OPTIONAL": {
+    "zh": "可选",
+    "ja": "任意",
+    "en": "Optional"
+  },
+  "FG_COL_ENUM_CONFIG": {
+    "zh": "枚举配置",
+    "ja": "列挙設定",
+    "en": "Enum config"
+  },
+  "FG_PLACEHOLDER_SELECT_ENUM": {
+    "zh": "选择枚举",
+    "ja": "列挙を選択",
+    "en": "Select enum"
+  },
+  "FG_LABEL_MULTISELECT": {
+    "zh": "多选",
+    "ja": "複数選択",
+    "en": "Multi-select"
+  },
+  "FG_COL_REQUIRED": {
+    "zh": "必填",
+    "ja": "必須",
+    "en": "Required"
+  },
+  "FG_COL_DEFAULT": {
+    "zh": "默认值",
+    "ja": "デフォルト値",
+    "en": "Default value"
+  },
+  "FG_COL_ACTIONS": {
+    "zh": "操作",
+    "ja": "操作",
+    "en": "Actions"
+  },
+  "FG_BTN_SAVE": {
+    "zh": "保存",
+    "ja": "保存",
+    "en": "Save"
+  },
+  "FG_BTN_CANCEL": {
+    "zh": "取消",
+    "ja": "キャンセル",
+    "en": "Cancel"
+  },
+  "FG_BTN_EDIT": {
+    "zh": "编辑",
+    "ja": "編集",
+    "en": "Edit"
+  },
+  "FG_BTN_COPY": {
+    "zh": "复制",
+    "ja": "コピー",
+    "en": "Copy"
+  },
+  "FG_MSG_DELETE_CONFIRM": {
+    "zh": "确认删除此字段？",
+    "ja": "このフィールドを削除しますか？",
+    "en": "Delete this field?"
+  },
+  "FG_BTN_DELETE": {
+    "zh": "删除",
+    "ja": "削除",
+    "en": "Delete"
+  },
+  "FG_BTN_ADD_FIELD": {
+    "zh": "添加字段",
+    "ja": "フィールドを追加",
+    "en": "Add field"
+  },
+  "FG_MSG_DUPLICATE_CODE": {
+    "zh": "字段名 '{0}' 已存在",
+    "ja": "フィールド名 '{0}' は既に存在します",
+    "en": "Field name '{0}' already exists"
+  },
+  "ENUM_SUBTITLE": {
+    "zh": "枚举定义管理",
+    "ja": "列挙定義の管理",
+    "en": "Enum definitions"
+  },
+  "ENUM_FILTER_ALL": {
+    "zh": "全部状态",
+    "ja": "全ステータス",
+    "en": "All status"
+  },
+  "ENUM_FILTER_ENABLED": {
+    "zh": "已启用",
+    "ja": "有効",
+    "en": "Enabled"
+  },
+  "ENUM_FILTER_DISABLED": {
+    "zh": "已禁用",
+    "ja": "無効",
+    "en": "Disabled"
+  },
+  "ENUM_COL_DISPLAY_NAME": {
+    "zh": "显示名称",
+    "ja": "表示名",
+    "en": "Display name"
+  },
+  "ENUM_OPTIONS_COUNT": {
+    "zh": "{0} 个选项",
+    "ja": "{0} 件のオプション",
+    "en": "{0} options"
+  },
+  "ENUM_COL_STATUS": {
+    "zh": "状态",
+    "ja": "ステータス",
+    "en": "Status"
+  },
+  "ENUM_STATUS_ENABLED": {
+    "zh": "已启用",
+    "ja": "有効",
+    "en": "Enabled"
+  },
+  "ENUM_STATUS_DISABLED": {
+    "zh": "已禁用",
+    "ja": "無効",
+    "en": "Disabled"
+  },
+  "ENUM_BTN_VIEW": {
+    "zh": "查看",
+    "ja": "表示",
+    "en": "View"
+  },
+  "ENUM_COL_NAME_ZH": {
+    "zh": "显示名称（中文）",
+    "ja": "表示名（中国語）",
+    "en": "Display name (Chinese)"
+  },
+  "ENUM_COL_NAME_JA": {
+    "zh": "显示名称（日文）",
+    "ja": "表示名（日本語）",
+    "en": "Display name (Japanese)"
+  },
+  "ENUM_COL_NAME_EN": {
+    "zh": "显示名称（英文）",
+    "ja": "表示名（英語）",
+    "en": "Display name (English)"
+  },
+  "ENUM_COL_DESCRIPTION": {
+    "zh": "描述",
+    "ja": "説明",
+    "en": "Description"
+  },
+  "SETUP_API_BASE_HINT": {
+    "zh": "如果不填写，将使用配置的默认地址。",
+    "ja": "未入力の場合、設定のデフォルトアドレスが使用されます。",
+    "en": "If left blank, the configured default address will be used."
+  },
+  "SETUP_BTN_RESET": {
+    "zh": "重置初始化设置",
+    "ja": "初期化設定をリセット",
+    "en": "Reset initialization setup"
+  },
+  "DGR_LOADING": {
+    "zh": "加载中...",
+    "ja": "読み込み中...",
+    "en": "Loading..."
+  },
+  "DGR_ERROR_PREFIX": {
+    "zh": "错误",
+    "ja": "エラー",
+    "en": "Error"
+  },
+  "DGR_EMPTY_DEFAULT": {
+    "zh": "暂无数据",
+    "ja": "データなし",
+    "en": "No data"
+  },
+  "DGR_TOTAL_RECORDS": {
+    "zh": "共 {0} 条",
+    "ja": "合計 {0} 件",
+    "en": "Total: {0} records"
+  },
+  "DGR_PREVIOUS": {
+    "zh": "上一页",
+    "ja": "前へ",
+    "en": "Previous"
+  },
+  "DGR_NEXT": {
+    "zh": "下一页",
+    "ja": "次へ",
+    "en": "Next"
+  },
+  "DGR_PAGE_LABEL": {
+    "zh": "第 {0} / {1} 页",
+    "ja": "{0} / {1} ページ",
+    "en": "Page {0} / {1}"
+  },
+  "LANG_ZH_SIMPLIFIED": {
+    "zh": "简体中文",
+    "ja": "簡体字中国語",
+    "en": "Simplified Chinese"
+  },
+  "LANG_JA": {
+    "zh": "日文",
+    "ja": "日本語",
+    "en": "Japanese"
+  },
+  "LANG_EN": {
+    "zh": "英文",
+    "ja": "英語",
+    "en": "English"
+  },
+  "MENU_ORG": {
+    "zh": "组织",
+    "ja": "組織",
+    "en": "Organizations"
+  },
+  "DEMO_STICKY_TEXT": {
+    "zh": "当前筛选：状态=潜在客户, 所属=华北大区",
+    "ja": "現在のフィルター：ステータス=見込み、地域=華北",
+    "en": "Current filters: Status=Potential, Region=North"
+  },
+  "BTN_RESET": {
+    "zh": "重置",
+    "ja": "リセット",
+    "en": "Reset"
+  },
+  "DEMO_BULK_SELECTED": {
+    "zh": "已选中 3 条记录",
+    "ja": "3件選択",
+    "en": "3 records selected"
+  },
+  "SUB_ENTITY_CODE_PLACEHOLDER": {
+    "zh": "例如：Lines, Items",
+    "ja": "例：Lines, Items",
+    "en": "e.g., Lines, Items"
+  },
+  "LBL_UNNAMED": {
+    "zh": "未命名",
+    "ja": "未命名",
+    "en": "Unnamed"
+  },
+  "TXT_RIGHT_PANEL_HINT": {
+    "zh": "此区域预留给提醒、批量操作或时间线等上下文信息。",
+    "en": "This area is reserved for alerts, bulk actions, or timeline context.",
+    "ja": "この領域は通知・一括操作・タイムラインなどのコンテキスト用です。"
+  },
+  "LBL_SELECT_ENTITY": {
+    "zh": "选择实体",
+    "en": "Select entity",
+    "ja": "エンティティを選択"
+  },
+  "PH_SELECT_ENTITY": {
+    "zh": "选择实体...",
+    "en": "Select entity...",
+    "ja": "エンティティを選択..."
+  },
+  "LBL_NO_DATA": {
+    "zh": "暂无数据",
+    "en": "No data",
+    "ja": "データなし"
+  },
+  "LBL_SELECTED_RECORD": {
+    "zh": "已选择记录",
+    "en": "Selected record",
+    "ja": "選択されたレコード"
+  },
+  "TXT_DETAIL_PLACEHOLDER": {
+    "zh": "TODO: 添加详情显示表单",
+    "en": "TODO: add detail form",
+    "ja": "TODO: 詳細フォームを追加"
+  },
+  "TXT_SELECT_PROMPT_LEFT": {
+    "zh": "请从左侧列表选择一条查看详情",
+    "en": "Select a row on the left to view details",
+    "ja": "左のリストから行を選択して詳細を表示"
+  },
+  "TXT_SELECT_PROMPT_TOP": {
+    "zh": "请从上方列表选择一条查看详情",
+    "en": "Select a row above to view details",
+    "ja": "上のリストから行を選択して詳細を表示"
+  },
+  "TXT_GROUP_TITLE_DEFAULT": {
+    "zh": "分组标题",
+    "en": "Group Title",
+    "ja": "グループタイトル"
+  },
+  "TXT_COLLAPSIBLE": {
+    "zh": "[可折叠]",
+    "en": "[Collapsible]",
+    "ja": "[折りたたみ可能]"
+  },
+  "TXT_DRAG_TO_GROUP": {
+    "zh": "拖入组件到分组",
+    "en": "Drag components here",
+    "ja": "コンポーネントをここにドラッグ"
+  },
+  "MSG_APP_LOADING": {
+    "zh": "正在准备画面，请稍候...",
+    "en": "Preparing application, please wait...",
+    "ja": "画面を準備しています。少々お待ちください…"
+  },
+  "PREVIEW_BTN_TEXT": {
+    "zh": "按钮",
+    "en": "Button",
+    "ja": "ボタン"
+  },
+  "PREVIEW_OPTION_1": {
+    "zh": "选项 1",
+    "en": "Option 1",
+    "ja": "オプション 1"
+  },
+  "PREVIEW_OPTION_2": {
+    "zh": "选项 2",
+    "en": "Option 2",
+    "ja": "オプション 2"
+  },
+  "PREVIEW_PLACEHOLDER": {
+    "zh": "请输入内容...",
+    "en": "Enter content...",
+    "ja": "内容を入力..."
+  },
+  "PREVIEW_DATE_PLACEHOLDER": {
+    "zh": "选择日期",
+    "en": "Select date",
+    "ja": "日付を選択"
   }
 }

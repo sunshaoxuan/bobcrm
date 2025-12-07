@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.Auth;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -23,19 +25,21 @@ public static class AuthEndpoints
         group.MapPost("/register", async (
             UserManager<IdentityUser> um,
             IEmailSender email,
+            ILocalization loc,
             RegisterDto dto,
             LinkGenerator links,
             HttpContext http,
             ILogger<Program> logger) =>
         {
             logger.LogInformation("[Auth] User registration attempt: username={Username}, email={Email}", dto.Username, dto.Email);
+            var lang = LangHelper.GetLang(http);
             
             var user = new IdentityUser { UserName = dto.Username, Email = dto.Email, EmailConfirmed = false };
             var result = await um.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
             {
                 logger.LogWarning("[Auth] Registration failed for {Username}: {Errors}", dto.Username, string.Join(", ", result.Errors.Select(e => e.Description)));
-                return Results.BadRequest(result.Errors);
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_REGISTER_FAILED", lang), result.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
             }
             
             var code = await um.GenerateEmailConfirmationTokenAsync(user);
@@ -43,41 +47,50 @@ public static class AuthEndpoints
             await email.SendAsync(dto.Email, "Activate your account", $"Click to activate: {url}");
             
             logger.LogInformation("[Auth] Registration successful for {Username}", dto.Username);
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("注册成功，请查收邮件激活账户"));
+            return Results.Ok(new SuccessResponse(loc.T("MSG_REGISTER_SUCCESS", lang)));
         })
         .WithName("Register")
         .WithSummary("用户注册")
-        .WithDescription("注册新用户账号，需要邮箱激活");
+        .WithDescription("注册新用户账号，需要邮箱激活")
+        .Produces<SuccessResponse>()
+        .Produces<ErrorResponse>(400);
 
         // 激活账户
         group.MapGet("/activate", async (
             UserManager<IdentityUser> um,
             ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http,
             string userId,
             string code) =>
         {
             logger.LogInformation("[Auth] Account activation attempt: userId={UserId}", userId);
+            var lang = LangHelper.GetLang(http);
             
             var user = await um.FindByIdAsync(userId);
             if (user == null)
             {
                 logger.LogWarning("[Auth] Activation failed: user not found, userId={UserId}", userId);
-                return Results.NotFound();
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ACCOUNT_NOT_FOUND", lang), "USER_NOT_FOUND"));
             }
             
             var res = await um.ConfirmEmailAsync(user, code);
             if (res.Succeeded)
             {
                 logger.LogInformation("[Auth] Account activated successfully: username={Username}", user.UserName);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse("账户激活成功"));
+                return Results.Ok(new SuccessResponse(loc.T("MSG_ACCOUNT_ACTIVATED", lang)));
             }
             
             logger.LogWarning("[Auth] Activation failed for {Username}: {Errors}", user.UserName, string.Join(", ", res.Errors.Select(e => e.Description)));
-            return Results.BadRequest(res.Errors);
+            var err = string.Join("; ", res.Errors.Select(e => e.Description));
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_ACTIVATE_FAILED", lang), err), res.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
         })
         .WithName("Activate")
         .WithSummary("激活账户")
-        .WithDescription("通过邮件链接激活用户账户");
+        .WithDescription("通过邮件链接激活用户账户")
+        .Produces<SuccessResponse>()
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(404);
 
         // 用户登录
         group.MapPost("/login", async (
@@ -91,18 +104,19 @@ public static class AuthEndpoints
             ILogger<Program> logger) =>
         {
             logger.LogInformation("[Auth] Login attempt: usernameOrEmail={Username}, remote={Ip}", dto.Username ?? "(null)", http.Connection.RemoteIpAddress);
+            var lang = LangHelper.GetLang(http);
 
             if (string.IsNullOrWhiteSpace(dto.Username))
             {
                 logger.LogWarning("[Auth] Invalid login request - username is empty");
-                return Results.BadRequest(new { error = "Username is required" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_USERNAME_REQUIRED", lang), "INVALID_REQUEST"));
             }
 
             var user = await um.FindByNameAsync(dto.Username) ?? await um.FindByEmailAsync(dto.Username);
             if (user == null)
             {
                 logger.LogWarning("[Auth] User not found: username={Username}", dto.Username);
-                return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new ErrorResponse(loc.T("ERR_INVALID_CREDENTIALS", lang), "AUTH_FAILED"), statusCode: 401);
             }
 
             logger.LogDebug("[Auth] Found user: username={UserName}, email={Email}, emailConfirmed={EmailConfirmed}", 
@@ -110,31 +124,47 @@ public static class AuthEndpoints
 
             if (!user.EmailConfirmed)
             {
-                var lang = LangHelper.GetLang(http);
                 logger.LogWarning("[Auth] Email not confirmed for user {UserName}", user.UserName);
-                return Results.BadRequest(new { error = loc.T("ERR_EMAIL_NOT_CONFIRMED", lang) });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_EMAIL_NOT_CONFIRMED", lang), "EMAIL_NOT_CONFIRMED"));
             }
 
             var validPassword = await um.CheckPasswordAsync(user, dto.Password);
             if (!validPassword)
             {
                 logger.LogWarning("[Auth] Password check failed for user {UserName}", user.UserName);
-                return Results.Json(new { error = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new ErrorResponse(loc.T("ERR_INVALID_CREDENTIALS", lang), "AUTH_FAILED"), statusCode: 401);
             }
 
             var key = System.Text.Encoding.UTF8.GetBytes(cfg["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
             var tokens = await IssueTokensAsync(cfg, user, rts, key);
+            
+            var roles = await um.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? "User";
+
             logger.LogInformation("[Auth] Login success for user {UserName}", user.UserName);
-            return Results.Json(new
+            
+            var payload = new LoginResponse
             {
-                accessToken = tokens.accessToken,
-                refreshToken = tokens.refreshToken,
-                user = new { id = user.Id, username = user.UserName, role = "user" }
-            });
+                AccessToken = tokens.accessToken,
+                RefreshToken = tokens.refreshToken,
+                User = new UserInfo
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
+                    Role = role
+                }
+            };
+
+            return Results.Ok(new SuccessResponse<LoginResponse>(payload));
         })
         .WithName("Login")
         .WithSummary("用户登录")
-        .WithDescription("使用用户名或邮箱登录，返回访问令牌和刷新令牌");
+        .WithDescription("使用用户名或邮箱登录，返回访问令牌和刷新令牌")
+        .Produces<SuccessResponse<LoginResponse>>()
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(401);
 
         // 刷新令牌
         group.MapPost("/refresh", async (
@@ -143,23 +173,25 @@ public static class AuthEndpoints
             UserManager<IdentityUser> um,
             ILogger<Program> logger,
             HttpContext http,
+            ILocalization loc,
             RefreshDto dto) =>
         {
             var clientIp = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             logger.LogInformation("[Auth] Refresh token request from {Ip}", clientIp);
+            var lang = LangHelper.GetLang(http);
             
             var stored = await rts.ValidateAsync(dto.RefreshToken);
             if (stored == null)
             {
                 logger.LogWarning("[Auth] Invalid or revoked refresh token from {Ip} - token may have been used already", clientIp);
-                return Results.Unauthorized();
+                return Results.Json(new ErrorResponse(loc.T("ERR_REFRESH_TOKEN_INVALID", lang), "AUTH_FAILED"), statusCode: 401);
             }
             
             var user = await um.FindByIdAsync(stored.UserId);
             if (user == null)
             {
                 logger.LogWarning("[Auth] User not found for refresh token, userId={UserId}, ip={Ip}", stored.UserId, clientIp);
-                return Results.Unauthorized();
+                return Results.Json(new ErrorResponse(loc.T("ERR_ACCOUNT_NOT_FOUND", lang), "AUTH_FAILED"), statusCode: 401);
             }
             
             logger.LogInformation("[Auth] Revoking old refresh token for user {UserName}", user.UserName);
@@ -169,45 +201,63 @@ public static class AuthEndpoints
             var tokens = await IssueTokensAsync(cfg, user, rts, key);
             
             logger.LogInformation("[Auth] Token refreshed successfully for user {UserName} from {Ip}", user.UserName, clientIp);
-            return Results.Json(new { accessToken = tokens.accessToken, refreshToken = tokens.refreshToken });
+            var payload = new RefreshTokenResponse
+            {
+                AccessToken = tokens.accessToken,
+                RefreshToken = tokens.refreshToken
+            };
+            return Results.Ok(new SuccessResponse<RefreshTokenResponse>(payload));
         })
         .WithName("RefreshToken")
         .WithSummary("刷新令牌")
-        .WithDescription("使用刷新令牌获取新的访问令牌");
+        .WithDescription("使用刷新令牌获取新的访问令牌")
+        .Produces<SuccessResponse<RefreshTokenResponse>>()
+        .Produces<ErrorResponse>(401);
 
         // 登出
         group.MapPost("/logout", async (
             IRefreshTokenStore rts, 
             ILogger<Program> logger,
+            HttpContext http,
+            ILocalization loc,
             LogoutDto dto) =>
         {
+            var lang = LangHelper.GetLang(http);
             if (!string.IsNullOrWhiteSpace(dto.RefreshToken))
             {
                 await rts.RevokeAsync(dto.RefreshToken);
                 logger.LogInformation("[Auth] User logged out");
             }
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("登出成功"));
+            return Results.Ok(new SuccessResponse(loc.T("MSG_LOGOUT_SUCCESS", lang)));
         })
         .RequireAuthorization()
         .WithName("Logout")
         .WithSummary("用户登出")
-        .WithDescription("撤销刷新令牌，登出用户");
+        .WithDescription("撤销刷新令牌，登出用户")
+        .Produces<SuccessResponse>();
 
         // 会话验证
         group.MapGet("/session", (ClaimsPrincipal user) =>
         {
             if (user?.Identity?.IsAuthenticated == true)
-                return Results.Ok(new
+            {
+                return Results.Ok(new SuccessResponse<SessionResponse>(new SessionResponse
                 {
-                    valid = true,
-                    user = new { id = user.FindFirstValue(ClaimTypes.NameIdentifier), username = user.Identity!.Name }
-                });
-            return Results.Ok(new { valid = false });
+                    Valid = true,
+                    User = new UserInfo
+                    {
+                        Id = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
+                        UserName = user.Identity!.Name ?? string.Empty
+                    }
+                }));
+            }
+            return Results.Ok(new SuccessResponse<SessionResponse>(new SessionResponse { Valid = false }));
         })
         .RequireAuthorization()
         .WithName("Session")
         .WithSummary("会话验证")
-        .WithDescription("验证当前用户会话是否有效");
+        .WithDescription("验证当前用户会话是否有效")
+        .Produces<SuccessResponse<SessionResponse>>();
 
         // 获取当前用户信息
         group.MapGet("/me", async (ClaimsPrincipal user, UserManager<IdentityUser> um) =>
@@ -225,27 +275,32 @@ public static class AuthEndpoints
 
             var roles = await um.GetRolesAsync(identityUser);
 
-            return Results.Ok(new
+            return Results.Ok(new SuccessResponse<UserInfo>(new UserInfo
             {
-                id = identityUser.Id,
-                userName = identityUser.UserName,
-                email = identityUser.Email,
-                emailConfirmed = identityUser.EmailConfirmed,
-                role = roles.FirstOrDefault() ?? "User"
-            });
+                Id = identityUser.Id,
+                UserName = identityUser.UserName!,
+                Email = identityUser.Email,
+                EmailConfirmed = identityUser.EmailConfirmed,
+                Role = roles.FirstOrDefault() ?? "User"
+            }));
         })
         .RequireAuthorization()
         .WithName("GetCurrentUser")
         .WithSummary("获取当前用户信息")
-        .WithDescription("返回当前已认证用户的详细信息，包括ID、用户名、邮箱和角色");
+        .WithDescription("返回当前已认证用户的详细信息，包括ID、用户名、邮箱和角色")
+        .Produces<SuccessResponse<UserInfo>>()
+        .Produces(401);
 
         // 修改密码
         group.MapPost("/change-password", async (
             ClaimsPrincipal user,
             UserManager<IdentityUser> um,
             ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http,
             ChangePasswordDto dto) =>
         {
+            var lang = LangHelper.GetLang(http);
             if (user?.Identity?.IsAuthenticated != true)
             {
                 logger.LogWarning("[Auth] Change password failed: user not authenticated");
@@ -263,7 +318,7 @@ public static class AuthEndpoints
             if (identityUser == null)
             {
                 logger.LogWarning("[Auth] Change password failed: user not found, userId={UserId}", uid);
-                return Results.NotFound("用户不存在");
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ACCOUNT_NOT_FOUND", lang), "USER_NOT_FOUND"));
             }
 
             logger.LogInformation("[Auth] Change password attempt for user {UserName}", identityUser.UserName);
@@ -274,16 +329,20 @@ public static class AuthEndpoints
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 logger.LogWarning("[Auth] Change password failed for {UserName}: {Errors}", identityUser.UserName, errors);
-                return Results.BadRequest(errors);
+                return Results.BadRequest(new ErrorResponse(errors, result.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
             }
 
             logger.LogInformation("[Auth] Password changed successfully for user {UserName}", identityUser.UserName);
-            return Results.Ok(new { message = "密码修改成功" });
+            return Results.Ok(new SuccessResponse(loc.T("MSG_PASSWORD_CHANGED", lang)));
         })
         .RequireAuthorization()
         .WithName("ChangePassword")
         .WithSummary("修改密码")
-        .WithDescription("修改当前用户的密码");
+        .WithDescription("修改当前用户的密码")
+        .Produces<SuccessResponse>()
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(401)
+        .Produces<ErrorResponse>(404);
 
         return app;
     }

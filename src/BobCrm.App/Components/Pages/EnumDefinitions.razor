@@ -11,7 +11,7 @@
 <AuthChecker>
     <div class="collection-shell">
         <CollectionHeader Title="@I18n.T("LBL_ENUM_DEFINITION")"
-                          Subtitle="管理系统枚举定义"
+                          Subtitle='@I18n.T("ENUM_SUBTITLE")'
                           Eyebrow="@I18n.T("LBL_COLLECTION")">
             <Actions>
                 <Button Type="@ButtonType.Default" OnClick="LoadData" Icon="@IconType.Outline.Reload">
@@ -30,9 +30,9 @@
                            Class="field-control" />
                 </div>
                 <Select TItemValue="bool?" TItem="string" @bind-Value="_isEnabledFilter" Style="min-width:160px">
-                    <SelectOption Value="@((bool?)null)">全部状态</SelectOption>
-                    <SelectOption Value="@((bool?)true)">已启用</SelectOption>
-                    <SelectOption Value="@((bool?)false)">已禁用</SelectOption>
+                    <SelectOption Value="@((bool?)null)">@I18n.T("ENUM_FILTER_ALL")</SelectOption>
+                    <SelectOption Value="@((bool?)true)">@I18n.T("ENUM_FILTER_ENABLED")</SelectOption>
+                    <SelectOption Value="@((bool?)false)">@I18n.T("ENUM_FILTER_DISABLED")</SelectOption>
                 </Select>
             </Filters>
         </CollectionHeader>
@@ -53,20 +53,20 @@
                     <Column Title="@I18n.T("LBL_ENUM_CODE")" TData="string" Width="200px">
                         <strong>@context.Code</strong>
                     </Column>
-                    <Column Title="显示名称" TData="string">
+                    <Column Title="@I18n.T("ENUM_COL_DISPLAY_NAME")" TData="string">
                         @GetDisplayName(context.DisplayName)
                     </Column>
                     <Column Title="@I18n.T("LBL_ENUM_OPTIONS")" TData="int" Width="120px" Align="ColumnAlign.Center">
-                        <Tag>@context.Options.Count 个选项</Tag>
+                        <Tag>@string.Format(I18n.T("ENUM_OPTIONS_COUNT"), context.Options.Count)</Tag>
                     </Column>
-                    <Column Title="状态" TData="bool" Width="100px" Align="ColumnAlign.Center">
+                    <Column Title="@I18n.T("ENUM_COL_STATUS")" TData="bool" Width="100px" Align="ColumnAlign.Center">
                         @if (context.IsEnabled)
                         {
-                            <Tag Color="@PresetColor.Green.ToString()">已启用</Tag>
+                            <Tag Color="@PresetColor.Green.ToString()">@I18n.T("ENUM_STATUS_ENABLED")</Tag>
                         }
                         else
                         {
-                            <Tag Color="@PresetColor.Red.ToString()">已禁用</Tag>
+                            <Tag Color="@PresetColor.Red.ToString()">@I18n.T("ENUM_STATUS_DISABLED")</Tag>
                         }
                     </Column>
                     <ActionColumn Title="@I18n.T("LBL_ACTIONS")" Width="250px" Fixed="ColumnFixPlacement.Right">
@@ -75,8 +75,8 @@
                                 <Button Size="@ButtonSize.Small"
                                         Icon="@IconType.Outline.Eye"
                                         OnClick="() => ViewEnum(context.Id)"
-                                        Title="查看">
-                                    查看
+                                        Title="@I18n.T("ENUM_BTN_VIEW")">
+                                    @I18n.T("ENUM_BTN_VIEW")
                                 </Button>
                             </SpaceItem>
                             <SpaceItem>
@@ -107,7 +107,7 @@
         }
     </div>
 
-    @* 查看详情Modal *@
+    @* View detail modal *@
     <Modal Title="@_viewModalTitle"
            Visible="_viewModalVisible"
            OnOk="CloseViewModal"
@@ -120,26 +120,26 @@
                 <DescriptionsItem Title="@I18n.T("LBL_ENUM_CODE")" Span="2">
                     <strong>@_viewingEnum.Code</strong>
                 </DescriptionsItem>
-                <DescriptionsItem Title="显示名称（中文）">
+                <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_ZH")'>
                     @(_viewingEnum.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
                 </DescriptionsItem>
-                <DescriptionsItem Title="显示名称（日文）">
+                <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_JA")'>
                     @(_viewingEnum.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
                 </DescriptionsItem>
-                <DescriptionsItem Title="显示名称（英文）">
+                <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_EN")'>
                     @(_viewingEnum.DisplayName?.GetValueOrDefault("en-US") ?? "-")
                 </DescriptionsItem>
-                <DescriptionsItem Title="状态">
+                <DescriptionsItem Title="@I18n.T("ENUM_COL_STATUS")">
                     @if (_viewingEnum.IsEnabled)
                     {
-                        <Tag Color="@PresetColor.Green.ToString()">已启用</Tag>
+                        <Tag Color="@PresetColor.Green.ToString()">@I18n.T("ENUM_STATUS_ENABLED")</Tag>
                     }
                     else
                     {
-                        <Tag Color="@PresetColor.Red.ToString()">已禁用</Tag>
+                        <Tag Color="@PresetColor.Red.ToString()">@I18n.T("ENUM_STATUS_DISABLED")</Tag>
                     }
                 </DescriptionsItem>
-                <DescriptionsItem Title="描述" Span="2">
+                <DescriptionsItem Title="@I18n.T("ENUM_COL_DESCRIPTION")" Span="2">
                     @(_viewingEnum.Description?.GetValueOrDefault(I18n.CurrentLang) ?? "-")
                 </DescriptionsItem>
             </Descriptions>
@@ -154,13 +154,13 @@
                 <Column Title="@I18n.T("LBL_OPTION_VALUE")" TData="string" Width="200px">
                     <strong>@context.Value</strong>
                 </Column>
-                <Column Title="显示名称（中文）" TData="string">
+                <Column Title='@I18n.T("ENUM_COL_NAME_ZH")' TData="string">
                     @(context.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
                 </Column>
-                <Column Title="显示名称（日文）" TData="string">
+                <Column Title='@I18n.T("ENUM_COL_NAME_JA")' TData="string">
                     @(context.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
                 </Column>
-                <Column Title="显示名称（英文）" TData="string">
+                <Column Title='@I18n.T("ENUM_COL_NAME_EN")' TData="string">
                     @(context.DisplayName?.GetValueOrDefault("en-US") ?? "-")
                 </Column>
                 <Column Title="@I18n.T("LBL_COLOR_TAG")" TData="string" Width="120px" Align="ColumnAlign.Center">
@@ -190,7 +190,7 @@
     private string _search = string.Empty;
     private bool? _isEnabledFilter = null;
 
-    // 查看详情相关
+    // View modal state
     private bool _viewModalVisible = false;
     private string _viewModalTitle = "";
     private EnumDefinitionDto? _viewingEnum = null;
@@ -296,8 +296,8 @@
         }
         catch (Exception ex)
         {
-            // 检查是否是引用完整性错误
-            if (ex.Message.Contains("in use") || ex.Message.Contains("使用中"))
+            // Check referential integrity constraint
+            if (ex.Message.Contains("in use"))
             {
                 ToastService.Error(I18n.T("MSG_ENUM_IN_USE"));
             }
@@ -308,3 +308,10 @@
         }
     }
 }
+
+
+
+
+
+
+

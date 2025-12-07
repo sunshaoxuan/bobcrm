@@ -2,6 +2,7 @@
 @using BobCrm.Api.Contracts.DTOs
 @using BobCrm.App.Services.Multilingual
 @inject IMultilingualTextResolver MultilingualTextResolver
+@inject BobCrm.App.Services.I18nService I18n
 
 <div class="field-grid-container">
     <Table TItem="FieldViewModel"
@@ -11,11 +12,11 @@
            Responsive>
 
         <ChildContent Context="field">
-            <Column Title="字段编码" TData="string" Width="150px">
+            <Column Title='@I18n.T("FG_COL_CODE")' TData="string" Width="150px">
                 @if (field.IsEditing)
                 {
                     <Input @bind-Value="@field.PropertyName"
-                           Placeholder="例如: ProductCode"
+                           Placeholder='@I18n.T("FG_PLACEHOLDER_CODE")'
                            Status="@(string.IsNullOrWhiteSpace(field.PropertyName) ? "error" : "")" />
                 }
                 else
@@ -24,7 +25,7 @@
                 }
             </Column>
 
-            <Column Title="显示名称" TData="string" Width="200px">
+            <Column Title='@I18n.T("FG_COL_DISPLAY_NAME")' TData="string" Width="200px">
                 @if (field.IsEditing)
                 {
                     <MultilingualInput @bind-Value="@field.DisplayName" />
@@ -35,7 +36,7 @@
                 }
             </Column>
 
-            <Column Title="数据类型" TData="string" Width="120px">
+            <Column Title='@I18n.T("FG_COL_DATA_TYPE")' TData="string" Width="120px">
                 @if (field.IsEditing)
                 {
                     <Select TItem="string"
@@ -60,13 +61,13 @@
                 }
             </Column>
 
-            <Column Title="长度" TData="int?" Width="100px">
+            <Column Title='@I18n.T("FG_COL_LENGTH")' TData="int?" Width="100px">
                 @if (field.IsEditing && field.DataType == "String")
                 {
                     <AntDesign.InputNumber @bind-Value="@field.Length"
                                  Min="1"
                                  Max="5000"
-                                 Placeholder="可选" />
+                                 Placeholder='@I18n.T("FG_PLACEHOLDER_OPTIONAL")' />
                 }
                 else if (!field.IsEditing)
                 {
@@ -74,7 +75,7 @@
                 }
             </Column>
 
-            <Column Title="枚举配置" TData="string" Width="200px">
+            <Column Title='@I18n.T("FG_COL_ENUM_CONFIG")' TData="string" Width="200px">
                 @if (field.IsEditing && field.DataType == "Enum")
                 {
                     <div style="display:flex; gap:8px; align-items:center;">
@@ -84,15 +85,15 @@
                                 @bind-Value="@field.EnumDefinitionId"
                                 LabelName="@nameof(EnumDefinitionDto.Code)"
                                 ValueName="@nameof(EnumDefinitionDto.Id)"
-                                Placeholder="选择枚举"
+                                Placeholder='@I18n.T("FG_PLACEHOLDER_SELECT_ENUM")'
                                 Style="width: 140px;" />
-                        <Checkbox @bind-Value="@field.IsMultiSelect">多选</Checkbox>
+                        <Checkbox @bind-Value="@field.IsMultiSelect">@I18n.T("FG_LABEL_MULTISELECT")</Checkbox>
                     </div>
                 }
                 else if (!field.IsEditing && field.DataType == "Enum")
                 {
                     var enumDef = EnumDefinitions.FirstOrDefault(e => e.Id == field.EnumDefinitionId);
-                    <Text>@(enumDef?.Code ?? "-") @(field.IsMultiSelect ? "(多选)" : "")</Text>
+                    <Text>@(enumDef?.Code ?? "-") @(field.IsMultiSelect ? $"({I18n.T("FG_LABEL_MULTISELECT")})" : "")</Text>
                 }
                 else
                 {
@@ -100,7 +101,7 @@
                 }
             </Column>
 
-            <Column Title="必填" TData="bool" Width="80px" Align="ColumnAlign.Center">
+            <Column Title='@I18n.T("FG_COL_REQUIRED")' TData="bool" Width="80px" Align="ColumnAlign.Center">
                 @if (field.IsEditing)
                 {
                     <Checkbox Checked="@field.IsRequired"
@@ -112,11 +113,11 @@
                 }
             </Column>
 
-            <Column Title="默认值" TData="string" Width="120px">
+            <Column Title='@I18n.T("FG_COL_DEFAULT")' TData="string" Width="120px">
                 @if (field.IsEditing)
                 {
                     <Input @bind-Value="@field.DefaultValue"
-                           Placeholder="可选" />
+                           Placeholder='@I18n.T("FG_PLACEHOLDER_OPTIONAL")' />
                 }
                 else
                 {
@@ -124,7 +125,7 @@
                 }
             </Column>
 
-            <Column Title="操作" TData="string" Width="180px">
+                        <Column Title='''@I18n.T("FG_COL_ACTIONS")''' TData="string" Width="180px">
                 @if (field.IsEditing)
                 {
                     <Space Size="@("small")">
@@ -133,14 +134,14 @@
                                     Type="@ButtonType.Primary"
                                     Icon="@IconType.Outline.Check"
                                     OnClick="@(() => SaveField(field))">
-                                保存
+                                @I18n.T("FG_BTN_SAVE")
                             </Button>
                         </SpaceItem>
                         <SpaceItem>
                             <Button Size="@ButtonSize.Small"
                                     Icon="@IconType.Outline.Close"
                                     OnClick="@(() => CancelEdit(field))">
-                                取消
+                                @I18n.T("FG_BTN_CANCEL")
                             </Button>
                         </SpaceItem>
                     </Space>
@@ -152,21 +153,21 @@
                             <Button Size="@ButtonSize.Small"
                                     Icon="@IconType.Outline.Edit"
                                     OnClick="@(() => EditField(field))"
-                                    Title="编辑" />
+                                    Title='''@I18n.T("FG_BTN_EDIT")''' />
                         </SpaceItem>
                         <SpaceItem>
                             <Button Size="@ButtonSize.Small"
                                     Icon="@IconType.Outline.Copy"
                                     OnClick="@(() => CopyField(field))"
-                                    Title="复制" />
+                                    Title='''@I18n.T("FG_BTN_COPY")''' />
                         </SpaceItem>
                         <SpaceItem>
-                            <Popconfirm Title="确认删除此字段？"
+                            <Popconfirm Title='''@I18n.T("FG_MSG_DELETE_CONFIRM")'''
                                         OnConfirm="@(() => DeleteField(field))">
                                 <Button Size="@ButtonSize.Small"
                                         Icon="@IconType.Outline.Delete"
                                         Danger
-                                        Title="删除" />
+                                        Title='''@I18n.T("FG_BTN_DELETE")''' />
                             </Popconfirm>
                         </SpaceItem>
                     </Space>
@@ -188,7 +189,7 @@
                 Icon="@IconType.Outline.Plus"
                 Block
                 OnClick="@AddField">
-            添加字段
+            @I18n.T("FG_BTN_ADD_FIELD")
         </Button>
     </div>
 </div>
@@ -204,7 +205,7 @@
 
     private void AddField()
     {
-        // 取消其他正在编辑的字段
+        // Cancel other rows that might be editing
         CancelAllEditing();
 
         var newField = new FieldViewModel
@@ -222,10 +223,10 @@
 
     private void EditField(FieldViewModel field)
     {
-        // 取消其他正在编辑的字段
+        // Cancel other rows that might be editing
         CancelAllEditing();
 
-        // 备份当前字段
+        // Backup current field before edit
         _backupFields[field.TempId] = field.Clone();
         field.IsEditing = true;
         StateHasChanged();
@@ -233,21 +234,21 @@
 
     private async Task SaveField(FieldViewModel field)
     {
-        // 验证字段
+        // Validate input
         if (!field.Validate())
         {
             StateHasChanged();
             return;
         }
 
-        // 检查字段名唯一性
+        // Enforce unique property name
         var duplicateField = Fields.FirstOrDefault(f =>
             f.TempId != field.TempId &&
             f.PropertyName.Equals(field.PropertyName, StringComparison.OrdinalIgnoreCase));
 
         if (duplicateField != null)
         {
-            field.ValidationError = $"字段名 '{field.PropertyName}' 已存在";
+            field.ValidationError = string.Format(I18n.T("FG_MSG_DUPLICATE_CODE"), field.PropertyName);
             StateHasChanged();
             return;
         }
@@ -272,7 +273,7 @@
     {
         if (_backupFields.TryGetValue(field.TempId, out var backup))
         {
-            // 恢复原值
+            // Restore original value
             var index = Fields.IndexOf(field);
             if (index >= 0)
             {
@@ -282,7 +283,7 @@
         }
         else if (field.IsNew)
         {
-            // 新增字段取消，直接删除
+            // Cancel new field and remove it
             Fields.Remove(field);
         }
 
@@ -291,7 +292,7 @@
 
     private void CopyField(FieldViewModel field)
     {
-        // 取消其他正在编辑的字段
+        // Cancel other rows that might be editing
         CancelAllEditing();
 
         var newField = field.Clone();
@@ -314,7 +315,7 @@
 
     private void OnDataTypeChanged(FieldViewModel field)
     {
-        // 根据数据类型清除不相关的字段
+        // Clear unrelated fields when data type changes
         if (field.DataType != "String")
         {
             field.Length = null;
@@ -372,4 +373,12 @@
         return newName;
     }
 }
+
+
+
+
+
+
+
+
 

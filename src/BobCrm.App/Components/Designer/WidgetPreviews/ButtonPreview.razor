@@ -1,12 +1,11 @@
-@* Button 设计态预览组件 *@
+@* Button preview component *@
 @using BobCrm.App.Models.Widgets
+@inject BobCrm.App.Services.I18nService I18n
 
 <div style="height:32px; background:#1890ff; color:#fff; border-radius:2px; display:flex; align-items:center; justify-content:center; font-size:13px">
-    @(string.IsNullOrWhiteSpace(Widget?.Label) ? "按钮" : Widget.Label)
+    @(string.IsNullOrWhiteSpace(Widget?.Label) ? I18n.T("PREVIEW_BTN_TEXT") : Widget.Label)
 </div>
 
 @code {
     [Parameter] public ButtonWidget? Widget { get; set; }
 }
-
-

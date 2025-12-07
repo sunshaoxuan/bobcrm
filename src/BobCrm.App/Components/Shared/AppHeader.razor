@@ -65,34 +65,22 @@
     private bool isAuthenticated = false;
     private string userName = "";
     private string? avatarUrl = null;
-    private string _contextLabel = "总览";
+    private string _contextLabel = string.Empty;
     private readonly List<BreadcrumbItem> _breadcrumbs = [];
     private string _headerSubtitle = "Record workspace";
-    private static readonly Dictionary<string, (string LabelKey, string Fallback)> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
-
+    private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
     {
-
-        [""] = ("MENU_DASHBOARD", "??"),
-
-        ["customers"] = ("MENU_CUSTOMERS", "�q?"),
-
-        ["customers/new"] = ("BTN_NEW_CUSTOMER", "�V���q?"),
-
-        ["customer"] = ("LBL_CUSTOMER_DETAIL", "�q??��"),
-
-        ["templates"] = ("MENU_TEMPLATES", "�͔�"),
-
-        ["files"] = ("MENU_FILES", "����"),
-
-        ["settings"] = ("MENU_SETTINGS", "?�u"),
-
-        ["entity-definitions"] = ("MENU_ENTITY", "?�̒�?"),
-        ["organizations"] = ("MENU_ORG", "组织关系"),
-
-        ["dynamic-entity"] = ("MENU_ENTITY", "???��"),
-
-        ["profile"] = ("MENU_PROFILE", "�T���v��")
-
+        [""] = "MENU_DASHBOARD",
+        ["customers"] = "MENU_CUSTOMERS",
+        ["customers/new"] = "BTN_NEW_CUSTOMER",
+        ["customer"] = "LBL_CUSTOMER_DETAIL",
+        ["templates"] = "MENU_TEMPLATES",
+        ["files"] = "MENU_FILES",
+        ["settings"] = "MENU_SETTINGS",
+        ["entity-definitions"] = "MENU_ENTITY",
+        ["organizations"] = "MENU_ORG",
+        ["dynamic-entity"] = "MENU_ENTITY",
+        ["profile"] = "MENU_PROFILE"
     };
 
     protected override void OnInitialized()
@@ -125,12 +113,12 @@
         {
             try
             {
-                // 加载语言
+                // Load language
                 var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
                 
-                // 检查登录状态并加载用户信息
+                // Check auth state and load user info
                 isAuthenticated = await Auth.EnsureAuthenticatedAsync();
                 
                 if (isAuthenticated)
@@ -140,7 +128,7 @@
                     {
                         var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
                         userName = userInfo?.UserName ?? "User";
-                        // avatarUrl 暂时为空，未来支持头像上传
+                        // avatarUrl is currently empty; future avatar upload support
                     }
                 }
                 
@@ -181,17 +169,17 @@
 
     private void DemoStickyBar()
     {
-        Interaction.ShowStickyBar("当前筛选：状态=潜在客户, 所属=华北大区",
+        Interaction.ShowStickyBar(I18n.T("DEMO_STICKY_TEXT"),
             new[]
             {
-                new InteractionState.StickyAction("重置", InteractionState.InteractionActionTone.Default, async () => { await Task.Delay(0); }),
-                new InteractionState.StickyAction("保存视图", InteractionState.InteractionActionTone.Primary, async () => { await Task.Delay(0); })
+                new InteractionState.StickyAction(I18n.T("BTN_RESET"), InteractionState.InteractionActionTone.Default, async () => { await Task.Delay(0); }),
+                new InteractionState.StickyAction(I18n.T("BTN_SAVE_VIEW"), InteractionState.InteractionActionTone.Primary, async () => { await Task.Delay(0); })
             });
     }
 
     private void DemoBulkBar()
     {
-        Interaction.ShowBulkBar("已选中 3 条记录", "批量更新", async () => await Task.Delay(0), "取消", async () => await Task.Delay(0));
+        Interaction.ShowBulkBar(I18n.T("DEMO_BULK_SELECTED"), I18n.T("BTN_BULK_UPDATE"), async () => await Task.Delay(0), I18n.T("BTN_CANCEL"), async () => await Task.Delay(0));
     }
 
     private void BuildNavigationMeta()
@@ -208,7 +196,7 @@
             var label = ResolveSegmentLabel(segment, currentPath);
             _breadcrumbs.Add(new BreadcrumbItem(label, "/" + currentPath));
         }
-        _contextLabel = _breadcrumbs.LastOrDefault()?.Label ?? "总览";
+        _contextLabel = _breadcrumbs.LastOrDefault()?.Label ?? I18n.T("LBL_OVERVIEW");
     }
 
     private static bool LooksLikeId(string value) => Guid.TryParse(value, out _) || int.TryParse(value, out _);
@@ -237,18 +225,13 @@
 
     private string? TryResolveRouteLabel(string token)
     {
-        if (!RouteLabels.TryGetValue(token, out var meta))
+        if (!RouteLabels.TryGetValue(token, out var labelKey))
         {
             return null;
         }
 
-        var localized = I18n.T(meta.LabelKey);
-        if (!string.IsNullOrWhiteSpace(localized) && !string.Equals(localized, meta.LabelKey, StringComparison.Ordinal))
-        {
-            return localized!;
-        }
-
-        return meta.Fallback;
+        var localized = I18n.T(labelKey);
+        return string.IsNullOrWhiteSpace(localized) ? labelKey : localized!;
     }
 
     public void Dispose()
@@ -274,8 +257,3 @@
         public string? Role { get; set; }
     }
 }
-
-
-
-
-

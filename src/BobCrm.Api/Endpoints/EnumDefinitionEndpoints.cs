@@ -1,5 +1,8 @@
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
@@ -30,10 +33,15 @@ public static class EnumDefinitionEndpoints
         // GET /api/enums/{id} - 根据ID获取枚举定义
         group.MapGet("/{id:guid}", async (
             Guid id,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var enumDef = await service.GetByIdAsync(id);
-            return enumDef == null ? Results.NotFound() : Results.Ok(enumDef);
+            return enumDef == null
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
+                : Results.Ok(enumDef);
         })
         .WithName("GetEnumById")
         .WithSummary("根据ID获取枚举定义")
@@ -43,10 +51,15 @@ public static class EnumDefinitionEndpoints
         // GET /api/enums/by-code/{code} - 根据Code获取枚举定义
         group.MapGet("/by-code/{code}", async (
             string code,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var enumDef = await service.GetByCodeAsync(code);
-            return enumDef == null ? Results.NotFound() : Results.Ok(enumDef);
+            return enumDef == null
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
+                : Results.Ok(enumDef);
         })
         .WithName("GetEnumByCode")
         .WithSummary("根据Code获取枚举定义")
@@ -57,8 +70,11 @@ public static class EnumDefinitionEndpoints
         group.MapGet("/{id:guid}/options", async (
             Guid id,
             [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http,
             [FromQuery] bool includeDisabled = false) =>
         {
+            var lang = LangHelper.GetLang(http);
             var options = await service.GetOptionsAsync(id, includeDisabled);
             return Results.Ok(options);
         })
@@ -69,8 +85,11 @@ public static class EnumDefinitionEndpoints
         // POST /api/enums - 创建枚举定义
         group.MapPost("/", async (
             [FromBody] CreateEnumDefinitionRequest request,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var created = await service.CreateAsync(request);
@@ -78,7 +97,9 @@ public static class EnumDefinitionEndpoints
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
+                    "ENUM_CREATE_FAILED"));
             }
         })
         .WithName("CreateEnum")
@@ -90,16 +111,23 @@ public static class EnumDefinitionEndpoints
         group.MapPut("/{id:guid}", async (
             Guid id,
             [FromBody] UpdateEnumDefinitionRequest request,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var updated = await service.UpdateAsync(id, request);
-                return updated == null ? Results.NotFound() : Results.Ok(updated);
+                return updated == null
+                    ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
+                    : Results.Ok(updated);
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
+                    "ENUM_UPDATE_FAILED"));
             }
         })
         .WithName("UpdateEnum")
@@ -111,16 +139,23 @@ public static class EnumDefinitionEndpoints
         // DELETE /api/enums/{id} - 删除枚举定义
         group.MapDelete("/{id:guid}", async (
             Guid id,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var deleted = await service.DeleteAsync(id);
-                return deleted ? Results.NoContent() : Results.NotFound();
+                return deleted
+                    ? Results.NoContent()
+                    : Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
+                    "ENUM_DELETE_FAILED"));
             }
         })
         .WithName("DeleteEnum")
@@ -133,8 +168,11 @@ public static class EnumDefinitionEndpoints
         group.MapPut("/{id:guid}/options", async (
             Guid id,
             [FromBody] UpdateEnumOptionsRequest request,
-            [FromServices] EnumDefinitionService service) =>
+            [FromServices] EnumDefinitionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var options = await service.UpdateOptionsAsync(id, request);
@@ -142,7 +180,9 @@ public static class EnumDefinitionEndpoints
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
+                    "ENUM_UPDATE_FAILED"));
             }
         })
         .WithName("UpdateEnumOptions")

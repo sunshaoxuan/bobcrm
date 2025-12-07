@@ -1,13 +1,13 @@
 @using BobCrm.App.Models.Widgets
 @inject IJSRuntime JS
 
-@* 换行占位符：NewLine=true 时强制控件从新行开始 *@
+@* Line break placeholder: when NewLine=true force widget to start on a new row *@
 @if (Widget.NewLine)
 {
     <div class="flow-break" style="flex-basis:100%; width:100%; height:0; padding:0; margin:0;"></div>
 }
 
-@* 统一的 Widget 宿主组件：负责渲染、选中、resize、防原生拖拽干扰 *@
+@* Unified widget host: renders widget, handles selection, resize, and blocks native drag interference *@
 <div class="layout-widget @(Selected ? "selected" : "")"
      draggable="@(isResizing ? "false" : "true")"
      data-drag-type="widget"
@@ -20,7 +20,7 @@
      @onclick:stopPropagation
      style="@GetWidgetStyle()">
 
-    @* Resize 句柄（仅选中时显示） *@
+    @* Resize handle (only visible when selected) *@
     @if (Selected && AllowResize)
     {
         <div class="resize-handle"
@@ -33,7 +33,7 @@
         </div>
     }
 
-    @* Widget 内容（禁用指针事件，确保点击落到 wrapper） *@
+    @* Widget content (pointer-events disabled so clicks land on wrapper) *@
     <div class="widget-content" style="width:100%; pointer-events:none;">
         @ChildContent
     </div>
@@ -41,70 +41,70 @@
 
 @code {
     /// <summary>
-    /// Widget 数据模型
+    /// Widget data model
     /// </summary>
     [Parameter, EditorRequired]
     public DraggableWidget Widget { get; set; } = default!;
 
     /// <summary>
-    /// 是否选中
+    /// Whether this widget is selected
     /// </summary>
     [Parameter]
     public bool Selected { get; set; }
 
     /// <summary>
-    /// 是否正在调整大小（由父组件控制）
+    /// Whether resizing is in progress (controlled by parent)
     /// </summary>
     [Parameter]
     public bool IsResizing { get; set; }
 
     /// <summary>
-    /// 选中回调
+    /// Selection callback
     /// </summary>
     [Parameter]
     public EventCallback<DraggableWidget> OnSelect { get; set; }
 
     /// <summary>
-    /// 拖拽开始回调
+    /// Drag start callback
     /// </summary>
     [Parameter]
     public EventCallback<(Microsoft.AspNetCore.Components.Web.DragEventArgs e, DraggableWidget widget)> OnWidgetDragStart { get; set; }
 
     /// <summary>
-    /// 拖拽结束回调
+    /// Drag end callback
     /// </summary>
     [Parameter]
     public EventCallback<Microsoft.AspNetCore.Components.Web.DragEventArgs> OnWidgetDragEnd { get; set; }
 
     /// <summary>
-    /// Resize 开始回调
+    /// Resize start callback
     /// </summary>
     [Parameter]
     public EventCallback<(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, DraggableWidget widget)> OnResizeStart { get; set; }
 
     /// <summary>
-    /// 是否允许 resize（默认 true）
+    /// Whether resize is allowed (default true)
     /// </summary>
     [Parameter]
     public bool AllowResize { get; set; } = true;
 
     /// <summary>
-    /// 自定义内容渲染
+    /// Custom content renderer
     /// </summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
     /// <summary>
-    /// 额外的 CSS 类名
+    /// Additional CSS class names
     /// </summary>
     [Parameter]
     public string? CssClass { get; set; }
 
-    // 使用父组件传入的 isResizing 而不是自己管理
+    // Use parent-provided IsResizing instead of managing locally
     private bool isResizing => IsResizing;
 
     /// <summary>
-    /// 处理点击选中
+    /// Handle click selection
     /// </summary>
     private async Task HandleClick()
     {
@@ -115,7 +115,7 @@
     }
 
     /// <summary>
-    /// 处理拖拽开始
+    /// Handle drag start
     /// </summary>
     private async Task OnDragStart(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
@@ -126,7 +126,7 @@
     }
 
     /// <summary>
-    /// 处理拖拽结束
+    /// Handle drag end
     /// </summary>
     private async Task OnDragEnd(Microsoft.AspNetCore.Components.Web.DragEventArgs e)
     {
@@ -137,7 +137,7 @@
     }
 
     /// <summary>
-    /// 处理 resize 开始
+    /// Handle resize start
     /// </summary>
     private async Task HandleResizeStart(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
     {
@@ -148,53 +148,53 @@
     }
 
     /// <summary>
-    /// 计算 Widget 样式（基于 LayoutOptions + 选中态）
+    /// Compute widget style (layout options + selection)
     /// </summary>
     private string GetWidgetStyle()
     {
         var parts = new List<string>();
 
-        // 基础布局样式
+        // Base layout styles
         var widthValue = Widget.Width;
         var flexBasis = Widget.WidthUnit == "%"
             ? $"calc({widthValue}% - 8px)"
             : $"{widthValue}px";
         parts.Add($"flex:0 0 {flexBasis}");
 
-        // 高度
+        // Height
         var minHeight = Widget.HeightUnit == "auto" ? "64px" : $"{Widget.Height}px";
         parts.Add($"min-height:{minHeight}");
 
-        // 背景和圆角
+        // Background and corner radius
         parts.Add("background:#fff");
         parts.Add("border-radius:4px");
 
-        // 边框（选中态）
+        // Border when selected
         var border = Selected
             ? "border:2px solid #1890ff"
             : "border:1px solid #e0e0e0";
         parts.Add(border);
 
-        // 阴影
+        // Shadow
         parts.Add("box-shadow:0 1px 3px rgba(0,0,0,0.1)");
 
-        // 选中态 z-index
+        // z-index when selected
         var zIndex = Selected ? "z-index:100" : "z-index:1";
         parts.Add(zIndex);
 
-        // 其他基础样式
+        // Other base styles
         parts.Add("user-select:none");
         parts.Add("position:relative");
         parts.Add("box-sizing:border-box");
         parts.Add("margin:4px");
 
-        // 可见性
+        // Visibility
         if (!Widget.Visible)
         {
             parts.Add("opacity:0.3");
         }
 
-        // 额外的 CSS 类
+        // Extra CSS classes
         if (!string.IsNullOrWhiteSpace(CssClass))
         {
             parts.Add(CssClass);

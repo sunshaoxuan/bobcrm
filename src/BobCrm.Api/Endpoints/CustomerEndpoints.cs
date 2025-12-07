@@ -6,7 +6,9 @@ using BobCrm.Api.Core.DomainCommon.Validation;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -31,10 +33,15 @@ public static class CustomerEndpoints
         .WithDescription("获取当前用户可访问的所有客户列表");
 
         // 获取客户详情
-        group.MapGet("/{id:int}", (int id, ICustomerQueries q) =>
+        group.MapGet("/{id:int}", (int id, ICustomerQueries q, ILocalization loc, HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var detail = q.GetDetail(id);
-            return detail is null ? Results.NotFound() : Results.Json(detail);
+            if (detail is null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_CUSTOMER_NOT_FOUND", lang), "CUSTOMER_NOT_FOUND"));
+            }
+            return Results.Json(detail);
         })
         .WithName("GetCustomerDetail")
         .WithSummary("获取客户详情")
@@ -146,7 +153,8 @@ public static class CustomerEndpoints
             if (c == null)
             {
                 logger.LogWarning("[Customer] Customer not found: id={Id}", id);
-                return Results.NotFound();
+                var lang = LangHelper.GetLang(http);
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_CUSTOMER_NOT_FOUND", lang), "CUSTOMER_NOT_FOUND"));
             }
 
             // 乐观并发控制
@@ -246,8 +254,11 @@ public static class CustomerEndpoints
             AppDbContext db,
             ClaimsPrincipal user,
             AccessUpsertDto body,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             var name = user.Identity?.Name ?? string.Empty;
             var role = user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
             
@@ -273,7 +284,7 @@ public static class CustomerEndpoints
                     id, body.UserId, body.CanEdit);
             }
             await db.SaveChangesAsync();
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("权限设置成功"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_CUSTOMER_ACCESS_UPDATED", lang)));
         })
         .WithName("UpsertCustomerAccess")
         .WithSummary("设置客户访问权限")

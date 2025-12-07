@@ -1,14 +1,16 @@
 @using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services
+@inject I18nService I18n
 
 @* Section 容器的设计态渲染器 *@
 <div style="border:@(Section.ContainerLayout.BorderWidth)px @(Section.ContainerLayout.BorderStyle) @(Section.ContainerLayout.BorderColor); border-radius:@(Section.ContainerLayout.BorderRadius)px; background:@(Section.ContainerLayout.BackgroundColor); min-height:@(Section.GetDesignMinHeight())px; display:flex; flex-direction:column; pointer-events:auto;">
     @if (Section.ShowTitle)
     {
         <div style="padding:8px 12px; border-bottom:1px solid #d9d9d9; font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-            <span>@(string.IsNullOrWhiteSpace(Section.Title) ? "分组标题" : Section.Title)</span>
+            <span>@(string.IsNullOrWhiteSpace(Section.Title) ? I18n.T("TXT_GROUP_TITLE_DEFAULT") : Section.Title)</span>
             @if (Section.Collapsible)
             {
-                <span style="font-size:10px; color:#999">[可折叠]</span>
+                <span style="font-size:10px; color:#999">@I18n.T("TXT_COLLAPSIBLE")</span>
             }
         </div>
     }
@@ -27,7 +29,7 @@
         else
         {
             <div style="flex:1; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px; pointer-events:none">
-                拖入组件到分组
+                @I18n.T("TXT_DRAG_TO_GROUP")
             </div>
         }
     </div>

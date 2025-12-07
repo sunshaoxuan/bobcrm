@@ -91,7 +91,7 @@ else if (entityData != null)
         </div>
     }
 
-    <!-- 渲染Widget布局 -->
+    <!-- Render widget layout -->
     <div class="runtime-layout @(isEditMode ? "edit-mode" : "")">
         @foreach (var widget in layoutWidgets.Where(w => w.Visible))
         {
@@ -141,7 +141,7 @@ else if (entityData != null)
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!loading)  // 参数变化时重新加载
+        if (!loading)  // reload when params change
         {
             await LoadData();
         }
@@ -171,8 +171,7 @@ else if (entityData != null)
 
             if (string.IsNullOrWhiteSpace(layoutJson))
             {
-                // 1. 【实体匹配】加载有效模板（根据EntityType）
-                // 优先级：用户默认模板 > 系统默认模板 > 第一个创建的模板
+                // 1. Entity match: load effective template by EntityType (priority: user default > system default > first created)
                 var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
 
                 if (templateResp.IsSuccessStatusCode)
@@ -189,7 +188,7 @@ else if (entityData != null)
                 }
                 else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    // 如果没有找到模板，回退到旧的UserLayout API
+                    // Fallback to legacy user layout API when no template is found
                     var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
                     if (layoutResp.IsSuccessStatusCode)
                     {
@@ -199,11 +198,11 @@ else if (entityData != null)
                 }
             }
 
-            // 2. 加载实体数据
+            // 2. Load entity data
             var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
             if (!dataResp.IsSuccessStatusCode)
             {
-                error = $"加载数据失败: {dataResp.StatusCode}";
+                error = string.Format(I18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
                 loading = false;
                 await InvokeAsync(StateHasChanged);
                 return;
@@ -212,7 +211,7 @@ else if (entityData != null)
             var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
             entityData = dataDoc;
 
-            // 3. 解析布局JSON（如果遇到数据绑定错误，保留控件但不显示数据）
+            // 3. Parse layout JSON (keep controls even if data binding fails)
             if (!string.IsNullOrWhiteSpace(layoutJson))
             {
                 try
@@ -222,7 +221,7 @@ else if (entityData != null)
                 }
                 catch (Exception ex)
                 {
-                    // 解析失败，使用空布局，记录错误到日志但不显示给用户
+                    // If parse fails, use empty layout; log but do not surface to user
                     System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to parse layout JSON: {ex.Message}");
                     layoutWidgets = new List<DraggableWidget>();
                 }
@@ -232,7 +231,7 @@ else if (entityData != null)
                 layoutWidgets = new List<DraggableWidget>();
             }
 
-            // 4. 初始化编辑值（即使数据绑定失败，也要初始化可用的字段）
+            // 4. Initialize editable values (even if binding failed)
             if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
             {
                 editValueManager.Clear();
@@ -248,7 +247,7 @@ else if (entityData != null)
                     }
                     catch (Exception ex)
                     {
-                        // 单个字段绑定错误不影响其他字段，仅记录到调试日志
+                        // Skip bad field binding and continue
                         System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to bind field, skipping: {ex.Message}");
                     }
                 }
@@ -259,7 +258,7 @@ else if (entityData != null)
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            error = string.Format(I18n.T("PL_LOAD_EXCEPTION"), ex.Message);
             loading = false;
             await InvokeAsync(StateHasChanged);
         }
@@ -364,7 +363,7 @@ else if (entityData != null)
 
     private string GetWidgetLabel(DraggableWidget widget)
     {
-        // 从entityData中查找字段的label
+        // Resolve label from entity data if provided
         if (!string.IsNullOrWhiteSpace(widget.DataField) && entityData.HasValue)
         {
             if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
@@ -406,7 +405,7 @@ else if (entityData != null)
     {
         isEditMode = true;
         
-        // 初始化编辑值
+        // Initialize edit values
         editCode = GetEntityCode();
         editName = GetEntityDisplayName();
         editValueManager.InitializeFromWidgets(layoutWidgets, GetFieldValue);
@@ -427,10 +426,10 @@ else if (entityData != null)
         {
             saving = true;
 
-            // 收集所有字段值
+            // Collect all field values
             var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, new HashSet<string>());
             
-            // 保存到API
+            // Persist to API
             var payload = new
             {
                 code = editCode,
@@ -448,12 +447,12 @@ else if (entityData != null)
             }
             else
             {
-                error = $"保存失败: {resp.StatusCode}";
+                error = string.Format(I18n.T("PL_SAVE_FAILED"), resp.StatusCode);
             }
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            error = string.Format(I18n.T("PL_SAVE_FAILED"), ex.Message);
         }
         finally
         {

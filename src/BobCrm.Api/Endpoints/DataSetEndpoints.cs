@@ -1,11 +1,14 @@
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
+using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
-/// 数据集相关接口
+/// Data set endpoints
 /// </summary>
 public static class DataSetEndpoints
 {
@@ -16,42 +19,54 @@ public static class DataSetEndpoints
             .WithOpenApi()
             .RequireAuthorization();
 
-        // 获取所有数据集
+        // Get all data sets
         group.MapGet("/", async ([FromServices] DataSetService service, CancellationToken ct) =>
         {
             var dataSets = await service.GetAllAsync(ct);
             return Results.Ok(dataSets);
         })
         .WithName("GetAllDataSets")
-        .WithSummary("获取所有数据集");
+        .WithSummary("Get all data sets");
 
-        // 根据ID获取数据集
-        group.MapGet("/{id:int}", async ([FromRoute] int id, [FromServices] DataSetService service, CancellationToken ct) =>
+        // Get data set by id
+        group.MapGet("/{id:int}", async (
+            [FromRoute] int id,
+            [FromServices] DataSetService service,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var dataSet = await service.GetByIdAsync(id, ct);
             if (dataSet == null)
             {
-                return Results.NotFound(new { message = $"DataSet {id} not found" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_DATASET_NOT_FOUND_BY_ID", lang), "DATASET_NOT_FOUND"));
             }
             return Results.Ok(dataSet);
         })
         .WithName("GetDataSetById")
-        .WithSummary("根据ID获取数据集");
+        .WithSummary("Get data set by id");
 
-        // 根据Code获取数据集
-        group.MapGet("/by-code/{code}", async ([FromRoute] string code, [FromServices] DataSetService service, CancellationToken ct) =>
+        // Get data set by code
+        group.MapGet("/by-code/{code}", async (
+            [FromRoute] string code,
+            [FromServices] DataSetService service,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var dataSet = await service.GetByCodeAsync(code, ct);
             if (dataSet == null)
             {
-                return Results.NotFound(new { message = $"DataSet '{code}' not found" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_DATASET_NOT_FOUND_BY_CODE", lang), "DATASET_NOT_FOUND"));
             }
             return Results.Ok(dataSet);
         })
         .WithName("GetDataSetByCode")
-        .WithSummary("根据Code获取数据集");
+        .WithSummary("Get data set by code");
 
-        // 创建数据集
+        // Create data set
         group.MapPost("/", async ([FromBody] CreateDataSetRequest request, [FromServices] DataSetService service, CancellationToken ct) =>
         {
             try
@@ -65,9 +80,9 @@ public static class DataSetEndpoints
             }
         })
         .WithName("CreateDataSet")
-        .WithSummary("创建数据集");
+        .WithSummary("Create data set");
 
-        // 更新数据集
+        // Update data set
         group.MapPut("/{id:int}", async (
             [FromRoute] int id,
             [FromBody] UpdateDataSetRequest request,
@@ -85,9 +100,9 @@ public static class DataSetEndpoints
             }
         })
         .WithName("UpdateDataSet")
-        .WithSummary("更新数据集");
+        .WithSummary("Update data set");
 
-        // 删除数据集
+        // Delete data set
         group.MapDelete("/{id:int}", async ([FromRoute] int id, [FromServices] DataSetService service, CancellationToken ct) =>
         {
             try
@@ -101,9 +116,9 @@ public static class DataSetEndpoints
             }
         })
         .WithName("DeleteDataSet")
-        .WithSummary("删除数据集");
+        .WithSummary("Delete data set");
 
-        // 执行数据集查询
+        // Execute data set query
         group.MapPost("/{id:int}/execute", async (
             [FromRoute] int id,
             [FromBody] DataSetExecutionRequest request,
@@ -121,9 +136,9 @@ public static class DataSetEndpoints
             }
         })
         .WithName("ExecuteDataSet")
-        .WithSummary("执行数据集查询");
+        .WithSummary("Execute data set query");
 
-        // 获取数据集字段元数据
+        // Get data set field metadata
         group.MapGet("/{id:int}/fields", async ([FromRoute] int id, [FromServices] DataSetService service, CancellationToken ct) =>
         {
             try
@@ -137,7 +152,7 @@ public static class DataSetEndpoints
             }
         })
         .WithName("GetDataSetFields")
-        .WithSummary("获取数据集字段元数据");
+        .WithSummary("Get data set field metadata");
 
         return app;
     }

@@ -30,9 +30,8 @@ public class AuthBoundaryTests : IClassFixture<TestWebAppFactory>
         var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
         Assert.Equal(HttpStatusCode.BadRequest, login.StatusCode);
 
-        var errorContent = await login.Content.ReadAsStringAsync();
-        var errorJson = JsonDocument.Parse(errorContent).RootElement;
-        Assert.True(errorJson.TryGetProperty("error", out _));
+        var errorJson = await login.ReadAsJsonAsync();
+        Assert.True(errorJson.TryGetProperty("code", out _));
     }
 
     [Fact]
@@ -71,9 +70,8 @@ public class AuthBoundaryTests : IClassFixture<TestWebAppFactory>
             new { username = "nonexistent_user_12345", password = "AnyPassword@123" });
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
 
-        var errorContent = await login.Content.ReadAsStringAsync();
-        var errorJson = JsonDocument.Parse(errorContent).RootElement;
-        Assert.True(errorJson.TryGetProperty("error", out _));
+        var errorJson = await login.ReadAsJsonAsync();
+        Assert.True(errorJson.TryGetProperty("code", out _));
     }
 
     [Fact]
@@ -89,7 +87,7 @@ public class AuthBoundaryTests : IClassFixture<TestWebAppFactory>
         var refresh = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken });
         refresh.EnsureSuccessStatusCode();
 
-        var json = JsonDocument.Parse(await refresh.Content.ReadAsStringAsync()).RootElement;
+        var json = (await refresh.ReadAsJsonAsync()).UnwrapData();
         Assert.True(json.TryGetProperty("accessToken", out var newAccess));
         Assert.True(json.TryGetProperty("refreshToken", out var newRefresh));
         // 新令牌应该不同
@@ -143,10 +141,17 @@ public class AuthBoundaryTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var session = await client.GetFromJsonAsync<JsonElement>("/api/auth/session");
-        Assert.True(session.GetProperty("valid").GetBoolean());
+        var sessionResp = await client.GetAsync("/api/auth/session");
+        sessionResp.EnsureSuccessStatusCode();
+        var raw = await sessionResp.Content.ReadAsStringAsync();
+        var session = JsonDocument.Parse(raw).RootElement.UnwrapData();
+        var valid = session.GetProperty("valid").GetBoolean();
+        if (!valid)
+        {
+            throw new InvalidOperationException($"Session response not valid. Payload: {raw}");
+        }
         Assert.True(session.TryGetProperty("user", out var user));
-        Assert.True(user.TryGetProperty("username", out _));
+        Assert.True(user.TryGetProperty("userName", out _) || user.TryGetProperty("username", out _));
     }
 
     [Fact]
@@ -183,7 +188,7 @@ public class AuthBoundaryTests : IClassFixture<TestWebAppFactory>
         var loginByEmail = await client.PostAsJsonAsync("/api/auth/login", new { username = email, password });
         loginByEmail.EnsureSuccessStatusCode();
 
-        var json = JsonDocument.Parse(await loginByEmail.Content.ReadAsStringAsync()).RootElement;
+        var json = (await loginByEmail.ReadAsJsonAsync()).UnwrapData();
         Assert.True(json.TryGetProperty("accessToken", out _));
     }
 }

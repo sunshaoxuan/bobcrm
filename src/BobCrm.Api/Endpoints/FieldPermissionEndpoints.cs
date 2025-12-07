@@ -1,22 +1,25 @@
 using System.Security.Claims;
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Infrastructure;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
-/// 字段级权限管理端点
+/// Field-level permission endpoints
 /// </summary>
 public static class FieldPermissionEndpoints
 {
     public static IEndpointRouteBuilder MapFieldPermissionEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/field-permissions")
-            .WithTags("字段权限")
+            .WithTags("FieldPermissions")
             .WithOpenApi()
             .RequireAuthorization();
 
-        // 获取角色的所有字段权限
+        // Get all field permissions for a role
         group.MapGet("/role/{roleId:guid}", async (
             Guid roleId,
             IFieldPermissionService service) =>
@@ -25,9 +28,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(permissions);
         })
         .WithName("GetPermissionsByRole")
-        .WithSummary("获取角色的所有字段权限");
+        .WithSummary("Get all field permissions for a role");
 
-        // 获取角色对特定实体的字段权限
+        // Get field permissions by role and entity
         group.MapGet("/role/{roleId:guid}/entity/{entityType}", async (
             Guid roleId,
             string entityType,
@@ -37,9 +40,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(permissions);
         })
         .WithName("GetPermissionsByRoleAndEntity")
-        .WithSummary("获取角色对特定实体的字段权限");
+        .WithSummary("Get field permissions of a role for an entity");
 
-        // 获取当前用户对特定实体字段的权限
+        // Get current user's field permission
         group.MapGet("/user/entity/{entityType}/field/{fieldName}", async (
             string entityType,
             string fieldName,
@@ -51,9 +54,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(permission);
         })
         .WithName("GetUserFieldPermission")
-        .WithSummary("获取当前用户对特定实体字段的权限");
+        .WithSummary("Get current user's permission for a field");
 
-        // 创建或更新字段权限
+        // Create or update a field permission
         group.MapPost("/role/{roleId:guid}/entity/{entityType}/field/{fieldName}", async (
             Guid roleId,
             string entityType,
@@ -75,53 +78,62 @@ public static class FieldPermissionEndpoints
             return Results.Ok(permission);
         })
         .WithName("UpsertFieldPermission")
-        .WithSummary("创建或更新字段权限");
+        .WithSummary("Create or update a field permission");
 
-        // 批量设置角色的字段权限
+        // Bulk upsert field permissions
         group.MapPost("/role/{roleId:guid}/entity/{entityType}/bulk", async (
             Guid roleId,
             string entityType,
             BulkUpsertFieldPermissionsRequest request,
             ClaimsPrincipal user,
-            IFieldPermissionService service) =>
+            IFieldPermissionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             await service.BulkUpsertPermissionsAsync(roleId, entityType, request.Permissions, userId);
-            return Results.Ok(new { message = "Bulk upsert completed successfully" });
+            return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSIONS_BULK_UPSERT", lang)));
         })
         .WithName("BulkUpsertFieldPermissions")
-        .WithSummary("批量设置角色的字段权限");
+        .WithSummary("Bulk set field permissions for a role");
 
-        // 删除字段权限
+        // Delete a field permission
         group.MapDelete("/{permissionId:int}", async (
             int permissionId,
-            IFieldPermissionService service) =>
+            IFieldPermissionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 await service.DeletePermissionAsync(permissionId);
-                return Results.Ok(new { message = "Permission deleted successfully" });
+                return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSION_DELETED", lang)));
             }
             catch (KeyNotFoundException ex)
             {
-                return Results.NotFound(new { error = ex.Message });
+                return Results.NotFound(new ErrorResponse(ex.Message, "FIELD_PERMISSION_NOT_FOUND"));
             }
         })
         .WithName("DeleteFieldPermission")
-        .WithSummary("删除字段权限");
+        .WithSummary("Delete a field permission");
 
-        // 删除角色的所有字段权限
+        // Delete all field permissions for a role
         group.MapDelete("/role/{roleId:guid}", async (
             Guid roleId,
-            IFieldPermissionService service) =>
+            IFieldPermissionService service,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             await service.DeletePermissionsByRoleAsync(roleId);
-            return Results.Ok(new { message = "All permissions deleted successfully" });
+            return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSIONS_DELETED_ALL", lang)));
         })
         .WithName("DeletePermissionsByRole")
-        .WithSummary("删除角色的所有字段权限");
+        .WithSummary("Delete all field permissions for a role");
 
-        // 检查当前用户是否可以读取字段
+        // Check if current user can read field
         group.MapGet("/user/entity/{entityType}/field/{fieldName}/can-read", async (
             string entityType,
             string fieldName,
@@ -133,9 +145,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new { canRead });
         })
         .WithName("CanUserReadField")
-        .WithSummary("检查当前用户是否可以读取字段");
+        .WithSummary("Check if current user can read the field");
 
-        // 检查当前用户是否可以写入字段
+        // Check if current user can write field
         group.MapGet("/user/entity/{entityType}/field/{fieldName}/can-write", async (
             string entityType,
             string fieldName,
@@ -147,9 +159,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new { canWrite });
         })
         .WithName("CanUserWriteField")
-        .WithSummary("检查当前用户是否可以写入字段");
+        .WithSummary("Check if current user can write the field");
 
-        // 获取当前用户对实体的所有可读字段列表
+        // Get readable fields for current user
         group.MapGet("/user/entity/{entityType}/readable-fields", async (
             string entityType,
             ClaimsPrincipal user,
@@ -160,9 +172,9 @@ public static class FieldPermissionEndpoints
             return Results.Ok(fields);
         })
         .WithName("GetReadableFields")
-        .WithSummary("获取当前用户对实体的所有可读字段列表");
+        .WithSummary("Get all readable fields for current user");
 
-        // 获取当前用户对实体的所有可写字段列表
+        // Get writable fields for current user
         group.MapGet("/user/entity/{entityType}/writable-fields", async (
             string entityType,
             ClaimsPrincipal user,
@@ -173,7 +185,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(fields);
         })
         .WithName("GetWritableFields")
-        .WithSummary("获取当前用户对实体的所有可写字段列表");
+        .WithSummary("Get all writable fields for current user");
 
         return app;
     }

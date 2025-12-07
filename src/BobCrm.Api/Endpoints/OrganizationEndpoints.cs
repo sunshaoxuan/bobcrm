@@ -1,5 +1,8 @@
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
+using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
@@ -10,25 +13,43 @@ public static class OrganizationEndpoints
     {
         var group = app.MapGroup("/api/organizations").RequireAuthorization();
 
-        group.MapGet("/tree", async ([FromServices] OrganizationService service, CancellationToken ct) =>
+        group.MapGet("/tree", async (
+            [FromServices] OrganizationService service,
+            CancellationToken ct) =>
         {
             var data = await service.GetTreeAsync(ct);
             return Results.Ok(data);
         });
 
-        group.MapPost("/", async ([FromBody] CreateOrganizationRequest request, [FromServices] OrganizationService service, CancellationToken ct) =>
+        group.MapPost("/", async (
+            [FromBody] CreateOrganizationRequest request,
+            [FromServices] OrganizationService service,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
         {
-            return await ExecuteAsync(() => service.CreateAsync(request, ct));
+            return await ExecuteAsync(loc, http, () => service.CreateAsync(request, ct));
         });
 
-        group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateOrganizationRequest request, [FromServices] OrganizationService service, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateOrganizationRequest request,
+            [FromServices] OrganizationService service,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
         {
-            return await ExecuteAsync(() => service.UpdateAsync(id, request, ct));
+            return await ExecuteAsync(loc, http, () => service.UpdateAsync(id, request, ct));
         });
 
-        group.MapDelete("/{id:guid}", async (Guid id, [FromServices] OrganizationService service, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (
+            Guid id,
+            [FromServices] OrganizationService service,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
         {
-            return await ExecuteAsync(async () =>
+            return await ExecuteAsync(loc, http, async () =>
             {
                 await service.DeleteAsync(id, ct);
                 return Results.Ok();
@@ -38,8 +59,12 @@ public static class OrganizationEndpoints
         return app;
     }
 
-    private static async Task<IResult> ExecuteAsync<T>(Func<Task<T>> action)
+    private static async Task<IResult> ExecuteAsync<T>(
+        ILocalization loc,
+        HttpContext http,
+        Func<Task<T>> action)
     {
+        var lang = LangHelper.GetLang(http);
         try
         {
             var result = await action();
@@ -47,19 +72,23 @@ public static class OrganizationEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { message = ex.Message });
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_ORG_OPERATION_FAILED", lang), ex.Message), "ORG_OPERATION_FAILED"));
         }
     }
 
-    private static async Task<IResult> ExecuteAsync(Func<Task<IResult>> action)
+    private static async Task<IResult> ExecuteAsync(
+        ILocalization loc,
+        HttpContext http,
+        Func<Task<IResult>> action)
     {
+        var lang = LangHelper.GetLang(http);
         try
         {
             return await action();
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { message = ex.Message });
+            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_ORG_OPERATION_FAILED", lang), ex.Message), "ORG_OPERATION_FAILED"));
         }
     }
 }

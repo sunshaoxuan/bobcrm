@@ -78,7 +78,7 @@
                                 disabled="@(!canEditSystem)">
                             @foreach (var lang in LanguageOptions)
                             {
-                                <option value="@lang.Code">@lang.Label</option>
+                                <option value="@lang.Code">@I18n.T(lang.LabelKey)</option>
                             }
                         </select>
                     </label>
@@ -163,7 +163,7 @@
                         <select class="field-control" @bind="userForm.Language">
                             @foreach (var lang in LanguageOptions)
                             {
-                                <option value="@lang.Code">@lang.Label</option>
+                                <option value="@lang.Code">@I18n.T(lang.LabelKey)</option>
                             }
                         </select>
                     </label>
@@ -352,9 +352,9 @@
 
     private readonly LanguageOption[] LanguageOptions =
     [
-        new("zh", "简体中文"),
-        new("ja", "日本語"),
-        new("en", "English")
+        new("zh", "LANG_ZH_SIMPLIFIED"),
+        new("ja", "LANG_JA"),
+        new("en", "LANG_EN")
     ];
 
     private readonly HomeRouteOption[] HomeRoutes =
@@ -543,7 +543,7 @@
         };
 
     private record ThemeOption(string Value, string LabelKey);
-    private record LanguageOption(string Code, string Label);
+    private record LanguageOption(string Code, string LabelKey);
     private record HomeRouteOption(string Value, string LabelKey);
     private record NavModeOption(LayoutState.NavDisplayMode Mode, string LabelKey);
 

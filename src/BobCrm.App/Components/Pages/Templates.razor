@@ -20,7 +20,7 @@
         </button>
     </div>
 
-    <!-- 筛选器 -->
+    <!-- Filters -->
     <div class="panel" style="margin-bottom:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <select @onchange="OnUsageTypeChanged" name="usageType" class="field-control" style="width:150px" value="@filterUsageType">
             <option value="">@I18n.T("LBL_ALL_USAGE")</option>
@@ -242,7 +242,7 @@
     private bool isAdmin;
     private bool regenerating;
 
-    // 筛选器
+    // Filters
     private string filterUsageType = "";
     private string filterTemplateType = "";
     private string searchKeyword = "";
@@ -281,7 +281,7 @@
                 return;
             }
 
-            // 构建 URL 参数
+            // Build URL parameters
             var queryParams = new List<string>();
             if (!string.IsNullOrWhiteSpace(filterUsageType))
             {
@@ -314,7 +314,7 @@
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    // 应用客户端搜索过滤
+                    // Apply client-side search filter
                     if (!string.IsNullOrWhiteSpace(searchKeyword) && rawGroups != null)
                     {
                         groupedTemplates = rawGroups.Select(g => new AppModels.TemplateGroupByEntity
@@ -335,7 +335,7 @@
                         content,
                         new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    // 应用客户端搜索过滤
+                    // Apply client-side search filter
                     if (!string.IsNullOrWhiteSpace(searchKeyword) && rawTemplates != null)
                     {
                         flatTemplates = rawTemplates.Where(t => t.Name != null && t.Name.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -426,7 +426,7 @@
 
     private void CreateNewTemplate()
     {
-        // 导航到设计器创建新模板
+        // Navigate to designer to create a new template
         Nav.NavigateTo("/designer/new");
     }
 
@@ -668,17 +668,17 @@
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "card template-card");
 
-        // 模板信息
+        // Template info
         builder.OpenElement(2, "div");
         builder.AddAttribute(3, "class", "template-info");
 
-        // 名称
+        // Name
         builder.OpenElement(4, "div");
         builder.AddAttribute(5, "class", "template-name");
         builder.AddContent(6, GetTemplateDisplayName(template.Name));
         builder.CloseElement();
 
-        // 徽章
+        // Badges
         builder.OpenElement(7, "div");
         builder.AddAttribute(8, "class", "template-badges");
 
@@ -712,7 +712,7 @@
             builder.CloseElement();
         }
 
-        // 用途标签
+        // Usage label
         builder.OpenElement(15, "span");
         builder.AddAttribute(16, "class", GetUsageBadgeClass(template.UsageType));
         builder.AddContent(17, GetUsageDisplayName(template.UsageType));
@@ -728,7 +728,7 @@
 
         builder.CloseElement(); // badges
 
-        // 描述
+        // Description
         if (!string.IsNullOrWhiteSpace(template.Description))
         {
             builder.OpenElement(18, "div");
@@ -737,7 +737,7 @@
             builder.CloseElement();
         }
 
-        // 元数据
+        // Metadata
         builder.OpenElement(21, "div");
         builder.AddAttribute(22, "class", "template-meta");
         var localUpdated = DateTime.SpecifyKind(template.UpdatedAt, DateTimeKind.Utc).ToLocalTime();
@@ -746,25 +746,25 @@
 
         builder.CloseElement(); // template-info
 
-        // 操作按钮
+        // Action buttons
         builder.OpenElement(24, "div");
         builder.AddAttribute(25, "class", "template-actions");
 
-        // 编辑按钮（允许系统模板进入编辑）
+        // Edit button (system templates editable)
         builder.OpenElement(26, "button");
         builder.AddAttribute(27, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(28, "onclick", EventCallback.Factory.Create(this, () => EditTemplate(template.Id)));
         builder.AddContent(29, $"✏️ {I18n.T("BTN_EDIT")}");
         builder.CloseElement();
 
-        // 复制按钮
+        // Copy button
         builder.OpenElement(30, "button");
         builder.AddAttribute(31, "class", "btn btn-ghost btn-sm");
         builder.AddAttribute(32, "onclick", EventCallback.Factory.Create(this, () => CopyTemplate(template.Id)));
         builder.AddContent(33, $"📋 {I18n.T("BTN_COPY")}");
         builder.CloseElement();
 
-        // 应用按钮（设为默认）- 始终显示，已应用时为disabled状态
+        // Apply button (set default) - always visible, disabled when applied
         if (!string.IsNullOrWhiteSpace(template.EntityType))
         {
             var isApplied = template.IsUserDefault;
@@ -772,11 +772,11 @@
             builder.AddAttribute(35, "class", isApplied ? "btn btn-success btn-sm" : "btn btn-ghost btn-sm");
             builder.AddAttribute(36, "disabled", isApplied);
             builder.AddAttribute(37, "onclick", EventCallback.Factory.Create(this, () => ApplyTemplate(template.Id)));
-            builder.AddContent(38, isApplied ? "✓ 已应用" : $"✓ {I18n.T("BTN_APPLY")}");
+            builder.AddContent(38, isApplied ? $"✓ {I18n.T("TPL_STATUS_APPLIED")}" : $"✓ {I18n.T("BTN_APPLY")}");
             builder.CloseElement();
         }
 
-        // 删除按钮
+        // Delete button
         var canDelete = !template.IsUserDefault && !template.IsSystemDefault && !template.IsInUse;
         builder.OpenElement(38, "button");
         builder.AddAttribute(39, "class", "btn btn-ghost btn-sm");

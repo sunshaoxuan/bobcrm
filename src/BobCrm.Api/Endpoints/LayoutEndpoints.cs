@@ -5,6 +5,7 @@ using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -73,9 +74,12 @@ public static class LayoutEndpoints
             int customerId,
             ClaimsPrincipal user,
             ILayoutQueries q,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             scope ??= "effective";
             
@@ -145,7 +149,8 @@ public static class LayoutEndpoints
                 logger.LogInformation("[Layout] Updated existing layout entry");
             }
             await uow.SaveChangesAsync();
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已保存"));
+            var lang2 = LangHelper.GetLang(http);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_SAVED", lang2)));
         })
         .WithName("SaveCustomerLayout_Deprecated")
         .WithSummary("[已废弃] 保存客户布局")
@@ -157,9 +162,12 @@ public static class LayoutEndpoints
             ClaimsPrincipal user,
             IRepository<UserLayout> repoLayout,
             IUnitOfWork uow,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var delScope = (scope ?? "user").ToLowerInvariant();
             var targetUserId = delScope == "default" ? "__default__" : uid;
@@ -193,7 +201,7 @@ public static class LayoutEndpoints
                 logger.LogDebug("[Layout] No layout found to delete");
             }
             
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已删除"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_DELETED", lang)));
         })
         .WithName("DeleteCustomerLayout_Deprecated")
         .WithSummary("[已废弃] 删除客户布局")
@@ -203,9 +211,12 @@ public static class LayoutEndpoints
         layoutGroup.MapGet("", (
             ClaimsPrincipal user,
             ILayoutQueries q,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             scope ??= "effective";
             
@@ -221,9 +232,12 @@ public static class LayoutEndpoints
         layoutGroup.MapGet("/customer", (
             ClaimsPrincipal user,
             ILayoutQueries q,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             scope ??= "effective";
             
@@ -264,6 +278,12 @@ public static class LayoutEndpoints
             }
 
             var body = System.Text.Json.JsonSerializer.Serialize(layout);
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                var lang = LangHelper.GetLang(http);
+                logger.LogWarning("[Layout] Validation failed: layout body is required");
+                return ApiErrors.Validation(loc.T("ERR_LAYOUT_BODY_REQUIRED", lang));
+            }
             var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
 
             if (entity != null)
@@ -285,7 +305,8 @@ public static class LayoutEndpoints
             }
 
             await uow.SaveChangesAsync();
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已保存"));
+            var lang2 = LangHelper.GetLang(http);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_SAVED", lang2)));
         })
         .WithName("SaveLayout")
         .WithSummary("保存布局")
@@ -321,6 +342,12 @@ public static class LayoutEndpoints
             }
 
             var body = System.Text.Json.JsonSerializer.Serialize(layout);
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                var lang = LangHelper.GetLang(http);
+                logger.LogWarning("[Layout] Validation failed: layout body is required");
+                return ApiErrors.Validation(loc.T("ERR_LAYOUT_BODY_REQUIRED", lang));
+            }
             var entity = repoLayout.Query(UserLayoutScope.ForUser(targetUserId, 0)).FirstOrDefault();
 
             if (entity != null)
@@ -342,7 +369,8 @@ public static class LayoutEndpoints
             }
 
             await uow.SaveChangesAsync();
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已保存"));
+            var lang2 = LangHelper.GetLang(http);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_SAVED", lang2)));
         })
         .WithName("SaveLayout_CustomerAlias")
         .WithSummary("保存布局（兼容别名）")
@@ -353,9 +381,12 @@ public static class LayoutEndpoints
             ClaimsPrincipal user,
             IRepository<UserLayout> repoLayout,
             IUnitOfWork uow,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var delScope = (scope ?? "user").ToLowerInvariant();
             var targetUserId = delScope == "default" ? "__default__" : uid;
@@ -386,7 +417,7 @@ public static class LayoutEndpoints
                 logger.LogDebug("[Layout] No user-level layout found to delete");
             }
 
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已删除"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_DELETED", lang)));
         })
         .WithName("DeleteLayout")
         .WithSummary("删除布局")
@@ -397,9 +428,12 @@ public static class LayoutEndpoints
             ClaimsPrincipal user,
             IRepository<UserLayout> repoLayout,
             IUnitOfWork uow,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var delScope = (scope ?? "user").ToLowerInvariant();
             var targetUserId = delScope == "default" ? "__default__" : uid;
@@ -430,7 +464,7 @@ public static class LayoutEndpoints
                 logger.LogDebug("[Layout] No user-level layout found to delete");
             }
 
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已删除"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_DELETED", lang)));
         })
         .WithName("DeleteLayout_CustomerAlias")
         .WithSummary("删除布局（兼容别名）")
@@ -490,6 +524,12 @@ public static class LayoutEndpoints
             }
 
             var body = System.Text.Json.JsonSerializer.Serialize(layout);
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                var lang = LangHelper.GetLang(http);
+                logger.LogWarning("[Layout] Validation failed: layout body is required");
+                return ApiErrors.Validation(loc.T("ERR_LAYOUT_BODY_REQUIRED", lang));
+            }
             var entity = repoLayout.Query(x => x.UserId == targetUserId && x.EntityType == entityType).FirstOrDefault();
 
             if (entity != null)
@@ -512,7 +552,8 @@ public static class LayoutEndpoints
             }
 
             await uow.SaveChangesAsync();
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已保存"));
+            var lang2 = LangHelper.GetLang(http);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_SAVED", lang2)));
         })
         .WithName("SaveLayoutByEntityType")
         .WithSummary("保存实体布局（根据实体类型）")
@@ -524,9 +565,12 @@ public static class LayoutEndpoints
             ClaimsPrincipal user,
             IRepository<UserLayout> repoLayout,
             IUnitOfWork uow,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? scope) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var delScope = (scope ?? "user").ToLowerInvariant();
             var targetUserId = delScope == "default" ? "__default__" : uid;
@@ -558,7 +602,7 @@ public static class LayoutEndpoints
                 logger.LogDebug("[Layout] No entity layout found to delete");
             }
 
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("布局已删除"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_LAYOUT_DELETED", lang)));
         })
         .WithName("DeleteLayoutByEntityType")
         .WithSummary("删除实体布局（根据实体类型）")

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,13 +62,16 @@ public static class AdminEndpoints
         // 重建数据库
         group.MapPost("/db/recreate", async (
             AppDbContext db,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             logger.LogWarning("[Admin] Database recreation requested - this will delete all data!");
             await DatabaseInitializer.RecreateAsync(db);
             logger.LogInformation("[Admin] Database recreated successfully");
             
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("数据库已重建"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_DB_RECREATED", lang)));
         })
         .WithName("RecreateDatabase")
         .WithSummary("重建数据库")
@@ -98,8 +102,11 @@ public static class AdminEndpoints
         debugGroup.MapPost("/reset-setup", async (
             UserManager<IdentityUser> um,
             RoleManager<IdentityRole> rm,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             logger.LogWarning("[Debug] Setup reset requested");
             
             var admin = await um.FindByNameAsync("admin");
@@ -109,17 +116,17 @@ public static class AdminEndpoints
                 if (result.Succeeded)
                 {
                     logger.LogInformation("[Debug] Admin user deleted successfully");
-                    return Results.Ok(ApiResponseExtensions.SuccessResponse("管理员用户已删除，可以重新初始化"));
+                    return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_ADMIN_DELETED", lang)));
                 }
                 else
                 {
                     logger.LogError("[Debug] Failed to delete admin user: {Errors}", string.Join("; ", result.Errors.Select(e => e.Description)));
-                    return Results.BadRequest(new { error = "Failed to delete admin user", details = string.Join("; ", result.Errors.Select(e => e.Description)) });
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_ADMIN_DELETE_FAILED", lang), result.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
                 }
             }
 
             logger.LogInformation("[Debug] No admin user found");
-            return Results.Ok(ApiResponseExtensions.SuccessResponse("未找到管理员用户，可以进行初始化"));
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_ADMIN_NOT_FOUND_INIT", lang)));
         })
         .WithName("DebugResetSetup")
         .WithSummary("重置初始化")
@@ -130,12 +137,15 @@ public static class AdminEndpoints
             UserManager<IdentityUser> um,
             RoleManager<IdentityRole> rm,
             ResetPasswordDto dto,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             if (!await rm.RoleExistsAsync("admin"))
             {
                 logger.LogWarning("[Admin] Admin role not found");
-                return Results.NotFound(new { error = "admin role not found" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ADMIN_ROLE_NOT_FOUND", lang), "ADMIN_ROLE_NOT_FOUND"));
             }
 
             var admins = await um.GetUsersInRoleAsync("admin");
@@ -143,7 +153,7 @@ public static class AdminEndpoints
             if (user == null)
             {
                 logger.LogWarning("[Admin] Admin user not found");
-                return Results.NotFound(new { error = "admin user not found" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ADMIN_USER_NOT_FOUND", lang), "ADMIN_USER_NOT_FOUND"));
             }
 
             logger.LogWarning("[Admin] Resetting password for admin user {UserName}", user.UserName);
@@ -154,7 +164,7 @@ public static class AdminEndpoints
                 if (!rmv.Succeeded)
                 {
                     logger.LogError("[Admin] Failed to remove old password: {Errors}", string.Join("; ", rmv.Errors.Select(e => e.Description)));
-                    return Results.BadRequest(new { error = string.Join("; ", rmv.Errors.Select(e => e.Description)) });
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_ADMIN_REMOVE_PWD_FAILED", lang), rmv.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
                 }
             }
 
@@ -162,14 +172,14 @@ public static class AdminEndpoints
             if (!add.Succeeded)
             {
                 logger.LogError("[Admin] Failed to set new password: {Errors}", string.Join("; ", add.Errors.Select(e => e.Description)));
-                return Results.BadRequest(new { error = string.Join("; ", add.Errors.Select(e => e.Description)) });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ADMIN_SET_PWD_FAILED", lang), add.Errors.ToDictionary(e => e.Code, e => new[] { e.Description })));
             }
 
             user.EmailConfirmed = true;
             await um.UpdateAsync(user);
             
             logger.LogInformation("[Admin] Password reset successfully for user {UserName}", user.UserName);
-            return Results.Ok(new { status = "ok", user = new { user = user.UserName, email = user.Email } });
+            return Results.Ok(new SuccessResponse(loc.T("MSG_ADMIN_PASSWORD_RESET_OK", lang)));
         })
         .WithName("AdminResetPassword")
         .WithSummary("重置管理员密码")
@@ -180,8 +190,11 @@ public static class AdminEndpoints
             AppDbContext db,
             IDefaultTemplateService templateService,
             TemplateBindingService bindingService,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             logger.LogInformation("[Admin] Regenerate-defaults called for all entities");
             var entities = await db.EntityDefinitions
                 .Include(e => e.Fields)
@@ -200,7 +213,7 @@ public static class AdminEndpoints
             }
 
             logger.LogInformation("[Admin] Regenerated default templates for {Count} entities, changes={Updated}", entities.Count, updated);
-            return Results.Ok(new { entities = entities.Count, updated });
+            return Results.Ok(new SuccessResponse<object>(new { entities = entities.Count, updated, message = loc.T("MSG_REGENERATE_DEFAULT_TEMPLATES", lang) }));
         })
         .WithName("RegenerateDefaultTemplates")
         .WithSummary("重新生成默认模板")
@@ -212,8 +225,11 @@ public static class AdminEndpoints
             AppDbContext db,
             IDefaultTemplateService templateService,
             TemplateBindingService bindingService,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var normalized = entityRoute?.Trim() ?? string.Empty;
             var normalizedLower = normalized.ToLowerInvariant();
             logger.LogInformation("[Admin] Regenerate defaults requested for entityRoute={EntityRoute}", normalized);
@@ -234,7 +250,7 @@ public static class AdminEndpoints
                 logger.LogWarning("[Admin] Regenerate failed: entity {EntityRoute} not found. Available: {Available}",
                     normalized,
                     string.Join(", ", available.Select(a => a.EntityRoute ?? a.EntityName ?? string.Empty)));
-                return Results.NotFound(new { error = $"Entity '{normalized}' not found" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
             }
 
             var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
@@ -246,12 +262,12 @@ public static class AdminEndpoints
             logger.LogInformation("[Admin] Regenerated templates for {Entity} created={Created} updated={Updated}",
                 normalized, result.Created.Count, result.Updated.Count);
 
-            return Results.Ok(new
+            return Results.Ok(new SuccessResponse<object>(new
             {
                 entity = normalized,
                 created = result.Created.Count,
                 updated = result.Updated.Count
-            });
+            }));
         })
         .WithName("RegenerateDefaultTemplatesForEntity")
         .WithSummary("为指定实体重新生成默认模板")
@@ -268,8 +284,11 @@ public static class AdminEndpoints
             string entityRoute,
             AppDbContext db,
             IDefaultTemplateService templateService,
-            ILogger<Program> logger) =>
+            ILogger<Program> logger,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             // 规范化参数：FormTemplate.EntityType 存储的是 EntityDefinition.EntityRoute
             var normalizedEntityType = entityRoute?.Trim() ?? string.Empty;
             logger.LogInformation("[TemplateReset] Hard reset requested for entityType={EntityType}", normalizedEntityType);
@@ -310,12 +329,15 @@ public static class AdminEndpoints
                     altNormalized,
                     string.Join(", ", availableEntities.Select(e => $"{e.EntityRoute}({e.EntityName},{e.Source})")));
 
-                return Results.NotFound(new
-                {
-                    error = $"Entity with EntityRoute '{normalizedEntityType}' not found",
-                    hint = "The EntityType from template must match an EntityDefinition.EntityRoute (singular/plural accepted)",
-                    availableRoutes = availableEntities.Select(e => e.EntityRoute).Distinct().ToList()
-                });
+                return Results.NotFound(new ErrorResponse(
+                    loc.T("ERR_ENTITY_NOT_FOUND", lang),
+                    new Dictionary<string, string[]>
+                    {
+                        { "Hint", new[] { loc.T("ERR_ENTITY_ROUTE_HINT", lang) } },
+                        { "Requested", new[] { normalizedEntityType } },
+                        { "Available", availableEntities.Select(e => e.EntityRoute ?? string.Empty).Distinct().ToArray() }
+                    },
+                    "ENTITY_NOT_FOUND"));
             }
 
             var entityType = entity.EntityRoute!; // EntityRoute is the canonical identifier

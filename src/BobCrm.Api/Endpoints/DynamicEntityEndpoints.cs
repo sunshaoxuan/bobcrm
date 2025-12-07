@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,8 +27,11 @@ public static class DynamicEntityEndpoints
             string fullTypeName,
             [FromBody] QueryRequest request,
             ReflectionPersistenceService persistenceService,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 logger.LogInformation("[DynamicEntity] Querying {EntityType}", fullTypeName);
@@ -56,7 +61,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Query failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", lang), ex.Message),
+                    "DYNAMIC_QUERY_FAILED"));
             }
         })
         .WithName("QueryDynamicEntities")
@@ -68,8 +75,11 @@ public static class DynamicEntityEndpoints
             string fullTypeName,
             int id,
             ReflectionPersistenceService persistenceService,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 logger.LogInformation("[DynamicEntity] Getting {EntityType} with ID {Id}", fullTypeName, id);
@@ -77,14 +87,18 @@ public static class DynamicEntityEndpoints
                 var entity = await persistenceService.GetByIdAsync(fullTypeName, id);
 
                 if (entity == null)
-                    return Results.NotFound(new { error = $"Entity with ID {id} not found" });
+                    return Results.NotFound(new ErrorResponse(
+                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                        "DYNAMIC_ENTITY_NOT_FOUND"));
 
                 return Results.Ok(entity);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Get failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", lang), ex.Message),
+                    "DYNAMIC_QUERY_FAILED"));
             }
         })
         .WithName("GetDynamicEntityById")
@@ -96,8 +110,11 @@ public static class DynamicEntityEndpoints
             string tableName,
             [FromBody] QueryRequest request,
             ReflectionPersistenceService persistenceService,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 logger.LogInformation("[DynamicEntity] Raw query on table {TableName}", tableName);
@@ -122,7 +139,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Raw query failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_RAW_QUERY_FAILED", lang), ex.Message),
+                    "DYNAMIC_RAW_QUERY_FAILED"));
             }
         })
         .WithName("RawQueryDynamicEntities")
@@ -137,8 +156,10 @@ public static class DynamicEntityEndpoints
             [FromBody] Dictionary<string, object> data,
             ReflectionPersistenceService persistenceService,
             HttpContext http,
+            ILocalization loc,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
@@ -164,7 +185,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Create failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_CREATE_FAILED", lang), ex.Message),
+                    "DYNAMIC_CREATE_FAILED"));
             }
         })
         .WithName("CreateDynamicEntity")
@@ -180,8 +203,10 @@ public static class DynamicEntityEndpoints
             [FromBody] Dictionary<string, object> data,
             ReflectionPersistenceService persistenceService,
             HttpContext http,
+            ILocalization loc,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
@@ -201,7 +226,9 @@ public static class DynamicEntityEndpoints
                 var entity = await persistenceService.UpdateAsync(fullTypeName, id, data);
 
                 if (entity == null)
-                    return Results.NotFound(new { error = $"Entity with ID {id} not found" });
+                    return Results.NotFound(new ErrorResponse(
+                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                        "DYNAMIC_ENTITY_NOT_FOUND"));
 
                 logger.LogInformation("[DynamicEntity] Updated {EntityType} successfully", fullTypeName);
 
@@ -210,7 +237,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Update failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_UPDATE_FAILED", lang), ex.Message),
+                    "DYNAMIC_UPDATE_FAILED"));
             }
         })
         .WithName("UpdateDynamicEntity")
@@ -224,8 +253,11 @@ public static class DynamicEntityEndpoints
             string fullTypeName,
             int id,
             ReflectionPersistenceService persistenceService,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 logger.LogInformation("[DynamicEntity] Deleting {EntityType} with ID {Id}", fullTypeName, id);
@@ -233,7 +265,9 @@ public static class DynamicEntityEndpoints
                 var deleted = await persistenceService.DeleteAsync(fullTypeName, id);
 
                 if (!deleted)
-                    return Results.NotFound(new { error = $"Entity with ID {id} not found" });
+                    return Results.NotFound(new ErrorResponse(
+                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                        "DYNAMIC_ENTITY_NOT_FOUND"));
 
                 logger.LogInformation("[DynamicEntity] Deleted {EntityType} successfully", fullTypeName);
 
@@ -242,7 +276,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Delete failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_DELETE_FAILED", lang), ex.Message),
+                    "DYNAMIC_DELETE_FAILED"));
             }
         })
         .WithName("DeleteDynamicEntity")
@@ -256,8 +292,11 @@ public static class DynamicEntityEndpoints
             string fullTypeName,
             [FromBody] CountRequest request,
             ReflectionPersistenceService persistenceService,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 logger.LogInformation("[DynamicEntity] Counting {EntityType}", fullTypeName);
@@ -269,7 +308,9 @@ public static class DynamicEntityEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Count failed: {Message}", ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_COUNT_FAILED", lang), ex.Message),
+                    "DYNAMIC_COUNT_FAILED"));
             }
         })
         .WithName("CountDynamicEntities")

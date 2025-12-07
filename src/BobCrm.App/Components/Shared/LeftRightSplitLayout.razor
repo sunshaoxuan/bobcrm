@@ -1,11 +1,12 @@
 @using BobCrm.App.Components.Shared
+@inject BobCrm.App.Services.I18nService I18n
 
 @*
-    LeftRightSplitLayout - 左列表右明细布局
+    LeftRightSplitLayout - left list, right detail layout
     
-    左侧：简化列表（仅关键字段如 Code、Name）
-    右侧：完整详情表单
-    适用场景：数据量中等，需要快速浏览并编辑
+    Left: compact list (key fields like Code, Name)
+    Right: full detail form
+    Scenario: medium volume; need fast browse and edit
 *@
 
 <div class="left-right-split-layout">
@@ -17,14 +18,14 @@
         @if (!string.IsNullOrEmpty(_selectedRecordId))
         {
             <div class="detail-placeholder">
-                <p>已选择记录: @_selectedRecordId</p>
-                <p>TODO: 添加详情编辑表单</p>
+                <p>@I18n.T("LBL_SELECTED_RECORD"): @_selectedRecordId</p>
+                <p>@I18n.T("TXT_DETAIL_PLACEHOLDER")</p>
             </div>
         }
         else
         {
             <div class="empty-state">
-                <p>请从左侧列表选择一项查看详情</p>
+                <p>@I18n.T("TXT_SELECT_PROMPT_LEFT")</p>
             </div>
         }
     </section>

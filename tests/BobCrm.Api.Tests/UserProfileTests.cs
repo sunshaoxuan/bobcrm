@@ -36,7 +36,7 @@ public class UserProfileTests : IClassFixture<TestWebAppFactory>
         var resp = await client.GetAsync("/api/auth/me");
         resp.EnsureSuccessStatusCode();
 
-        var userInfo = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var userInfo = (await resp.ReadAsJsonAsync()).UnwrapData();
         
         // 验证返回的字段
         Assert.True(userInfo.TryGetProperty("id", out _), "应该包含id");
@@ -61,7 +61,7 @@ public class UserProfileTests : IClassFixture<TestWebAppFactory>
         var resp = await client.GetAsync("/api/auth/me");
         resp.EnsureSuccessStatusCode();
 
-        var userInfo = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var userInfo = (await resp.ReadAsJsonAsync()).UnwrapData();
         
         Assert.Equal(userName, userInfo.GetProperty("userName").GetString());
         Assert.Equal("User", userInfo.GetProperty("role").GetString());

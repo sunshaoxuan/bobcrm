@@ -103,9 +103,9 @@
     [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
     
-    [Parameter] public string Title { get; set; } = "选择";
-    [Parameter] public string Placeholder { get; set; } = "请选择";
-    [Parameter] public string EmptyText { get; set; } = "暂无数据";
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Placeholder { get; set; } = string.Empty;
+    [Parameter] public string EmptyText { get; set; } = string.Empty;
     [Parameter] public bool Disabled { get; set; } = false;
     [Parameter] public bool EnableSearch { get; set; } = true;
     
@@ -128,6 +128,13 @@
     
     private string DisplayText => string.IsNullOrWhiteSpace(Value) ? "" : GetDisplayTextForValue(Value);
     
+    protected override void OnInitialized()
+    {
+        Title = string.IsNullOrWhiteSpace(Title) ? I18n.T("LBL_SELECT_ENTITY") : Title;
+        Placeholder = string.IsNullOrWhiteSpace(Placeholder) ? I18n.T("PH_SELECT_ENTITY") : Placeholder;
+        EmptyText = string.IsNullOrWhiteSpace(EmptyText) ? I18n.T("LBL_NO_DATA") : EmptyText;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         // 如果有初始值但数据未加载，预加载数据以显示 DisplayName

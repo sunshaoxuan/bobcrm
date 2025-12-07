@@ -6,8 +6,8 @@
 @inject I18nService I18n
 
 @*
-    EnumSelector - 枚举选择器组件
-    动态加载枚举选项的下拉选择器，使用 Ant Design 组件
+    EnumSelector - enum selector component
+    Dropdown that loads enum options dynamically using Ant Design
 *@
 
 @if (_isLoading)
@@ -102,55 +102,55 @@ else
 
 @code {
     /// <summary>
-    /// 枚举代码（用于加载枚举定义）
+    /// Enum code (used to load enum definition)
     /// </summary>
     [Parameter, EditorRequired]
     public string EnumCode { get; set; } = string.Empty;
 
     /// <summary>
-    /// 单选模式的值
+    /// Single-select value
     /// </summary>
     [Parameter]
     public string? Value { get; set; }
 
     /// <summary>
-    /// 单选值变更回调
+    /// Single-select value changed callback
     /// </summary>
     [Parameter]
     public EventCallback<string?> ValueChanged { get; set; }
 
     /// <summary>
-    /// 多选模式的值
+    /// Multi-select values
     /// </summary>
     [Parameter]
     public IEnumerable<string>? Values { get; set; }
 
     /// <summary>
-    /// 多选值变更回调
+    /// Multi-select values changed callback
     /// </summary>
     [Parameter]
     public EventCallback<IEnumerable<string>?> ValuesChanged { get; set; }
 
     /// <summary>
-    /// 是否多选模式
+    /// Enable multi-select mode
     /// </summary>
     [Parameter]
     public bool MultiSelect { get; set; } = false;
 
     /// <summary>
-    /// 占位符文本
+    /// Placeholder text
     /// </summary>
     [Parameter]
-    public string Placeholder { get; set; } = "请选择...";
+    public string Placeholder { get; set; } = "Select...";
 
     /// <summary>
-    /// 当前语言
+    /// Current language
     /// </summary>
     [Parameter]
     public string CurrentLanguage { get; set; } = "zh";
 
     /// <summary>
-    /// 是否禁用
+    /// Disable selector
     /// </summary>
     [Parameter]
     public bool Disabled { get; set; } = false;
@@ -184,7 +184,7 @@ else
     }
 
     /// <summary>
-    /// 处理单选值变更
+    /// Handle single-select changes
     /// </summary>
     private async Task HandleSingleSelectChangeAsync(string value)
     {
@@ -197,7 +197,7 @@ else
     }
 
     /// <summary>
-    /// 处理多选值变更
+    /// Handle multi-select changes
     /// </summary>
     private async Task HandleMultiSelectChangeAsync(IEnumerable<string> values)
     {
@@ -210,7 +210,7 @@ else
     }
 
     /// <summary>
-    /// 加载枚举选项
+    /// Load enum data
     /// </summary>
     private async Task LoadOptionsAsync()
     {
@@ -248,7 +248,7 @@ else
     }
 
     /// <summary>
-    /// 获取枚举选项的显示名称
+    /// Get display name for an enum option
     /// </summary>
     private string GetDisplayName(EnumOptionDto option)
     {
@@ -260,3 +260,4 @@ else
         return option.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? option.Value;
     }
 }
+

@@ -1,33 +1,26 @@
 using System.Security.Claims;
-
 using Microsoft.EntityFrameworkCore;
-
 using BobCrm.Api.Infrastructure;
-
 using BobCrm.Api.Base.Models;
-
 using BobCrm.Api.Core.DomainCommon;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Requests.Entity;
+using BobCrm.Api.Contracts.Responses.Entity;
+using EntityFieldDto = BobCrm.Api.Contracts.Responses.Entity.FieldMetadataDto;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
 /// 实体定义管理端点 - 支持实体自定义与发布
 /// </summary>
-
 public static class EntityDefinitionEndpoints
-
 {
-
     public static IEndpointRouteBuilder MapEntityDefinitionEndpoints(this IEndpointRouteBuilder app)
-
     {
-
         // ==================== 实体元数据端点（公共访问）====================
-
         var entitiesGroup = app.MapGroup("/api/entities")
-
             .WithTags("实体元数据")
-
             .WithOpenApi();
 
         static List<string> BuildEntityCandidates(string entityType)
@@ -54,55 +47,38 @@ public static class EntityDefinitionEndpoints
         }
 
         // 获取可用实体列表（公共端点，不需要认证）
-
         entitiesGroup.MapGet("", async (AppDbContext db) =>
-
         {
-
             var entities = await db.EntityDefinitions
-
                 .Where(ed => ed.IsEnabled && ed.Status == EntityStatus.Published)
-
                 .OrderBy(ed => ed.Order)
-
-                .Select(ed => new
-
+                .Select(ed => new EntitySummaryDto
                 {
-
-                    entityType = ed.EntityRoute,
-
-                    entityName = ed.EntityName,
-
-                    displayName = ed.DisplayName,
-
-                    description = ed.Description,
-
-                    apiEndpoint = ed.ApiEndpoint,
-
-                    icon = ed.Icon,
-
-                    category = ed.Category,
-
-                    isRootEntity = ed.IsRootEntity
-
+                    EntityType = ed.EntityRoute,
+                    EntityRoute = ed.EntityRoute,
+                    EntityName = ed.EntityName,
+                    DisplayName = new MultilingualText(ed.DisplayName ?? new Dictionary<string, string?>()),
+                    Description = new MultilingualText(ed.Description ?? new Dictionary<string, string?>()),
+                    ApiEndpoint = ed.ApiEndpoint,
+                    Icon = ed.Icon,
+                    Category = ed.Category,
+                    IsRootEntity = ed.IsRootEntity,
+                    IsEnabled = ed.IsEnabled,
+                    Status = ed.Status
                 })
-
                 .ToListAsync();
 
-            return Results.Json(entities);
-
+            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(entities));
         })
-
         .WithName("GetAvailableEntities")
-
         .WithSummary("获取可用实体列表")
-
         .WithDescription("获取所有已启用且已发布的实体元数据（公共访问）")
-
+        .Produces<SuccessResponse<List<EntitySummaryDto>>>()
         .AllowAnonymous();
 
-        entitiesGroup.MapGet("/{entityType}/definition", async (string entityType, AppDbContext db) =>
+        entitiesGroup.MapGet("/{entityType}/definition", async (string entityType, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var candidates = BuildEntityCandidates(entityType);
 
             var definition = await db.EntityDefinitions
@@ -116,367 +92,266 @@ public static class EntityDefinitionEndpoints
 
             if (definition == null)
             {
-                return Results.NotFound(new { error = "实体定义不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
             }
 
-            var dto = new
+            var dto = new EntityDefinitionDto
             {
-                definition.Id,
-                definition.EntityRoute,
-                definition.EntityName,
-                definition.FullTypeName,
-                definition.DisplayName,
-                definition.Description,
+                Id = definition.Id,
+                Namespace = definition.Namespace,
+                EntityName = definition.EntityName,
+                FullTypeName = definition.FullTypeName,
+                EntityRoute = definition.EntityRoute,
+                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
+                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                ApiEndpoint = definition.ApiEndpoint,
+                StructureType = definition.StructureType,
+                Status = definition.Status,
+                Source = definition.Source,
+                IsLocked = definition.IsLocked,
+                IsRootEntity = definition.IsRootEntity,
+                IsEnabled = definition.IsEnabled,
+                Order = definition.Order,
+                Icon = definition.Icon,
+                Category = definition.Category,
+                CreatedAt = definition.CreatedAt,
+                UpdatedAt = definition.UpdatedAt,
+                CreatedBy = definition.CreatedBy,
+                UpdatedBy = definition.UpdatedBy,
                 Fields = definition.Fields
                     .Where(f => !f.IsDeleted)
                     .OrderBy(f => f.SortOrder)
-                    .Select(f => new
+                    .Select(f => new EntityFieldDto
                     {
-                        f.PropertyName,
-                        f.DisplayName,
-                        f.DataType,
-                        f.SortOrder,
-                        f.IsRequired,
-                        f.Length,
-                        f.EnumDefinitionId,
-                        f.IsMultiSelect
+                        Id = f.Id,
+                        PropertyName = f.PropertyName,
+                        DisplayName = new MultilingualText(f.DisplayName ?? new Dictionary<string, string?>()),
+                        DataType = f.DataType,
+                        Length = f.Length,
+                        Precision = f.Precision,
+                        Scale = f.Scale,
+                        IsRequired = f.IsRequired,
+                        IsEntityRef = f.IsEntityRef,
+                        ReferencedEntityId = f.ReferencedEntityId,
+                        TableName = f.TableName,
+                        SortOrder = f.SortOrder,
+                        DefaultValue = f.DefaultValue,
+                        ValidationRules = f.ValidationRules,
+                        Source = f.Source,
+                        EnumDefinitionId = f.EnumDefinitionId,
+                        IsMultiSelect = f.IsMultiSelect
                     }).ToList(),
                 Interfaces = definition.Interfaces
                     .Where(i => i.IsEnabled)
-                    .Select(i => new { i.InterfaceType, i.IsEnabled })
+                    .Select(i => new EntityInterfaceDto { Id = i.Id, InterfaceType = i.InterfaceType, IsEnabled = i.IsEnabled })
                     .ToList()
             };
 
-            return Results.Json(dto);
+            return Results.Ok(new SuccessResponse<EntityDefinitionDto>(dto));
         })
         .WithName("GetEntityDefinitionByRoute")
         .WithSummary("根据路由获取实体定义")
         .WithDescription("根据实体路由/名称获取实体定义（含字段、接口），支持系统实体")
+        .Produces<SuccessResponse<EntityDefinitionDto>>()
+        .Produces<ErrorResponse>(404)
         .AllowAnonymous();
 
         // 获取所有实体（包括禁用的）- 需要管理员权限
-
         entitiesGroup.MapGet("/all", async (AppDbContext db) =>
-
         {
-
             var entities = await db.EntityDefinitions
-
                 .OrderBy(ed => ed.Order)
-
-                .Select(ed => new
-
+                .Select(ed => new EntitySummaryDto
                 {
-
-                    entityType = ed.FullTypeName,
-
-                    entityRoute = ed.EntityRoute,
-
-                    entityName = ed.EntityName,
-
-                    displayName = ed.DisplayName,
-
-                    description = ed.Description,
-
-                    apiEndpoint = ed.ApiEndpoint,
-
-                    icon = ed.Icon,
-
-                    category = ed.Category,
-
-                    isEnabled = ed.IsEnabled,
-
-                    isRootEntity = ed.IsRootEntity,
-
-                    status = ed.Status
-
+                    EntityType = ed.FullTypeName,
+                    EntityRoute = ed.EntityRoute,
+                    EntityName = ed.EntityName,
+                    DisplayName = new MultilingualText(ed.DisplayName ?? new Dictionary<string, string?>()),
+                    Description = new MultilingualText(ed.Description ?? new Dictionary<string, string?>()),
+                    ApiEndpoint = ed.ApiEndpoint,
+                    Icon = ed.Icon,
+                    Category = ed.Category,
+                    IsEnabled = ed.IsEnabled,
+                    IsRootEntity = ed.IsRootEntity,
+                    Status = ed.Status
                 })
-
                 .ToListAsync();
 
-            return Results.Json(entities);
-
+            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(entities));
         })
-
         .WithName("GetAllEntities")
-
         .WithSummary("获取所有实体列表（包括禁用的）")
-
         .WithDescription("管理员用：获取所有实体的元数据，包括已禁用的")
-
+        .Produces<SuccessResponse<List<EntitySummaryDto>>>()
         .RequireAuthorization();
 
         // 验证实体路由是否有效
-
         entitiesGroup.MapGet("/{entityRoute}/validate", async (string entityRoute, AppDbContext db) =>
-
         {
-
             var entity = await db.EntityDefinitions
-
                 .Where(ed => ed.EntityRoute == entityRoute && ed.IsEnabled && ed.Status == EntityStatus.Published)
-
                 .FirstOrDefaultAsync();
 
             var isValid = entity != null;
+            var entityPayload = entity == null
+                ? null
+                : new
+                {
+                    entity.Id,
+                    entity.EntityName,
+                    entity.EntityRoute,
+                    entity.FullTypeName,
+                    entity.Source,
+                    entity.Status,
+                    entity.ApiEndpoint,
+                    entity.DisplayName
+                };
 
-            return Results.Json(new { isValid, entityRoute, entity });
-
+            return Results.Ok(new SuccessResponse<object>(new { isValid, entityRoute, entity = entityPayload }));
         })
-
         .WithName("ValidateEntityRoute")
-
         .WithSummary("验证实体路由")
-
         .WithDescription("检查指定的实体路由是否存在且可用")
-
+        .Produces<SuccessResponse<object>>()
         .AllowAnonymous();
 
         // ==================== 实体定义管理端点（需要认证）====================
-
         var group = app.MapGroup("/api/entity-definitions")
-
             .WithTags("实体定义管理")
-
             .WithOpenApi()
-
             .RequireAuthorization();
 
         // ==================== 查询 ====================
 
         // 获取所有实体定义列表
-
         group.MapGet("", async (AppDbContext db, HttpContext http) =>
-
         {
-
-            var lang = LangHelper.GetLang(http);
-
             var definitions = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields)
-
                 .Include(ed => ed.Interfaces)
-
                 .OrderByDescending(ed => ed.UpdatedAt)
-
-                .Select(ed => new
-
+                .Select(ed => new EntityListDto
                 {
-
-                    ed.Id,
-
-                    ed.Namespace,
-
-                    ed.EntityName,
-
-                    ed.FullTypeName,
-
-                    ed.EntityRoute,
-
-                    ed.DisplayName,
-
-                    ed.Description,
-
-                    ed.ApiEndpoint,
-
-                    ed.StructureType,
-
-                    ed.Status,
-
-                    ed.Source,
-
-                    ed.IsLocked,
-
-                    ed.IsRootEntity,
-
-                    ed.IsEnabled,
-
-                    ed.Order,
-
-                    ed.Icon,
-
-                    ed.Category,
-
-                    ed.CreatedAt,
-
-                    ed.UpdatedAt,
-
-                    ed.CreatedBy,
-
+                    Id = ed.Id,
+                    Namespace = ed.Namespace,
+                    EntityName = ed.EntityName,
+                    FullTypeName = ed.FullTypeName,
+                    EntityRoute = ed.EntityRoute,
+                    DisplayName = new MultilingualText(ed.DisplayName ?? new Dictionary<string, string?>()),
+                    Description = new MultilingualText(ed.Description ?? new Dictionary<string, string?>()),
+                    ApiEndpoint = ed.ApiEndpoint,
+                    StructureType = ed.StructureType,
+                    Status = ed.Status,
+                    Source = ed.Source,
+                    IsLocked = ed.IsLocked,
+                    IsRootEntity = ed.IsRootEntity,
+                    IsEnabled = ed.IsEnabled,
+                    Order = ed.Order,
+                    Icon = ed.Icon,
+                    Category = ed.Category,
+                    CreatedAt = ed.CreatedAt,
+                    UpdatedAt = ed.UpdatedAt,
+                    CreatedBy = ed.CreatedBy,
                     FieldCount = ed.Fields.Count,
-
-                    Interfaces = ed.Interfaces.Select(i => new
-
+                    Interfaces = ed.Interfaces.Select(i => new EntityInterfaceDto
                     {
-
-                        i.Id,
-
-                        i.InterfaceType,
-
-                        i.IsEnabled
-
+                        Id = i.Id,
+                        InterfaceType = i.InterfaceType,
+                        IsEnabled = i.IsEnabled
                     }).ToList()
-
                 })
-
                 .ToListAsync();
 
-            return Results.Json(definitions);
-
+            return Results.Ok(new SuccessResponse<List<EntityListDto>>(definitions));
         })
-
         .WithName("GetEntityDefinitions")
-
         .WithSummary("获取实体定义列表")
-
-        .WithDescription("获取所有实体定义的列表，包括字段数量和接口类型");
+        .WithDescription("获取所有实体定义的列表，包括字段数量和接口类型")
+        .Produces<SuccessResponse<List<EntityListDto>>>();
 
         // 获取单个实体定义详情
-
-        group.MapGet("/{id:guid}", async (
-
-            Guid id,
-
-            AppDbContext db) =>
-
+        group.MapGet("/{id:guid}", async (Guid id, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             var definition = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
-
                 .Include(ed => ed.Interfaces)
-
                 .FirstOrDefaultAsync(ed => ed.Id == id);
 
             if (definition == null)
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
-                return Results.NotFound(new { error = "实体定义不存在" });
-
-            // 多语言数据已直接存储在 jsonb 字段中，无需额外加载
-
-            return Results.Json(new
-
+            var dto = new EntityDefinitionDto
             {
-
-                definition.Id,
-
-                definition.Namespace,
-
-                definition.EntityName,
-
-                definition.FullTypeName,
-
-                definition.EntityRoute,
-
-                definition.DisplayName,      // Dictionary<string, string>? from jsonb
-
-                definition.Description,      // Dictionary<string, string>? from jsonb
-
-                definition.ApiEndpoint,
-
-                definition.StructureType,
-
-                definition.Status,
-
-                definition.Source,
-
-                definition.IsLocked,
-
-                definition.IsRootEntity,
-
-                definition.IsEnabled,
-
-                definition.Order,
-
-                definition.Icon,
-
-                definition.Category,
-
-                definition.CreatedAt,
-
-                definition.UpdatedAt,
-
-                definition.CreatedBy,
-
-                definition.UpdatedBy,
-
+                Id = definition.Id,
+                Namespace = definition.Namespace,
+                EntityName = definition.EntityName,
+                FullTypeName = definition.FullTypeName,
+                EntityRoute = definition.EntityRoute,
+                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
+                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                ApiEndpoint = definition.ApiEndpoint,
+                StructureType = definition.StructureType,
+                Status = definition.Status,
+                Source = definition.Source,
+                IsLocked = definition.IsLocked,
+                IsRootEntity = definition.IsRootEntity,
+                IsEnabled = definition.IsEnabled,
+                Order = definition.Order,
+                Icon = definition.Icon,
+                Category = definition.Category,
+                CreatedAt = definition.CreatedAt,
+                UpdatedAt = definition.UpdatedAt,
+                CreatedBy = definition.CreatedBy,
+                UpdatedBy = definition.UpdatedBy,
                 Fields = definition.Fields
-                    .Where(f => !f.IsDeleted)  // 过滤已删除的字段
+                    .Where(f => !f.IsDeleted)
                     .OrderBy(f => f.SortOrder)
-                    .Select(f => new
-
+                    .Select(f => new EntityFieldDto
+                    {
+                        Id = f.Id,
+                        PropertyName = f.PropertyName,
+                        DisplayName = new MultilingualText(f.DisplayName ?? new Dictionary<string, string?>()),
+                        DataType = f.DataType,
+                        Length = f.Length,
+                        Precision = f.Precision,
+                        Scale = f.Scale,
+                        IsRequired = f.IsRequired,
+                        IsEntityRef = f.IsEntityRef,
+                        ReferencedEntityId = f.ReferencedEntityId,
+                        TableName = f.TableName,
+                        SortOrder = f.SortOrder,
+                        DefaultValue = f.DefaultValue,
+                        ValidationRules = f.ValidationRules,
+                        Source = f.Source,
+                        EnumDefinitionId = f.EnumDefinitionId,
+                        IsMultiSelect = f.IsMultiSelect
+                    }).ToList(),
+                Interfaces = definition.Interfaces.Select(i => new EntityInterfaceDto
                 {
+                    Id = i.Id,
+                    InterfaceType = i.InterfaceType,
+                    IsEnabled = i.IsEnabled
+                }).ToList()
+            };
 
-                    f.Id,
-
-                    f.PropertyName,
-
-                    f.DisplayName,           // Dictionary<string, string>? from jsonb
-
-                    f.DataType,
-
-                    f.Length,
-
-                    f.Precision,
-
-                    f.Scale,
-
-                    f.IsRequired,
-
-                    f.IsEntityRef,
-
-                    f.ReferencedEntityId,
-
-                    f.TableName,
-
-                    f.SortOrder,
-
-                    f.DefaultValue,
-
-                    f.ValidationRules,
-
-                    f.Source
-
-                }),
-
-                Interfaces = definition.Interfaces.Select(i => new
-
-                {
-
-                    i.Id,
-
-                    i.InterfaceType,
-
-                    i.IsEnabled
-
-                })
-
-            });
-
+            return Results.Ok(new SuccessResponse<EntityDefinitionDto>(dto));
         })
-
         .WithName("GetEntityDefinition")
-
         .WithSummary("获取实体定义详情")
-
-        .WithDescription("获取指定实体定义的完整信息，包括所有字段、接口和多语言数据");
+        .WithDescription("获取指定实体定义的完整信息，包括所有字段、接口和多语言数据")
+        .Produces<SuccessResponse<EntityDefinitionDto>>()
+        .Produces<ErrorResponse>(404);
 
         // 根据实体类型名称获取实体定义（用于表单设计器）
-
-        group.MapGet("/by-type/{entityType}", async (string entityType, AppDbContext db) =>
-
+        group.MapGet("/by-type/{entityType}", async (string entityType, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             var normalized = entityType?.Trim();
 
             var definition = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
-
                 .Include(ed => ed.Interfaces)
-
                 .FirstOrDefaultAsync(ed =>
                     ed.FullName == normalized ||
                     ed.FullTypeName == normalized ||
@@ -484,467 +359,365 @@ public static class EntityDefinitionEndpoints
                     ed.EntityName == normalized);
 
             if (definition == null)
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
-                return Results.NotFound(new { error = "实体定义不存在" });
+            var dto = new EntityDefinitionDto
+            {
+                Id = definition.Id,
+                Namespace = definition.Namespace,
+                EntityName = definition.EntityName,
+                FullTypeName = definition.FullTypeName,
+                EntityRoute = definition.EntityRoute,
+                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
+                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                ApiEndpoint = definition.ApiEndpoint,
+                StructureType = definition.StructureType,
+                Status = definition.Status,
+                Source = definition.Source,
+                IsLocked = definition.IsLocked,
+                IsRootEntity = definition.IsRootEntity,
+                IsEnabled = definition.IsEnabled,
+                Order = definition.Order,
+                Icon = definition.Icon,
+                Category = definition.Category,
+                CreatedAt = definition.CreatedAt,
+                UpdatedAt = definition.UpdatedAt,
+                CreatedBy = definition.CreatedBy,
+                UpdatedBy = definition.UpdatedBy,
+                Fields = definition.Fields
+                    .Where(f => !f.IsDeleted)
+                    .OrderBy(f => f.SortOrder)
+                    .Select(f => new EntityFieldDto
+                    {
+                        Id = f.Id,
+                        PropertyName = f.PropertyName,
+                        DisplayName = new MultilingualText(f.DisplayName ?? new Dictionary<string, string?>()),
+                        DataType = f.DataType,
+                        Length = f.Length,
+                        Precision = f.Precision,
+                        Scale = f.Scale,
+                        IsRequired = f.IsRequired,
+                        IsEntityRef = f.IsEntityRef,
+                        ReferencedEntityId = f.ReferencedEntityId,
+                        TableName = f.TableName,
+                        SortOrder = f.SortOrder,
+                        DefaultValue = f.DefaultValue,
+                        ValidationRules = f.ValidationRules,
+                        Source = f.Source,
+                        EnumDefinitionId = f.EnumDefinitionId,
+                        IsMultiSelect = f.IsMultiSelect
+                    }).ToList(),
+                Interfaces = definition.Interfaces.Select(i => new EntityInterfaceDto
+                {
+                    Id = i.Id,
+                    InterfaceType = i.InterfaceType,
+                    IsEnabled = i.IsEnabled
+                }).ToList()
+            };
 
-            return Results.Json(definition);
-
+            return Results.Ok(new SuccessResponse<EntityDefinitionDto>(dto));
         })
-
         .WithName("GetEntityDefinitionByType")
-
         .WithSummary("根据类型名称获取实体定义")
-
-        .WithDescription("根据实体的完整类型名称获取实体定义，用于表单设计器中的实体元数据树");
+        .WithDescription("根据实体的完整类型名称获取实体定义，用于表单设计器中的实体元数据树")
+        .Produces<SuccessResponse<EntityDefinitionDto>>()
+        .Produces<ErrorResponse>(404);
 
         // 检查实体是否被引用
-
-        group.MapGet("/{id:guid}/referenced", async (Guid id, AppDbContext db) =>
-
+        group.MapGet("/{id:guid}/referenced", async (Guid id, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             var definition = await db.EntityDefinitions.FindAsync(id);
 
             if (definition == null)
-
-                return Results.NotFound(new { error = "实体定义不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
             // 检查是否被FormTemplate引用
-
             var templateCount = await db.FormTemplates
-
                 .Where(t => t.EntityType == definition.FullName)
-
                 .CountAsync();
 
-            return Results.Json(new
-
+            return Results.Ok(new SuccessResponse<EntityReferenceCheckDto>(new EntityReferenceCheckDto
             {
-
-                isReferenced = templateCount > 0,
-
-                referenceCount = templateCount,
-
-                referencedBy = new
-
+                IsReferenced = templateCount > 0,
+                ReferenceCount = templateCount,
+                ReferencedBy = new ReferenceDetailsDto
                 {
-
-                    formTemplates = templateCount
-
+                    FormTemplates = templateCount
                 }
-
-            });
-
+            }));
         })
-
         .WithName("CheckEntityReferenced")
-
         .WithSummary("检查实体是否被引用")
-
-        .WithDescription("检查实体定义是否被模板或其他地方引用");
+        .WithDescription("检查实体定义是否被模板或其他地方引用")
+        .Produces<SuccessResponse<EntityReferenceCheckDto>>()
+        .Produces<ErrorResponse>(404);
 
         // ==================== 创建 ====================
 
         // 创建新实体定义
-
         group.MapPost("", async (
-
             CreateEntityDefinitionDto dto,
-
             AppDbContext db,
-
             HttpContext http,
-
+            ILocalization loc,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
             logger.LogInformation("[EntityDefinition] Creating new entity: {Namespace}.{EntityName}",
-
                 dto.Namespace, dto.EntityName);
 
             // 验证必填字段
-
             if (string.IsNullOrWhiteSpace(dto.Namespace))
-
-                return Results.BadRequest(new { error = "命名空间不能为空" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_NAMESPACE_REQUIRED", lang), "VALIDATION_ERROR"));
 
             if (string.IsNullOrWhiteSpace(dto.EntityName))
-
-                return Results.BadRequest(new { error = "实体名不能为空" });
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_NAME_REQUIRED", lang), "VALIDATION_ERROR"));
 
             // 验证多语言显示名
-
             if (dto.DisplayName == null || !dto.DisplayName.Any() ||
-
                 !dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-
             {
-
-                return Results.BadRequest(new { error = "显示名至少需要提供一种语言的文本" });
-
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_DISPLAY_NAME_REQUIRED", lang), "VALIDATION_ERROR"));
             }
 
             // 检查是否已存在同名实体
-
             var exists = await db.EntityDefinitions
-
                 .AnyAsync(ed => ed.Namespace == dto.Namespace && ed.EntityName == dto.EntityName);
 
             if (exists)
-
             {
-
                 logger.LogWarning("[EntityDefinition] Entity already exists: {Namespace}.{EntityName}",
-
                     dto.Namespace, dto.EntityName);
-
-                return Results.Conflict(new { error = "实体已存在" });
-
+                return Results.Conflict(new ErrorResponse(loc.T("ERR_ENTITY_EXISTS", lang), "ENTITY_EXISTS"));
             }
 
             // 创建实体定义（直接保存 jsonb 多语言数据）
-
             var definition = new EntityDefinition
-
             {
-
                 Namespace = dto.Namespace,
-
                 EntityName = dto.EntityName,
-
                 DisplayName = dto.DisplayName,  // 直接赋值 Dictionary，EF Core 自动转 jsonb
-
                 Description = dto.Description?.Any(kvp => !string.IsNullOrWhiteSpace(kvp.Value)) == true
-
                     ? dto.Description
-
                     : null,
-
-                StructureType = dto.StructureType ?? EntityStructureType.Single,
-
+                StructureType = string.IsNullOrWhiteSpace(dto.StructureType) ? EntityStructureType.Single : dto.StructureType,
                 Status = EntityStatus.Draft,
-
                 CreatedBy = uid,
-
                 UpdatedBy = uid
-
             };
 
             // 添加字段
-
             if (dto.Fields != null)
-
             {
-
                 foreach (var fieldDto in dto.Fields)
-
                 {
-
                     // 验证字段显示名
-
                     if (fieldDto.DisplayName == null || !fieldDto.DisplayName.Any() ||
-
                         !fieldDto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-
                     {
-
-                        return Results.BadRequest(new
-
-                        {
-
-                            error = $"字段 {fieldDto.PropertyName} 的显示名至少需要提供一种语言的文本"
-
-                        });
-
+                        var message = string.Format(loc.T("ERR_FIELD_DISPLAY_NAME_REQUIRED", lang), fieldDto.PropertyName);
+                        return Results.BadRequest(new ErrorResponse(message, "VALIDATION_ERROR"));
                     }
 
                     definition.Fields.Add(new FieldMetadata
-
                     {
-
                         PropertyName = fieldDto.PropertyName,
-
                         DisplayName = fieldDto.DisplayName,  // 直接赋值 Dictionary，EF Core 自动转 jsonb
-
                         DataType = fieldDto.DataType,
-
                         Length = fieldDto.Length,
-
                         Precision = fieldDto.Precision,
-
                         Scale = fieldDto.Scale,
-
                         IsRequired = fieldDto.IsRequired,
-
                         IsEntityRef = fieldDto.IsEntityRef,
-
                         ReferencedEntityId = fieldDto.ReferencedEntityId,
-
                         SortOrder = fieldDto.SortOrder,
-
                         DefaultValue = fieldDto.DefaultValue,
-
                         ValidationRules = fieldDto.ValidationRules
-
                     });
-
                 }
-
             }
 
             // 添加接口
-
             if (dto.Interfaces != null)
-
             {
-
                 foreach (var interfaceType in dto.Interfaces)
-
                 {
-
                     definition.Interfaces.Add(new EntityInterface
-
                     {
-
                         InterfaceType = interfaceType,
-
                         IsEnabled = true
-
                     });
 
                     // 根据接口类型自动添加字段
-
                     var interfaceFields = InterfaceFieldMapping.GetFields(interfaceType);
-
                     foreach (var ifField in interfaceFields)
-
                     {
-
                         // 检查字段是否已存在
-
                         if (!definition.Fields.Any(f => f.PropertyName == ifField.PropertyName))
-
                         {
-
                             definition.Fields.Add(new FieldMetadata
-
                             {
-
                                 PropertyName = ifField.PropertyName,
-
                                 DisplayName = null,  // 接口字段暂不提供默认多语言
-
                                 DataType = ifField.DataType,
-
                                 Length = ifField.Length,
-
                                 IsRequired = ifField.IsRequired,
-
                                 IsEntityRef = ifField.IsEntityRef,
-
                                 TableName = ifField.ReferenceTable,
-
                                 DefaultValue = ifField.DefaultValue,
-
                                 SortOrder = 0 // 接口字段排在前面
-
                             });
-
                         }
-
                     }
-
                 }
-
             }
 
             db.EntityDefinitions.Add(definition);
-
             await db.SaveChangesAsync();
 
             logger.LogInformation("[EntityDefinition] Entity created successfully: {Id}", definition.Id);
 
-            return Results.Created($"/api/entity-definitions/{definition.Id}", definition);
+            // Return DTO
+            var resultDto = new EntityDefinitionDto
+            {
+                Id = definition.Id,
+                Namespace = definition.Namespace,
+                EntityName = definition.EntityName,
+                FullTypeName = definition.FullTypeName,
+                EntityRoute = definition.EntityRoute,
+                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
+                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                ApiEndpoint = definition.ApiEndpoint,
+                StructureType = definition.StructureType,
+                Status = definition.Status,
+                Source = definition.Source,
+                IsLocked = definition.IsLocked,
+                IsRootEntity = definition.IsRootEntity,
+                IsEnabled = definition.IsEnabled,
+                Order = definition.Order,
+                Icon = definition.Icon,
+                Category = definition.Category,
+                CreatedAt = definition.CreatedAt,
+                UpdatedAt = definition.UpdatedAt,
+                CreatedBy = definition.CreatedBy,
+                UpdatedBy = definition.UpdatedBy
+            };
 
+            return Results.Created($"/api/entity-definitions/{definition.Id}", new SuccessResponse<EntityDefinitionDto>(resultDto));
         })
-
         .WithName("CreateEntityDefinition")
-
         .WithSummary("创建实体定义")
-
-        .WithDescription("创建新的实体定义，可包含字段和接口");
+        .WithDescription("创建新的实体定义，可包含字段和接口")
+        .Produces<SuccessResponse<EntityDefinitionDto>>(201)
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(409);
 
         // ==================== 更新 ====================
 
         // 更新实体定义
-
         group.MapPut("/{id:guid}", async (
-
             Guid id,
-
             UpdateEntityDefinitionDto dto,
-
             AppDbContext db,
-
             HttpContext http,
-
+            ILocalization loc,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
             var definition = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields)
-
                 .Include(ed => ed.Interfaces)
-
                 .FirstOrDefaultAsync(ed => ed.Id == id);
 
             if (definition == null)
-
-                return Results.NotFound(new { error = "实体定义不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
             logger.LogInformation("[EntityDefinition] Updating entity: {Id}, IsLocked={IsLocked}",
-
                 id, definition.IsLocked);
 
             // 如果实体已被引用锁定，则进行严格校验
-
             if (definition.IsLocked)
-
             {
-
                 // 不允许修改命名空间和实体名
-
                 if (dto.Namespace != null && dto.Namespace != definition.Namespace)
-
-                    return Results.BadRequest(new { error = "实体已被引用，不能修改命名空间" });
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_LOCKED_NAMESPACE", lang), "ENTITY_LOCKED"));
 
                 if (dto.EntityName != null && dto.EntityName != definition.EntityName)
-
-                    return Results.BadRequest(new { error = "实体已被引用，不能修改实体名" });
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_LOCKED_NAME", lang), "ENTITY_LOCKED"));
 
                 // 检查字段删除
-
                 if (dto.Fields != null)
-
                 {
-
                     var existingFieldIds = definition.Fields.Select(f => f.Id).ToHashSet();
-
                     var newFieldIds = dto.Fields.Select(f => f.Id).Where(id => id.HasValue).Select(id => id!.Value).ToHashSet();
-
                     var deletedFieldIds = existingFieldIds.Except(newFieldIds).ToList();
 
                     if (deletedFieldIds.Any())
-
                     {
-
                         logger.LogWarning("[EntityDefinition] Cannot delete fields when entity is locked: {FieldIds}",
-
                             string.Join(", ", deletedFieldIds));
-
-                        return Results.BadRequest(new { error = "实体已被引用，不能删除字段" });
-
+                        return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_LOCKED_DELETE_FIELD", lang), "ENTITY_LOCKED"));
                     }
 
                     // 检查字段类型修改和长度缩小
-
                     foreach (var fieldDto in dto.Fields.Where(f => f.Id.HasValue))
-
                     {
-
                         var existingField = definition.Fields.FirstOrDefault(f => f.Id == fieldDto.Id!.Value);
-
                         if (existingField != null)
-
                         {
-
                             if (fieldDto.DataType != null && fieldDto.DataType != existingField.DataType)
-
-                                return Results.BadRequest(new { error = $"字段 {existingField.PropertyName} 已被引用，不能修改数据类型" });
+                                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FIELD_LOCKED_TYPE_CHANGE", lang), existingField.PropertyName), "ENTITY_LOCKED"));
 
                             if (fieldDto.Length.HasValue && fieldDto.Length < existingField.Length)
-
-                                return Results.BadRequest(new { error = $"字段 {existingField.PropertyName} 的长度只能增大，不能缩小" });
-
+                                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FIELD_LOCKED_LENGTH_DECREASE", lang), existingField.PropertyName), "ENTITY_LOCKED"));
                         }
-
                     }
-
                 }
 
                 // 检查接口删除
-
                 if (dto.Interfaces != null)
-
                 {
-
                     var existingInterfaceTypes = definition.Interfaces.Where(i => i.IsLocked).Select(i => i.InterfaceType).ToHashSet();
-
                     var removedInterfaces = existingInterfaceTypes.Except(dto.Interfaces).ToList();
 
                     if (removedInterfaces.Any())
-
                     {
-
                         logger.LogWarning("[EntityDefinition] Cannot remove locked interfaces: {Interfaces}",
-
                             string.Join(", ", removedInterfaces));
-
-                        return Results.BadRequest(new { error = "实体已被引用，不能删除已锁定的接口" });
-
+                        return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_LOCKED_DELETE_INTERFACE", lang), "ENTITY_LOCKED"));
                     }
-
                 }
-
             }
 
             // 更新基本信息
-
             if (dto.Namespace != null) definition.Namespace = dto.Namespace;
-
             if (dto.EntityName != null) definition.EntityName = dto.EntityName;
-
             if (dto.StructureType != null) definition.StructureType = dto.StructureType;
 
             // 更新多语言显示名（直接更新 jsonb 字段）
-
             if (dto.DisplayName != null && dto.DisplayName.Any() &&
-
                 dto.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-
             {
-
                 definition.DisplayName = dto.DisplayName;  // EF Core 自动更新 jsonb
-
             }
 
             // 更新多语言描述（直接更新 jsonb 字段）
-
             if (dto.Description != null && dto.Description.Any() &&
-
                 dto.Description.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-
             {
-
                 definition.Description = dto.Description;  // EF Core 自动更新 jsonb
-
             }
 
             definition.UpdatedAt = DateTime.UtcNow;
-
             definition.UpdatedBy = uid;
 
             // 如果状态是Published，改为Modified
-
             if (definition.Status == EntityStatus.Published)
-
                 definition.Status = EntityStatus.Modified;
 
             // 更新字段列表
@@ -962,13 +735,13 @@ public static class EntityDefinitionEndpoints
                     if (field.Source == FieldSource.System)
                     {
                         logger.LogWarning("[EntityDefinition] Cannot delete System field: {FieldName}", field.PropertyName);
-                        return Results.BadRequest(new { error = $"系统字段 {field.PropertyName} 不能删除" });
+                        return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_SYSTEM_FIELD_DELETE", lang), field.PropertyName), "VALIDATION_ERROR"));
                     }
 
                     if (field.Source == FieldSource.Interface)
                     {
                         logger.LogWarning("[EntityDefinition] Cannot delete Interface field: {FieldName}", field.PropertyName);
-                        return Results.BadRequest(new { error = $"接口字段 {field.PropertyName} 不能删除，请移除相应的接口" });
+                        return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_INTERFACE_FIELD_DELETE", lang), field.PropertyName), "VALIDATION_ERROR"));
                     }
 
                     // Custom字段：软删除（标记为已删除）
@@ -976,9 +749,6 @@ public static class EntityDefinitionEndpoints
                     field.IsDeleted = true;
                     field.DeletedAt = DateTime.UtcNow;
                     field.DeletedBy = uid;
-
-                    // 如果是已发布的实体，需要生成ALTER TABLE语句将字段改为可空
-                    // 这部分逻辑在发布修改时处理
                 }
 
                 // 更新或添加字段
@@ -1090,7 +860,7 @@ public static class EntityDefinitionEndpoints
                             definition.Fields.Add(new FieldMetadata
                             {
                                 PropertyName = ifField.PropertyName,
-                                DisplayName = null,
+                                DisplayName = null,  // 接口字段暂不提供默认多语言
                                 DataType = ifField.DataType,
                                 Length = ifField.Length,
                                 IsRequired = ifField.IsRequired,
@@ -1109,108 +879,105 @@ public static class EntityDefinitionEndpoints
 
             logger.LogInformation("[EntityDefinition] Entity updated successfully: {Id}", id);
 
-            return Results.Ok(definition);
+            // Construct response DTO
+            var resultDto = new EntityDefinitionDto
+            {
+                Id = definition.Id,
+                Namespace = definition.Namespace,
+                EntityName = definition.EntityName,
+                FullTypeName = definition.FullTypeName,
+                EntityRoute = definition.EntityRoute,
+                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
+                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                ApiEndpoint = definition.ApiEndpoint,
+                StructureType = definition.StructureType,
+                Status = definition.Status,
+                Source = definition.Source,
+                IsLocked = definition.IsLocked,
+                IsRootEntity = definition.IsRootEntity,
+                IsEnabled = definition.IsEnabled,
+                Order = definition.Order,
+                Icon = definition.Icon,
+                Category = definition.Category,
+                CreatedAt = definition.CreatedAt,
+                UpdatedAt = definition.UpdatedAt,
+                CreatedBy = definition.CreatedBy,
+                UpdatedBy = definition.UpdatedBy
+            };
 
+            return Results.Ok(new SuccessResponse<EntityDefinitionDto>(resultDto));
         })
-
         .WithName("UpdateEntityDefinition")
-
         .WithSummary("更新实体定义")
-
-        .WithDescription("更新实体定义，如果实体已被引用则受到限制");
+        .WithDescription("更新实体定义，如果实体已被引用则受到限制")
+        .Produces<SuccessResponse<EntityDefinitionDto>>()
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(404);
 
         // ==================== 删除 ====================
 
         // 删除实体定义
-
         group.MapDelete("/{id:guid}", async (
-
             Guid id,
-
             AppDbContext db,
-
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             var definition = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields)
-
                 .Include(ed => ed.Interfaces)
-
                 .FirstOrDefaultAsync(ed => ed.Id == id);
 
             if (definition == null)
-
-                return Results.NotFound(new { error = "实体定义不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
             // 检查是否已发布
-
             if (definition.Status == EntityStatus.Published)
-
             {
-
                 logger.LogWarning("[EntityDefinition] Cannot delete published entity: {Id}", id);
-
-                return Results.BadRequest(new { error = "已发布的实体不能直接删除，请先撤销发布" });
-
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_PUBLISHED_DELETE", lang), "ENTITY_PUBLISHED"));
             }
 
             // 检查是否被引用
-
             var templateCount = await db.FormTemplates
-
                 .Where(t => t.EntityType == definition.FullName)
-
                 .CountAsync();
 
             if (templateCount > 0)
-
             {
-
                 logger.LogWarning("[EntityDefinition] Cannot delete referenced entity: {Id}, TemplateCount={Count}",
-
                     id, templateCount);
-
-                return Results.BadRequest(new { error = "实体已被模板引用，不能删除" });
-
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ENTITY_REFERENCED_DELETE", lang), "ENTITY_REFERENCED"));
             }
 
             db.EntityDefinitions.Remove(definition);
-
             await db.SaveChangesAsync();
 
             logger.LogInformation("[EntityDefinition] Entity deleted successfully: {Id}", id);
 
-            return Results.NoContent();
-
+            return Results.Ok(new SuccessResponse(loc.T("MSG_ENTITY_DELETE_SUCCESS", lang)));
         })
-
         .WithName("DeleteEntityDefinition")
-
         .WithSummary("删除实体定义")
-
-        .WithDescription("删除实体定义（仅限草稿状态且未被引用）");
+        .WithDescription("删除实体定义（仅限草稿状态且未被引用）")
+        .Produces<SuccessResponse>()
+        .Produces<ErrorResponse>(400)
+        .Produces<ErrorResponse>(404);
 
         // ==================== 发布 ====================
 
         // 发布新实体（CREATE TABLE）
-
         group.MapPost("/{id:guid}/publish", async (
-
             Guid id,
-
             AppDbContext db,
-
             Services.IEntityPublishingService publishService,
-
             HttpContext http,
-
+            ILocalization loc,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
             logger.LogInformation("[Publish] Publishing new entity: {Id}", id);
@@ -1218,72 +985,60 @@ public static class EntityDefinitionEndpoints
             var result = await publishService.PublishNewEntityAsync(id, uid);
 
             if (!result.Success)
-
             {
-
                 logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
-
-                return Results.BadRequest(new { error = result.ErrorMessage });
-
+                return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? loc.T("ERR_PUBLISH_FAILED", lang), "PUBLISH_FAILED"));
             }
 
-            return Results.Ok(new
+            return Results.Ok(new SuccessResponse<PublishResultDto>(new PublishResultDto
             {
-                success = true,
-                scriptId = result.ScriptId,
-                ddlScript = result.DDLScript,
-                templates = result.Templates.Select(t => new
+                Success = true,
+                ScriptId = result.ScriptId,
+                DdlScript = result.DDLScript,
+                Templates = result.Templates.Select(t => new TemplateInfoDto
                 {
-                    viewState = t.ViewState,
-                    templateId = t.TemplateId,
-                    templateName = t.TemplateName
+                    ViewState = t.ViewState,
+                    TemplateId = t.TemplateId,
+                    TemplateName = t.TemplateName
                 }),
-                bindings = result.TemplateBindings.Select(b => new
+                Bindings = result.TemplateBindings.Select(b => new TemplateBindingInfoDto
                 {
-                    viewState = b.ViewState,
-                    usage = b.UsageType,
-                    usageType = b.UsageType,
-                    bindingId = b.BindingId,
-                    templateId = b.TemplateId,
-                    requiredPermission = b.RequiredFunctionCode
+                    ViewState = b.ViewState,
+                    Usage = b.UsageType.ToString(),
+                    UsageType = b.UsageType.ToString(),
+                    BindingId = b.BindingId,
+                    TemplateId = b.TemplateId,
+                    RequiredPermission = b.RequiredFunctionCode
                 }),
-                menus = result.MenuNodes.Select(m => new
+                Menus = result.MenuNodes.Select(m => new MenuNodeInfoDto
                 {
-                    m.Code,
-                    nodeId = m.NodeId,
-                    parentId = m.ParentId,
-                    m.Route,
-                    viewState = m.ViewState,
-                    usage = m.UsageType,
-                    usageType = m.UsageType
+                    Code = m.Code,
+                    NodeId = m.NodeId,
+                    ParentId = m.ParentId,
+                    Route = m.Route,
+                    ViewState = m.ViewState,
+                    Usage = m.UsageType.ToString(),
+                    UsageType = m.UsageType.ToString()
                 }),
-                message = "实体发布成功"
-            });
-
+                Message = loc.T("MSG_ENTITY_PUBLISH_SUCCESS", lang)
+            }));
         })
-
         .WithName("PublishEntity")
-
         .WithSummary("发布新实体")
-
-        .WithDescription("发布新实体定义，生成并执行CREATE TABLE语句");
+        .WithDescription("发布新实体定义，生成并执行CREATE TABLE语句")
+        .Produces<SuccessResponse<PublishResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 发布实体修改（ALTER TABLE）
-
         group.MapPost("/{id:guid}/publish-changes", async (
-
             Guid id,
-
             AppDbContext db,
-
             Services.IEntityPublishingService publishService,
-
             HttpContext http,
-
+            ILocalization loc,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
 
             logger.LogInformation("[Publish] Publishing changes for entity: {Id}", id);
@@ -1291,824 +1046,398 @@ public static class EntityDefinitionEndpoints
             var result = await publishService.PublishEntityChangesAsync(id, uid);
 
             if (!result.Success)
-
             {
-
                 logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
-
-                return Results.BadRequest(new { error = result.ErrorMessage });
-
+                return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? loc.T("ERR_PUBLISH_FAILED", lang), "PUBLISH_FAILED"));
             }
 
-            return Results.Ok(new
-
+            return Results.Ok(new SuccessResponse<PublishResultDto>(new PublishResultDto
             {
-
-                success = true,
-
-                scriptId = result.ScriptId,
-
-                ddlScript = result.DDLScript,
-
-                changeAnalysis = new
-
+                Success = true,
+                ScriptId = result.ScriptId,
+                DdlScript = result.DDLScript,
+                ChangeAnalysis = new ChangeAnalysisDto
                 {
-
-                    newFieldsCount = result.ChangeAnalysis?.NewFields.Count ?? 0,
-
-                    lengthIncreasesCount = result.ChangeAnalysis?.LengthIncreases.Count ?? 0,
-
-                    hasDestructiveChanges = result.ChangeAnalysis?.HasDestructiveChanges ?? false
-
+                    NewFieldsCount = result.ChangeAnalysis?.NewFields.Count ?? 0,
+                    LengthIncreasesCount = result.ChangeAnalysis?.LengthIncreases.Count ?? 0,
+                    HasDestructiveChanges = result.ChangeAnalysis?.HasDestructiveChanges ?? false
                 },
-
-                templates = result.Templates.Select(t => new
+                Templates = result.Templates.Select(t => new TemplateInfoDto
                 {
-                    viewState = t.ViewState,
-                    templateId = t.TemplateId,
-                    templateName = t.TemplateName
+                    ViewState = t.ViewState,
+                    TemplateId = t.TemplateId,
+                    TemplateName = t.TemplateName
                 }),
-                bindings = result.TemplateBindings.Select(b => new
+                Bindings = result.TemplateBindings.Select(b => new TemplateBindingInfoDto
                 {
-                    viewState = b.ViewState,
-                    usage = b.UsageType,
-                    usageType = b.UsageType,
-                    bindingId = b.BindingId,
-                    templateId = b.TemplateId,
-                    requiredPermission = b.RequiredFunctionCode
+                    ViewState = b.ViewState,
+                    Usage = b.UsageType.ToString(),
+                    UsageType = b.UsageType.ToString(),
+                    BindingId = b.BindingId,
+                    TemplateId = b.TemplateId,
+                    RequiredPermission = b.RequiredFunctionCode
                 }),
-                menus = result.MenuNodes.Select(m => new
+                Menus = result.MenuNodes.Select(m => new MenuNodeInfoDto
                 {
-                    m.Code,
-                    nodeId = m.NodeId,
-                    parentId = m.ParentId,
-                    m.Route,
-                    viewState = m.ViewState,
-                    usage = m.UsageType,
-                    usageType = m.UsageType
+                    Code = m.Code,
+                    NodeId = m.NodeId,
+                    ParentId = m.ParentId,
+                    Route = m.Route,
+                    ViewState = m.ViewState,
+                    Usage = m.UsageType.ToString(),
+                    UsageType = m.UsageType.ToString()
                 }),
-
-                message = "实体修改发布成功"
-
-            });
-
+                Message = loc.T("MSG_ENTITY_CHANGE_PUBLISH_SUCCESS", lang)
+            }));
         })
-
         .WithName("PublishEntityChanges")
-
         .WithSummary("发布实体修改")
-
-        .WithDescription("发布实体定义的修改，生成并执行ALTER TABLE语句");
+        .WithDescription("发布实体定义的修改，生成并执行ALTER TABLE语句")
+        .Produces<SuccessResponse<PublishResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 预览DDL脚本（不执行）
-
         group.MapGet("/{id:guid}/preview-ddl", async (
-
             Guid id,
-
             AppDbContext db,
-
-            Services.PostgreSQLDDLGenerator ddlGenerator) =>
-
+            Services.PostgreSQLDDLGenerator ddlGenerator,
+            ILocalization loc,
+            HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             var definition = await db.EntityDefinitions
-
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
-
                 .Include(ed => ed.Interfaces)
-
                 .FirstOrDefaultAsync(ed => ed.Id == id);
 
             if (definition == null)
-
-                return Results.NotFound(new { error = "实体定义不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
 
             string ddlScript;
 
             if (definition.Status == EntityStatus.Draft)
-
             {
-
                 ddlScript = ddlGenerator.GenerateCreateTableScript(definition);
-
             }
-
             else if (definition.Status == EntityStatus.Modified)
-
             {
-
                 // 简化实现：只显示添加字段的脚本
-
                 var newFields = definition.Fields.Where(f => f.CreatedAt > definition.UpdatedAt.AddMinutes(-5)).ToList();
-
                 if (newFields.Any())
-
                 {
-
                     ddlScript = ddlGenerator.GenerateAlterTableAddColumns(definition, newFields);
-
                 }
-
                 else
-
                 {
-
-                    ddlScript = "-- 无变更";
-
+                    ddlScript = loc.T("MSG_NO_CHANGES", lang);
                 }
-
             }
-
             else
-
             {
-
-                ddlScript = "-- 实体已发布，无待发布的变更";
-
+                ddlScript = loc.T("MSG_NO_PENDING_CHANGES", lang);
             }
 
-            return Results.Ok(new
-
+            return Results.Ok(new SuccessResponse<PreviewDdlResultDto>(new PreviewDdlResultDto
             {
-
-                entityId = id,
-
-                entityName = definition.EntityName,
-
-                status = definition.Status,
-
-                ddlScript
-
-            });
-
+                EntityId = id,
+                EntityName = definition.EntityName,
+                Status = definition.Status,
+                DdlScript = ddlScript
+            }));
         })
-
         .WithName("PreviewDDL")
-
         .WithSummary("预览DDL脚本")
-
-        .WithDescription("预览将要执行的DDL脚本（不实际执行）");
+        .WithDescription("预览将要执行的DDL脚本（不实际执行）")
+        .Produces<SuccessResponse<PreviewDdlResultDto>>()
+        .Produces<ErrorResponse>(404);
 
         // 获取DDL执行历史
-
         group.MapGet("/{id:guid}/ddl-history", async (
-
             Guid id,
-
             AppDbContext db,
-
             Services.DDLExecutionService ddlExecutor) =>
-
         {
-
             var history = await ddlExecutor.GetDDLHistoryAsync(id);
 
-            return Results.Ok(history.Select(h => new
-
+            var dtos = history.Select(h => new DdlExecutionHistoryDto
             {
+                Id = h.Id,
+                ScriptType = h.ScriptType,
+                Status = h.Status,
+                CreatedAt = h.CreatedAt,
+                ExecutedAt = h.ExecutedAt,
+                CreatedBy = h.CreatedBy,
+                ErrorMessage = h.ErrorMessage,
+                ScriptPreview = h.SqlScript.Length > 200 ? h.SqlScript.Substring(0, 200) + "..." : h.SqlScript
+            }).ToList();
 
-                h.Id,
-
-                h.ScriptType,
-
-                h.Status,
-
-                h.CreatedAt,
-
-                h.ExecutedAt,
-
-                h.CreatedBy,
-
-                h.ErrorMessage,
-
-                scriptPreview = h.SqlScript.Length > 200 ? h.SqlScript.Substring(0, 200) + "..." : h.SqlScript
-
-            }));
-
+            return Results.Ok(new SuccessResponse<List<DdlExecutionHistoryDto>>(dtos));
         })
-
         .WithName("GetDDLHistory")
-
         .WithSummary("获取DDL执行历史")
-
-        .WithDescription("获取实体定义的所有DDL脚本执行历史");
+        .WithDescription("获取实体定义的所有DDL脚本执行历史")
+        .Produces<SuccessResponse<List<DdlExecutionHistoryDto>>>();
 
         // ==================== 代码生成与编译 ====================
 
         // 生成实体代码
-
         group.MapGet("/{id:guid}/generate-code", async (
-
             Guid id,
-
             AppDbContext db,
-
-            Services.DynamicEntityService dynamicEntityService) =>
-
+            Services.DynamicEntityService dynamicEntityService,
+            ILocalization loc,
+            HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             try
-
             {
-
                 var code = await dynamicEntityService.GenerateCodeAsync(id);
-
-                return Results.Ok(new
-
+                return Results.Ok(new SuccessResponse<CodeGenerationResultDto>(new CodeGenerationResultDto
                 {
-
-                    entityId = id,
-
-                    code,
-
-                    message = "代码生成成功"
-
-                });
-
+                    EntityId = id,
+                    Code = code,
+                    Message = loc.T("MSG_CODE_GENERATION_SUCCESS", lang)
+                }));
             }
-
             catch (Exception ex)
-
             {
-
-                return Results.BadRequest(new { error = ex.Message });
-
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_CODE_GENERATION_FAILED", lang), ex.Message),
+                    "CODE_GENERATION_FAILED"));
             }
-
         })
-
         .WithName("GenerateEntityCode")
-
         .WithSummary("生成实体代码")
-
-        .WithDescription("生成实体的C#类代码（不编译）");
+        .WithDescription("生成实体的C#类代码（不编译）")
+        .Produces<SuccessResponse<CodeGenerationResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 编译实体
-
         group.MapPost("/{id:guid}/compile", async (
-
             Guid id,
-
             AppDbContext db,
-
             Services.DynamicEntityService dynamicEntityService,
-
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             try
-
             {
-
                 logger.LogInformation("[Compile] Compiling entity: {Id}", id);
-
                 var result = await dynamicEntityService.CompileEntityAsync(id);
 
                 if (!result.Success)
-
                 {
-
                     logger.LogError("[Compile] Failed with {Count} errors", result.Errors.Count);
-
-                    return Results.BadRequest(new
-
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_COMPILE_FAILED", lang), new Dictionary<string, string[]>
                     {
-
-                        success = false,
-
-                        errors = result.Errors.Select(e => new
-
-                        {
-
-                            e.Code,
-
-                            e.Message,
-
-                            e.Line,
-
-                            e.Column
-
-                        })
-
-                    });
-
+                        { "Errors", result.Errors.Select(e => $"{e.Code}: {e.Message} at {e.Line}:{e.Column}").ToArray() }
+                    }, "COMPILE_FAILED"));
                 }
 
-                return Results.Ok(new
-
+                return Results.Ok(new SuccessResponse<CompileResultDto>(new CompileResultDto
                 {
-
-                    success = true,
-
-                    assemblyName = result.AssemblyName,
-
-                    loadedTypes = result.LoadedTypes,
-
-                    message = "实体编译成功"
-
-                });
-
+                    Success = true,
+                    AssemblyName = result.AssemblyName,
+                    LoadedTypes = result.LoadedTypes,
+                    Message = loc.T("MSG_ENTITY_COMPILE_SUCCESS", lang)
+                }));
             }
-
             catch (Exception ex)
-
             {
-
                 logger.LogError(ex, "[Compile] Exception: {Message}", ex.Message);
-
-                return Results.BadRequest(new { error = ex.Message });
-
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_COMPILE_FAILED_DETAIL", lang), ex.Message),
+                    "COMPILE_FAILED"));
             }
-
         })
-
         .WithName("CompileEntity")
-
         .WithSummary("编译实体")
-
-        .WithDescription("编译实体代码并加载到内存");
+        .WithDescription("编译实体代码并加载到内存")
+        .Produces<SuccessResponse<CompileResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 批量编译实体
-
         group.MapPost("/compile-batch", async (
-
             CompileBatchDto dto,
-
             AppDbContext db,
-
             Services.DynamicEntityService dynamicEntityService,
-
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             try
-
             {
-
                 logger.LogInformation("[Compile] Batch compiling {Count} entities", dto.EntityIds.Count);
-
                 var result = await dynamicEntityService.CompileMultipleEntitiesAsync(dto.EntityIds);
 
                 if (!result.Success)
-
                 {
-
                     logger.LogError("[Compile] Batch failed with {Count} errors", result.Errors.Count);
-
-                    return Results.BadRequest(new
-
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_COMPILE_BATCH_FAILED", lang), new Dictionary<string, string[]>
                     {
-
-                        success = false,
-
-                        errors = result.Errors.Select(e => new
-
-                        {
-
-                            e.Code,
-
-                            e.Message,
-
-                            e.Line,
-
-                            e.Column,
-
-                            e.FilePath
-
-                        })
-
-                    });
-
+                        { "Errors", result.Errors.Select(e => $"{e.Code}: {e.Message} at {e.FilePath}:{e.Line}").ToArray() }
+                    }, "COMPILE_FAILED"));
                 }
 
-                return Results.Ok(new
-
+                return Results.Ok(new SuccessResponse<CompileResultDto>(new CompileResultDto
                 {
-
-                    success = true,
-
-                    assemblyName = result.AssemblyName,
-
-                    loadedTypes = result.LoadedTypes,
-
-                    count = result.LoadedTypes.Count,
-
-                    message = $"成功编译{result.LoadedTypes.Count}个实体"
-
-                });
-
+                    Success = true,
+                    AssemblyName = result.AssemblyName,
+                    LoadedTypes = result.LoadedTypes,
+                    Count = result.LoadedTypes.Count,
+                    Message = string.Format(loc.T("MSG_COMPILE_BATCH_SUCCESS", lang), result.LoadedTypes.Count)
+                }));
             }
-
             catch (Exception ex)
-
             {
-
                 logger.LogError(ex, "[Compile] Batch exception: {Message}", ex.Message);
-
-                return Results.BadRequest(new { error = ex.Message });
-
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_COMPILE_FAILED_DETAIL", lang), ex.Message),
+                    "COMPILE_FAILED"));
             }
-
         })
-
         .WithName("CompileBatchEntities")
-
         .WithSummary("批量编译实体")
-
-        .WithDescription("批量编译多个实体到同一程序集");
+        .WithDescription("批量编译多个实体到同一程序集")
+        .Produces<SuccessResponse<CompileResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 验证实体代码语法
-
         group.MapGet("/{id:guid}/validate-code", async (
-
             Guid id,
-
             AppDbContext db,
-
-            Services.DynamicEntityService dynamicEntityService) =>
-
+            Services.DynamicEntityService dynamicEntityService,
+            ILocalization loc,
+            HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             try
-
             {
-
                 var result = await dynamicEntityService.ValidateEntityCodeAsync(id);
-
-                return Results.Ok(new
-
+                return Results.Ok(new SuccessResponse<ValidateCodeResultDto>(new ValidateCodeResultDto
                 {
-
-                    isValid = result.IsValid,
-
-                    errors = result.Errors.Select(e => new
-
+                    IsValid = result.IsValid,
+                    Errors = result.Errors.Select(e => new CompileErrorDto
                     {
-
-                        e.Code,
-
-                        e.Message,
-
-                        e.Line,
-
-                        e.Column
-
+                        Code = e.Code,
+                        Message = e.Message,
+                        Line = e.Line,
+                        Column = e.Column
                     })
-
-                });
-
+                }));
             }
-
             catch (Exception ex)
-
             {
-
-                return Results.BadRequest(new { error = ex.Message });
-
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_VALIDATION_FAILED_DETAIL", lang), ex.Message),
+                    "VALIDATION_FAILED"));
             }
-
         })
-
         .WithName("ValidateEntityCode")
-
         .WithSummary("验证实体代码")
-
-        .WithDescription("验证生成的实体代码语法（不编译）");
+        .WithDescription("验证生成的实体代码语法（不编译）")
+        .Produces<SuccessResponse<ValidateCodeResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         // 获取已加载的实体列表
-
         group.MapGet("/loaded-entities", (Services.DynamicEntityService dynamicEntityService) =>
-
         {
-
             var loadedEntities = dynamicEntityService.GetLoadedEntities();
-
-            return Results.Ok(new
-
+            return Results.Ok(new SuccessResponse<LoadedEntitiesDto>(new LoadedEntitiesDto
             {
-
-                count = loadedEntities.Count,
-
-                entities = loadedEntities
-
-            });
-
+                Count = loadedEntities.Count,
+                Entities = loadedEntities
+            }));
         })
-
         .WithName("GetLoadedEntities")
-
         .WithSummary("获取已加载实体")
-
-        .WithDescription("获取当前已加载到内存的所有动态实体");
+        .WithDescription("获取当前已加载到内存的所有动态实体")
+        .Produces<SuccessResponse<LoadedEntitiesDto>>();
 
         // 获取实体类型信息
-
         group.MapGet("/type-info/{fullTypeName}", (
-
             string fullTypeName,
-
-            Services.DynamicEntityService dynamicEntityService) =>
-
+            Services.DynamicEntityService dynamicEntityService,
+            ILocalization loc,
+            HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             var typeInfo = dynamicEntityService.GetEntityTypeInfo(fullTypeName);
-
             if (typeInfo == null)
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_TYPE_NOT_LOADED", lang), "TYPE_NOT_LOADED"));
 
-                return Results.NotFound(new { error = "实体类型未加载" });
-
-            return Results.Ok(typeInfo);
-
+            return Results.Ok(new SuccessResponse<object>(typeInfo));
         })
-
         .WithName("GetEntityTypeInfo")
-
         .WithSummary("获取实体类型信息")
-
-        .WithDescription("获取已加载实体的类型元数据信息");
+        .WithDescription("获取已加载实体的类型元数据信息")
+        .Produces<SuccessResponse<object>>()
+        .Produces<ErrorResponse>(404);
 
         // 卸载实体
-
         group.MapDelete("/loaded-entities/{fullTypeName}", (
-
             string fullTypeName,
-
-            Services.DynamicEntityService dynamicEntityService) =>
-
+            Services.DynamicEntityService dynamicEntityService,
+            ILocalization loc,
+            HttpContext http) =>
         {
-
+            var lang = LangHelper.GetLang(http);
             dynamicEntityService.UnloadEntity(fullTypeName);
-
-            return Results.Ok(new { message = $"实体 {fullTypeName} 已卸载" });
-
+            return Results.Ok(new SuccessResponse(string.Format(loc.T("MSG_ENTITY_UNLOADED", lang), fullTypeName)));
         })
-
         .WithName("UnloadEntity")
-
         .WithSummary("卸载实体")
-
-        .WithDescription("从内存中卸载指定的动态实体");
+        .WithDescription("从内存中卸载指定的动态实体")
+        .Produces<SuccessResponse>();
 
         // 重新编译实体
-
         group.MapPost("/{id:guid}/recompile", async (
-
             Guid id,
-
             AppDbContext db,
-
             Services.DynamicEntityService dynamicEntityService,
-
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
-
         {
-
+            var lang = LangHelper.GetLang(http);
             try
-
             {
-
                 logger.LogInformation("[Recompile] Recompiling entity: {Id}", id);
-
                 var result = await dynamicEntityService.RecompileEntityAsync(id);
 
                 if (!result.Success)
-
                 {
-
-                    return Results.BadRequest(new
-
+                    return Results.BadRequest(new ErrorResponse(loc.T("ERR_RECOMPILE_FAILED", lang), new Dictionary<string, string[]>
                     {
-
-                        success = false,
-
-                        errors = result.Errors
-
-                    });
-
+                        { "Errors", result.Errors.Select(e => $"{e.Code}: {e.Message}").ToArray() }
+                    }, "COMPILE_FAILED"));
                 }
 
-                return Results.Ok(new
-
+                return Results.Ok(new SuccessResponse<CompileResultDto>(new CompileResultDto
                 {
-
-                    success = true,
-
-                    assemblyName = result.AssemblyName,
-
-                    loadedTypes = result.LoadedTypes,
-
-                    message = "实体重新编译成功"
-
-                });
-
+                    Success = true,
+                    AssemblyName = result.AssemblyName,
+                    LoadedTypes = result.LoadedTypes,
+                    Message = loc.T("MSG_ENTITY_RECOMPILE_SUCCESS", lang)
+                }));
             }
-
             catch (Exception ex)
-
             {
-
                 logger.LogError(ex, "[Recompile] Exception: {Message}", ex.Message);
-
-                return Results.BadRequest(new { error = ex.Message });
-
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_COMPILE_FAILED_DETAIL", lang), ex.Message),
+                    "COMPILE_FAILED"));
             }
-
         })
-
         .WithName("RecompileEntity")
-
         .WithSummary("重新编译实体")
-
-        .WithDescription("卸载并重新编译实体（用于实体定义更新后）");
+        .WithDescription("卸载并重新编译实体（用于实体定义更新后）")
+        .Produces<SuccessResponse<CompileResultDto>>()
+        .Produces<ErrorResponse>(400);
 
         return app;
-
     }
-
-}
-
-// ==================== DTOs ====================
-
-/// <summary>
-/// 创建实体定义DTO
-/// </summary>
-/// <summary>
-/// 多语言文本 - 动态结构，支持任意语言
-/// Key: 语言代码（如 "ja", "zh", "en"）
-/// Value: 该语言的文本
-/// </summary>
-
-public class MultilingualText : Dictionary<string, string?>
-
-{
-
-    public MultilingualText() : base(StringComparer.OrdinalIgnoreCase)
-
-    {
-
-    }
-
-    /// <summary>
-    /// 构造函数 - 从字典创建（用于API反序列化）
-    /// </summary>
-
-    public MultilingualText(IDictionary<string, string?> source) : base(source, StringComparer.OrdinalIgnoreCase)
-
-    {
-
-    }
-
-}
-
-public record CreateEntityDefinitionDto
-
-{
-
-    public string Namespace { get; init; } = "BobCrm.Base.Custom";
-
-    public string EntityName { get; init; } = string.Empty;
-
-    /// <summary>
-    /// 显示名（多语言）
-    /// </summary>
-
-    public MultilingualText? DisplayName { get; init; }
-
-    /// <summary>
-    /// 描述（多语言）
-    /// </summary>
-
-    public MultilingualText? Description { get; init; }
-
-    public string? StructureType { get; init; }
-
-    public List<CreateFieldMetadataDto>? Fields { get; init; }
-
-    public List<string>? Interfaces { get; init; }
-
-}
-
-/// <summary>
-/// 创建字段元数据DTO
-/// </summary>
-
-public record CreateFieldMetadataDto
-
-{
-
-    public string PropertyName { get; init; } = string.Empty;
-
-    /// <summary>
-    /// 显示名（多语言）
-    /// </summary>
-
-    public MultilingualText? DisplayName { get; init; }
-
-    public string DataType { get; init; } = FieldDataType.String;
-
-    public int? Length { get; init; }
-
-    public int? Precision { get; init; }
-
-    public int? Scale { get; init; }
-
-    public bool IsRequired { get; init; }
-
-    public bool IsEntityRef { get; init; }
-
-    public Guid? ReferencedEntityId { get; init; }
-
-    public int SortOrder { get; init; }
-
-    public string? DefaultValue { get; init; }
-
-    public string? ValidationRules { get; init; }
-
-}
-
-/// <summary>
-/// 更新实体定义DTO
-/// </summary>
-
-public record UpdateEntityDefinitionDto
-
-{
-
-    public string? Namespace { get; init; }
-
-    public string? EntityName { get; init; }
-
-    /// <summary>
-    /// 显示名（多语言）
-    /// </summary>
-
-    public MultilingualText? DisplayName { get; init; }
-
-    /// <summary>
-    /// 描述（多语言）
-    /// </summary>
-
-    public MultilingualText? Description { get; init; }
-
-    public string? StructureType { get; init; }
-
-    public List<UpdateFieldMetadataDto>? Fields { get; init; }
-
-    public List<string>? Interfaces { get; init; }
-
-}
-
-/// <summary>
-/// 更新字段元数据DTO
-/// </summary>
-
-public record UpdateFieldMetadataDto
-
-{
-
-    public Guid? Id { get; init; }
-
-    public string? PropertyName { get; init; }
-
-    /// <summary>
-    /// 显示名（多语言）
-    /// </summary>
-
-    public MultilingualText? DisplayName { get; init; }
-
-    public string? DataType { get; init; }
-
-    public int? Length { get; init; }
-
-    public int? Precision { get; init; }
-
-    public int? Scale { get; init; }
-
-    public bool? IsRequired { get; init; }
-
-    public bool? IsEntityRef { get; init; }
-
-    public Guid? ReferencedEntityId { get; init; }
-
-    public int? SortOrder { get; init; }
-
-    public string? DefaultValue { get; init; }
-
-    public string? ValidationRules { get; init; }
-
-}
-
-/// <summary>
-/// 批量编译DTO
-/// </summary>
-
-public record CompileBatchDto
-
-{
-
-    public List<Guid> EntityIds { get; init; } = new();
-
 }

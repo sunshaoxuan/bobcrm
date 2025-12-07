@@ -1,11 +1,10 @@
-@* Calendar 设计态预览组件 *@
+@* Calendar preview component *@
+@inject BobCrm.App.Services.I18nService I18n
 <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px; justify-content:space-between">
-    <span style="color:#ccc; font-size:11px">选择日期</span>
+    <span style="color:#ccc; font-size:11px">@I18n.T("PREVIEW_DATE_PLACEHOLDER")</span>
     <Icon Type="@IconType.Outline.Calendar" Style="color:#999" />
 </div>
 
 @code {
     [Parameter] public object? Widget { get; set; }
 }
-
-

@@ -1,32 +1,38 @@
 using BobCrm.Api.Base.Aggregates;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Services;
+using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
 
 /// <summary>
-/// 实体聚合端点 - 支持主子实体的聚合管理
+/// Entity aggregate endpoints - manage master/sub-entities together
 /// </summary>
 public static class EntityAggregateEndpoints
 {
     public static IEndpointRouteBuilder MapEntityAggregateEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/entity-aggregates")
-            .WithTags("实体聚合管理")
+            .WithTags("EntityAggregates")
             .WithOpenApi()
             .RequireAuthorization();
 
-        // 获取聚合（主实体 + 子实体）
+        // Get aggregate (master + sub entities)
         group.MapGet("/{id:guid}", async (
             Guid id,
             [FromServices] EntityDefinitionAggregateService service,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken cancellationToken) =>
         {
+            var lang = LangHelper.GetLang(http);
             var aggregate = await service.LoadAggregateAsync(id, cancellationToken);
             if (aggregate == null)
             {
-                return Results.NotFound(new { message = $"实体定义 {id} 不存在" });
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
             }
 
             // 转换为DTO
@@ -34,17 +40,20 @@ public static class EntityAggregateEndpoints
             return Results.Ok(dto);
         })
         .WithName("GetEntityAggregate")
-        .WithSummary("获取实体聚合")
-        .WithDescription("获取实体定义及其所有子实体");
+        .WithSummary("Get entity aggregate")
+        .WithDescription("Get entity definition and all sub entities");
 
-        // 保存聚合（新建或更新）
+        // Save aggregate (create or update)
         group.MapPost("", async (
             [FromBody] SaveEntityDefinitionAggregateRequest request,
             [FromServices] EntityDefinitionAggregateService aggregateService,
             [FromServices] ISubEntityCodeGenerator codeGenerator,
             [FromServices] IAggregateMetadataPublisher metadataPublisher,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken cancellationToken) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 // 1. 构建聚合
@@ -67,7 +76,7 @@ public static class EntityAggregateEndpoints
             {
                 return Results.BadRequest(new
                 {
-                    message = "验证失败",
+                    message = loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang),
                     errors = ex.Errors.Select(e => new
                     {
                         propertyPath = e.PropertyPath,
@@ -78,21 +87,24 @@ public static class EntityAggregateEndpoints
             catch (Exception ex)
             {
                 return Results.Problem(
-                    title: "保存聚合失败",
+                    title: loc.T("ERR_AGGREGATE_SAVE_FAILED", lang),
                     detail: ex.Message,
                     statusCode: 500);
             }
         })
         .WithName("SaveEntityAggregate")
-        .WithSummary("保存实体聚合")
-        .WithDescription("保存实体定义及其子实体，自动生成代码和元数据");
+        .WithSummary("Save entity aggregate")
+        .WithDescription("Save entity definition and sub entities, generate code and metadata");
 
-        // 验证聚合（不保存）
+        // Validate aggregate (no save)
         group.MapPost("/validate", async (
             [FromBody] SaveEntityDefinitionAggregateRequest request,
             [FromServices] EntityDefinitionAggregateService aggregateService,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken cancellationToken) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var aggregate = await BuildAggregateFromRequest(request, aggregateService, cancellationToken);
@@ -100,7 +112,7 @@ public static class EntityAggregateEndpoints
 
                 if (validationResult.IsValid)
                 {
-                    return Results.Ok(new { isValid = true, message = "验证通过" });
+                    return Results.Ok(new { isValid = true, message = loc.T("MSG_AGGREGATE_VALID", lang) });
                 }
                 else
                 {
@@ -118,16 +130,16 @@ public static class EntityAggregateEndpoints
             catch (Exception ex)
             {
                 return Results.Problem(
-                    title: "验证失败",
+                    title: loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang),
                     detail: ex.Message,
                     statusCode: 500);
             }
         })
         .WithName("ValidateEntityAggregate")
-        .WithSummary("验证实体聚合")
-        .WithDescription("验证实体定义及其子实体，但不保存");
+        .WithSummary("Validate entity aggregate")
+        .WithDescription("Validate entity definition and sub entities without saving");
 
-        // 删除子实体
+        // Delete sub entity
         group.MapDelete("/sub-entities/{id:guid}", async (
             Guid id,
             [FromServices] EntityDefinitionAggregateService service,
@@ -137,10 +149,10 @@ public static class EntityAggregateEndpoints
             return Results.NoContent();
         })
         .WithName("DeleteSubEntity")
-        .WithSummary("删除子实体")
-        .WithDescription("删除指定的子实体及其字段");
+        .WithSummary("Delete sub entity")
+        .WithDescription("Delete the specified sub entity and its fields");
 
-        // 生成元数据预览
+        // Generate metadata preview
         group.MapGet("/{id:guid}/metadata-preview", async (
             Guid id,
             [FromServices] EntityDefinitionAggregateService service,
@@ -157,10 +169,10 @@ public static class EntityAggregateEndpoints
             return Results.Content(metadataJson, "application/json");
         })
         .WithName("PreviewAggregateMetadata")
-        .WithSummary("预览聚合元数据")
-        .WithDescription("生成并预览聚合的JSON元数据");
+        .WithSummary("Preview aggregate metadata")
+        .WithDescription("Generate and preview aggregate JSON metadata");
 
-        // 生成代码预览
+        // Generate code preview
         group.MapGet("/{id:guid}/code-preview", async (
             Guid id,
             [FromServices] EntityDefinitionAggregateService service,
@@ -189,8 +201,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(codePreview);
         })
         .WithName("PreviewGeneratedCode")
-        .WithSummary("预览生成的代码")
-        .WithDescription("预览为子实体生成的C#代码");
+        .WithSummary("Preview generated code")
+        .WithDescription("Preview generated C# code for sub entities");
 
         return app;
     }
@@ -223,7 +235,7 @@ public static class EntityAggregateEndpoints
             var existingAggregate = await service.LoadAggregateAsync(request.Id, cancellationToken);
             if (existingAggregate == null)
             {
-                throw new InvalidOperationException($"实体定义 {request.Id} 不存在");
+                throw new InvalidOperationException($"Entity definition {request.Id} not found");
             }
 
             root = existingAggregate.Root;

@@ -33,7 +33,7 @@ public class AuthFlowTests : IClassFixture<TestWebAppFactory>
         // login
         var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
         login.EnsureSuccessStatusCode();
-        var json = JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement;
+        var json = (await login.ReadAsJsonAsync()).UnwrapData();
         var token = json.GetProperty("accessToken").GetString();
         Assert.False(string.IsNullOrWhiteSpace(token));
     }

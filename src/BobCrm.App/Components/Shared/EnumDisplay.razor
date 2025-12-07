@@ -5,8 +5,8 @@
 @inject I18nService I18n
 
 @*
-    EnumDisplay - 枚举值只读显示组件
-    用于在表单或列表中以只读方式显示枚举值
+    EnumDisplay - read-only enum display component
+    Shows enum value read-only in forms or lists
 *@
 
 @if (_isLoading)
@@ -47,25 +47,25 @@ else
 
 @code {
     /// <summary>
-    /// 枚举代码（用于加载枚举定义）
+    /// Enum code (for loading enum definition)
     /// </summary>
     [Parameter, EditorRequired]
     public string EnumCode { get; set; } = string.Empty;
 
     /// <summary>
-    /// 枚举选项值
+    /// Enum option value
     /// </summary>
     [Parameter]
     public string? Value { get; set; }
 
     /// <summary>
-    /// 当前语言
+    /// Current language
     /// </summary>
     [Parameter]
     public string CurrentLanguage { get; set; } = "zh";
 
     /// <summary>
-    /// 是否显示为Tag（带颜色和图标）
+    /// Render as Tag (with color/icon)
     /// </summary>
     [Parameter]
     public bool AsTag { get; set; } = true;
@@ -94,7 +94,7 @@ else
     }
 
     /// <summary>
-    /// 加载枚举选项的显示值
+    /// Load display value for enum option
     /// </summary>
     private async Task LoadDisplayValueAsync()
     {
@@ -143,7 +143,7 @@ else
     }
 
     /// <summary>
-    /// 获取枚举选项的显示名称
+    /// Get display name of enum option
     /// </summary>
     private string GetDisplayName(Dictionary<string, string?> displayName)
     {

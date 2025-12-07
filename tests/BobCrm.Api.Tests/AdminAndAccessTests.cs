@@ -119,7 +119,8 @@ public class AdminAndAccessTests : IClassFixture<TestWebAppFactory>
         }
         var login = await userClient.PostAsJsonAsync("/api/auth/login", new { username, password });
         login.EnsureSuccessStatusCode();
-        var token = System.Text.Json.JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement.GetProperty("accessToken").GetString();
+        var tokenJson = (await login.ReadAsJsonAsync()).UnwrapData();
+        var token = tokenJson.GetProperty("accessToken").GetString();
         userClient.UseBearer(token!);
         // 使用 admin 客户端获取客户列表（普通用户可能看不到客户）
         var adminClient = _factory.CreateClient();

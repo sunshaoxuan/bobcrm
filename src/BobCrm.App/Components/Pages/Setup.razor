@@ -8,7 +8,6 @@
 @inject BobCrm.App.Services.AuthService Auth
 @inject MessageService Message
 @inject IConfiguration Configuration
-@inject IConfiguration Configuration
 
 <h1>@I18n.T("LBL_SETUP")</h1>
 
@@ -21,7 +20,7 @@
         </div>
         <Input @bind-Value="apiBase" Placeholder="@placeholderText" Class="field-control" />
         <div class="text-muted small" style="margin-top:6px">
-            @I18n.T("LBL_API_BASE_HINT") 如果不填写，将使用配置的默认地址。
+            @I18n.T("SETUP_API_BASE_HINT")
         </div>
     </div>
 
@@ -29,9 +28,9 @@
         <select value="@lang" @onchange="OnLangChanged" class="field-control" style="width:220px">
             @if (langs.Count == 0)
             {
-                <option value="zh">中文</option>
-                <option value="ja">日本語</option>
-                <option value="en">English</option>
+                <option value="zh">@I18n.T("LANG_ZH_SIMPLIFIED")</option>
+                <option value="ja">@I18n.T("LANG_JA")</option>
+                <option value="en">@I18n.T("LANG_EN")</option>
             }
             else
             {
@@ -66,7 +65,7 @@
         <Space>
             <Button Type="ButtonType.Primary" OnClick="SaveAsync" Loading="saving">@I18n.T("BTN_SAVE_AND_GO_LOGIN")</Button>
             <Button OnClick="GotoLogin">@I18n.T("BTN_GO_LOGIN")</Button>
-            <Button Type="ButtonType.Default" Danger="true" OnClick="ResetSetup" Loading="resetting">重置初始化设置</Button>
+            <Button Type="ButtonType.Default" Danger="true" OnClick="ResetSetup" Loading="resetting">@I18n.T("SETUP_BTN_RESET")</Button>
         </Space>
     </div>
 
@@ -84,43 +83,43 @@
     private List<LangItem> langs = new();
     private bool saving;
 
-    // 初始为空：避免刷新时先看到硬编码的默认值，等待 API 返回后回填
+    // Initialize empty to avoid flashing hardcoded defaults before API response
     private string adminUser = string.Empty;
 
     private string adminEmail = string.Empty;
 
-    private string adminPassword = ""; // 密码字段不初始化，保持为空
+    private string adminPassword = ""; // Keep password empty by default
     private bool resetting = false;
     
     protected override void OnInitialized()
     {
-        // 优先从当前页面的host推断API地址（支持分布式部署）
+        // Infer API base from current host first (supports distributed deployments)
         var currentUri = new Uri(Nav.BaseUri);
-        var apiPort = 5200; // 统一默认使用 5200，避免回退到 8081
+        var apiPort = 5200; // Default to 5200 to avoid falling back to 8081
         
-        // 使用当前访问的host和scheme，而不是localhost
+        // Use current request host and scheme instead of localhost
         var inferredBase = $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
         
-        // 如果配置文件中有配置且包含localhost，则替换为当前host
+        // If config base contains localhost, swap host to current host
         var configBase = Configuration["Api:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(configBase) && configBase.Contains("localhost"))
         {
-            // 配置文件是localhost，需要替换为当前host
+            // Config uses localhost; replace with current host
             var configUri = new Uri(configBase);
             defaultApiBase = $"{currentUri.Scheme}://{currentUri.Host}:{configUri.Port}";
         }
         else if (!string.IsNullOrWhiteSpace(configBase))
         {
-            // 配置文件不是localhost，直接使用配置
+            // Config has explicit host; use as-is
             defaultApiBase = configBase;
         }
         else
         {
-            // 没有配置，使用推断的地址
+            // No config; use inferred address
             defaultApiBase = inferredBase;
         }
         
-        apiBase = defaultApiBase; // 初始化为默认值
+        apiBase = defaultApiBase; // Start with default value
         placeholderText = string.Format(I18n.T("PH_DEFAULT_VALUE"), defaultApiBase);
     }
 
@@ -131,7 +130,7 @@
         {
             try
             {
-                // 先确定有效 API Base（localStorage -> cookie -> 已输入值/默认推断）
+                // Resolve effective API base (localStorage -> cookie -> current/default)
                 var lsBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
                 var cookieBase = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
                 if (!string.IsNullOrWhiteSpace(lsBase))
@@ -145,25 +144,25 @@
                 else
                 {
                     var currentUri = new Uri(Nav.BaseUri);
-                    var apiPort = 5200; // 统一默认使用 5200
+                    var apiPort = 5200; // Default to 5200
                     apiBase ??= $"{currentUri.Scheme}://{currentUri.Host}:{apiPort}";
                 }
                 defaultApiBase = apiBase;
                 placeholderText = string.Format(I18n.T("PH_DEFAULT_VALUE"), defaultApiBase);
-                // 写入 cookie，供 I18nService/命名客户端使用
+                // Persist apiBase for I18nService/named clients
                 try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
                 try { await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
 
-                // 再加载语言（cookie 或默认）
+                // Load language (cookie or default)
                 var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : lang;
                 await I18n.LoadAsync(langToLoad);
                 try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
                 
-                // 从数据库读取当前管理员信息（如果已配置）
+                // Load current admin info from backend (if already configured)
                 try
                 {
-                    // 计算有效 API 基础地址：优先当前输入/状态，其次 cookie，再次默认/来源
+                    // Compute effective API base: current input/state -> cookie -> default/origin
                     var cb = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
                     var effectiveBase = apiBase ?? (!string.IsNullOrWhiteSpace(cb) ? cb! : null) ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
 
@@ -192,7 +191,7 @@
                         catch { return false; }
                     }
 
-                    // 只尝试一次，不自动回退到其他端口
+                    // Single attempt; no automatic port fallback
                     await TryFetchAdminAsync(effectiveBase);
                 }
                 catch (Exception ex)
@@ -225,7 +224,7 @@
                         catch { return false; }
                     }
 
-                    // 只尝试一次，不自动回退到其他端口
+                    // Single attempt; no automatic port fallback
                     await TryFetchAsync(base2);
                 }
                 catch { }
@@ -249,13 +248,13 @@
             await Task.Yield(); // Ensure UI updates
             
             
-            // Validate input - 如果用户没有填写，使用默认值
+            // Validate input - fall back to defaults when missing
             if (string.IsNullOrWhiteSpace(apiBase))
             {
                 apiBase = defaultApiBase ?? "http://localhost:5200";
             }
             
-            // 确保API地址有效
+            // Ensure API address is valid
             if (!Uri.TryCreate(apiBase, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
             {
                 var errorMsg = string.Format(I18n.T("ERR_INVALID_API_BASE"), apiBase);
@@ -291,7 +290,7 @@
             
             System.Diagnostics.Debug.WriteLine("[Setup] Validation passed, starting save process...");
 
-            // persist base and lang locally first（即使后端保存失败也要持久化 API_BASE）
+            // Persist base and language locally first (even if backend save fails)
             try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
             try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
             try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
@@ -333,8 +332,7 @@
                         var successContent = await resp.Content.ReadAsStringAsync();
                         System.Diagnostics.Debug.WriteLine($"[Setup] Success response: {successContent}");
                         await JS.InvokeVoidAsync("console.log", $"[Setup] Success: {successContent}");
-                        // 确认管理员账户已保存
-                        ok = true; // 明确设置为true
+                        ok = true; // Explicitly mark as saved
                     }
                 }
             }
@@ -384,7 +382,7 @@
 
             System.Diagnostics.Debug.WriteLine("[Setup] Save successful, navigating to home...");
             
-            // 管理员信息已保存到数据库（PostgreSQL），无需额外的持久化操作
+            // Admin info saved to database; no extra persistence needed
             
             // mark configured and navigate to home
             try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", (apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin")), 365); } catch { }
@@ -432,7 +430,7 @@
         
         try
         {
-            var confirmMsg = I18n.T("MSG_RESET_CONFIRM") ?? "确定要重置初始化设置吗？这将删除当前管理员账户，您需要重新设置。";
+            var confirmMsg = I18n.T("MSG_RESET_CONFIRM") ?? "Reset setup? This removes the current admin account and requires reconfiguration.";
             var confirm = await JS.InvokeAsync<bool>("confirm", confirmMsg);
             if (!confirm)
             {
@@ -448,10 +446,10 @@
             if (resp.IsSuccessStatusCode)
             {
                 var result = await resp.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-                var message = result?.GetValueOrDefault("message")?.ToString() ?? I18n.T("MSG_RESET_SETUP_SUCCESS") ?? "重置成功";
+                var message = result?.GetValueOrDefault("message")?.ToString() ?? I18n.T("MSG_RESET_SETUP_SUCCESS") ?? "Reset succeeded";
                 Message.Success(message);
                 
-                // 清空表单
+                // Clear form
                 adminUser = string.Empty;
                 adminEmail = string.Empty;
                 adminPassword = string.Empty;
@@ -460,13 +458,13 @@
             else
             {
                 var error = await resp.Content.ReadAsStringAsync();
-                var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
+                var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "Reset failed";
                 Message.Error($"{errorMsg}: {error}");
             }
         }
         catch (Exception ex)
         {
-            var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "重置失败";
+            var errorMsg = I18n.T("ERR_RESET_SETUP_FAILED") ?? "Reset failed";
             Message.Error($"{errorMsg}: {ex.Message}");
         }
         finally

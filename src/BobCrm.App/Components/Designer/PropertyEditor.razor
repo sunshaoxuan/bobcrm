@@ -5,14 +5,14 @@
 @using BobCrm.App.Components.Designer.PropertyEditors
 @inject BobCrm.App.Services.I18nService I18n
 
-@* 通用属性编辑器 - 根据元数据动态渲染，支持Width属性根据单位动态调整Max值 *@
+@* Generic property editor - renders from metadata; adjusts Width max based on unit *@
 
 @if (Properties != null && Properties.Any())
 {
     string? currentGroup = null;
     foreach (var prop in Properties)
     {
-        @* 条件显示检查 *@
+        @* Conditional display check *@
         if (!string.IsNullOrEmpty(prop.VisibleWhen))
         {
             var conditionValue = GetPropertyValue(Widget, prop.VisibleWhen);
@@ -22,14 +22,14 @@
             }
         }
 
-        @* 分组分隔线 *@
+        @* Group separator *@
         if (prop.Group != null && prop.Group != currentGroup)
         {
             currentGroup = prop.Group;
             <Divider Plain Style="margin:12px 0 8px 0; font-size:11px">@I18n.T(currentGroup)</Divider>
         }
 
-        @* 渲染属性编辑器 *@
+        @* Render property editor *@
         <div style="margin-bottom:16px; @(prop.EditorType == PropertyEditorType.Boolean ? "display:flex; justify-content:space-between; align-items:center" : "")">
             <label style="@(prop.EditorType == PropertyEditorType.Boolean ? "font-size:12px; color:#666" : "display:block; font-size:12px; color:#666; margin-bottom:4px")">
                 @I18n.T(prop.Label)
@@ -40,7 +40,7 @@
                 case PropertyEditorType.Text:
                     @if (prop.PropertyPath == "Code")
                     {
-                        // Code 属性需要唯一性校验
+                        // Code property must be unique
                         var currentCode = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
                         var isCodeValid = string.IsNullOrWhiteSpace(currentCode) ||
                                          WidgetCodeGenerator.IsCodeUnique(currentCode, Widget?.Id ?? "", AllWidgets ?? Enumerable.Empty<DraggableWidget>());
@@ -65,7 +65,7 @@
                 
                 case PropertyEditorType.Number:
                     {
-                        // 对于 Width 属性，实时从 Widget 获取最大值（响应 WidthUnit 变化）
+                        // For Width, pull max from widget (responsive to WidthUnit)
                         var maxValue = prop.Max;
                         if (prop.PropertyPath == "Width" && Widget != null)
                         {
@@ -156,20 +156,20 @@
     public Action? OnPropertyChanged { get; set; }
 
     /// <summary>
-    /// 所有组件的列表（用于Code唯一性校验）
+    /// All widgets (used for Code uniqueness)（widget list for Code uniqueness check）
     /// </summary>
     [Parameter]
     public IEnumerable<DraggableWidget>? AllWidgets { get; set; }
 
     /// <summary>
-    /// 处理Code属性的修改
+    /// Handle Code property changes
     /// </summary>
     private void HandleCodeChange(string newCode)
     {
         if (Widget == null)
             return;
 
-        // 验证唯一性
+        // Validate uniqueness
         if (string.IsNullOrWhiteSpace(newCode))
         {
             SetPropertyValue(Widget, "Code", newCode);
@@ -178,12 +178,12 @@
 
         var isUnique = WidgetCodeGenerator.IsCodeUnique(newCode, Widget.Id, AllWidgets ?? Enumerable.Empty<DraggableWidget>());
 
-        // 无论是否唯一都设置值，让用户看到错误提示
+        // Set value regardless so users see validation message
         SetPropertyValue(Widget, "Code", newCode);
     }
 
     /// <summary>
-    /// 获取属性值（支持嵌套路径，如 "ContainerLayout.Gap"）
+    /// Get property value (supports nested paths, e.g., "ContainerLayout.Gap")
     /// </summary>
     private object? GetPropertyValue(object? obj, string propertyPath)
     {
@@ -209,7 +209,7 @@
     }
 
     /// <summary>
-    /// 设置属性值（支持嵌套路径）
+    /// Set property value (supports nested paths)
     /// </summary>
     private void SetPropertyValue(object? obj, string propertyPath, object? value)
     {
@@ -219,7 +219,7 @@
         var parts = propertyPath.Split('.');
         object? current = obj;
 
-        // 导航到倒数第二层
+        // Navigate to the second-to-last segment
         for (int i = 0; i < parts.Length - 1; i++)
         {
             if (current == null)
@@ -235,7 +235,7 @@
         if (current == null)
             return;
 
-        // 设置最后一层属性
+        // Set the final property value
         var targetProp = current.GetType().GetProperty(parts[^1]);
         if (targetProp != null && targetProp.CanWrite)
         {

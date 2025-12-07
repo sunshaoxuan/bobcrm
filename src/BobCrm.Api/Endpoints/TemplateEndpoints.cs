@@ -5,6 +5,7 @@ using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
@@ -46,14 +47,16 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var template = await templateService.GetTemplateByIdAsync(id, uid);
 
             if (template == null)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
 
             return Results.Json(template);
@@ -82,8 +85,10 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             ITemplateService templateService,
             UpdateTemplateRequest req,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -92,11 +97,13 @@ public static class TemplateEndpoints
             }
             catch (KeyNotFoundException)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
+                    "TEMPLATE_UPDATE_FAILED"));
             }
         })
         .WithName("UpdateTemplate")
@@ -108,21 +115,25 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
                 await templateService.DeleteTemplateAsync(id, uid);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse(i18n.T("MSG_TEMPLATE_DELETED")));
+                return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_TEMPLATE_DELETED", lang)));
             }
             catch (KeyNotFoundException)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
+                    "TEMPLATE_DELETE_FAILED"));
             }
         })
         .WithName("DeleteTemplate")
@@ -135,8 +146,10 @@ public static class TemplateEndpoints
             ClaimsPrincipal user,
             ITemplateService templateService,
             CopyTemplateRequest req,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -145,7 +158,7 @@ public static class TemplateEndpoints
             }
             catch (KeyNotFoundException)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
         })
         .WithName("CopyTemplate")
@@ -157,8 +170,10 @@ public static class TemplateEndpoints
             int id,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             try
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -166,7 +181,7 @@ public static class TemplateEndpoints
 
                 return Results.Ok(new
                 {
-                    message = "模板已应用为默认模板",
+                    message = loc.T("MSG_TEMPLATE_APPLIED_DEFAULT", lang),
                     template = new
                     {
                         template.Id,
@@ -180,11 +195,13 @@ public static class TemplateEndpoints
             }
             catch (KeyNotFoundException)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
+                    "TEMPLATE_APPLY_FAILED"));
             }
         })
         .WithName("ApplyTemplate")
@@ -196,14 +213,16 @@ public static class TemplateEndpoints
             string entityType,
             ClaimsPrincipal user,
             ITemplateService templateService,
-            II18nService i18n) =>
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var template = await templateService.GetEffectiveTemplateAsync(entityType, uid);
 
             if (template == null)
             {
-                return Results.NotFound(new { error = i18n.T("MSG_TEMPLATE_NOT_FOUND") });
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
 
             return Results.Json(template);
@@ -215,10 +234,13 @@ public static class TemplateEndpoints
         group.MapGet("/menu-bindings", async (
             ClaimsPrincipal user,
             AppDbContext db,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger,
             string? viewState,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             if (string.IsNullOrWhiteSpace(uid))
             {
@@ -389,12 +411,15 @@ public static class TemplateEndpoints
             string entityType,
             FormTemplateUsageType? usageType,
             TemplateBindingService bindingService,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var resolvedUsage = usageType ?? FormTemplateUsageType.Detail;
             var binding = await bindingService.GetBindingAsync(entityType, resolvedUsage, ct);
             return binding is null
-                ? Results.NotFound(new { error = "Template binding not found." })
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_TEMPLATE_BINDING_NOT_FOUND", lang), "TEMPLATE_BINDING_NOT_FOUND"))
                 : Results.Ok(binding.ToDto());
         })
         .WithName("GetTemplateBinding")
@@ -405,8 +430,11 @@ public static class TemplateEndpoints
             UpsertTemplateBindingRequest request,
             ClaimsPrincipal user,
             TemplateBindingService bindingService,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
             {
@@ -433,8 +461,11 @@ public static class TemplateEndpoints
             TemplateRuntimeRequest request,
             ClaimsPrincipal user,
             TemplateRuntimeService runtimeService,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(uid))
             {
@@ -442,8 +473,21 @@ public static class TemplateEndpoints
             }
 
             request ??= new TemplateRuntimeRequest();
-            var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
-            return Results.Ok(context);
+            try
+            {
+                var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
+                return Results.Ok(context);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new ErrorResponse(
+                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
+                    "TEMPLATE_RUNTIME_FAILED"));
+            }
         })
         .WithName("BuildTemplateRuntime")
         .WithSummary("获取模板运行时上下文")

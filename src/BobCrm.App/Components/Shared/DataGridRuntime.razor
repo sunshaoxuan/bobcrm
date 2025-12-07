@@ -7,7 +7,7 @@
 @inject NavigationManager Nav
 @inject ILogger<DataGridRuntime> Logger
 
-@* DataGrid Widget 运行时渲染组件 *@
+@* DataGrid widget runtime renderer *@
 
 <div class="datagrid-runtime" style="@ContainerStyle">
     @if (!string.IsNullOrWhiteSpace(Widget.Label))
@@ -20,20 +20,19 @@
     @if (_isLoading)
     {
         <div style="padding:24px; text-align:center;">
-            <span>Loading data...</span>
+            <span>@I18n.T("DGR_LOADING")</span>
         </div>
     }
     else if (_error != null)
     {
         <div style="padding:16px; background:#fff2f0; border:1px solid #ffccc7; border-radius:4px; color:#cf1322;">
-            <strong>Error:</strong> @_error
+            <strong>@I18n.T("DGR_ERROR_PREFIX"):</strong> @_error
         </div>
     }
     else if (_data != null)
     {
         <div class="datagrid-table" style="overflow-x:auto;">
             <table style="width:100%; border-collapse:collapse; @GetTableStyle()">
-                @* 表头 *@
                 <thead>
                     <tr style="background:#fafafa;">
                         @if (Widget.AllowMultiSelect)
@@ -48,18 +47,17 @@
                                 @column.Label
                                 @if (column.Sortable)
                                 {
-                                    <span style="margin-left:4px; cursor:pointer;">⇅</span>
+                                    <span style="margin-left:4px; cursor:pointer;">↕</span>
                                 }
                             </th>
                         }
                         @if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
                         {
-                            <th style="width:120px; padding:12px; border:1px solid #e0e0e0; text-align:center;">Actions</th>
+                            <th style="width:120px; padding:12px; border:1px solid #e0e0e0; text-align:center;">@I18n.T("LBL_ACTIONS")</th>
                         }
                     </tr>
                 </thead>
 
-                @* 数据行 *@
                 <tbody>
                     @if (_dataRows.Any())
                     {
@@ -99,7 +97,14 @@
                     {
                         <tr>
                             <td colspan="@GetColumnCount()" style="padding:24px; text-align:center; color:#999;">
-                                @(Widget.EmptyTextKey ?? "No data")
+                                @{
+                                    var emptyTextKey = Widget.EmptyTextKey;
+                                    var emptyText = string.IsNullOrWhiteSpace(emptyTextKey)
+                                        ? I18n.T("DGR_EMPTY_DEFAULT")
+                                        : I18n.T(emptyTextKey);
+                                    emptyText = string.IsNullOrWhiteSpace(emptyText) ? I18n.T("DGR_EMPTY_DEFAULT") : emptyText;
+                                }
+                                @emptyText
                             </td>
                         </tr>
                     }
@@ -107,17 +112,16 @@
             </table>
         </div>
 
-        @* 分页 *@
         @if (Widget.ShowPagination && _totalCount > 0)
         {
             <div class="datagrid-pagination" style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="color:#666;">
-                    Total: @_totalCount records
+                    @string.Format(I18n.T("DGR_TOTAL_RECORDS"), _totalCount)
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <button disabled="@(_currentPage <= 1)" @onclick="PreviousPage">Previous</button>
-                    <span>Page @_currentPage / @_totalPages</span>
-                    <button disabled="@(_currentPage >= _totalPages)" @onclick="NextPage">Next</button>
+                    <button disabled="@(_currentPage <= 1)" @onclick="PreviousPage">@I18n.T("DGR_PREVIOUS")</button>
+                    <span>@string.Format(I18n.T("DGR_PAGE_LABEL"), _currentPage, _totalPages)</span>
+                    <button disabled="@(_currentPage >= _totalPages)" @onclick="NextPage">@I18n.T("DGR_NEXT")</button>
                 </div>
             </div>
         }
@@ -145,7 +149,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // 加载枚举定义
         try
         {
             _enumDefinitions = await EnumService.GetAllAsync();
@@ -155,7 +158,6 @@
             Logger.LogWarning(ex, "Failed to load enum definitions");
         }
 
-        // 解析列定义
         if (!string.IsNullOrWhiteSpace(Widget.ColumnsJson))
         {
             try
@@ -170,7 +172,6 @@
         }
         EnsureColumns();
 
-        // 解析行操作定义
         if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
         {
             try
@@ -184,15 +185,13 @@
             }
         }
 
-        // 确定实体类型（从EntityType或ApiEndpoint推断）
         _entityType = Widget.EntityType;
         if (string.IsNullOrWhiteSpace(_entityType) && !string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
         {
-            // 从ApiEndpoint推断：/api/customers -> customer
             var match = System.Text.RegularExpressions.Regex.Match(Widget.ApiEndpoint, @"\/api\/([^\/\?]+)");
             if (match.Success)
             {
-                _entityType = match.Groups[1].Value.TrimEnd('s'); // 简单复数处理
+                _entityType = match.Groups[1].Value.TrimEnd('s');
             }
         }
 
@@ -211,7 +210,6 @@
 
             if (Widget.DataSetId.HasValue)
             {
-                // Mode 1: DataSet Execution (POST)
                 var request = new
                 {
                     Page = _currentPage,
@@ -233,14 +231,10 @@
             }
             else if (!string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
             {
-                // Mode 2: Direct Entity API (GET)
-                // 确保ApiEndpoint正确映射到实体API
                 var url = Widget.ApiEndpoint;
                 
-                // 如果ApiEndpoint是相对路径，确保以/api/开头
                 if (!url.StartsWith("http") && !url.StartsWith("/api/"))
                 {
-                    // 从EntityType推断API端点
                     if (!string.IsNullOrWhiteSpace(Widget.EntityType))
                     {
                         url = $"/api/{Widget.EntityType}s";
@@ -251,7 +245,6 @@
                     }
                 }
                 
-                // Try to append query parameters
                 if (url.Contains("?")) url += "&"; else url += "?";
                 url += $"page={_currentPage}&pageSize={Widget.PageSize}";
                 
@@ -267,7 +260,6 @@
                     return;
                 }
 
-                // Try to parse as Paged Result first
                 try 
                 {
                     var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
@@ -279,7 +271,6 @@
                 }
                 catch {}
 
-                // Fallback: Parse as Array (Client-side paging or full list)
                 var content = await response.Content.ReadAsStringAsync();
                 var doc = JsonDocument.Parse(content);
                 if (doc.RootElement.ValueKind == JsonValueKind.Array)
@@ -287,9 +278,7 @@
                     _data = doc;
                     _dataRows = _data.RootElement.EnumerateArray().ToList();
                     _totalCount = _dataRows.Count;
-                    _totalPages = 1; // Assume full list for now
-                    
-                    // TODO: Implement client-side paging if needed
+                    _totalPages = 1;
                 }
                 else
                 {
@@ -304,7 +293,7 @@
         catch (Exception ex)
         {
             _error = $"Exception: {ex.Message}";
-            Logger.LogError(ex, "Error loading data for DataGrid");
+            Logger.LogError(ex, "Error loading DataGrid");
         }
         finally
         {
@@ -350,7 +339,6 @@
                 _ => value.GetRawText()
             };
 
-            // 尝试查找列定义
             var column = _columns.FirstOrDefault(c => c.Field == field);
             if (column != null && column.EnumDefinitionId.HasValue)
             {
@@ -369,7 +357,6 @@
 
         if (isMultiSelect)
         {
-            // 解析 JSON 数组
             try
             {
                 var values = JsonSerializer.Deserialize<List<string>>(value);
@@ -381,7 +368,6 @@
             }
             catch
             {
-                // 解析失败，可能是单个值或格式错误
             }
         }
 
@@ -465,11 +451,9 @@
 
     private void HandleRowClick(JsonElement row)
     {
-        // 获取行的ID（尝试多个可能的字段名）
         var id = GetRowId(row);
         if (id == null) return;
 
-        // 导航到详情页
         var entityType = _entityType ?? Widget.EntityType ?? "customer";
         Nav.NavigateTo($"/{entityType}/{id}");
     }
@@ -497,7 +481,6 @@
 
     private string? GetRowId(JsonElement row)
     {
-        // 尝试多个可能的ID字段名
         var idFields = new[] { "id", "Id", "ID", "customerId", "CustomerId" };
         foreach (var field in idFields)
         {
@@ -523,7 +506,6 @@
             
             if (response.IsSuccessStatusCode)
             {
-                // 刷新数据
                 await LoadDataAsync();
             }
             else
@@ -537,7 +519,6 @@
         }
     }
 
-    // 数据模型
     private class RowAction
     {
         public string Action { get; set; } = string.Empty;
@@ -564,3 +545,4 @@
         public int TotalPages { get; set; }
     }
 }
+

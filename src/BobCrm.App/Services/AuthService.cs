@@ -241,9 +241,9 @@ public class AuthService
             OnUnauthorized?.Invoke();
             return false;
         }
-        
-        var json = await res.Content.ReadFromJsonAsync<TokenPair>();
-        if (json == null)
+
+        var json = await ApiResponseHelper.ReadDataAsync<TokenPair>(res);
+        if (json is null)
         {
             try
             {

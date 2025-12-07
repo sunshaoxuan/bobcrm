@@ -1,10 +1,9 @@
-@* Textarea 设计态预览组件 *@
+@* Textarea preview component *@
+@inject BobCrm.App.Services.I18nService I18n
 <div style="min-height:80px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; padding:4px; color:#ccc; font-size:11px">
-    多行文本...
+    @I18n.T("PREVIEW_PLACEHOLDER")
 </div>
 
 @code {
     [Parameter] public object? Widget { get; set; }
 }
-
-

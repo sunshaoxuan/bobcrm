@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -18,9 +21,12 @@ public static class SetupEndpoints
         group.MapGet("/admin", async (
             UserManager<IdentityUser> um,
             RoleManager<IdentityRole> rm,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
             logger.LogDebug("[Setup] Admin info requested");
+            var lang = LangHelper.GetLang(http);
             
             var adminRole = await rm.FindByNameAsync("admin");
             if (adminRole == null)
@@ -58,8 +64,11 @@ public static class SetupEndpoints
             RoleManager<IdentityRole> rm,
             SignInManager<IdentityUser> sm,
             AdminSetupDto dto,
+            ILocalization loc,
+            HttpContext http,
             ILogger<Program> logger) =>
         {
+            var lang = LangHelper.GetLang(http);
             logger.LogInformation("[Setup] Admin configuration request: username={Username}, email={Email}", dto.Username, dto.Email);
             
             if (!await rm.RoleExistsAsync("admin"))
@@ -117,11 +126,14 @@ public static class SetupEndpoints
                 {
                     var errors = string.Join("; ", cr.Errors.Select(e => $"{e.Code}: {e.Description}"));
                     logger.LogError("[Setup] Failed to create admin: {Errors}", errors);
-                    return Results.BadRequest(new { error = "创建管理员用户失败", details = errors });
+                    return Results.BadRequest(new ErrorResponse(
+                        loc.T("ERR_SETUP_CREATE_ADMIN_FAILED", lang),
+                        new Dictionary<string, string[]> { { "errors", new[] { errors } } },
+                        "SETUP_CREATE_FAILED"));
                 }
                 await um.AddToRoleAsync(adminUser, "admin");
                 logger.LogInformation("[Setup] Admin created successfully: {Username}", dto.Username);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse("管理员账户创建成功"));
+                return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_SETUP_ADMIN_CREATED", lang)));
             }
             else
             {
@@ -138,7 +150,10 @@ public static class SetupEndpoints
                 {
                     var errors = string.Join("; ", ur.Errors.Select(e => $"{e.Code}: {e.Description}"));
                     logger.LogError("[Setup] Failed to update admin profile: {Errors}", errors);
-                    return Results.BadRequest(new { error = "更新管理员用户失败", details = errors });
+                    return Results.BadRequest(new ErrorResponse(
+                        loc.T("ERR_SETUP_UPDATE_ADMIN_FAILED", lang),
+                        new Dictionary<string, string[]> { { "errors", new[] { errors } } },
+                        "SETUP_UPDATE_FAILED"));
                 }
 
                 // 更新密码
@@ -149,7 +164,10 @@ public static class SetupEndpoints
                     {
                         var errors = string.Join("; ", removeResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
                         logger.LogError("[Setup] Failed to remove old password: {Errors}", errors);
-                        return Results.BadRequest(new { error = "移除旧密码失败", details = errors });
+                        return Results.BadRequest(new ErrorResponse(
+                            loc.T("ERR_SETUP_REMOVE_PASSWORD_FAILED", lang),
+                            new Dictionary<string, string[]> { { "errors", new[] { errors } } },
+                            "SETUP_UPDATE_FAILED"));
                     }
                 }
 
@@ -158,11 +176,14 @@ public static class SetupEndpoints
                 {
                     var errors = string.Join("; ", pr.Errors.Select(e => $"{e.Code}: {e.Description}"));
                     logger.LogError("[Setup] Failed to set new password: {Errors}", errors);
-                    return Results.BadRequest(new { error = "设置新密码失败", details = errors });
+                    return Results.BadRequest(new ErrorResponse(
+                        loc.T("ERR_SETUP_SET_PASSWORD_FAILED", lang),
+                        new Dictionary<string, string[]> { { "errors", new[] { errors } } },
+                        "SETUP_UPDATE_FAILED"));
                 }
                 await um.UpdateSecurityStampAsync(adminUser);
                 logger.LogInformation("[Setup] Admin updated successfully: {Username}", dto.Username);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse("管理员账户更新成功"));
+                return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_SETUP_ADMIN_UPDATED", lang)));
             }
         })
         .WithName("SetupAdmin")

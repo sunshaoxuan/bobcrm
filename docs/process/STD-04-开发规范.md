@@ -281,13 +281,13 @@ new EnumDefinition
 ### 7.1 文档分类
 ```
 docs/
-├── architecture/       # 架构文档
+├── design/            # 架构与设计文档
 │   ├── diagrams/      # Mermaid 图表
 │   └── *.md
 ├── api/               # API 文档
 │   └── *.md
-└── development/       # 开发文档
-    ├── coding-standards.md  # 本文档
+└── process/           # 流程与规范文档
+    ├── STD-04-开发规范.md  # 本文档
     └── *.md
 ```
 
@@ -501,8 +501,7 @@ docs/
 ├── design/           # 架构与设计文档 (ARCH, PROD, UI)
 ├── guides/           # 使用指南 (GUIDE, DEV, TEST, I18N, OPS)
 ├── examples/         # 示例代码 (EX)
-├── development/      # 开发文档 (coding-standards.md 等)
-├── process/          # 流程规范 (PROC)
+├── process/          # 流程规范 (PROC, STD)
 ├── history/          # 历史记录 (PHASE, AUDIT, GAP, MIGRATION)
 ├── reviews/          # 代码审查 (REVIEW)
 ├── plans/            # 实施计划 (PLAN)

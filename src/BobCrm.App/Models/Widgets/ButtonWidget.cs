@@ -1,4 +1,8 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
 
 namespace BobCrm.App.Models.Widgets;
 
@@ -71,15 +75,29 @@ public class ButtonWidget : TextWidget
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
         RenderFieldLabel(builder, context.Label);
-        builder.OpenElement(4, "button");
-        builder.AddAttribute(5, "type", "button");
-        builder.AddAttribute(6, "style", "padding:6px 16px; border-radius:4px; border:none; cursor:pointer; background:#1890ff; color:#fff;");
-        if (context.Mode == RuntimeWidgetRenderMode.Browse)
+
+        builder.OpenComponent<Button>(4);
+        builder.AddAttribute(5, "Type", MapVariantToButtonType(Variant));
+        builder.AddAttribute(6, "Size", MapSize(Size));
+        builder.AddAttribute(7, "Block", Block);
+        builder.AddAttribute(8, "Disabled", context.Mode == RuntimeWidgetRenderMode.Browse);
+        if (!string.IsNullOrWhiteSpace(Icon))
         {
-            builder.AddAttribute(7, "disabled", true);
+            builder.AddAttribute(9, "Icon", Icon);
         }
-        builder.AddContent(8, Label);
-        builder.CloseElement(); // button
+
+        var onClick = BuildActionCallback(context);
+        if (onClick.HasDelegate)
+        {
+            builder.AddAttribute(10, "OnClick", onClick);
+        }
+
+        builder.AddAttribute(11, "ChildContent", (RenderFragment)(childBuilder =>
+        {
+            childBuilder.AddContent(12, Label);
+        }));
+
+        builder.CloseComponent();
         builder.CloseElement(); // container
     }
 
@@ -102,4 +120,39 @@ public class ButtonWidget : TextWidget
     {
         return "button";
     }
+
+    private EventCallback<MouseEventArgs> BuildActionCallback(RuntimeRenderContext context)
+    {
+        if (string.IsNullOrWhiteSpace(Action))
+        {
+            return default;
+        }
+
+        var callbackFactory = new EventCallbackFactory();
+        return callbackFactory.Create<MouseEventArgs>(context.EventTarget, _ => HandleActionAsync());
+    }
+
+    private Task HandleActionAsync()
+    {
+        // 占位实现：后续可扩展为导航、下载或执行脚本等动作
+        return Task.CompletedTask;
+    }
+
+    private static ButtonType MapVariantToButtonType(string? variant) =>
+        (variant ?? string.Empty).ToLowerInvariant() switch
+        {
+            "default" => ButtonType.Default,
+            "dashed" => ButtonType.Dashed,
+            "link" => ButtonType.Link,
+            "text" => ButtonType.Text,
+            _ => ButtonType.Primary
+        };
+
+    private static ButtonSize MapSize(string? size) =>
+        (size ?? string.Empty).ToLowerInvariant() switch
+        {
+            "small" => ButtonSize.Small,
+            "large" => ButtonSize.Large,
+            _ => ButtonSize.Default
+        };
 }

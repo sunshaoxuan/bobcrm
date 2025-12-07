@@ -1,21 +1,21 @@
-# Comprehensive Endpoint Catalog for BobCrm.Api
+# BobCrm.Api 综合端点目录
 
-## Summary Statistics
-- Total Endpoint Files: 16
-- Total HTTP Endpoints: 80+
-- Endpoints with Anonymous Return Types: ~40 (HIGH RISK)
-- Endpoints with DTOs: ~20
-- Mixed/Inconsistent Return Formats: ~15
+## 统计摘要
+- 端点文件总数: 16
+- HTTP 端点总数: 80+
+- 具有匿名返回类型的端点: ~40 (高风险)
+- 具有 DTO 的端点: ~20
+- 混合/不一致的返回格式: ~15
 
 ---
 
-## 1. ACCESS ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
+## 1. 访问端点 (ACCESS ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
 
 ### GET /api/access/functions
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok()
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   [
     {
@@ -31,38 +31,38 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
     }
   ]
   ```
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
-- **Risk**: HIGH - Anonymous object with nested structure
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **风险**: 高 - 具有嵌套结构的匿名对象
 
 ### GET /api/access/functions/me
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok()
-- **Response Structure**: List of FunctionNodeDto (nested tree structure)
-- **Authentication**: Required
-- **Risk**: MEDIUM - Returns FunctionNodeDto but inconsistent with other endpoints
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**: FunctionNodeDto 列表 (嵌套树结构)
+- **认证**: 必需
+- **风险**: 中 - 返回 FunctionNodeDto 但与其他端点不一致
 
 ### POST /api/access/functions
-- **HTTP Method**: POST
-- **Request DTO**: CreateFunctionRequest
-- **Return Type**: FunctionNodeDto (Results.Ok)
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateFunctionRequest
+- **返回类型**: FunctionNodeDto (Results.Ok)
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### GET /api/access/roles
-- **HTTP Method**: GET
-- **Return Type**: RoleProfile objects (Results.Ok)
-- **Includes**: Functions, DataScopes
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **HTTP 方法**: GET
+- **返回类型**: RoleProfile 对象 (Results.Ok)
+- **包含**: Functions, DataScopes
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### POST /api/access/roles
-- **HTTP Method**: POST
-- **Request DTO**: CreateRoleRequest
-- **Return Type**: RoleProfile (Results.Ok)
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateRoleRequest
+- **返回类型**: RoleProfile (Results.Ok)
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### GET /api/access/roles/{roleId}
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "id": "guid",
@@ -70,44 +70,44 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
     "datascopes": [...]
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **风险**: 高 - 匿名对象
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### PUT /api/access/roles/{roleId}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateRoleRequest
-- **Return Type**: ANONYMOUS OBJECT
-- **Response**: RoleProfile instance
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateRoleRequest
+- **返回类型**: 匿名对象
+- **响应**: RoleProfile 实例
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### DELETE /api/access/roles/{roleId}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### PUT /api/access/roles/{roleId}/permissions
-- **HTTP Method**: PUT
-- **Request DTO**: UpdatePermissionsRequest
-- **Return Type**: ANONYMOUS OBJECT
-- **Response**:
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdatePermissionsRequest
+- **返回类型**: 匿名对象
+- **响应**:
   ```json
   {
     "message": "Permissions updated successfully"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: RequireFunction("BAS.AUTH.ROLE.PERM")
+- **风险**: 高 - 匿名对象
+- **认证**: RequireFunction("BAS.AUTH.ROLE.PERM")
 
 ### POST /api/access/assignments
-- **HTTP Method**: POST
-- **Request DTO**: AssignRoleRequest
-- **Return Type**: RoleAssignment object
-- **Authentication**: RequireFunction("BAS.AUTH.USER.ROLE")
+- **HTTP 方法**: POST
+- **请求 DTO**: AssignRoleRequest
+- **返回类型**: RoleAssignment 对象
+- **认证**: RequireFunction("BAS.AUTH.USER.ROLE")
 
 ### GET /api/access/assignments/user/{userId}
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   [
     {
@@ -121,23 +121,23 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
     }
   ]
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: RequireFunction("BAS.AUTH.USER.ROLE")
+- **风险**: 高 - 匿名对象
+- **认证**: RequireFunction("BAS.AUTH.USER.ROLE")
 
 ### DELETE /api/access/assignments/{assignmentId}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: RequireFunction("BAS.AUTH.USER.ROLE")
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **认证**: RequireFunction("BAS.AUTH.USER.ROLE")
 
 ---
 
-## 2. ADMIN ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
+## 2. 管理端点 (ADMIN ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
 
 ### GET /api/admin/db/health
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "provider": "string",
@@ -150,18 +150,18 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
     }
   }
   ```
-- **Risk**: HIGH - Nested anonymous objects
-- **Authentication**: None (Debug endpoint)
+- **风险**: 高 - 嵌套匿名对象
+- **认证**: 无 (调试端点)
 
 ### POST /api/admin/db/recreate
-- **HTTP Method**: POST
-- **Return Type**: Results.Ok via ApiResponseExtensions.SuccessResponse()
-- **Risk**: HIGH - Anonymous object
+- **HTTP 方法**: POST
+- **返回类型**: Results.Ok (ApiResponseExtensions.SuccessResponse())
+- **风险**: 高 - 匿名对象
 
 ### GET /api/debug/users
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   [
     {
@@ -173,18 +173,18 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
     }
   ]
   ```
-- **Risk**: HIGH - Anonymous object
+- **风险**: 高 - 匿名对象
 
 ### POST /api/debug/reset-setup
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via ApiResponseExtensions.SuccessResponse()
-- **Risk**: MEDIUM
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (ApiResponseExtensions.SuccessResponse())
+- **风险**: 中
 
 ### POST /api/admin/reset-password
-- **HTTP Method**: POST
-- **Request DTO**: ResetPasswordDto
-- **Return Type**: ANONYMOUS OBJECT
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: ResetPasswordDto
+- **返回类型**: 匿名对象
+- **响应结构**:
   ```json
   {
     "status": "ok",
@@ -194,30 +194,30 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AdminEndpoints.cs`
     }
   }
   ```
-- **Risk**: HIGH - Nested anonymous objects
+- **风险**: 高 - 嵌套匿名对象
 
 ---
 
-## 3. AUTH ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AuthEndpoints.cs`
+## 3. 认证端点 (AUTH ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AuthEndpoints.cs`
 
 ### POST /api/auth/register
-- **HTTP Method**: POST
-- **Request DTO**: RegisterDto
-- **Return Type**: ANONYMOUS OBJECT via ApiResponseExtensions.SuccessResponse()
-- **Risk**: MEDIUM
+- **HTTP 方法**: POST
+- **请求 DTO**: RegisterDto
+- **返回类型**: 匿名对象 (ApiResponseExtensions.SuccessResponse())
+- **风险**: 中
 
 ### GET /api/auth/activate
-- **HTTP Method**: GET
-- **Parameters**: userId, code
-- **Return Type**: ANONYMOUS OBJECT via ApiResponseExtensions.SuccessResponse()
-- **Risk**: MEDIUM
+- **HTTP 方法**: GET
+- **参数**: userId, code
+- **返回类型**: 匿名对象 (ApiResponseExtensions.SuccessResponse())
+- **风险**: 中
 
 ### POST /api/auth/login
-- **HTTP Method**: POST
-- **Request DTO**: LoginDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: LoginDto
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "accessToken": "string",
@@ -229,31 +229,31 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AuthEndpoints.cs`
     }
   }
   ```
-- **Risk**: HIGH - Nested anonymous objects
+- **风险**: 高 - 嵌套匿名对象
 
 ### POST /api/auth/refresh
-- **HTTP Method**: POST
-- **Request DTO**: RefreshDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: RefreshDto
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "accessToken": "string",
     "refreshToken": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
+- **风险**: 高 - 匿名对象
 
 ### POST /api/auth/logout
-- **HTTP Method**: POST
-- **Request DTO**: LogoutDto
-- **Return Type**: ANONYMOUS OBJECT via ApiResponseExtensions.SuccessResponse()
-- **Risk**: MEDIUM
+- **HTTP 方法**: POST
+- **请求 DTO**: LogoutDto
+- **返回类型**: 匿名对象 (ApiResponseExtensions.SuccessResponse())
+- **风险**: 中
 
 ### GET /api/auth/session
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "valid": "boolean",
@@ -263,12 +263,12 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AuthEndpoints.cs`
     }
   }
   ```
-- **Risk**: HIGH - Anonymous nested object
+- **风险**: 高 - 匿名嵌套对象
 
 ### GET /api/auth/me
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "id": "string",
@@ -278,42 +278,42 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/AuthEndpoints.cs`
     "role": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
+- **风险**: 高 - 匿名对象
 
 ### POST /api/auth/change-password
-- **HTTP Method**: POST
-- **Request DTO**: ChangePasswordDto
-- **Return Type**: ANONYMOUS OBJECT
-- **Response**: 
+- **HTTP 方法**: POST
+- **请求 DTO**: ChangePasswordDto
+- **返回类型**: 匿名对象
+- **响应**: 
   ```json
   {
     "message": "密码修改成功"
   }
   ```
-- **Risk**: HIGH - Anonymous object
+- **风险**: 高 - 匿名对象
 
 ---
 
-## 4. CUSTOMER ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/CustomerEndpoints.cs`
+## 4. 客户端点 (CUSTOMER ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/CustomerEndpoints.cs`
 
 ### GET /api/customers
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ICustomerQueries.GetList())
-- **Risk**: MEDIUM - Depends on query implementation
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (来自 ICustomerQueries.GetList())
+- **风险**: 中 - 取决于查询实现
+- **认证**: 必需
 
 ### GET /api/customers/{id}
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ICustomerQueries.GetDetail())
-- **Risk**: MEDIUM - Depends on query implementation
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (来自 ICustomerQueries.GetDetail())
+- **风险**: 中 - 取决于查询实现
+- **认证**: 必需
 
 ### POST /api/customers
-- **HTTP Method**: POST
-- **Request DTO**: CreateCustomerDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateCustomerDto
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "id": "int",
@@ -321,27 +321,27 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/CustomerEndpoints.cs`
     "name": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### PUT /api/customers/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateCustomerDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateCustomerDto
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "status": "success",
     "newVersion": "int"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/customers/{id}/access
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   [
     {
@@ -350,25 +350,25 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/CustomerEndpoints.cs`
     }
   ]
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required (admin only)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需 (仅管理员)
 
 ### POST /api/customers/{id}/access
-- **HTTP Method**: POST
-- **Request DTO**: AccessUpsertDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
+- **HTTP 方法**: POST
+- **请求 DTO**: AccessUpsertDto
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
 
 ---
 
-## 5. DYNAMIC ENTITY ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
+## 5. 动态实体端点 (DYNAMIC ENTITY ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
 
 ### POST /api/dynamic-entities/{fullTypeName}/query
-- **HTTP Method**: POST
-- **Request DTO**: QueryRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: QueryRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "data": [],
@@ -377,85 +377,85 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
     "pageSize": "int"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/dynamic-entities/{fullTypeName}/{id}
-- **HTTP Method**: GET
-- **Return Type**: Entity object via Results.Ok
-- **Risk**: MEDIUM - Dynamic type
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 实体对象 (Results.Ok)
+- **风险**: 中 - 动态类型
+- **认证**: 必需
 
 ### POST /api/dynamic-entities/raw/{tableName}/query
-- **HTTP Method**: POST
-- **Request DTO**: QueryRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: QueryRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "data": [],
     "count": "int"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/dynamic-entities/{fullTypeName}
-- **HTTP Method**: POST
-- **Request DTO**: Dictionary<string, object>
-- **Return Type**: Entity object via Results.Created
-- **Risk**: MEDIUM - Dynamic type
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: Dictionary<string, object>
+- **返回类型**: 实体对象 (Results.Created)
+- **风险**: 中 - 动态类型
+- **认证**: 必需
 
 ### PUT /api/dynamic-entities/{fullTypeName}/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: Dictionary<string, object>
-- **Return Type**: Entity object via Results.Ok
-- **Risk**: MEDIUM - Dynamic type
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: Dictionary<string, object>
+- **返回类型**: 实体对象 (Results.Ok)
+- **风险**: 中 - 动态类型
+- **认证**: 必需
 
 ### DELETE /api/dynamic-entities/{fullTypeName}/{id}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **认证**: 必需
 
 ### POST /api/dynamic-entities/{fullTypeName}/count
-- **HTTP Method**: POST
-- **Request DTO**: CountRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response**: 
+- **HTTP 方法**: POST
+- **请求 DTO**: CountRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应**: 
   ```json
   {
     "count": "int"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 6. ENTITY AGGREGATE ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityAggregateEndpoints.cs`
+## 6. 实体聚合端点 (ENTITY AGGREGATE ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityAggregateEndpoints.cs`
 
 ### GET /api/entity-aggregates/{id}
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**: Complex nested structure with master, subEntities, fields
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**: 复杂的嵌套结构，包含 master, subEntities, fields
+- **风险**: 高 - 复杂的匿名嵌套对象
+- **认证**: 必需
 
 ### POST /api/entity-aggregates
-- **HTTP Method**: POST
-- **Request DTO**: SaveEntityDefinitionAggregateRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: SaveEntityDefinitionAggregateRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 复杂的匿名嵌套对象
+- **认证**: 必需
 
 ### POST /api/entity-aggregates/validate
-- **HTTP Method**: POST
-- **Request DTO**: SaveEntityDefinitionAggregateRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: SaveEntityDefinitionAggregateRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "isValid": "boolean",
@@ -463,41 +463,41 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityAggregateEndpoints.cs`
     "errors": []
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### DELETE /api/entity-aggregates/sub-entities/{id}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **认证**: 必需
 
 ### GET /api/entity-aggregates/{id}/metadata-preview
-- **HTTP Method**: GET
-- **Return Type**: Results.Content (JSON string)
-- **Risk**: MEDIUM - Raw JSON content
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Content (JSON 字符串)
+- **风险**: 中 - 原始 JSON 内容
+- **认证**: 必需
 
 ### GET /api/entity-aggregates/{id}/code-preview
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "FileName.cs": "code string"
   }
   ```
-- **Risk**: HIGH - Anonymous object (dictionary)
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象 (字典)
+- **认证**: 必需
 
 ---
 
-## 7. ENTITY DEFINITION ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` (VERY LARGE FILE - ~930 lines)
+## 7. 实体定义端点 (ENTITY DEFINITION ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` (非常大的文件 - ~930 行)
 
 ### GET /api/entities
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   [
     {
@@ -512,19 +512,19 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     }
   ]
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None (public)
+- **风险**: 高 - 匿名对象
+- **认证**: 无 (公开)
 
 ### GET /api/entities/all
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required (admin)
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需 (管理员)
 
 ### GET /api/entities/{entityRoute}/validate
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "isValid": "boolean",
@@ -532,13 +532,13 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     "entity": {}
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None (public)
+- **风险**: 高 - 匿名对象
+- **认证**: 无 (公开)
 
 ### GET /api/entity-definitions
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   [
     {
@@ -552,25 +552,25 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     }
   ]
   ```
-- **Risk**: HIGH - Complex anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 复杂的匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 复杂的匿名嵌套对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/by-type/{entityType}
-- **HTTP Method**: GET
-- **Return Type**: EntityDefinition via Results.Json
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: EntityDefinition (Results.Json)
+- **风险**: 中
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}/referenced
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **响应结构**:
   ```json
   {
     "isReferenced": "boolean",
@@ -580,32 +580,32 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     }
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/entity-definitions
-- **HTTP Method**: POST
-- **Request DTO**: CreateEntityDefinitionDto
-- **Return Type**: EntityDefinition via Results.Created
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateEntityDefinitionDto
+- **返回类型**: EntityDefinition (Results.Created)
+- **风险**: 中
+- **认证**: 必需
 
 ### PUT /api/entity-definitions/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateEntityDefinitionDto
-- **Return Type**: EntityDefinition via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateEntityDefinitionDto
+- **返回类型**: EntityDefinition (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### DELETE /api/entity-definitions/{id}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **认证**: 必需
 
 ### POST /api/entity-definitions/{id}/publish
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "success": "boolean",
@@ -614,13 +614,13 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     "message": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/entity-definitions/{id}/publish-changes
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "success": "boolean",
@@ -630,13 +630,13 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     "message": "string"
   }
   ```
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: Required
+- **风险**: 高 - 复杂的匿名嵌套对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}/preview-ddl
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "entityId": "guid",
@@ -645,13 +645,13 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     "ddlScript": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}/ddl-history
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok (array)
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok) (数组)
+- **响应结构**:
   ```json
   [
     {
@@ -666,13 +666,13 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     }
   ]
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}/generate-code
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "entityId": "guid",
@@ -680,89 +680,89 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` 
     "message": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/entity-definitions/{id}/compile
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok/BadRequest
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (Results.Ok/BadRequest)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/entity-definitions/compile-batch
-- **HTTP Method**: POST
-- **Request DTO**: CompileBatchDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: CompileBatchDto
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/{id}/validate-code
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "isValid": "boolean",
     "errors": [...]
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/loaded-entities
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "count": "int",
     "entities": []
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-definitions/type-info/{fullTypeName}
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### DELETE /api/entity-definitions/loaded-entities/{fullTypeName}
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response**: 
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应**: 
   ```json
   {
     "message": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/entity-definitions/{id}/recompile
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 8. FIELD ACTION ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/FieldActionEndpoints.cs`
+## 8. 字段动作端点 (FIELD ACTION ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/FieldActionEndpoints.cs`
 
 ### POST /api/actions/rdp/download
-- **HTTP Method**: POST
-- **Request DTO**: RdpDownloadRequest
-- **Return Type**: Results.File (binary RDP file)
-- **Risk**: LOW - File download endpoint
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: RdpDownloadRequest
+- **返回类型**: Results.File (二进制 RDP 文件)
+- **风险**: 低 - 文件下载端点
+- **认证**: 必需
 
 ### POST /api/actions/file/validate
-- **HTTP Method**: POST
-- **Request DTO**: FileValidationRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求 DTO**: FileValidationRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "exists": "boolean",
@@ -772,583 +772,402 @@ File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/FieldActionEndpoints.cs`
     "lastModified": "datetime?"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### POST /api/actions/mailto/generate
-- **HTTP Method**: POST
-- **Request DTO**: MailtoRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response**:
+- **HTTP 方法**: POST
+- **请求 DTO**: MailtoRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应**:
   ```json
   {
     "link": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 9. FILE ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/FileEndpoints.cs`
+## 9. 文件端点 (FILE ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/FileEndpoints.cs`
 
 ### POST /api/files/upload
-- **HTTP Method**: POST
-- **Request**: Form file upload
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
+- **HTTP 方法**: POST
+- **请求**: 表单文件上传
+- **返回类型**: 匿名对象 (Results.Ok)
+- **响应结构**:
   ```json
   {
     "key": "string",
     "url": "string"
   }
   ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required (Authorize)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/files/{*key}
-- **HTTP Method**: GET
-- **Return Type**: Results.Stream (binary content)
-- **Risk**: LOW - File download endpoint
-- **Authentication**: None
+- **HTTP 方法**: GET
+- **返回类型**: Stream
+- **风险**: 低
+- **认证**: 无 (公开)
 
 ### DELETE /api/files/{*key}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.NoContent()
-- **Authentication**: Required (Authorize)
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.NoContent()
+- **风险**: 低
+- **认证**: 必需
 
 ---
 
-## 10. I18N ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/I18nEndpoints.cs`
+## 10. 国际化端点 (I18N ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/I18nEndpoints.cs`
 
 ### GET /api/i18n/version
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response**:
-  ```json
-  {
-    "version": "int/string"
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 无
 
 ### GET /api/i18n/resources
-- **HTTP Method**: GET
-- **Return Type**: List<LocalizationResource> via Results.Json
-- **Risk**: MEDIUM - Depends on model structure
-- **Authentication**: Required
-- **Features**: ETag caching, 304 Not Modified
+- **HTTP 方法**: GET
+- **返回类型**: List<LocalizationResource>
+- **风险**: 中
+- **认证**: 无
 
 ### GET /api/i18n/{lang}
-- **HTTP Method**: GET
-- **Return Type**: Dictionary<string, string> via Results.Json
-- **Risk**: MEDIUM - Dynamic dictionary
-- **Authentication**: None
-- **Features**: ETag caching, 304 Not Modified
+- **HTTP 方法**: GET
+- **返回类型**: Dictionary<string,string>
+- **风险**: 中
+- **认证**: 无
 
-### GET /api/i18n/languages (DUPLICATE ROUTE)
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
-  ```json
-  [
-    {
-      "code": "string",
-      "name": "string"
-    }
-  ]
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None
+### GET /api/i18n/languages
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 无
 
 ---
 
-## 11. LAYOUT ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/LayoutEndpoints.cs` (VERY LARGE - ~680 lines)
+## 11. 布局端点 (LAYOUT ENDPOINTS) [6 个已废弃]
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/LayoutEndpoints.cs`
 
 ### GET /api/fields
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from IFieldQueries.GetDefinitions())
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (IQuery)
+- **风险**: 中
+- **认证**: 必需
 
 ### GET /api/fields/tags
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
-  ```json
-  [
-    {
-      "tag": "string",
-      "count": "int"
-    }
-  ]
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
-### GET /api/layout/{customerId} [DEPRECATED]
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ILayoutQueries)
-- **Risk**: MEDIUM
-- **Authentication**: Required
+### GET /api/layout/{id} [已废弃]
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (IQuery)
+- **风险**: 中
+- **认证**: 必需
 
-### POST /api/layout/{customerId} [DEPRECATED]
-- **HTTP Method**: POST
-- **Request**: System.Text.Json.JsonElement
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
+### POST /api/layout/{id} [已废弃]
+- **HTTP 方法**: POST
+- **请求 DTO**: JsonElement
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
-### DELETE /api/layout/{customerId} [DEPRECATED]
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
+### DELETE /api/layout/{id} [已废弃]
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### GET /api/layout
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ILayoutQueries)
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (IQuery)
+- **风险**: 中
+- **认证**: 必需
 
 ### GET /api/layout/customer
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ILayoutQueries)
-- **Risk**: MEDIUM - Alias endpoint
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (IQuery)
+- **风险**: 中
+- **认证**: 必需
 
 ### POST /api/layout
-- **HTTP Method**: POST
-- **Request**: System.Text.Json.JsonElement
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: JsonElement
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### POST /api/layout/customer
-- **HTTP Method**: POST
-- **Request**: System.Text.Json.JsonElement
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM - Alias endpoint
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: JsonElement
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### DELETE /api/layout
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### DELETE /api/layout/customer
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM - Alias endpoint
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
-### GET /api/layout/entity/{entityType}
-- **HTTP Method**: GET
-- **Return Type**: Results.Json (from ILayoutQueries)
-- **Risk**: MEDIUM
-- **Authentication**: Required
+### GET /api/layout/entity/{type}
+- **HTTP 方法**: GET
+- **返回类型**: Results.Json (IQuery)
+- **风险**: 中
+- **认证**: 必需
 
-### POST /api/layout/entity/{entityType}
-- **HTTP Method**: POST
-- **Request**: System.Text.Json.JsonElement
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+### POST /api/layout/entity/{type}
+- **HTTP 方法**: POST
+- **请求 DTO**: JsonElement
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
-### DELETE /api/layout/entity/{entityType}
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+### DELETE /api/layout/entity/{type}
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
-### POST /api/layout/{customerId}/generate
-- **HTTP Method**: POST
-- **Request DTO**: GenerateLayoutRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**:
-  ```json
-  {
-    "mode": "string",
-    "items": {...}
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+### POST /api/layout/{id}/generate
+- **HTTP 方法**: POST
+- **请求 DTO**: GenerateLayoutRequest
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 12. ORGANIZATION ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/OrganizationEndpoints.cs`
+## 12. 组织端点 (ORGANIZATION ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/OrganizationEndpoints.cs`
 
 ### GET /api/organizations/tree
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM - Depends on service implementation
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### POST /api/organizations
-- **HTTP Method**: POST
-- **Request DTO**: CreateOrganizationRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM - Depends on service response
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateOrganizationRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### PUT /api/organizations/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateOrganizationRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateOrganizationRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### DELETE /api/organizations/{id}
-- **HTTP Method**: DELETE
-- **Return Type**: Results.Ok()
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: Results.Ok
+- **风险**: 中
+- **认证**: 必需
 
 ---
 
-## 13. SETTINGS ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/SettingsEndpoints.cs`
+## 13. 设置端点 (SETTINGS ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/SettingsEndpoints.cs`
 
 ### GET /api/settings/system
-- **HTTP Method**: GET
-- **Return Type**: SystemSettingsDto via Results.Ok
-- **Risk**: LOW - Typed DTO
-- **Authentication**: Required (admin role)
+- **HTTP 方法**: GET
+- **返回类型**: SystemSettingsDto (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### PUT /api/settings/system
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateSystemSettingsRequest
-- **Return Type**: SystemSettingsDto via Results.Ok
-- **Risk**: LOW - Typed DTO
-- **Authentication**: Required (admin role)
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateSystemSettingsRequest
+- **返回类型**: SystemSettingsDto (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### GET /api/settings/user
-- **HTTP Method**: GET
-- **Return Type**: UserSettingsSnapshot via Results.Ok
-- **Risk**: LOW - Typed return
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: UserSettingsSnapshot (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### PUT /api/settings/user
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateUserSettingsRequest
-- **Return Type**: UserSettingsSnapshot via Results.Ok
-- **Risk**: LOW - Typed return
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateUserSettingsRequest
+- **返回类型**: UserSettingsSnapshot (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ---
 
-## 14. SETUP ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/SetupEndpoints.cs`
+## 14. 设置端点 (SETUP ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/SetupEndpoints.cs`
 
 ### GET /api/setup/admin
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
-  ```json
-  {
-    "username": "string",
-    "email": "string",
-    "exists": "boolean"
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None (AllowAnonymous)
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 无
 
 ### POST /api/setup/admin
-- **HTTP Method**: POST
-- **Request DTO**: AdminSetupDto
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok/ApiResponseExtensions
-- **Risk**: MEDIUM
-- **Authentication**: None (AllowAnonymous)
+- **HTTP 方法**: POST
+- **请求 DTO**: AdminSetupDto
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 无
 
 ---
 
-## 15. TEMPLATE ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/TemplateEndpoints.cs` (~440 lines)
+## 15. 模板端点 (TEMPLATE ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/TemplateEndpoints.cs`
 
 ### GET /api/templates
-- **HTTP Method**: GET
-- **Parameters**: entityType (query), groupBy (query)
-- **Return Type**: ANONYMOUS OBJECT via Results.Json
-- **Response Structure**: Grouped or flat array depending on groupBy parameter
-- **Risk**: HIGH - Anonymous object, inconsistent response structure
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Results.Json)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/templates/{id}
-- **HTTP Method**: GET
-- **Return Type**: FormTemplate via Results.Json
-- **Risk**: MEDIUM - Depends on model structure
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: FormTemplate (Results.Json)
+- **风险**: 中
+- **认证**: 必需
 
 ### POST /api/templates
-- **HTTP Method**: POST
-- **Request DTO**: CreateTemplateRequest
-- **Return Type**: FormTemplate via Results.Created
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateTemplateRequest
+- **返回类型**: FormTemplate (Results.Created)
+- **风险**: 中
+- **认证**: 必需
 
 ### PUT /api/templates/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateTemplateRequest
-- **Return Type**: FormTemplate via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateTemplateRequest
+- **返回类型**: FormTemplate (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### DELETE /api/templates/{id}
-- **HTTP Method**: DELETE
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: DELETE
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
-### GET /api/templates/effective/{entityType}
-- **HTTP Method**: GET
-- **Return Type**: FormTemplate via Results.Json
-- **Risk**: MEDIUM
-- **Authentication**: Required
+### GET /api/templates/effective/{type}
+- **HTTP 方法**: GET
+- **返回类型**: FormTemplate (Results.Json)
+- **风险**: 中
+- **认证**: 必需
 
-### GET /api/templates/bindings/{entityType}
-- **HTTP Method**: GET
-- **Parameters**: usageType (query)
-- **Return Type**: TemplateBinding (ToDto()) via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: None
+### GET /api/templates/bindings/{type}
+- **HTTP 方法**: GET
+- **返回类型**: TemplateBinding (ToDto)
+- **风险**: 中
+- **认证**: 必需
 
 ### PUT /api/templates/bindings
-- **HTTP Method**: PUT
-- **Request DTO**: UpsertTemplateBindingRequest
-- **Return Type**: TemplateBinding (ToDto()) via Results.Ok
-- **Risk**: MEDIUM
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpsertTemplateBindingRequest
+- **返回类型**: TemplateBinding (ToDto)
+- **风险**: 中
+- **认证**: 必需
 
-### POST /api/templates/runtime/{entityType}
-- **HTTP Method**: POST
-- **Request DTO**: TemplateRuntimeRequest
-- **Return Type**: ANONYMOUS OBJECT (runtime context) via Results.Ok
-- **Risk**: HIGH - Anonymous object structure depends on service
-- **Authentication**: Required
+### POST /api/templates/runtime/{type}
+- **HTTP 方法**: POST
+- **请求 DTO**: TemplateRuntimeRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 16. USER ENDPOINTS
-File: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/UserEndpoints.cs`
+## 16. 用户端点 (USER ENDPOINTS)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Endpoints/UserEndpoints.cs`
 
 ### GET /api/users
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok (mapped user summaries)
-- **Response Structure**: List of UserSummaryDto
-- **Risk**: MEDIUM - Uses DTO, but mapping is inline
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: Mapped (Results.Ok)
+- **风险**: 中
+- **认证**: 必需
 
 ### GET /api/users/{id}
-- **HTTP Method**: GET
-- **Return Type**: UserDetailDto via Results.Ok
-- **Risk**: LOW - Typed DTO
-- **Authentication**: Required
+- **HTTP 方法**: GET
+- **返回类型**: UserDetailDto (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### POST /api/users
-- **HTTP Method**: POST
-- **Request DTO**: CreateUserRequest
-- **Return Type**: UserDetailDto via Results.Ok
-- **Risk**: LOW - Typed DTO
-- **Authentication**: Required
+- **HTTP 方法**: POST
+- **请求 DTO**: CreateUserRequest
+- **返回类型**: UserDetailDto (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### PUT /api/users/{id}
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateUserRequest
-- **Return Type**: UserDetailDto via Results.Ok
-- **Risk**: LOW - Typed DTO
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateUserRequest
+- **返回类型**: UserDetailDto (Results.Ok)
+- **风险**: 低
+- **认证**: 必需
 
 ### PUT /api/users/{id}/roles
-- **HTTP Method**: PUT
-- **Request DTO**: UpdateUserRolesRequest
-- **Return Type**: ANONYMOUS OBJECT via Results.Ok
-- **Response Structure**:
-  ```json
-  {
-    "success": "boolean",
-    "roles": [...]
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: Required
+- **HTTP 方法**: PUT
+- **请求 DTO**: UpdateUserRolesRequest
+- **返回类型**: 匿名对象 (Results.Ok)
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ---
 
-## 17. ENTITY ADVANCED FEATURES CONTROLLER
-File: `/home/user/bobcrm/src/BobCrm.Api/Controllers/EntityAdvancedFeaturesController.cs`
+## 17. 实体高级功能控制器 (ENTITY ADVANCED FEATURES CONTROLLER)
+文件: `/home/user/bobcrm/src/BobCrm.Api/Controllers/EntityAdvancedFeaturesController.cs`
 
-### GET /api/entity-advanced/{entityId}/children
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Ok()
-- **Response Structure**:
-  ```json
-  {
-    "entityId": "guid",
-    "entityName": "string",
-    "structureType": "string",
-    "childCount": "int",
-    "children": [...]
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None (Controller default)
+### GET /api/entity-advanced/{id}/children
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
-### POST /api/entity-advanced/{entityId}/configure-master-detail
-- **HTTP Method**: POST
-- **Request DTO**: MasterDetailConfigRequest
-- **Return Type**: ANONYMOUS OBJECT via Ok()
-- **Response Structure**:
-  ```json
-  {
-    "message": "string",
-    "entityId": "guid",
-    "structureType": "string"
-  }
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None
+### POST /api/entity-advanced/{id}/configure-master-detail
+- **HTTP 方法**: POST
+- **请求 DTO**: MasterDetailConfigRequest
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
-### POST /api/entity-advanced/{entityId}/generate-aggvo
-- **HTTP Method**: POST
-- **Return Type**: ANONYMOUS OBJECT via Ok()
-- **Response Structure**:
-  ```json
-  {
-    "entity": "string",
-    "aggVOClassName": "string",
-    "aggVOCode": "string",
-    "voCode": "string",
-    "childVOCodes": {...}
-  }
-  ```
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: None
+### POST /api/entity-advanced/{id}/generate-aggvo
+- **HTTP 方法**: POST
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
-### POST /api/entity-advanced/{entityId}/evaluate-migration
-- **HTTP Method**: POST
-- **Request DTO**: List<FieldMetadata>
-- **Return Type**: ANONYMOUS OBJECT via Ok()
-- **Response Structure**:
-  ```json
-  {
-    "entityName": "string",
-    "tableName": "string",
-    "affectedRows": "int",
-    "riskLevel": "string",
-    "isSafe": "boolean",
-    "operations": [],
-    "warnings": [],
-    "errors": []
-  }
-  ```
-- **Risk**: HIGH - Complex anonymous nested object
-- **Authentication**: None
+### POST /api/entity-advanced/{id}/evaluate-migration
+- **HTTP 方法**: POST
+- **请求 DTO**: List<FieldMetadata>
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-advanced/master-candidates
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Ok() (array)
-- **Response Structure**:
-  ```json
-  [
-    {
-      "id": "guid",
-      "entityName": "string",
-      "fullTypeName": "string",
-      "structureType": "string",
-      "displayName": "string",
-      "currentChildCount": "int"
-    }
-  ]
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需
 
 ### GET /api/entity-advanced/detail-candidates
-- **HTTP Method**: GET
-- **Return Type**: ANONYMOUS OBJECT via Ok() (array)
-- **Response Structure**:
-  ```json
-  [
-    {
-      "id": "guid",
-      "entityName": "string",
-      "fullTypeName": "string",
-      "structureType": "string",
-      "displayName": "string",
-      "fieldCount": "int"
-    }
-  ]
-  ```
-- **Risk**: HIGH - Anonymous object
-- **Authentication**: None
-
----
-
-## SUMMARY OF ISSUES
-
-### HIGH RISK ENDPOINTS (Anonymous Objects - 40+)
-
-**Location Pattern**: Most endpoints use `Results.Json()`, `Results.Ok()` with inline anonymous types
-
-**Top Issues**:
-1. AccessEndpoints:
-   - GET /api/access/functions - Anonymous tree structure
-   - GET /api/access/roles/{roleId} - Anonymous object
-   - PUT /api/access/roles/{roleId}/permissions - Anonymous object
-   - GET /api/access/assignments/user/{userId} - Anonymous array
-
-2. AuthEndpoints:
-   - POST /api/auth/login - Nested anonymous object with user
-   - POST /api/auth/refresh - Anonymous token response
-   - GET /api/auth/session - Anonymous nested object
-   - GET /api/auth/me - Anonymous user object
-
-3. CustomerEndpoints:
-   - POST /api/customers - Anonymous id/code/name response
-   - PUT /api/customers/{id} - Anonymous status/version response
-   - GET /api/customers/{id}/access - Anonymous array of access objects
-
-4. DynamicEntityEndpoints:
-   - POST /api/dynamic-entities/{fullTypeName}/query - Anonymous pagination object
-   - POST /api/dynamic-entities/{fullTypeName}/count - Anonymous count object
-
-5. EntityDefinitionEndpoints:
-   - GET /api/entities - Multiple anonymous objects
-   - POST /api/entity-definitions/{id}/publish - Anonymous DDL response
-   - Many compilation and code generation endpoints
-
-6. EntityAdvancedFeaturesController:
-   - Multiple endpoints returning anonymous objects for master-detail configuration
-
-### RECOMMENDATIONS
-
-1. **Create DTOs for all anonymous returns**:
-   - LoginResponseDto
-   - TokenRefreshResponseDto
-   - EntityListDto
-   - PaginationResultDto
-   - etc.
-
-2. **Standardize response envelopes**:
-   - Use consistent ApiResponse<T> wrapper
-   - Include metadata (timestamp, version, etc.)
-
-3. **Deprecated endpoints removal**:
-   - LayoutEndpoints has multiple [DEPRECATED] endpoints with old routes
-   - Consider removing in next major version
-
-4. **Inconsistent naming**:
-   - Some endpoints use `Results.Json()`, others `Results.Ok()`
-   - Some use ApiResponseExtensions.SuccessResponse()
-   - Should standardize on one pattern
-
-5. **Missing DTOs**:
-   - SystemSettingsDto exists, but other similar domains don't
-   - Create comprehensive DTO set for each domain
-
+- **HTTP 方法**: GET
+- **返回类型**: 匿名对象 (Ok())
+- **风险**: 高 - 匿名对象
+- **认证**: 必需

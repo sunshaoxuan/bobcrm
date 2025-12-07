@@ -8,6 +8,22 @@ namespace BobCrm.Api.Tests;
 
 public static class TestHelpers
 {
+    public static async Task<JsonElement> ReadAsJsonAsync(this HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        return JsonDocument.Parse(content).RootElement;
+    }
+
+    public static JsonElement UnwrapData(this JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            if (root.TryGetProperty("data", out var data)) return data;
+            if (root.TryGetProperty("Data", out var dataPascal)) return dataPascal;
+        }
+        return root;
+    }
+
     public static async Task<(string accessToken, string refreshToken)> LoginAsAdminAsync(this HttpClient client)
     {
         var res = await client.PostAsJsonAsync("/api/auth/login", new { username = "admin", password = "Admin@12345" });
@@ -16,7 +32,7 @@ public static class TestHelpers
             var errorContent = await res.Content.ReadAsStringAsync();
             throw new InvalidOperationException($"Admin login failed with status {res.StatusCode}: {errorContent}");
         }
-        var json = JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement;
+        var json = (await res.ReadAsJsonAsync()).UnwrapData();
         var access = json.GetProperty("accessToken").GetString()!;
         var refresh = json.GetProperty("refreshToken").GetString()!;
         return (access, refresh);
@@ -49,7 +65,7 @@ public static class TestHelpers
             var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
             login.EnsureSuccessStatusCode();
             
-            var json = JsonDocument.Parse(await login.Content.ReadAsStringAsync()).RootElement;
+            var json = (await login.ReadAsJsonAsync()).UnwrapData();
             var access = json.GetProperty("accessToken").GetString()!;
             return (u!.Id, username, access);
         }

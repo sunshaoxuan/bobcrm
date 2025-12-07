@@ -81,7 +81,7 @@
     <Form Model="@_newSubEntity" @ref="_addForm" LabelCol="new ColLayoutParam { Span = 6 }" WrapperCol="new ColLayoutParam { Span = 18 }">
         <FormItem Label="@I18n.T("LBL_SUB_ENTITY_CODE")" Required>
             <Input @bind-Value="@_newSubEntity.Code"
-                   Placeholder="@I18n.T("例如: Lines, Items")"
+                   Placeholder="@I18n.T("SUB_ENTITY_CODE_PLACEHOLDER")"
                    MaxLength="100" />
             <p style="font-size: 12px; color: #8c8c8c; margin-top: 4px;">
                 @I18n.T("LBL_SUB_ENTITY_CODE_HINT")
@@ -141,7 +141,7 @@
 
     private string GetDisplayName(MultilingualTextDto? displayName)
     {
-        return MultilingualTextResolver.Resolve(displayName, "未命名");
+        return MultilingualTextResolver.Resolve(displayName, I18n.T("LBL_UNNAMED"));
     }
 
     private void ShowAddSubEntityModal()
@@ -156,7 +156,7 @@
 
     private async Task OnAddSubEntityConfirm()
     {
-        // 验证子实体编码
+        // Validate sub-entity code
         if (string.IsNullOrWhiteSpace(_newSubEntity.Code))
         {
             MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_REQUIRED"));
@@ -169,27 +169,27 @@
             return;
         }
 
-        // 检查编码唯一性
+        // Ensure code is unique
         if (SubEntities != null && SubEntities.Any(s => s.Code.Equals(_newSubEntity.Code, StringComparison.OrdinalIgnoreCase)))
         {
             MessageService.Error(I18n.T("MSG_SUB_ENTITY_CODE_EXISTS"));
             return;
         }
 
-        // 验证显示名称
+        // Validate display name
         if (_newSubEntity.DisplayName == null || !_newSubEntity.DisplayName.Any())
         {
             MessageService.Error(I18n.T("MSG_SUB_ENTITY_DISPLAY_NAME_REQUIRED"));
             return;
         }
 
-        // 初始化字段列表
+        // Initialize field list
         if (_newSubEntity.Fields == null)
         {
             _newSubEntity.Fields = new List<FieldViewModel>();
         }
 
-        // 通知父组件添加子实体
+        // Notify parent to add sub-entity
         await OnSubEntityAdded.InvokeAsync(_newSubEntity);
 
         _addModalVisible = false;
@@ -209,10 +209,10 @@
 
             if (subEntity != null && SubEntities != null)
             {
-                // 通知父组件删除子实体（父组件会更新列表）
+                // Notify parent to delete sub-entity (parent updates list)
                 await OnSubEntityRemoved.InvokeAsync(subEntityId);
 
-                // 更新活动Tab
+                // Update active tab
                 if (_activeKey == key && SubEntities.Any())
                 {
                     _activeKey = SubEntities.First().TempId.ToString();

@@ -1,11 +1,12 @@
 @using BobCrm.App.Components.Shared
+@inject BobCrm.App.Services.I18nService I18n
 
 @*
-    TopBottomSplitLayout - 上列表下明细布局
+    TopBottomSplitLayout - top list, bottom detail layout
     
-    上方：完整列表表格（所有配置的显示字段）
-    下方：详情表单（选中行时显示）
-    适用场景：数据量较大，需要完整列表信息
+    Top: full list table (configured display fields)
+    Bottom: detail form (inline for selected row)
+    Scenario: larger datasets needing full list context
 *@
 
 <div class="top-bottom-split-layout">
@@ -17,14 +18,14 @@
         @if (!string.IsNullOrEmpty(_selectedRecordId))
         {
             <div class="detail-placeholder">
-                <p>已选择记录: @_selectedRecordId</p>
-                <p>TODO: 添加详情编辑表单</p>
+                <p>@I18n.T("LBL_SELECTED_RECORD"): @_selectedRecordId</p>
+                <p>@I18n.T("TXT_DETAIL_PLACEHOLDER")</p>
             </div>
         }
         else
         {
             <div class="empty-state">
-                <p>请从上方列表选择一项查看详情</p>
+                <p>@I18n.T("TXT_SELECT_PROMPT_TOP")</p>
             </div>
         }
     </div>

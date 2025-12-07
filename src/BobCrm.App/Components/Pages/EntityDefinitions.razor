@@ -50,16 +50,16 @@
     {
         <Card>
             <Tabs DefaultActiveKey="all">
-                <TabPane Key="all" Tab="全部">
+                <TabPane Key="all" Tab="@I18n.T("TAB_ALL")">
                     <EntityDefinitionsTable Entities="@filtered" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
-                <TabPane Key="system" Tab="系统实体">
+                <TabPane Key="system" Tab="@I18n.T("TAB_SYSTEM_ENTITIES")">
                     <EntityDefinitionsTable Entities="@filtered.Where(e => e.Source == EntitySource.System).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
-                <TabPane Key="custom" Tab="自定义实体">
+                <TabPane Key="custom" Tab="@I18n.T("TAB_CUSTOM_ENTITIES")">
                     <EntityDefinitionsTable Entities="@filtered.Where(e => e.Source == EntitySource.Custom).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
-                <TabPane Key="draft" Tab="草稿">
+                <TabPane Key="draft" Tab="@I18n.T("TAB_DRAFT")">
                     <EntityDefinitionsTable Entities="@filtered.Where(e => e.Status == EntityStatus.Draft).ToList()" OnEdit="NavigateToEdit" OnPublish="NavigateToPublish" OnDelete="HandleDelete" OnReload="LoadData" />
                 </TabPane>
             </Tabs>
@@ -89,7 +89,7 @@
         }
         catch (Exception ex)
         {
-            MessageService.Error($"加载失败: {ex.Message}");
+            MessageService.Error($"{I18n.T("ED_MSG_LOAD_FAILED")}: {ex.Message}");
         }
         finally
         {
@@ -143,11 +143,11 @@
     {
         var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
         {
-            Title = "确认删除",
-            Content = "确定要删除此实体定义吗？此操作不可恢复。",
+            Title = I18n.T("ED_CONFIRM_DELETE_TITLE"),
+            Content = I18n.T("ED_CONFIRM_DELETE_CONTENT"),
             ClassName = "calm-modal",
-            OkText = "删除",
-            CancelText = "取消",
+            OkText = I18n.T("BTN_DELETE"),
+            CancelText = I18n.T("BTN_CANCEL"),
             OkType = ButtonType.Primary
         });
 
@@ -156,12 +156,12 @@
             try
             {
                 await EntityDefService.DeleteAsync(id);
-                MessageService.Success("删除成功");
+                MessageService.Success(I18n.T("MSG_DELETE_SUCCESS"));
                 await LoadData();
             }
             catch (Exception ex)
             {
-                MessageService.Error($"删除失败: {ex.Message}");
+                MessageService.Error($"{I18n.T("MSG_DELETE_FAILED")}: {ex.Message}");
             }
         }
     }

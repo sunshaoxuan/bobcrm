@@ -62,13 +62,13 @@
             var resp = await client.GetAsync("/api/i18n/languages");
             if (!resp.IsSuccessStatusCode)
             {
-                _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "利用可能な言語を取得できません。しばらくしてから再度お試しください。");
+                _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "Failed to load languages.");
                 return;
             }
             var result = await resp.Content.ReadFromJsonAsync<List<LanguageDto>>();
             if (result is null || result.Count == 0)
             {
-                _loadError = LocalizeOrFallback("TXT_LANG_EMPTY", "利用可能な言語がまだ設定されていません。管理画面で言語を追加してください。");
+                _loadError = LocalizeOrFallback("TXT_LANG_EMPTY", "No languages configured.");
                 return;
             }
             _languages.AddRange(result
@@ -77,7 +77,7 @@
         }
         catch
         {
-            _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "利用可能な言語を取得できません。しばらくしてから再度お試しください。");
+            _loadError = LocalizeOrFallback("ERR_LANG_LOAD_FAILED", "Failed to load languages.");
         }
         finally
         {
