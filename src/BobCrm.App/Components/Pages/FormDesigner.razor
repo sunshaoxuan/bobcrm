@@ -1,0 +1,856 @@
+@page "/designer/new"
+@page "/designer/{TemplateId:int}"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services
+@using BobCrm.App.Services.Designer
+@using BobCrm.App.Services.Widgets
+@using BobCrm.App.Services.Widgets.Rendering
+@using BobCrm.App.Components.Designer
+@using Microsoft.AspNetCore.Components.Web
+@using AppFormTemplate = BobCrm.App.Models.FormTemplate
+@inject AuthService Auth
+@inject I18nService I18n
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IMessageService MessageService
+@inject ModalService Modal
+@inject IDesignWidgetContentRenderer DesignRenderer
+@inject IDesignContainerRenderer ContainerRenderer
+@inject IWidgetPropertyProvider PropertyProvider
+@inject EntityDefinitionService EntityDefinitionService
+
+<PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
+
+<CascadingValue Value="_dragState">
+    <AuthChecker>
+        @if (_loading)
+        {
+            <div style="padding:48px; text-align:center; color:#999">
+                <Spin Size="@SpinSize.Large" />
+                <div style="margin-top:12px; font-size:13px">@I18n.T("LBL_LOADING")...</div>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div style="padding:48px">
+                <Alert Message="@_error" Type="@AlertType.Error" ShowIcon="true" />
+            </div>
+        }
+        else
+        {
+            <div class="designer-shell">
+                <div class="designer-header">
+                    <div class="designer-header-meta">
+                        <div>
+                            <p class="designer-eyebrow">@I18n.T("TPL_PAGE_TITLE")</p>
+                            <h2>@(_templateName ?? I18n.T("LBL_TEMPLATE_NAME"))</h2>
+                            <div style="display:flex; gap:12px; align-items:center; color:var(--muted); font-size:12px">
+                                <span>@I18n.T("LBL_ENTITY"): @(_templateEntity ?? I18n.T("LBL_UNASSIGNED_ENTITY"))</span>
+                                @if (TemplateId.HasValue)
+                                {
+                                    <Tag Color="@TagColor.Blue">#@TemplateId</Tag>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="designer-header-actions">
+                        <Button OnClick="NavigateBack">@I18n.T("BTN_CANCEL")</Button>
+                        <Button Type="@ButtonType.Primary" Loading="@_saving" OnClick="SaveAsync" Icon="@IconType.Outline.Save">
+                            @I18n.T("BTN_SAVE")
+                        </Button>
+                    </div>
+                </div>
+
+                <div class="designer-main">
+                    <aside class="designer-panel designer-toolbox">
+                        <div class="designer-section">
+                            <h3 class="designer-section-title">@I18n.T("LBL_TEMPLATE_INFO")</h3>
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_TEMPLATE_NAME")</label>
+                                <Input @bind-Value="_templateName" Placeholder="@I18n.T("LBL_TEMPLATE_NAME")" />
+                            </div>
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_ENTITY")</label>
+                                <Select TItem="EntityDefinitionDto"
+                                        TItemValue="string"
+                                        TValue="string?"
+                                        @bind-Value="_templateEntity"
+                                        Disabled="@_entityLocked"
+                                        Placeholder="@I18n.T("LBL_ENTITY")">
+                                    @foreach (var entity in _entities)
+                                    {
+                                        <SelectOption Value="@entity.EntityRoute">@ResolveEntityName(entity)</SelectOption>
+                                    }
+                                </Select>
+                            </div>
+                            <div class="designer-field">
+                                <label>@I18n.T("LBL_DESCRIPTION")</label>
+                                <AntDesign.TextArea @bind-Value="_templateDescription" Rows="2" />
+                            </div>
+                            <div class="designer-switch-row">
+                                <span>@I18n.T("LBL_USER_DEFAULT")</span>
+                                <Switch Checked="@_isUserDefault"
+                                        Disabled="@_entityLocked"
+                                        OnChange="(val) => _isUserDefault = val" />
+                            </div>
+                        </div>
+
+                        <div class="designer-section">
+                            <h3 class="designer-section-title">@I18n.T("LBL_WIDGETS")</h3>
+                            <div class="designer-palette">
+                                <div class="designer-hint">
+                                    <Icon Type="@IconType.Outline.Drag" />
+                                    <span>@I18n.T("TXT_DRAG_TO_CANVAS")</span>
+                                </div>
+                                @RenderPalette("LBL_WIDGET_BASIC", WidgetRegistry.BasicWidgets)
+                                @RenderPalette("LBL_LAYOUT", WidgetRegistry.LayoutWidgets)
+                                @RenderPalette("LBL_DATA", WidgetRegistry.DataWidgets)
+                            </div>
+                        </div>
+
+                        <div class="designer-section">
+                            <h3 class="designer-section-title">@I18n.T("LBL_FIELDS")</h3>
+                            <EntityMetadataTree EntityType="@_templateEntity"
+                                                OnFieldDragStarted="OnFieldDragStarted" />
+                        </div>
+                    </aside>
+
+                    <section class="designer-canvas">
+                        <div class="designer-canvas-content">
+                            <div class="frame-drop-zone"
+                                 style="min-height:640px; padding:16px; display:flex; flex-wrap:wrap; align-items:flex-start; gap:8px;"
+                                 @ondrop="@((DragEventArgs e) => OnDrop("root", _widgets.Count, e))"
+                                 @ondragover:preventDefault>
+                                @if (_widgets.Any())
+                                {
+                                    @for (var i = 0; i < _widgets.Count; i++)
+                                    {
+                                        @RenderDropZone("root", i)
+                                        @RenderWidgetCard(_widgets[i], "root")
+                                    }
+                                    @RenderDropZone("root", _widgets.Count)
+                                }
+                                else
+                                {
+                                    <div class="designer-empty-state">
+                                        <Icon Type="@IconType.Outline.Inbox" Style="font-size:32px; margin-bottom:8px" />
+                                        <div>@I18n.T("TXT_DRAG_TO_CANVAS")</div>
+                                    </div>
+                                    @RenderDropZone("root", 0)
+                                }
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="designer-panel designer-properties">
+                        <div class="designer-section">
+                            <h3 class="designer-section-title">@I18n.T("LBL_PROPERTIES")</h3>
+                            @if (_selectedWidget is null)
+                            {
+                                <div style="padding:12px; color:#999; font-size:12px">
+                                    @I18n.T("TXT_SELECT_WIDGET")
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                                    <div style="display:flex; flex-direction:column; gap:2px">
+                                        <strong style="font-size:14px">@_selectedWidget.Label</strong>
+                                        <span style="font-size:12px; color:#999">@_selectedWidget.Type</span>
+                                    </div>
+                                    <Button Danger Icon="@IconType.Outline.Delete" Size="@ButtonSize.Small" OnClick="RemoveSelected">
+                                        @I18n.T("BTN_DELETE")
+                                    </Button>
+                                </div>
+                                <PropertyEditor Properties="@PropertyProvider.GetProperties(_selectedWidget)"
+                                                Widget="@_selectedWidget"
+                                                AllWidgets="@GetAllWidgets()"
+                                                OnPropertyChanged="OnPropertiesChanged" />
+                            }
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        }
+    </AuthChecker>
+</CascadingValue>
+
+@code {
+    [Parameter] public int? TemplateId { get; set; }
+
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(), new WidgetJsonConverter() }
+    };
+
+    private readonly DesignerDragState _dragState = new();
+    private List<DraggableWidget> _widgets = new();
+    private List<EntityDefinitionDto> _entities = new();
+    private DraggableWidget? _selectedWidget;
+    private DraggableWidget? _draggingWidget;
+    private string? _draggingFromContainerId;
+    private string? _draggingWidgetType;
+    private EntityFieldNode? _draggingField;
+
+    private string? _templateName;
+    private string? _templateEntity;
+    private string? _templateDescription;
+    private bool _isUserDefault;
+    private bool _entityLocked;
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+    private int? _loadedTemplateId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedTemplateId != TemplateId)
+        {
+            await InitializeAsync();
+        }
+    }
+
+    private async Task InitializeAsync()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var authed = await Auth.EnsureAuthenticatedAsync();
+            if (!authed)
+            {
+                Nav.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+
+            await LoadEntitiesAsync();
+
+            if (TemplateId.HasValue)
+            {
+                await LoadTemplateAsync(TemplateId.Value);
+            }
+            else
+            {
+                InitNewTemplate();
+            }
+
+            _loadedTemplateId = TemplateId;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadEntitiesAsync()
+    {
+        try
+        {
+            _entities = await EntityDefinitionService.GetAllAsync();
+        }
+        catch
+        {
+            _entities = new List<EntityDefinitionDto>();
+        }
+    }
+
+    private async Task LoadTemplateAsync(int id)
+    {
+        try
+        {
+            var resp = await Auth.GetWithRefreshAsync($"/api/templates/{id}");
+            if (!resp.IsSuccessStatusCode)
+            {
+                _error = $"{I18n.T("MSG_LOAD_DATA_FAILED")}: {resp.StatusCode}";
+                return;
+            }
+
+            var template = await resp.Content.ReadFromJsonAsync<AppFormTemplate>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (template == null)
+            {
+                _error = I18n.T("MSG_TEMPLATE_NOT_FOUND");
+                return;
+            }
+
+            _templateName = template.Name;
+            _templateEntity = template.EntityType;
+            _templateDescription = template.Description;
+            _isUserDefault = template.IsUserDefault;
+            _entityLocked = !string.IsNullOrWhiteSpace(template.EntityType);
+
+            _widgets = DeserializeWidgets(template.LayoutJson);
+            if (_widgets.Count == 0)
+            {
+                SeedCanvas();
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void InitNewTemplate()
+    {
+        _templateName = I18n.T("LBL_TEMPLATE_NAME");
+        _templateDescription = null;
+        _templateEntity = null;
+        _isUserDefault = false;
+        _entityLocked = false;
+        _widgets = new List<DraggableWidget>();
+        SeedCanvas();
+    }
+
+    private void SeedCanvas()
+    {
+        // Provide a starter section to make drag targets obvious
+        var section = WidgetRegistry.Create("section");
+        section.Code = WidgetCodeGenerator.GenerateUniqueCode(section, GetAllWidgets());
+        _widgets.Add(section);
+        _selectedWidget = section;
+    }
+
+    private List<DraggableWidget> DeserializeWidgets(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<DraggableWidget>();
+        }
+
+        try
+        {
+            var list = JsonSerializer.Deserialize<List<DraggableWidget>>(json, _jsonOptions);
+            return list ?? new List<DraggableWidget>();
+        }
+        catch
+        {
+            return new List<DraggableWidget>();
+        }
+    }
+
+    private string SerializeWidgets() => JsonSerializer.Serialize(_widgets, _jsonOptions);
+
+    private RenderFragment RenderPalette(string titleKey, IReadOnlyList<WidgetRegistry.WidgetDefinition> definitions) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "designer-section");
+        builder.OpenElement(2, "p");
+        builder.AddAttribute(3, "class", "designer-section-title");
+        builder.AddContent(4, I18n.T(titleKey));
+        builder.CloseElement();
+
+        builder.OpenElement(5, "div");
+        builder.AddAttribute(6, "class", "designer-palette");
+        var seq = 7;
+        foreach (var def in definitions)
+        {
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "designer-palette-item");
+            builder.AddAttribute(seq++, "draggable", true);
+            builder.AddAttribute(seq++, "ondragstart",
+                EventCallback.Factory.Create<DragEventArgs>(this, _ => OnToolboxDragStart(def.Type)));
+            builder.AddContent(seq++, (RenderFragment)(b =>
+            {
+                b.OpenComponent<Icon>(0);
+                b.AddAttribute(1, "Type", def.Icon);
+                b.AddAttribute(2, "Style", "color:#1890ff");
+                b.CloseComponent();
+                b.AddContent(3, I18n.T(def.LabelKey));
+            }));
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderDropZone(string containerId, int insertIndex) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", "height:10px; width:100%; border:1px dashed #d9d9d9; border-radius:6px; background:#fafafa;");
+        builder.AddAttribute(2, "ondrop",
+            EventCallback.Factory.Create<DragEventArgs>(this, e => OnDrop(containerId, insertIndex, e)));
+        builder.AddEventPreventDefaultAttribute(3, "ondrop", true);
+        builder.AddEventStopPropagationAttribute(4, "ondrop", true);
+        builder.AddEventPreventDefaultAttribute(5, "ondragover", true);
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderWidgetCard(DraggableWidget widget, string parentContainerId) => builder =>
+    {
+        var isSelected = ReferenceEquals(_selectedWidget, widget);
+        var style = widget.Layout.GetCssStyle();
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", $"card {(isSelected ? "selected-widget" : string.Empty)}");
+        builder.AddAttribute(2, "style", $"{style}; position:relative; padding:8px; border:1px solid {(isSelected ? "#1890ff" : "#d9d9d9")}; border-radius:8px; background:#fff;");
+        builder.AddAttribute(3, "draggable", true);
+        builder.AddAttribute(4, "data-widget-id", widget.Id);
+        builder.AddAttribute(5, "ondragstart",
+            EventCallback.Factory.Create<DragEventArgs>(this, e => OnWidgetDragStart(parentContainerId, widget)));
+        builder.AddAttribute(6, "ondragend",
+            EventCallback.Factory.Create<DragEventArgs>(this, OnDragEnd));
+        builder.AddAttribute(7, "onclick",
+            EventCallback.Factory.Create<MouseEventArgs>(this, () => SelectWidget(widget)));
+        builder.AddEventStopPropagationAttribute(8, "onclick", true);
+
+        // Header
+        builder.OpenElement(9, "div");
+        builder.AddAttribute(10, "style", "display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; font-size:12px; color:#666;");
+        builder.AddContent(11, widget.Label);
+        builder.OpenElement(12, "span");
+        builder.AddAttribute(13, "style", "font-size:11px; color:#999;");
+        builder.AddContent(14, widget.Code);
+        builder.CloseElement();
+        builder.CloseElement();
+
+        // Content
+        builder.OpenElement(20, "div");
+        builder.AddAttribute(21, "style", "pointer-events:none;");
+        if (widget is ContainerWidget container)
+        {
+            builder.AddContent(22, RenderContainerWidget(container));
+        }
+        else
+        {
+            var fragment = DesignRenderer.Render(widget, GetWidgetTextStyle, GetWidgetBackground, key => I18n.T(key));
+            builder.AddContent(23, fragment);
+        }
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderContainerWidget(ContainerWidget container)
+    {
+        var tabs = container is TabContainerWidget tabContainer
+            ? tabContainer.Children?.OfType<TabWidget>().ToList() ?? new List<TabWidget>()
+            : new List<TabWidget>();
+        var activeTab = tabs.FirstOrDefault(t => t.TabId == (container as TabContainerWidget)?.ActiveTabId) ?? tabs.FirstOrDefault();
+        if (container is TabContainerWidget tc && activeTab != null && string.IsNullOrWhiteSpace(tc.ActiveTabId))
+        {
+            tc.ActiveTabId = activeTab.TabId;
+        }
+
+        RenderFragment? OverlayBuilder(DraggableWidget child)
+        {
+            var children = GetChildren(container.Id);
+            var index = children.IndexOf(child);
+            if (index < 0) return null;
+            return RenderDropZone(container.Id, index);
+        }
+
+        return ContainerRenderer.Render(new DesignContainerRenderRequest
+        {
+            Container = container,
+            SelectedWidget = _selectedWidget,
+            EventTarget = this,
+            RenderChild = child => RenderWidgetCard(child, container.Id),
+            GetWidgetTextStyle = GetWidgetTextStyle,
+            GetWidgetBackground = GetWidgetBackground,
+            GetNestedChildStyle = w => $"{w.Layout.GetCssStyle()}; position:relative;",
+            IsSelected = w => ReferenceEquals(_selectedWidget, w),
+            SelectWidget = SelectWidget,
+            OnWidgetDragStart = (e, w) => OnWidgetDragStart(container.Id, w),
+            OnDropToContainer = (e, targetContainer) => OnDrop(targetContainer.Id, GetChildren(targetContainer.Id).Count, e),
+            OnDragEnd = OnDragEnd,
+            ChildOverlay = OverlayBuilder,
+            Tabs = tabs,
+            ActiveTab = activeTab,
+            ActivateTab = (tc, tab) =>
+            {
+                tc.ActiveTabId = tab.TabId;
+                StateHasChanged();
+            },
+            AddTab = tc =>
+            {
+                var tab = new TabWidget { Label = I18n.T("LBL_TAB") };
+                tab.Code = WidgetCodeGenerator.GenerateUniqueCode(tab, GetAllWidgets());
+                tc.Children ??= new List<DraggableWidget>();
+                tc.Children.Add(tab);
+                tc.ActiveTabId = tab.TabId;
+                StateHasChanged();
+            },
+            RemoveTab = (tc, tab) =>
+            {
+                if (tc.Children == null) return;
+                tc.Children.Remove(tab);
+                if (tc.ActiveTabId == tab.TabId)
+                {
+                    tc.ActiveTabId = tc.Children.OfType<TabWidget>().FirstOrDefault()?.TabId;
+                }
+                StateHasChanged();
+            }
+        });
+    }
+
+    private string GetWidgetTextStyle(DraggableWidget widget) => "color:#333; font-size:12px;";
+
+    private string GetWidgetBackground(DraggableWidget widget) => widget.Visible ? "#fff" : "#fafafa";
+
+    private void OnToolboxDragStart(string widgetType)
+    {
+        _draggingWidgetType = widgetType;
+        _draggingWidget = null;
+        _draggingFromContainerId = null;
+        _draggingField = null;
+    }
+
+    private Task OnWidgetDragStart(string containerId, DraggableWidget widget)
+    {
+        _draggingWidget = widget;
+        _draggingFromContainerId = containerId;
+        _draggingWidgetType = null;
+        _draggingField = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnFieldDragStarted(EntityFieldNode field)
+    {
+        _draggingField = field;
+        _draggingWidgetType = null;
+        _draggingWidget = null;
+        _draggingFromContainerId = null;
+        _dragState.CurrentEntityField = field;
+        return Task.CompletedTask;
+    }
+
+    private Task OnDragEnd(DragEventArgs _)
+    {
+        ClearDragState();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDrop(string containerId, int insertIndex, DragEventArgs e)
+    {
+        var targetChildren = GetChildren(containerId);
+        if (_draggingWidget != null)
+        {
+            if (IsDescendant(containerId, _draggingWidget.Id))
+            {
+                MessageService.Warning(I18n.T("MSG_MENU_INVALID_DROP"));
+                ClearDragState();
+                return;
+            }
+
+            MoveWidget(_draggingWidget, _draggingFromContainerId ?? "root", containerId, insertIndex);
+        }
+        else
+        {
+            var widget = CreateWidgetFromDragSource();
+            if (widget != null)
+            {
+                widget.Code = WidgetCodeGenerator.GenerateUniqueCode(widget, GetAllWidgets());
+                insertIndex = Math.Clamp(insertIndex, 0, targetChildren.Count);
+                targetChildren.Insert(insertIndex, widget);
+                _selectedWidget = widget;
+            }
+        }
+
+        ClearDragState();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private DraggableWidget? CreateWidgetFromDragSource()
+    {
+        if (_draggingField != null)
+        {
+            var widgetType = ResolveWidgetType(_draggingField);
+            var widget = WidgetRegistry.Create(widgetType, _draggingField.DisplayName ?? _draggingField.PropertyName);
+            widget.DataField = _draggingField.PropertyName;
+            return widget;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_draggingWidgetType))
+        {
+            return WidgetRegistry.Create(_draggingWidgetType!);
+        }
+
+        return null;
+    }
+
+    private void MoveWidget(DraggableWidget widget, string fromContainerId, string toContainerId, int insertIndex)
+    {
+        var source = GetChildren(fromContainerId);
+        var target = GetChildren(toContainerId);
+        if (!source.Remove(widget))
+        {
+            return;
+        }
+
+        insertIndex = Math.Clamp(insertIndex, 0, target.Count);
+        target.Insert(insertIndex, widget);
+    }
+
+    private List<DraggableWidget> GetChildren(string containerId)
+    {
+        if (containerId == "root")
+        {
+            return _widgets;
+        }
+
+        var container = FindWidget(containerId);
+        if (container is ContainerWidget cw)
+        {
+            cw.Children ??= new List<DraggableWidget>();
+            return cw.Children;
+        }
+
+        return _widgets;
+    }
+
+    private DraggableWidget? FindWidget(string widgetId)
+    {
+        return FindWidgetRecursive(_widgets, widgetId);
+    }
+
+    private DraggableWidget? FindWidgetRecursive(IEnumerable<DraggableWidget> list, string widgetId)
+    {
+        foreach (var widget in list)
+        {
+            if (widget.Id == widgetId)
+            {
+                return widget;
+            }
+
+            if (widget.Children is { Count: > 0 })
+            {
+                var found = FindWidgetRecursive(widget.Children, widgetId);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsDescendant(string containerId, string widgetId)
+    {
+        if (containerId == "root")
+        {
+            return false;
+        }
+
+        var container = FindWidget(containerId);
+        if (container == null)
+        {
+            return false;
+        }
+
+        if (container.Id == widgetId)
+        {
+            return true;
+        }
+
+        if (container.Children is null)
+        {
+            return false;
+        }
+
+        return FindWidgetRecursive(container.Children, widgetId) != null;
+    }
+
+    private void SelectWidget(DraggableWidget widget)
+    {
+        _selectedWidget = widget;
+    }
+
+    private void RemoveSelected()
+    {
+        if (_selectedWidget == null)
+        {
+            return;
+        }
+
+        RemoveWidget(_selectedWidget);
+        _selectedWidget = null;
+    }
+
+    private void RemoveWidget(DraggableWidget target)
+    {
+        RemoveWidgetRecursive(_widgets, target);
+    }
+
+    private bool RemoveWidgetRecursive(List<DraggableWidget> list, DraggableWidget target)
+    {
+        if (list.Remove(target))
+        {
+            return true;
+        }
+
+        foreach (var widget in list)
+        {
+            if (widget.Children is { Count: > 0 } && RemoveWidgetRecursive(widget.Children, target))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private IEnumerable<DraggableWidget> GetAllWidgets()
+    {
+        foreach (var widget in _widgets)
+        {
+            yield return widget;
+            if (widget.Children is { Count: > 0 })
+            {
+                foreach (var child in Flatten(widget.Children))
+                {
+                    yield return child;
+                }
+            }
+        }
+    }
+
+    private IEnumerable<DraggableWidget> Flatten(IEnumerable<DraggableWidget> list)
+    {
+        foreach (var widget in list)
+        {
+            yield return widget;
+            if (widget.Children is { Count: > 0 })
+            {
+                foreach (var child in Flatten(widget.Children))
+                {
+                    yield return child;
+                }
+            }
+        }
+    }
+
+    private string ResolveWidgetType(EntityFieldNode field)
+    {
+        var type = field.DataType?.ToLowerInvariant();
+        return type switch
+        {
+            "integer" or "long" or "decimal" => "number",
+            "boolean" => "checkbox",
+            "datetime" or "date" => "calendar",
+            "text" => "textarea",
+            _ => (field.Length.HasValue && field.Length > 200) ? "textarea" : "textbox"
+        };
+    }
+
+    private string ResolveEntityName(EntityDefinitionDto entity)
+    {
+        if (entity.DisplayName != null && entity.DisplayName.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrWhiteSpace(name))
+        {
+            return name!;
+        }
+
+        return entity.EntityName;
+    }
+
+    private void ClearDragState()
+    {
+        _draggingWidget = null;
+        _draggingFromContainerId = null;
+        _draggingWidgetType = null;
+        _draggingField = null;
+        _dragState.CurrentEntityField = null;
+    }
+
+    private void OnPropertiesChanged()
+    {
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_templateName))
+        {
+            MessageService.Warning("Template name is required.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_templateEntity))
+        {
+            MessageService.Warning("Entity type is required.");
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var payload = new
+            {
+                name = _templateName,
+                entityType = _templateEntity,
+                isUserDefault = _isUserDefault,
+                layoutJson = SerializeWidgets(),
+                description = _templateDescription
+            };
+
+            var client = await Auth.CreateClientWithAuthAsync();
+            HttpResponseMessage resp;
+
+            if (TemplateId.HasValue)
+            {
+                resp = await client.PutAsJsonAsync($"/api/templates/{TemplateId}", payload);
+            }
+            else
+            {
+                resp = await client.PostAsJsonAsync("/api/templates", payload);
+            }
+
+            if (resp.IsSuccessStatusCode)
+            {
+                MessageService.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                if (!TemplateId.HasValue)
+                {
+                    var created = await resp.Content.ReadFromJsonAsync<AppFormTemplate>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    TemplateId = created?.Id;
+                    _entityLocked = !string.IsNullOrWhiteSpace(_templateEntity);
+                    _loadedTemplateId = TemplateId;
+                }
+            }
+            else
+            {
+                var error = await resp.Content.ReadAsStringAsync();
+                MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Nav.NavigateTo("/templates");
+    }
+}

@@ -321,14 +321,21 @@
                 return;
             }
             var json = await ApiResponseHelper.ReadDataAsync<LoginResult>(resp);
+            await JS.InvokeVoidAsync("console.log", "[Login] ReadDataAsync result:", json != null ? "success" : "null");
             if (json is null)
             {
-                error = I18n.T("ERR_PARSE_RESPONSE"); return;
+                error = I18n.T("ERR_PARSE_RESPONSE");
+                await JS.InvokeVoidAsync("console.error", "[Login] ParseError: json is null");
+                return;
             }
+            await JS.InvokeVoidAsync("console.log", "[Login] Storing accessToken...");
             await JS.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
+            await JS.InvokeVoidAsync("console.log", "[Login] Storing refreshToken...");
             await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+            await JS.InvokeVoidAsync("console.log", "[Login] Storing user...");
             var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
             await JS.InvokeVoidAsync("localStorage.setItem", "user", userStr);
+            await JS.InvokeVoidAsync("console.log", "[Login] All tokens stored, navigating to /...");
             Nav.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
@@ -350,9 +357,8 @@
         public string password { get; set; } = string.Empty;
     }
     public record LoginResult(string accessToken, string refreshToken, UserDto user);
-    public record UserDto(string id, string username, string role);
+    public record UserDto(string id, string userName, string email, bool emailConfirmed, string role);
     public class AdminInfo { public bool exists { get; set; } public string? username { get; set; } public string? email { get; set; } }
 
     
 }
-
