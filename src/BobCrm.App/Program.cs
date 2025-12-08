@@ -78,19 +78,48 @@ app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), apiApp =>
         // Copy request headers
         foreach (var header in context.Request.Headers)
         {
-            if (!header.Key.StartsWith(":") && header.Key != "Host")
+            // Skip pseudo-headers, Host, and content headers that will be set automatically
+            if (!header.Key.StartsWith(":") && 
+                header.Key != "Host" && 
+                header.Key != "Transfer-Encoding" && 
+                header.Key != "Content-Length")
             {
                 requestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
             }
         }
 
-        // Copy request body for POST/PUT
-        if (context.Request.ContentLength > 0)
+        // Copy request body for POST/PUT - check for body content regardless of ContentLength header
+        if (context.Request.Method == "POST" || context.Request.Method == "PUT" || context.Request.Method == "PATCH")
         {
-            requestMessage.Content = new StreamContent(context.Request.Body);
-            if (context.Request.ContentType != null)
+            var memoryStream = new MemoryStream();
+            await context.Request.Body.CopyToAsync(memoryStream);
+            
+            if (memoryStream.Length > 0)
             {
-                requestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(context.Request.ContentType);
+                memoryStream.Position = 0;
+                requestMessage.Content = new StreamContent(memoryStream);
+                if (context.Request.ContentType != null)
+                {
+                    try
+                    {
+                        // 安全解析 ContentType，处理 charset 参数
+                        var contentType = context.Request.ContentType;
+                        if (System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(contentType, out var mediaType))
+                        {
+                            requestMessage.Content.Headers.ContentType = mediaType;
+                        }
+                    }
+                    catch
+                    {
+                        // 如果解析失败，尝试只设置基本的 content type
+                        try
+                        {
+                            var baseType = context.Request.ContentType.Split(';')[0].Trim();
+                            requestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(baseType);
+                        }
+                        catch { }
+                    }
+                }
             }
         }
 
@@ -98,12 +127,23 @@ app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), apiApp =>
 
         // Copy response
         context.Response.StatusCode = (int)response.StatusCode;
+        
+        // Copy response headers (excluding content headers)
         foreach (var header in response.Headers)
         {
+            // 跳过 Transfer-Encoding，由 ASP.NET Core 自动处理
+            if (header.Key.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+                continue;
             context.Response.Headers[header.Key] = header.Value.ToArray();
         }
+        
+        // Copy content headers (excluding those that conflict)
         foreach (var header in response.Content.Headers)
         {
+            // 跳过 Content-Length 和 Transfer-Encoding，由 ASP.NET Core 自动处理
+            if (header.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) ||
+                header.Key.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+                continue;
             context.Response.Headers[header.Key] = header.Value.ToArray();
         }
 
