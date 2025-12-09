@@ -68,7 +68,7 @@ public static class WidgetRegistry
     public static WidgetDefinition GetDefinition(string type)
     {
         if (!_definitions.TryGetValue(type.ToLowerInvariant(), out var def))
-            throw new InvalidOperationException($"Unknown widget type: {type}");
+            throw new InvalidOperationException($"未知的 Widget 类型: {type}");
         return def;
     }
 

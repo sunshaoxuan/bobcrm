@@ -135,6 +135,57 @@
                                                 ValueChanged="@((string? val) => { SetPropertyValue(Widget, prop.PropertyPath, val); OnPropertyChanged?.Invoke(); })" />
                     }
                     break;
+
+                case PropertyEditorType.DataSetPicker:
+                    {
+                        var currentValue = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
+                        <AntDesign.Select TItemValue="string"
+                                         TItem="string"
+                                         Value="@currentValue"
+                                         Style="width:100%"
+                                         Placeholder="@I18n.T("LBL_SELECT_DATASET")"
+                                         OnSelectedItemChanged="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))">
+                            <SelectOptions>
+                                @if (AllEntities != null)
+                                {
+                                    @foreach (var entity in AllEntities)
+                                    {
+                                        var name = entity.DisplayName != null && entity.DisplayName.TryGetValue(I18n.CurrentLang, out var dn) ? dn : entity.EntityName;
+                                        <SelectOption TItemValue="string" TItem="string" Value="@entity.EntityRoute" Label="@name" />
+                                    }
+                                }
+                            </SelectOptions>
+                        </AntDesign.Select>
+                    }
+                    break;
+
+                case PropertyEditorType.FieldPicker:
+                    {
+                        var currentValue = GetPropertyValue(Widget, prop.PropertyPath)?.ToString() ?? "";
+                        <AntDesign.Select TItemValue="string"
+                                         TItem="string"
+                                         Value="@currentValue"
+                                         Style="width:100%"
+                                         ShowSearch="true"
+                                         Placeholder="@I18n.T("LBL_SELECT_FIELD")"
+                                         OnSelectedItemChanged="@((string val) => SetPropertyValue(Widget, prop.PropertyPath, val))">
+                            <SelectOptions>
+                                @if (EntityDefinition != null && EntityDefinition.Fields != null)
+                                {
+                                    @foreach (var field in EntityDefinition.Fields)
+                                    {
+                                        var name = field.DisplayName != null && field.DisplayName.TryGetValue(I18n.CurrentLang, out var dn) ? dn : field.PropertyName;
+                                        <SelectOption TItemValue="string" TItem="string" Value="@field.PropertyName" Label="@($"{name} ({field.PropertyName})")" />
+                                    }
+                                }
+                            </SelectOptions>
+                        </AntDesign.Select>
+                    }
+                    break;
+
+                 default:
+                    <div style="font-size:12px; color:orange">Unsupported Editor: @prop.EditorType</div>
+                    break;
             }
             
             @if (!string.IsNullOrEmpty(prop.HelpText))
@@ -160,6 +211,12 @@
     /// </summary>
     [Parameter]
     public IEnumerable<DraggableWidget>? AllWidgets { get; set; }
+
+    [Parameter]
+    public BobCrm.App.Models.EntityDefinitionDto? EntityDefinition { get; set; }
+
+    [Parameter]
+    public IEnumerable<BobCrm.App.Models.EntityDefinitionDto>? AllEntities { get; set; }
 
     /// <summary>
     /// Handle Code property changes

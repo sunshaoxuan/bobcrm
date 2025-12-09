@@ -1,3 +1,6 @@
+using BobCrm.App.Services.Widgets;
+using BobCrm.App.Services.Widgets.Rendering;
+
 namespace BobCrm.App.Models.Widgets;
 
 /// <summary>
@@ -23,5 +26,20 @@ public abstract class ContainerWidget : DraggableWidget
         // 容器需要足够的空间显示拖放区域
         // 100px = 标题栏(~40px) + 内容区域(~60px)
         return 100;
+    }
+
+    /// <summary>
+    /// 运行态渲染：默认使用 RuntimeContainerRenderer 渲染通用容器结构
+    /// </summary>
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        RuntimeContainerRenderer.RenderContainer(
+            context.Builder,
+            this,
+            context.Mode,
+            (child, mode) => context.RenderChild(child),
+            w => w.Label ?? w.Type,
+            (w, mode) => WidgetStyleHelper.GetRuntimeWidgetStyle(w, mode)
+        );
     }
 }

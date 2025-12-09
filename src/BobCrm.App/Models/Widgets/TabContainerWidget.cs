@@ -1,3 +1,6 @@
+using BobCrm.App.Services.Widgets;
+using BobCrm.App.Services.Widgets.Rendering;
+
 namespace BobCrm.App.Models.Widgets;
 
 /// <summary>
@@ -23,6 +26,37 @@ public class TabContainerWidget : ContainerWidget
 
     /// <summary>标签是否可居中显示</summary>
     public bool Centered { get; set; } = false;
+
+    /// <summary>
+    /// 运行态渲染：使用 RuntimeContainerRenderer.RenderTabContainer
+    /// </summary>
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        RuntimeContainerRenderer.RenderTabContainer(
+            context.Builder,
+            this,
+            context.Mode,
+            (child, mode) => context.RenderChild(child),
+            // 获取当前激活的 Tab
+            container => 
+            {
+                var tabs = container.Children?.OfType<TabWidget>().ToList();
+                if (tabs == null || !tabs.Any()) return null;
+                
+                // 1. Try to find by ActiveTabId
+                var active = tabs.FirstOrDefault(t => t.TabId == container.ActiveTabId);
+                
+                // 2. Fallback to IsDefault
+                if (active == null) active = tabs.FirstOrDefault(t => t.IsDefault);
+                
+                // 3. Fallback to first
+                if (active == null) active = tabs.First();
+                
+                return active;
+            },
+            (w, mode) => WidgetStyleHelper.GetRuntimeWidgetStyle(w, mode)
+        );
+    }
 
     /// <summary>
     /// 获取 TabContainer 控件的属性元数据

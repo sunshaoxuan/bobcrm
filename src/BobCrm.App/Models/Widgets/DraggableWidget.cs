@@ -206,6 +206,12 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         public required ComponentBase EventTarget { get; init; }
         public required DraggableWidget Widget { get; init; }
         public required string Label { get; init; }
+
+        /// <summary>
+        /// 递归渲染子控件的委托
+        /// </summary>
+        public required Func<DraggableWidget, RenderFragment> RenderChild { get; init; }
+
         public Func<string>? ValueGetter { get; init; }
         public Func<string?, Task>? ValueSetter { get; init; }
         public Func<DraggableWidget, string>? GetWidgetTextStyle { get; init; }

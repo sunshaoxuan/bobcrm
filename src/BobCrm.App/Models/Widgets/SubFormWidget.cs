@@ -96,9 +96,9 @@ public class SubFormWidget : ContainerWidget
             {
                 PropertyPath = "RelatedEntityType",
                 Label = "PROP_RELATED_ENTITY_TYPE",
-                EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text,
-                Placeholder = "PROP_ENTITY_TYPE_PLACEHOLDER",
-                Group = "PROP_GROUP_DATA"
+                EditorType = BobCrm.App.Models.Designer.PropertyEditorType.DataSetPicker,
+                Group = "PROP_GROUP_DATA",
+                HelpText = "PROP_RELATED_ENTITY_TYPE_HELP"
             },
             new()
             {

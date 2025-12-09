@@ -28,10 +28,10 @@ public class EditValueManager
                 _values[widget.DataField] = fieldValueGetter(widget.DataField);
             }
 
-            // 递归处理容器子控件
-            if (widget is ContainerWidget container && container.Children != null)
+            // 递归处理所有子控件（不仅限于 ContainerWidget）
+            if (widget.Children != null && widget.Children.Any())
             {
-                InitializeRecursive(container.Children, fieldValueGetter);
+                InitializeRecursive(widget.Children, fieldValueGetter);
             }
         }
     }
@@ -57,26 +57,29 @@ public class EditValueManager
     /// <summary>
     /// 收集所有字段的Payload（用于保存）
     /// </summary>
-    public List<FieldPayload> CollectFieldPayloads(IEnumerable<DraggableWidget> widgets, HashSet<string> allowedKeys)
+    public List<FieldPayload> CollectFieldPayloads(IEnumerable<DraggableWidget> widgets, HashSet<string>? allowedKeys = null)
     {
         var output = new List<FieldPayload>();
         CollectRecursive(widgets, allowedKeys, output);
         return output;
     }
 
-    private void CollectRecursive(IEnumerable<DraggableWidget> widgets, HashSet<string> allowedKeys, List<FieldPayload> output)
+    private void CollectRecursive(IEnumerable<DraggableWidget> widgets, HashSet<string>? allowedKeys, List<FieldPayload> output)
     {
         foreach (var widget in widgets)
         {
-            if (!string.IsNullOrWhiteSpace(widget.DataField) && allowedKeys.Contains(widget.DataField))
+            // 如果 allowedKeys 为 null 或空，或者包含该字段，则收集
+            bool isAllowed = allowedKeys == null || allowedKeys.Count == 0 || allowedKeys.Contains(widget.DataField!);
+
+            if (!string.IsNullOrWhiteSpace(widget.DataField) && isAllowed)
             {
                 var val = GetValue(widget.DataField);
                 output.Add(new FieldPayload { key = widget.DataField, value = val });
             }
 
-            if (widget is ContainerWidget container && container.Children != null)
+            if (widget.Children != null && widget.Children.Any())
             {
-                CollectRecursive(container.Children, allowedKeys, output);
+                CollectRecursive(widget.Children, allowedKeys, output);
             }
         }
     }

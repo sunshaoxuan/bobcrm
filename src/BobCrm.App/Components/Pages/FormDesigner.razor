@@ -169,6 +169,8 @@
                                 <PropertyEditor Properties="@PropertyProvider.GetProperties(_selectedWidget)"
                                                 Widget="@_selectedWidget"
                                                 AllWidgets="@GetAllWidgets()"
+                                                EntityDefinition="@_entities.FirstOrDefault(e => e.EntityRoute == _templateEntity)"
+                                                AllEntities="@_entities"
                                                 OnPropertyChanged="OnPropertiesChanged" />
                             }
                         </div>

@@ -39,6 +39,7 @@ public sealed class RuntimeWidgetRenderer : IRuntimeWidgetRenderer
             EventTarget = request.EventTarget,
             Widget = request.Widget,
             Label = request.Label,
+            RenderChild = childWidget => Render(request with { Widget = childWidget, Label = childWidget.Label ?? childWidget.Type }),
             ValueGetter = request.ValueGetter,
             ValueSetter = request.ValueSetter,
             GetWidgetTextStyle = request.GetWidgetTextStyle,

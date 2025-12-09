@@ -216,8 +216,23 @@ else if (entityData != null)
             {
                 try
                 {
-                    var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
-                    layoutWidgets = ParseLayoutFromJson(doc.RootElement);
+                    using var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
+                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        // New Unified JSON Format
+                         layoutWidgets = System.Text.Json.JsonSerializer.Deserialize<List<DraggableWidget>>(
+                            layoutJson,
+                            new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNameCaseInsensitive = true,
+                                Converters = { new WidgetJsonConverter() }
+                            }) ?? new List<DraggableWidget>();
+                    }
+                    else
+                    {
+                        // Legacy Format
+                        layoutWidgets = ParseLayoutFromJson(doc.RootElement);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -427,7 +442,7 @@ else if (entityData != null)
             saving = true;
 
             // Collect all field values
-            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, new HashSet<string>());
+            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, null);
             
             // Persist to API
             var payload = new

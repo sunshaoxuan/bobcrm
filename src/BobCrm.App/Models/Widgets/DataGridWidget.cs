@@ -120,17 +120,11 @@ public class DataGridWidget : DraggableWidget
         {
             new WidgetPropertyMetadata
             {
-                PropertyPath = "DataSetId",
-                Label = "PROP_DATASET",
-                EditorType = PropertyEditorType.DataSetPicker,
-                Group = "PROP_GROUP_DATA"
-            },
-            new WidgetPropertyMetadata
-            {
                 PropertyPath = "EntityType",
                 Label = "PROP_ENTITY_TYPE",
-                EditorType = PropertyEditorType.Text,
-                Group = "PROP_GROUP_DATA"
+                EditorType = PropertyEditorType.DataSetPicker,
+                Group = "PROP_GROUP_DATA",
+                HelpText = "PROP_ENTITY_TYPE_HELP"
             },
             new WidgetPropertyMetadata
             {
