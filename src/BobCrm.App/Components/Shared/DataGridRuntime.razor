@@ -176,6 +176,7 @@
             }
         }
         EnsureColumns();
+        LocalizeColumns();
 
         if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
         {
@@ -416,6 +417,33 @@
                 var translated = I18n.T(column.Label);
                 if (!string.IsNullOrWhiteSpace(translated) &&
                     !string.Equals(translated, column.Label, StringComparison.Ordinal))
+                {
+                    column.Label = translated;
+                }
+            }
+        }
+    }
+
+    private void LocalizeColumns()
+    {
+        foreach (var column in _columns)
+        {
+            // 尝试直接按 label 作为多语键
+            var translated = I18n.T(column.Label);
+            if (!string.IsNullOrWhiteSpace(translated) &&
+                !string.Equals(translated, column.Label, StringComparison.Ordinal))
+            {
+                column.Label = translated;
+                continue;
+            }
+
+            // 尝试使用字段名作为多语键（如 FIELD_CODE）
+            if (!string.IsNullOrWhiteSpace(column.Field))
+            {
+                var fieldKey = $"FIELD_{column.Field.ToUpperInvariant()}";
+                translated = I18n.T(fieldKey);
+                if (!string.IsNullOrWhiteSpace(translated) &&
+                    !string.Equals(translated, fieldKey, StringComparison.Ordinal))
                 {
                     column.Label = translated;
                 }
