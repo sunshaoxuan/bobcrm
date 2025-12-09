@@ -15,6 +15,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$CjkBlock = '\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}'
+$CjkChars = "[{0}]" -f $CjkBlock
+$CjkInQuotes = ('"[^"]*{0}+[^"]*"' -f $CjkChars)
+
 # Severity ordering helper
 $SeverityOrder = @("ERROR", "WARNING", "INFO")
 function Should-CheckLevel {
@@ -45,6 +49,9 @@ $Config = @{
     ExcludeDirs  = @("bin", "obj", "node_modules", ".git", "Migrations", "wwwroot")
     ExcludeFiles = @("*.Designer.cs", "*Tests.cs", "*Seed*.cs", "Program.cs")
     AllowedContexts = @(
+        'I18n\.\w+\s*\(',
+        'Localizer\s*\[',
+        'IStringLocalizer',
         'logger\.Log\w+\s*\(',
         '_logger\.Log\w+\s*\(',
         'Console\.Write',
@@ -67,29 +74,29 @@ $Config = @{
     Violations = @{
         ERROR = @{
             Patterns = @(
-                'Results\.(Ok|BadRequest|NotFound|Problem|Conflict|UnprocessableEntity)\s*\([^)]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+',
-                'new\s+ErrorResponse\s*\([^)]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+',
-                'ModelState\.AddModelError\s*\([^)]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+',
-                '<span[^>]*>[^<]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^<]*</span>',
-                'MessageService\.\w+\s*\([^)]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+',
-                'ToastService\.\w+\s*\([^)]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+'
+                ('Results\.(Ok|BadRequest|NotFound|Problem|Conflict|UnprocessableEntity)\s*\([^)]*{0}+' -f $CjkChars),
+                ('new\s+ErrorResponse\s*\([^)]*{0}+' -f $CjkChars),
+                ('ModelState\.AddModelError\s*\([^)]*{0}+' -f $CjkChars),
+                ('<span[^>]*>[^<]*{0}+[^<]*</span>' -f $CjkChars),
+                ('MessageService\.\w+\s*\([^)]*{0}+' -f $CjkChars),
+                ('ToastService\.\w+\s*\([^)]*{0}+' -f $CjkChars)
             )
             Message = "ERROR: user-facing text must use I18n resources."
         }
         WARNING = @{
             Patterns = @(
-                '<Button[^>]*>[^<]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^<]*</Button>',
-                '<label[^>]*>[^<]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^<]*</label>',
-                'Placeholder\s*=\s*"[^"]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^"]*"',
-                'Title\s*=\s*"[^"]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^"]*"',
-                '<Divider[^>]*>[^<]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^<]*</Divider>',
-                '<th[^>]*>[^<]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^<]*</th>'
+                ('<Button[^>]*>[^<]*{0}+[^<]*</Button>' -f $CjkChars),
+                ('<label[^>]*>[^<]*{0}+[^<]*</label>' -f $CjkChars),
+                ('Placeholder\s*=\s*"[^"]*{0}+[^"]*"' -f $CjkChars),
+                ('Title\s*=\s*"[^"]*{0}+[^"]*"' -f $CjkChars),
+                ('<Divider[^>]*>[^<]*{0}+[^<]*</Divider>' -f $CjkChars),
+                ('<th[^>]*>[^<]*{0}+[^<]*</th>' -f $CjkChars)
             )
             Message = "WARNING: UI text should use I18n resources."
         }
         INFO = @{
             Patterns = @(
-                '"[^"]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]+[^"]*"'
+                $CjkInQuotes
             )
             Message = "INFO: consider moving string literals to I18n resources."
         }
@@ -190,7 +197,7 @@ function Get-ResourceKeySuggestion {
     )
 
     $sourceText = if ($Text) { $Text } else { "Text" }
-    $cleanText = $sourceText -replace '["''<>]', '' -replace '\s+', '_' -replace '[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}]', 'X'
+    $cleanText = $sourceText -replace '["''<>]', '' -replace '\s+', '_' -replace $CjkChars, 'X'
     if (-not $cleanText) { $cleanText = "TEXT" }
 
     $prefix = "TXT"
@@ -276,8 +283,8 @@ function Scan-File {
                     }
 
                     $hardcodedText = ""
-                    if ($matchText -match '"([^"]*[\p{IsCJKUnifiedIdeographs}\p{IsHiragana}\p{IsKatakana}][^"]*)"') {
-                        $hardcodedText = $Matches[1]
+                    if ($matchText -match $CjkInQuotes) {
+                        $hardcodedText = $Matches[0].Trim('"')
                     }
 
                     $suggestion = Get-ResourceKeySuggestion -Text $hardcodedText -Line $line
@@ -439,7 +446,7 @@ function Main {
         Write-ColorOutput "`nNext steps:" -Color Cyan
         Write-ColorOutput "  1. Run with --Fix to get automated suggestions" -Color White
         Write-ColorOutput "  2. Run with --Output violations.csv to export results" -Color White
-        Write-ColorOutput "  3. See docs/process/STD-05-多语言合规规范.md for guidance" -Color White
+        Write-ColorOutput "  3. See docs/process/STD-05-i18n.md for guidance" -Color White
     }
 
     if ($script:LogEnabled -and $script:ResolvedLogFile) {
@@ -448,3 +455,4 @@ function Main {
 }
 
 Main
+
