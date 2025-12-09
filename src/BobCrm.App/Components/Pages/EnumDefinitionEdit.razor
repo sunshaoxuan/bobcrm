@@ -272,7 +272,7 @@
         // 检查重复值
         if (_options.Count(o => o.Value == option.Value && o.TempId != option.TempId) > 0)
         {
-            ToastService.Error("选项值已存在");
+            ToastService.Error(I18n.T("MSG_OPTION_VALUE_DUPLICATE"));
             return;
         }
 
@@ -296,13 +296,13 @@
 
         if (_options.Any(o => o.IsEditing))
         {
-            ToastService.Warning("请先保存或取消正在编辑的选项");
+            ToastService.Warning(I18n.T("MSG_ENUM_OPTION_EDIT_IN_PROGRESS"));
             return;
         }
 
         if (_options.Count == 0)
         {
-            ToastService.Warning("请至少添加一个枚举选项");
+            ToastService.Warning(I18n.T("MSG_ENUM_OPTIONS_REQUIRED"));
             return;
         }
 

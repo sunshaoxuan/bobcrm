@@ -2604,6 +2604,11 @@
     "ja": "オプション値は必須です",
     "en": "Option value is required"
   },
+  "MSG_OPTION_VALUE_DUPLICATE": {
+    "zh": "该选项值已存在",
+    "ja": "このオプション値は既に存在します",
+    "en": "Option value already exists"
+  },
   "MSG_EDIT_WIP": {
     "zh": "编辑功能开发中...",
     "ja": "編集機能は開発中です...",
@@ -4798,6 +4803,11 @@
     "zh": "至少需要一个枚举选项",
     "ja": "少なくとも1つのオプションが必要です",
     "en": "At least one enum option is required"
+  },
+  "MSG_ENUM_OPTION_EDIT_IN_PROGRESS": {
+    "zh": "请先保存或取消正在编辑的选项",
+    "ja": "編集中のオプションを先に保存またはキャンセルしてください",
+    "en": "Please save or cancel the option you are editing first"
   },
   "TXT_ENUM_CODE_HINT": {
     "zh": "用于引用的唯一标识，如: customer_type",
