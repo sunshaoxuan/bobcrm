@@ -158,11 +158,16 @@
             Logger.LogWarning(ex, "Failed to load enum definitions");
         }
 
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         if (!string.IsNullOrWhiteSpace(Widget.ColumnsJson))
         {
             try
             {
-                _columns = JsonSerializer.Deserialize<List<DataGridColumn>>(Widget.ColumnsJson) ?? new();
+                _columns = JsonSerializer.Deserialize<List<DataGridColumn>>(Widget.ColumnsJson, jsonOptions) ?? new();
             }
             catch (Exception ex)
             {
@@ -176,7 +181,7 @@
         {
             try
             {
-                _rowActions = JsonSerializer.Deserialize<List<RowAction>>(Widget.RowActionsJson) ?? new();
+                _rowActions = JsonSerializer.Deserialize<List<RowAction>>(Widget.RowActionsJson, jsonOptions) ?? new();
             }
             catch (Exception ex)
             {
@@ -545,4 +550,3 @@
         public int TotalPages { get; set; }
     }
 }
-

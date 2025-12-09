@@ -93,6 +93,11 @@ public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
 - ✅ **实现 IDisposable 接口**
 - ✅ **避免内存泄漏**
 
+### 2.6 临时文件/产物
+- ✅ 允许本地生成临时输出（日志、抓包、扫描结果等），但用毕必须删除或加入 `.gitignore`
+- ✅ 仓库内只保留有长期价值的证据（如最终成功截图/录屏），调试中间产物须清理
+- ✅ 自动化脚本如生成 artifacts，请在脚本结束时附带清理逻辑或在提交前手工清理
+
 ---
 
 ## 3. C# 编码规范

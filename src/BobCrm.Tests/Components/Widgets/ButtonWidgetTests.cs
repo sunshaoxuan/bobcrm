@@ -141,6 +141,7 @@ public class ButtonWidgetTests
             EventTarget = new DummyComponent(),
             Widget = widget,
             Label = widget.Label,
+            RenderChild = _ => __builder => { },
             GetWidgetBackground = _ => "#fff",
             GetWidgetTextStyle = _ => "color:#333;"
         };
