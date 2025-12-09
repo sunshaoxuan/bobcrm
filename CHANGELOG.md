@@ -10,6 +10,11 @@
 ## [未发布] - 进行中
 
 ### Fixed
+- **模板运行链路修复** (PLAN-06):
+  - 统一模板 JSON 格式：所有环节使用数组式 Widget JSON（含 children / layout），`WidgetJsonConverter` 支持 `WidgetRegistry` 和递归反序列化。
+  - 运行时解析升级：`ContainerWidget` 及其子类（Panel, Section, Card 等）实现递归 `RenderRuntime`，`PageLoader` 适配新 JSON 格式并支持嵌套布局。
+  - 设计器能力增强：`PropertyEditor` 新增 `DataSetPicker` 和 `FieldPicker`，支持数据绑定配置。
+  - 运行态数据收集：`EditValueManager` 支持递归收集嵌套控件的字段值，修复保存时数据丢失问题。
 - **Template Regeneration**: Fixed "Regenerate Defaults" button unresponsiveness and timestamp behavior
   - Added missing `<AntContainer />` component to `MainLayout.razor` to enable Ant Design modals
   - Fixed i18n key from non-existent `BTN_CONFIRM` to `BTN_OK` in confirmation modal

@@ -77,3 +77,8 @@
 - `src/BobCrm.App/Components/Pages/Templates.razor`: 927 lines (OK)
 - `src/BobCrm.Api/Resources/i18n-resources.json`: (Validated by Script)
 - `src/BobCrm.App/Components/Pages/FormDesigner.razor`: **0 lines (EMPTY)**
+
+## 6. 修复记录 (2025-12-08)
+- **FormDesigner.razor**: 已完全恢复并增强（PLAN-06）。实现了拖拽布局、容器嵌套（Panel/Section/Grid/Tabs）、多语言支持及统一 JSON 序列化。
+- **运行链路**: 统一了运行时解析（PageLoader/ListTemplateHost）与设计器保存格式，解决了嵌套布局无法渲染的问题。
+- **数据组件**: PropertyEditor 已补齐 DataSetPicker 和 FieldPicker，支持数据绑定配置。
