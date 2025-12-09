@@ -1,44 +1,62 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services
+@using BobCrm.App.Services.Widgets
 @using BobCrm.App.Services.Widgets.Rendering
 @using System.Text.Json
 @inject AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
 @inject IRuntimeWidgetRenderer Renderer
 @inject ILogger<ListTemplateHost> Logger
 
 @* 列表模板运行宿主 - 渲染 UsageType=List 的模板 *@
 
-<div class="list-template-host">
+<div class="list-template-host @(string.IsNullOrWhiteSpace(CssClass) ? string.Empty : CssClass)">
     @if (_isLoading)
     {
-        <div class="loading-indicator">
-            <span>Loading template...</span>
+        <div class="runtime-state loading">
+            <strong>@I18n.T("LBL_LOADING")</strong>
+            <span>@I18n.T("LBL_LOADING")...</span>
         </div>
     }
     else if (_error != null)
     {
-        <div class="error-message" style="padding:16px; background:#fff2f0; border:1px solid #ffccc7; border-radius:4px; color:#cf1322;">
-            <strong>Error:</strong> @_error
+        <div class="runtime-state error">
+            <div>@_error</div>
+            <Button Type="@ButtonType.Primary" Size="ButtonSize.Small" OnClick="RefreshAsync">@I18n.T("BTN_RETRY")</Button>
         </div>
     }
     else if (_templateResponse != null)
     {
-        <div class="template-content">
-            @* 渲染模板中的 widgets *@
-            @if (_widgets != null && _widgets.Any())
+        <div class="list-template-header">
+            <div class="list-template-meta">
+                <div class="list-template-usage">@_templateResponse.Template.UsageType</div>
+                <h2 class="list-template-name">@TemplateDisplayName</h2>
+                <div class="runtime-template-meta">@EntityType.ToUpperInvariant() ・ @_templateResponse.Template.Id</div>
+            </div>
+            <Button Type="@ButtonType.Default" Size="ButtonSize.Small" OnClick="RefreshAsync">
+                @I18n.T("BTN_RETRY")
+            </Button>
+        </div>
+
+        <div class="runtime-stack">
+            @if (_widgets.Any())
             {
-                <div class="widgets-container" style="display:flex; flex-direction:column; gap:16px;">
-                    @foreach (var widget in _widgets)
-                    {
+                @foreach (var widget in _widgets)
+                {
+                    <div class="runtime-widget-shell">
                         @RenderWidget(widget)
-                    }
-                </div>
+                    </div>
+                }
             }
             else
             {
-                <div style="padding:32px; text-align:center; color:#999;">
-                    No widgets configured in this template
+                <div class="runtime-empty">
+                    <strong>@I18n.T("MSG_TEMPLATE_EMPTY")</strong>
+                    <div>@I18n.T("MSG_TEMPLATE_EMPTY_HINT")</div>
+                    <div style="margin-top:var(--space-3, 12px);">
+                        <Button OnClick="RefreshAsync" Type="@ButtonType.Primary" Ghost="true">@I18n.T("BTN_RETRY")</Button>
+                    </div>
                 </div>
             }
         </div>
@@ -46,12 +64,12 @@
         @* 调试信息 *@
         @if (ShowDebugInfo)
         {
-            <div class="debug-info" style="margin-top:16px; padding:12px; background:#f5f5f5; border:1px solid #d9d9d9; border-radius:4px; font-size:12px; font-family:monospace;">
+            <div class="runtime-state" style="font-family:monospace; font-size:12px;">
                 <div><strong>Template:</strong> @_templateResponse.Template.Name (ID: @_templateResponse.Template.Id)</div>
                 <div><strong>Entity Type:</strong> @EntityType</div>
                 <div><strong>Applied Scopes:</strong> @string.Join(", ", _templateResponse.AppliedScopes)</div>
                 <div><strong>Full Access:</strong> @_templateResponse.HasFullAccess</div>
-                <div><strong>Widget Count:</strong> @(_widgets?.Count ?? 0)</div>
+                <div><strong>Widget Count:</strong> @_widgets.Count</div>
             </div>
         }
     }
@@ -79,7 +97,9 @@
     private bool _isLoading = true;
     private string? _error;
     private TemplateRuntimeResponse? _templateResponse;
-    private List<DraggableWidget>? _widgets;
+    private List<DraggableWidget> _widgets = new();
+
+    private string TemplateDisplayName => _templateResponse?.Template?.Name ?? EntityType;
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,6 +120,7 @@
         {
             _isLoading = true;
             _error = null;
+            _widgets.Clear();
             StateHasChanged();
 
             // 调用后端 API 获取运行时模板上下文
@@ -114,8 +135,8 @@
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _error = $"Failed to load template: {response.StatusCode} - {errorContent}";
-                Logger.LogError("Failed to load template for {EntityType}: {Error}", EntityType, _error);
+                _error = string.Format(I18n.T("TPL_LOAD_FAILED"), response.StatusCode);
+                Logger.LogError("Failed to load template for {EntityType}: {Status} - {Error}", EntityType, response.StatusCode, errorContent);
                 return;
             }
 
@@ -123,12 +144,12 @@
 
             if (_templateResponse == null)
             {
-                _error = "Template response is null";
+                _error = string.Format(I18n.T("TPL_LOAD_FAILED"), "empty response");
                 return;
             }
 
             // 解析模板中的 widgets
-            if (!string.IsNullOrWhiteSpace(_templateResponse.Template.LayoutJson))
+            if (!string.IsNullOrWhiteSpace(_templateResponse.Template?.LayoutJson))
             {
                 try
                 {
@@ -137,7 +158,7 @@
                         {
                             PropertyNameCaseInsensitive = true,
                             Converters = { new WidgetJsonConverter() }
-                        });
+                        }) ?? new List<DraggableWidget>();
                 }
                 catch (Exception ex)
                 {
@@ -145,17 +166,10 @@
                     _widgets = new List<DraggableWidget>();
                 }
             }
-            else
-            {
-                _widgets = new List<DraggableWidget>();
-            }
-
-            Logger.LogInformation("Loaded template {TemplateId} for {EntityType} with {Count} widgets",
-                _templateResponse!.Template.Id, EntityType, _widgets!.Count);
         }
         catch (Exception ex)
         {
-            _error = $"Exception: {ex.Message}";
+            _error = string.Format(I18n.T("TPL_LOAD_FAILED"), ex.Message);
             Logger.LogError(ex, "Error loading template for {EntityType}", EntityType);
         }
         finally
@@ -173,10 +187,10 @@
             var renderRequest = new RuntimeWidgetRenderRequest
             {
                 Widget = widget,
-                Mode = RuntimeWidgetRenderMode.Browse, // List 模板默认为浏览模式
+                Mode = RuntimeWidgetRenderMode.Browse, // List 模板默认浏览模式
                 EventTarget = this,
                 Label = widget.Label ?? widget.Type,
-                ValueGetter = null, // List 模板中不需要单字段值获取
+                ValueGetter = null, // List 模板中不需要对字段值取值
                 ValueSetter = null,
                 GetWidgetTextStyle = null,
                 GetWidgetBackground = null,

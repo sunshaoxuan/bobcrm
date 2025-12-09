@@ -1,7 +1,7 @@
 # PLAN-06: v0.7.0 模板运行链路修复实施计划
 
 **版本**: 1.0  
-**状态**: 待执行  
+**状态**: 进行中  
 **关联文档**:  
 - `docs/design/PROD-01-客户信息管理系统设计文档.md`（需求基线）  
 - `docs/reviews/REV-01-v0.7.0-项目审计.md`（偏差来源）  
@@ -47,12 +47,12 @@
 ---
 
 ## 4. 行动清单（可勾选）
-- [ ] 统一模板 JSON：`WidgetJsonConverter/LayoutMapper` 支持 children/WidthUnit/HeightUnit/NewLine/Visible/ExtendedProperties。
-- [ ] `PageLoader.razor`：改用统一解析；支持 children 嵌套、NewLine、百分比尺寸；Detail/Edit 表头与校验保持。
-- [ ] `ListTemplateHost`：复用统一解析与渲染路径，消除专用解析分支。
-- [ ] 设计器宿主：引入 WidgetHost/DropZone/Resize，确保 Flow/Absolute 交互一致；防止 children 递归拖拽成环。
-- [ ] `PropertyEditor`：实现 DataSetPicker/FieldPicker/TextStyle/Background 选择器；为数据控件挂上对应元数据。
-- [ ] 主题兜底：增加基础 design token，并替换设计器与运行时的硬编码颜色/阴影。
+- [x] 统一模板 JSON：`WidgetJsonConverter/LayoutMapper` 支持 children/WidthUnit/HeightUnit/NewLine/Visible/ExtendedProperties。
+- [x] `PageLoader.razor`：改用统一解析；支持 children 嵌套、NewLine、百分比尺寸；Detail/Edit 表头与校验保持。
+- [x] `ListTemplateHost`：复用统一解析与渲染路径，消除专用解析分支。
+- [x] 设计器宿主：引入 WidgetHost/DropZone/Resize，确保 Flow/Absolute 交互一致；防止 children 递归拖拽成环。
+- [x] `PropertyEditor`：实现 DataSetPicker/FieldPicker/TextStyle/Background 选择器；为数据控件挂上对应元数据。
+- [x] 主题兜底：增加基础 design token，并替换设计器与运行时的硬编码颜色/阴影；空态/错误态一致。
 - [ ] 测试：执行 `scripts/verify-setup.ps1`，运行 Playwright 登录+模板链路脚本；补充至少 1 条模板链路 API/前端集成测试。
 - [ ] 文档与变更记录：更新 `CHANGELOG.md` 与 REV-01 备注修复项。
 

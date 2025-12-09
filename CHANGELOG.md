@@ -15,6 +15,7 @@
   - 运行时解析升级：`ContainerWidget` 及其子类（Panel, Section, Card 等）实现递归 `RenderRuntime`，`PageLoader` 适配新 JSON 格式并支持嵌套布局。
   - 设计器能力增强：`PropertyEditor` 新增 `DataSetPicker` 和 `FieldPicker`，支持数据绑定配置。
   - 运行态数据收集：`EditValueManager` 支持递归收集嵌套控件的字段值，修复保存时数据丢失问题。
+  - 视觉兜底：PageLoader/ListTemplateHost 使用 design token 外观，统一空态/错误态与重试按钮，模板加载失败使用 I18n 文案。
 - **Template Regeneration**: Fixed "Regenerate Defaults" button unresponsiveness and timestamp behavior
   - Added missing `<AntContainer />` component to `MainLayout.razor` to enable Ant Design modals
   - Fixed i18n key from non-existent `BTN_CONFIRM` to `BTN_OK` in confirmation modal
@@ -45,6 +46,7 @@
 - 设计器 Tooltip：统一使用语义文本色，避免浅底场景下字段标签（如 *Required）出现白底白字。
 - Form Designer：组件面板改为手风琴模式，默认只展开“实体结构”，切换分组时自动收起其他分组，减少滚动。
 - 模板列表页：默认按实体分组，管理员可在每个实体分组处一键再生成默认模板（前端确认，后端管理端点支持单实体/全量重建并更新绑定）。
+- Playwright 模板链路脚本：支持 BASE_URL/HEADLESS/SLOWMO/SCREENSHOT_DIR 配置，错误截图输出到 artifacts，便于 STD-06 复现。
 
 ---
 

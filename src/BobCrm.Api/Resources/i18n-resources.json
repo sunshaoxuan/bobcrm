@@ -5054,6 +5054,21 @@
     "ja": "読み込み中に例外が発生しました: {0}",
     "en": "Exception while loading: {0}"
   },
+  "TPL_LOAD_FAILED": {
+    "zh": "加载模板失败: {0}",
+    "ja": "テンプレートの読み込みに失敗しました: {0}",
+    "en": "Failed to load template: {0}"
+  },
+  "MSG_TEMPLATE_EMPTY": {
+    "zh": "当前模板为空，暂无可展示的控件",
+    "ja": "このテンプレートには表示できるウィジェットがありません",
+    "en": "This template is empty and has no visible widgets yet"
+  },
+  "MSG_TEMPLATE_EMPTY_HINT": {
+    "zh": "请在设计器中添加组件或点击重试重新加载模板",
+    "ja": "デザイナーでウィジェットを追加するか、再読み込みしてください",
+    "en": "Add widgets in the designer or retry to reload the template"
+  },
   "PL_SAVE_FAILED": {
     "zh": "保存失败: {0}",
     "ja": "保存に失敗しました: {0}",
@@ -6490,3 +6505,7 @@
     "ja": "日付を選択"
   }
 }
+
+
+
+

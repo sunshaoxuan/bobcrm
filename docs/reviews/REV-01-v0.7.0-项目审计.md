@@ -5,11 +5,11 @@
 
 ## 1. 总体结论
 
-当前工程在**底层架构治理**、**国际化规范**及**后端服务重构**方面已达到或超过预期目标（v0.7.0标准），但在**前端核心功能**（表单设计器）上存在重大缺失，导致版本目标（模板系统闭环）目前无法交付。
+当前工程在**底层架构治理**、**国际化规范**及**后端服务重构**方面已达到或超过预期目标（v0.7.0标准），前端表单/模板链路已恢复，但仍需完成阶段 C/D（设计 token 兜底、STD-06 验证与 E2E 证据）才能闭环交付。
 
-- **整体完成度**: 约 75%
+- **整体完成度**: 约 85%
 - **代码质量**: 高 (I18n 0 违规, 架构分层清晰)
-- **关键风险**: `FormDesigner.razor` 文件丢失/损坏（0字节）
+- **当前风险**: STD-06 流程与模板链路 E2E 尚未执行完备（缺少截图/日志留存）
 
 ---
 
@@ -28,7 +28,7 @@
 #### 模板系统 (⚠️ 阻滞)
 - **后端 (✅ 100%)**: `TemplateService` 重构完成，支持复制、应用、默认模板逻辑。`DefaultTemplateGenerator` 已升级支持 DataGrid 和 Enum。
 - **管理 UI (✅ 100%)**: `Templates.razor` 已移除原生 JS (Prompt/Confirm/Alert)，改用 AntDesign 组件 (FIX-01/02/03 Completed)。
-- **设计器 (❌ 0%)**: **严重故障**。`src/BobCrm.App/Components/Pages/FormDesigner.razor` 文件大小为 0 字节。导致 T4 (表单设计器强化) 及 T7 (闭环) 无法进行。
+- **前端 (80%)**: FormDesigner 已恢复并接入统一 JSON；PageLoader/ListTemplateHost 运行时解析与空态兜底完成；剩余：设计 token 全量收敛、STD-06/E2E 流程。
 
 #### 动态枚举系统 (✅ 90%)
 - **后端**: `EnumDefinitionService` 完整实现 (CRUD, Validation)。
@@ -45,10 +45,10 @@
 
 ### 3.1 关键偏离 (Critical Deviations)
 
-1.  **表单设计器丢失**:
-    - **规划**: PLAN-01 T4 要求增强设计器（支持 SubForm, DataGrid）。
-    - **现状**: 文件为空，功能完全不可用。
-    - **影响**: 阻断了整个 v0.7.0 "模板系统闭环" 的核心路径。
+1.  **模板链路验证缺失**:
+    - **期望**: 按 STD-06 提供可回放的 E2E（登录 + List → Detail → Edit）与截图/日志。
+    - **现状**: 代码已恢复但未执行 STD-06 验证，模板链路缺少自动化证据。
+    - **影响**: 存在交付验收风险，运行态稳定性未被验证。
 
 ### 3.2 次要偏离 (Minor Deviations)
 
@@ -60,25 +60,20 @@
 
 ## 4. 建议修复路径
 
-1.  **立即恢复 FormDesigner**:
-    - 检查 Git 历史，恢复 `FormDesigner.razor` 到最近可用版本。
-    - 如果无法恢复，需要根据 `FormDesigner.razor.css` (如存在) 或 `PLAN-01` 重新实现。
+1.  **完成 STD-06 流程**：执行 `scripts/verify-setup.ps1`，运行 Playwright 登录+模板链路脚本，输出截图/日志留痕。
 
-2.  **重启 T4 任务**:
-    - 在恢复的设计器基础上，实施 T4 (添加 DataGrid/SubForm 控件)。
+2.  **收敛设计 token**：统一 PageLoader/ListTemplateHost/Designer 的空态、错误态与主题变量，清理残留内联样式。
 
-3.  **完成 T7 闭环**:
-    - 连接后端已就绪的 `TemplateService`，验证前端渲染逻辑。
-
----
+3.  **更新文档与记录**：同步 PLAN-06 勾选、REV-01 状态、CHANGELOG 记录。
 
 ## 5. 附录：文件完整性检查快照
 - `src/BobCrm.Api/Services/TemplateService.cs`: 493 lines (OK)
 - `src/BobCrm.App/Components/Pages/Templates.razor`: 927 lines (OK)
 - `src/BobCrm.Api/Resources/i18n-resources.json`: (Validated by Script)
-- `src/BobCrm.App/Components/Pages/FormDesigner.razor`: **0 lines (EMPTY)**
+- `src/BobCrm.App/Components/Pages/FormDesigner.razor`: 已恢复 (OK)
 
 ## 6. 修复记录 (2025-12-08)
 - **FormDesigner.razor**: 已完全恢复并增强（PLAN-06）。实现了拖拽布局、容器嵌套（Panel/Section/Grid/Tabs）、多语言支持及统一 JSON 序列化。
 - **运行链路**: 统一了运行时解析（PageLoader/ListTemplateHost）与设计器保存格式，解决了嵌套布局无法渲染的问题。
 - **数据组件**: PropertyEditor 已补齐 DataSetPicker 和 FieldPicker，支持数据绑定配置。
+
