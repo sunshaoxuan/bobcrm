@@ -84,10 +84,11 @@
                                         @foreach (var action in _rowActions)
                                         {
                                             <button 
-                                                style="margin:0 4px; padding:4px 8px; cursor:pointer;"
+                                                style="margin:0 4px; width:28px; height:28px; padding:0; border:1px solid #d9d9d9; border-radius:6px; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
                                                 @onclick="@(() => HandleRowAction(action, row))"
-                                                title="@action.Label">
-                                                @action.Label
+                                                title="@action.Label"
+                                                aria-label="@action.Label">
+                                                @GetActionIcon(action)
                                             </button>
                                         }
                                     </td>
@@ -602,9 +603,21 @@
                 await HandleDeleteAsync(id, entityType);
                 break;
             default:
-                Logger.LogWarning("Unknown row action: {Action}", action.Action);
-                break;
+            Logger.LogWarning("Unknown row action: {Action}", action.Action);
+            break;
         }
+    }
+
+    private string GetActionIcon(RowAction action)
+    {
+        var act = action.Action?.ToLowerInvariant();
+        return act switch
+        {
+            "edit" => "✏️",
+            "delete" => "🗑️",
+            "view" => "👁️",
+            _ => string.IsNullOrWhiteSpace(action.Icon) ? "•" : action.Icon
+        };
     }
 
     private string? GetRowId(JsonElement row)
