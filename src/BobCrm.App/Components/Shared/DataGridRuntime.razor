@@ -83,13 +83,9 @@
                                     <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;" @onclick:stopPropagation="true">
                                         @foreach (var action in _rowActions)
                                         {
-                                            <button 
-                                                style="margin:0 4px; width:28px; height:28px; padding:0; border:1px solid #d9d9d9; border-radius:6px; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;"
-                                                @onclick="@(() => HandleRowAction(action, row))"
-                                                title="@action.Label"
-                                                aria-label="@action.Label">
-                                                @GetActionIcon(action)
-                                            </button>
+                                            <BobCrm.App.Components.Shared.IconActionButton Icon="@GetActionIcon(action)"
+                                                                                           Tooltip="@action.Label"
+                                                                                           OnClick="() => HandleRowAction(action, row)" />
                                         }
                                     </td>
                                 }
@@ -603,13 +599,15 @@
                 await HandleDeleteAsync(id, entityType);
                 break;
             default:
-            Logger.LogWarning("Unknown row action: {Action}", action.Action);
-            break;
+                Logger.LogWarning("Unknown row action: {Action}", action.Action);
+                break;
         }
     }
 
     private string GetActionIcon(RowAction action)
     {
+        if (!string.IsNullOrWhiteSpace(action.Icon)) return action.Icon;
+
         var act = action.Action?.ToLowerInvariant();
         return act switch
         {

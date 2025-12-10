@@ -1,0 +1,27 @@
+@using Microsoft.AspNetCore.Components
+
+<button class="@($"action-icon-btn {(Class ?? string.Empty)}")"
+        style="@CombinedStyle"
+        title="@Tooltip"
+        aria-label="@Tooltip"
+        @onclick="OnClick"
+        @onclick:stopPropagation="StopPropagation">
+    @Icon
+</button>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "•";
+    [Parameter] public string Tooltip { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public bool StopPropagation { get; set; } = true;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private string CombinedStyle =>
+        $"{BaseStyle}{(string.IsNullOrWhiteSpace(Style) ? string.Empty : $" {Style}")}";
+
+    private const string BaseStyle =
+        "margin:0 4px; width:28px; height:28px; padding:0; border:1px solid #d9d9d9; " +
+        "border-radius:6px; background:#fff; cursor:pointer; display:inline-flex; " +
+        "align-items:center; justify-content:center;";
+}
