@@ -210,9 +210,10 @@ else if (entityData != null)
                         layoutJson = template.LayoutJson;
                     }
                 }
-                else if (templateResp.StatusCode == System.Net.HttpStatusCode.NotFound)
+
+                // 2. Legacy fallback：如果仍然没有 layout，则走老的用户布局接口
+                if (string.IsNullOrWhiteSpace(layoutJson))
                 {
-                    // Fallback to legacy user layout API when no template is found
                     var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
                     if (layoutResp.IsSuccessStatusCode)
                     {
@@ -314,6 +315,22 @@ else if (entityData != null)
         
         if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
         {
+            // Legacy layout: items 集合（无 item_ 前缀）
+            if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var item in itemsElement.EnumerateObject())
+                {
+                    if (item.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        var widget = ParseWidgetFromJson(item.Value);
+                        if (widget != null)
+                        {
+                            widgets.Add(widget);
+                        }
+                    }
+                }
+            }
+
             foreach (var prop in root.EnumerateObject())
             {
                 if (prop.Name.StartsWith("item_") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
@@ -351,6 +368,8 @@ else if (entityData != null)
             widget.DataField = dataFieldElement.GetString();
         if (element.TryGetProperty("Width", out var widthElement))
             widget.Width = widthElement.GetInt32();
+        else if (element.TryGetProperty("w", out var wElement) && wElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+            widget.Width = wElement.GetInt32();
         if (element.TryGetProperty("Height", out var heightElement))
             widget.Height = heightElement.GetInt32();
         if (element.TryGetProperty("visible", out var visibleElement))
