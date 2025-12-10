@@ -270,12 +270,46 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
     private static List<FieldMetadata> PrepareFields(EntityDefinition entity)
     {
-        return entity.Fields?
-                   .Where(f => !f.IsDeleted)
-                   .OrderBy(f => f.SortOrder)
-                   .ThenBy(f => f.PropertyName)
-                   .ToList()
-               ?? new List<FieldMetadata>();
+        var fields = entity.Fields?
+                       .Where(f => !f.IsDeleted)
+                       .OrderBy(f => f.SortOrder)
+                       .ThenBy(f => f.PropertyName)
+                       .ToList()
+                   ?? new List<FieldMetadata>();
+
+        // Fallback: ensure基本字段存在，避免生成空模板
+        if (fields.Count == 0)
+        {
+            fields = new List<FieldMetadata>
+            {
+                new FieldMetadata
+                {
+                    PropertyName = "code",
+                    DataType = FieldDataType.String.ToString(),
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        ["zh"] = "编码",
+                        ["ja"] = "コード",
+                        ["en"] = "Code"
+                    },
+                    IsRequired = true
+                },
+                new FieldMetadata
+                {
+                    PropertyName = "name",
+                    DataType = FieldDataType.String.ToString(),
+                    DisplayName = new Dictionary<string, string?>
+                    {
+                        ["zh"] = "名称",
+                        ["ja"] = "名称",
+                        ["en"] = "Name"
+                    },
+                    IsRequired = true
+                }
+            };
+        }
+
+        return fields;
     }
 
     private static string BuildTemplateNameKey(EntityDefinition entity, string viewState)
