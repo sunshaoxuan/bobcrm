@@ -230,11 +230,14 @@
     }
 
     private void ToggleRightPanel() => Layout.ToggleRightPanel();
-    private bool ShowCustomerSider => IsCustomerRoute();
-    private bool IsCustomerRoute()
+    private bool ShowCustomerSider => IsCustomerDetailRoute();
+    private bool IsCustomerDetailRoute()
     {
-        return _currentRoute.StartsWith("customers", StringComparison.OrdinalIgnoreCase) ||
-               _currentRoute.StartsWith("customer", StringComparison.OrdinalIgnoreCase);
+        // 仅在客户详情页显示右侧工作区，列表页不再重复展示
+        var route = _currentRoute?.Trim('/') ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(route)) return false;
+        if (route.StartsWith("customers", StringComparison.OrdinalIgnoreCase)) return false;
+        return route.StartsWith("customer", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task InvokeSticky(Func<Task>? callback)

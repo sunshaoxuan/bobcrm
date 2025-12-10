@@ -8,6 +8,7 @@ const path = require('path');
     const slowMo = Number(process.env.SLOWMO || 0);
     const artifactDir = process.env.SCREENSHOT_DIR || 'artifacts';
     const recordVideo = (process.env.RECORD_VIDEO || 'false').toLowerCase() === 'true';
+    const cleanTestCustomers = (process.env.CLEAN_TEST_CUSTOMERS || 'false').toLowerCase() === 'true';
 
     if (!fs.existsSync(artifactDir)) {
         fs.mkdirSync(artifactDir, { recursive: true });
@@ -52,6 +53,8 @@ const path = require('path');
         return null;
     }
 
+    let authTokens = null;
+
     // 工具函数：登录（API 获取 token 并注入 localStorage）
     async function login() {
         console.log('[Step 1] 登录中...');
@@ -67,6 +70,7 @@ const path = require('path');
         if (!accessToken || !refreshToken) {
             throw new Error('API 登录未返回 token');
         }
+        authTokens = { accessToken, refreshToken };
 
         // 预先访问域以便可写 localStorage
         await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
@@ -198,11 +202,60 @@ const path = require('path');
         await stepShot('step4-edit-save.png');
     }
 
+    async function cleanupTestData() {
+        if (!cleanTestCustomers) {
+            return;
+        }
+        if (!authTokens?.accessToken) {
+            console.log('   ! 未获取到 token，跳过测试数据清理');
+            return;
+        }
+
+        console.log('[Cleanup] 清理测试客户数据...');
+        try {
+            const pageSize = 200;
+            let pageIndex = 1;
+            let deleted = 0;
+            while (true) {
+                const resp = await context.request.get(`${baseUrl}/api/customers?page=${pageIndex}&pageSize=${pageSize}`, {
+                    headers: { Authorization: `Bearer ${authTokens.accessToken}` }
+                });
+                if (!resp.ok()) {
+                    console.log(`   ! 获取客户列表失败：${resp.status()}`);
+                    break;
+                }
+                const data = await resp.json();
+                const items = data?.data?.items || data?.items || data || [];
+                const candidates = items.filter(x => {
+                    const name = (x.name || x.Name || '').toString();
+                    return /^TEST_/i.test(name) || /^DUP_/i.test(name) || name.includes('测试');
+                });
+                for (const c of candidates) {
+                    const id = c.id || c.Id;
+                    if (!id) continue;
+                    await context.request.delete(`${baseUrl}/api/customers/${id}`, {
+                        headers: { Authorization: `Bearer ${authTokens.accessToken}` }
+                    });
+                    deleted++;
+                }
+                if (!data?.data?.hasMore && (!items.length || items.length < pageSize)) {
+                    break;
+                }
+                pageIndex++;
+                if (pageIndex > 20) break; // 安全上限
+            }
+            console.log(`   ✓ 清理测试客户尝试完成，删除 ${deleted} 条（仅匹配 TEST_/DUP_/含“测试”）`);
+        } catch (e) {
+            console.log('   ! 清理测试数据失败', e);
+        }
+    }
+
     try {
         await login();
         await testListTemplate();
         await testDetailTemplate();
         await testEditMode();
+        await cleanupTestData();
 
         console.log('');
         console.log('=== 用例全部通过 ===');

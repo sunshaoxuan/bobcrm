@@ -99,7 +99,34 @@
     private TemplateRuntimeResponse? _templateResponse;
     private List<DraggableWidget> _widgets = new();
 
-    private string TemplateDisplayName => _templateResponse?.Template?.Name ?? EntityType;
+    private string TemplateDisplayName
+    {
+        get
+        {
+            var name = _templateResponse?.Template?.Name ?? EntityType;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return EntityType;
+            }
+
+            // 优先按模板名翻译
+            var translated = I18n.T(name);
+            if (!string.IsNullOrWhiteSpace(translated) && !string.Equals(translated, name, StringComparison.Ordinal))
+            {
+                return translated;
+            }
+
+            // 模板名是多语 key 但未配置翻译时，尝试用实体菜单多语兜底
+            var entityKey = $"MENU_{EntityType.ToUpperInvariant()}";
+            translated = I18n.T(entityKey);
+            if (!string.IsNullOrWhiteSpace(translated) && !string.Equals(translated, entityKey, StringComparison.Ordinal))
+            {
+                return translated;
+            }
+
+            return name;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

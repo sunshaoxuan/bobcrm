@@ -1,6 +1,7 @@
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services
 @using System.Text.Json
+@using System.Linq
 @inject AuthService Auth
 @inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject BobCrm.App.Services.I18nService I18n
@@ -135,6 +136,7 @@
     [Parameter]
     public string? ContainerStyle { get; set; }
 
+    private const int DefaultPageSize = 20;
     private bool _isLoading = true;
     private string? _error;
     private JsonDocument? _data;
@@ -162,6 +164,12 @@
         {
             PropertyNameCaseInsensitive = true
         };
+
+        // 兜底页大小，避免模板未设置导致全量加载
+        if (Widget.PageSize <= 0)
+        {
+            Widget.PageSize = DefaultPageSize;
+        }
 
         if (!string.IsNullOrWhiteSpace(Widget.ColumnsJson))
         {
@@ -214,17 +222,17 @@
 
             var client = await Auth.CreateClientWithAuthAsync();
 
-            if (Widget.DataSetId.HasValue)
-            {
-                var request = new
+                if (Widget.DataSetId.HasValue)
                 {
-                    Page = _currentPage,
-                    PageSize = Widget.PageSize,
-                    SortField = Widget.DefaultSortField,
-                    SortDirection = Widget.DefaultSortDirection
-                };
+                    var request = new
+                    {
+                        Page = _currentPage,
+                        PageSize = GetPageSize(),
+                        SortField = Widget.DefaultSortField,
+                        SortDirection = Widget.DefaultSortDirection
+                    };
 
-                var response = await client.PostAsJsonAsync($"/api/datasets/{Widget.DataSetId.Value}/execute", request);
+                    var response = await client.PostAsJsonAsync($"/api/datasets/{Widget.DataSetId.Value}/execute", request);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -252,7 +260,7 @@
                 }
                 
                 if (url.Contains("?")) url += "&"; else url += "?";
-                url += $"page={_currentPage}&pageSize={Widget.PageSize}";
+                url += $"page={_currentPage}&pageSize={GetPageSize()}";
                 
                 if (!string.IsNullOrWhiteSpace(Widget.DefaultSortField))
                 {
@@ -282,9 +290,13 @@
                 if (doc.RootElement.ValueKind == JsonValueKind.Array)
                 {
                     _data = doc;
-                    _dataRows = _data.RootElement.EnumerateArray().ToList();
-                    _totalCount = _dataRows.Count;
-                    _totalPages = 1;
+                    var allRows = _data.RootElement.EnumerateArray().ToList();
+                    var pageSize = GetPageSize();
+                    _totalCount = allRows.Count;
+                    _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)pageSize));
+                    if (_currentPage > _totalPages) _currentPage = _totalPages;
+                    var skip = Math.Max(0, (_currentPage - 1) * pageSize);
+                    _dataRows = allRows.Skip(skip).Take(pageSize).ToList();
                 }
                 else
                 {
@@ -551,6 +563,8 @@
             Logger.LogError(ex, "Error deleting {EntityType} {Id}", entityType, id);
         }
     }
+
+    private int GetPageSize() => Widget.PageSize > 0 ? Widget.PageSize : DefaultPageSize;
 
     private class RowAction
     {
