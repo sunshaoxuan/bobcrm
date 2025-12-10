@@ -80,13 +80,15 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(Widget.RowActionsJson))
                                 {
-                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center;" @onclick:stopPropagation="true">
-                                        @foreach (var action in _rowActions)
-                                        {
-                                            <BobCrm.App.Components.Shared.IconActionButton Icon="@GetActionIcon(action)"
-                                                                                           Tooltip="@action.Label"
-                                                                                           OnClick="() => HandleRowAction(action, row)" />
-                                        }
+                                    <td style="padding:12px; border:1px solid #e0e0e0; text-align:center; white-space:nowrap;" @onclick:stopPropagation="true">
+                                        <div style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                                            @foreach (var action in _rowActions)
+                                            {
+                                                <BobCrm.App.Components.Shared.IconActionButton Icon="@GetActionIcon(action)"
+                                                                                               Tooltip="@action.Label"
+                                                                                               OnClick="() => HandleRowAction(action, row)" />
+                                            }
+                                        </div>
                                     </td>
                                 }
                             </tr>
