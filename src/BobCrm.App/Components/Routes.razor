@@ -22,7 +22,7 @@
     <div class="app-splash">
         <div class="app-splash-card">
             <strong>OneCRM</strong>
-            <p>@I18n.T("MSG_APP_LOADING")</p>
+            <p>@GetSplashText()</p>
         </div>
     </div>
 }
@@ -54,6 +54,23 @@
             _i18nRenderVersion++;
         }
         try { InvokeAsync(StateHasChanged); } catch { }
+    }
+
+    private string GetSplashText()
+    {
+        // I18n 未加载时避免展示资源键，使用固定文本兜底
+        if (!I18n.IsLoaded)
+        {
+            return "Loading...";
+        }
+
+        var text = I18n.T("MSG_APP_LOADING");
+        if (string.IsNullOrWhiteSpace(text) || text == "MSG_APP_LOADING")
+        {
+            return "Loading...";
+        }
+
+        return text;
     }
 
     public void Dispose()
