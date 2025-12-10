@@ -78,6 +78,9 @@ const path = require('path');
         // 跳转首页验证会话
         await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
         await page.waitForURL(/.*(dashboard|\/)$/i, { timeout: 20000 });
+        // 等待应用完成初始化，避免截到 splash 画面
+        await page.waitForSelector('.app-stage.ready', { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(500);
         console.log('   ✓ 登录成功（API token 注入）');
         await stepShot('step1-login.png');
     }
