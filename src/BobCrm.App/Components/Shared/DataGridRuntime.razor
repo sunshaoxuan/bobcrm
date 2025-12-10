@@ -606,16 +606,34 @@
 
     private string GetActionIcon(RowAction action)
     {
-        if (!string.IsNullOrWhiteSpace(action.Icon)) return action.Icon;
-
-        var act = action.Action?.ToLowerInvariant();
-        return act switch
+        var iconKey = (action.Icon ?? action.Action ?? string.Empty).Trim().ToLowerInvariant();
+        switch (iconKey)
         {
-            "edit" => "✏️",
-            "delete" => "🗑️",
-            "view" => "👁️",
-            _ => string.IsNullOrWhiteSpace(action.Icon) ? "•" : action.Icon
-        };
+            case "edit":
+            case "edit-outline":
+            case "edit-outlined":
+            case "edit-fill":
+            case "editfilled":
+                return "✏️";
+            case "delete":
+            case "remove":
+            case "trash":
+            case "delete-outline":
+            case "delete-outlined":
+                return "🗑️";
+            case "view":
+            case "eye":
+            case "preview":
+            case "open":
+                return "👁️";
+            default:
+                // 如果 Icon 字段是已自带的符号（单字符或 emoji），直接返回
+                if (!string.IsNullOrWhiteSpace(action.Icon) && action.Icon.Length <= 3)
+                {
+                    return action.Icon;
+                }
+                return "•";
+        }
     }
 
     private string? GetRowId(JsonElement row)
