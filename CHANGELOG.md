@@ -16,6 +16,7 @@
   - 设计器能力增强：`PropertyEditor` 新增 `DataSetPicker` 和 `FieldPicker`，支持数据绑定配置。
   - 运行态数据收集：`EditValueManager` 支持递归收集嵌套控件的字段值，修复保存时数据丢失问题。
   - 视觉兜底：PageLoader/ListTemplateHost 使用 design token 外观，统一空态/错误态与重试按钮，模板加载失败使用 I18n 文案。
+  - 模板绑定自愈：运行时获取绑定时会跳过空模板/无控件模板，并回落到系统默认（TemplateStateBinding），避免详情页渲染空模板。
 - **列表页体验**：
   - 行内操作按钮图标化（查看/编辑/删除），使用标准 `IconActionButton` 组件，横向排列且悬停显示多语提示，避免拉高行高。
   - 客户列表移除非编辑态的保存类按钮，仅保留导出与新建入口。
