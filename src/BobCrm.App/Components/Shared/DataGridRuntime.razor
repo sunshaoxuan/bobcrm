@@ -2,6 +2,7 @@
 @using BobCrm.App.Services
 @using System.Text.Json
 @using System.Linq
+@using System.Globalization
 @inject AuthService Auth
 @inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject BobCrm.App.Services.I18nService I18n
@@ -113,7 +114,7 @@
             </table>
         </div>
 
-        @if (Widget.ShowPagination && _totalCount > 0)
+        @if (Widget.ShowPagination)
         {
             <div class="datagrid-pagination" style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="color:#666;">
@@ -144,7 +145,7 @@
     private List<JsonElement> _dataRows = new();
     private int _currentPage = 1;
     private int _totalCount = 0;
-    private int _totalPages = 0;
+    private int _totalPages = 1;
     private List<BobCrm.Api.Contracts.DTOs.EnumDefinitionDto> _enumDefinitions = new();
     private List<RowAction> _rowActions = new();
     private string? _entityType;
@@ -191,6 +192,7 @@
             try
             {
                 _rowActions = JsonSerializer.Deserialize<List<RowAction>>(Widget.RowActionsJson, jsonOptions) ?? new();
+                LocalizeRowActions();
             }
             catch (Exception ex)
             {
@@ -287,21 +289,7 @@
 
                 var content = await response.Content.ReadAsStringAsync();
                 var doc = JsonDocument.Parse(content);
-                if (doc.RootElement.ValueKind == JsonValueKind.Array)
-                {
-                    _data = doc;
-                    var allRows = _data.RootElement.EnumerateArray().ToList();
-                    var pageSize = GetPageSize();
-                    _totalCount = allRows.Count;
-                    _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)pageSize));
-                    if (_currentPage > _totalPages) _currentPage = _totalPages;
-                    var skip = Math.Max(0, (_currentPage - 1) * pageSize);
-                    _dataRows = allRows.Skip(skip).Take(pageSize).ToList();
-                }
-                else
-                {
-                     _error = "Unexpected API response format";
-                }
+                ProcessApiResponse(doc);
             }
             else
             {
@@ -329,7 +317,7 @@
         }
 
         _totalCount = result.TotalCount;
-        _totalPages = result.TotalPages;
+        _totalPages = result.TotalPages > 0 ? result.TotalPages : 1;
 
         if (!string.IsNullOrWhiteSpace(result.DataJson))
         {
@@ -341,6 +329,72 @@
         }
         
         Logger.LogInformation("Loaded {Count} rows", _dataRows.Count);
+    }
+
+    private void ProcessApiResponse(JsonDocument doc)
+    {
+        if (doc.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            _data = doc;
+            var allRows = _data.RootElement.EnumerateArray().ToList();
+            ApplyPagination(allRows, null, null);
+            return;
+        }
+
+        if (doc.RootElement.ValueKind == JsonValueKind.Object)
+        {
+            var root = doc.RootElement;
+            JsonElement itemsElement;
+            if (root.TryGetProperty("items", out itemsElement) || root.TryGetProperty("Items", out itemsElement))
+            {
+                if (itemsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var allRows = itemsElement.EnumerateArray().ToList();
+                    int? totalCount = TryGetInt(root, "totalCount", "TotalCount", "count", "total");
+                    int? totalPages = TryGetInt(root, "totalPages", "TotalPages");
+                    ApplyPagination(allRows, totalCount, totalPages);
+                    return;
+                }
+            }
+
+            // 如果没有 items 字段，尝试当作单行对象列表
+            _data = doc;
+            var allRowsFallback = new List<JsonElement> { root };
+            ApplyPagination(allRowsFallback, 1, 1);
+            return;
+        }
+
+        _error = "Unexpected API response format";
+    }
+
+    private void ApplyPagination(List<JsonElement> allRows, int? totalCount, int? totalPages)
+    {
+        var pageSize = GetPageSize();
+        _totalCount = totalCount ?? allRows.Count;
+        _totalPages = totalPages ?? Math.Max(1, (int)Math.Ceiling(_totalCount / (double)pageSize));
+        if (_totalPages < 1) _totalPages = 1;
+        if (_currentPage > _totalPages) _currentPage = _totalPages;
+        var skip = Math.Max(0, (_currentPage - 1) * pageSize);
+        _dataRows = allRows.Skip(skip).Take(pageSize).ToList();
+    }
+
+    private int? TryGetInt(JsonElement root, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (root.TryGetProperty(key, out var value))
+            {
+                if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var num))
+                {
+                    return num;
+                }
+                if (value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    return parsed;
+                }
+            }
+        }
+        return null;
     }
 
     private string GetCellValue(JsonElement row, string field)
@@ -491,6 +545,35 @@
         {
             _currentPage++;
             await LoadDataAsync();
+        }
+    }
+
+    private void LocalizeRowActions()
+    {
+        foreach (var action in _rowActions)
+        {
+            var label = action.Label;
+            if (string.IsNullOrWhiteSpace(label)) continue;
+
+            var translated = I18n.T(label);
+            if (!string.IsNullOrWhiteSpace(translated) &&
+                !string.Equals(translated, label, StringComparison.Ordinal))
+            {
+                action.Label = translated;
+                continue;
+            }
+
+            var upper = label.ToUpperInvariant();
+            foreach (var key in new[] { $"ACTION_{upper}", $"BTN_{upper}", upper })
+            {
+                translated = I18n.T(key);
+                if (!string.IsNullOrWhiteSpace(translated) &&
+                    !string.Equals(translated, key, StringComparison.Ordinal))
+                {
+                    action.Label = translated;
+                    break;
+                }
+            }
         }
     }
 

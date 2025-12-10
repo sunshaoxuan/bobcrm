@@ -109,6 +109,16 @@
                 return EntityType;
             }
 
+            // 模板名为默认 key 时直接使用实体菜单翻译兜底
+            if (name.StartsWith("TEMPLATE_NAME_", StringComparison.OrdinalIgnoreCase))
+            {
+                var entityLabel = TranslateMenuForEntity();
+                if (!string.IsNullOrWhiteSpace(entityLabel))
+                {
+                    return entityLabel;
+                }
+            }
+
             // 优先按模板名翻译
             var translated = I18n.T(name);
             if (!string.IsNullOrWhiteSpace(translated) && !string.Equals(translated, name, StringComparison.Ordinal))
@@ -116,16 +126,26 @@
                 return translated;
             }
 
-            // 模板名是多语 key 但未配置翻译时，尝试用实体菜单多语兜底
-            var entityKey = $"MENU_{EntityType.ToUpperInvariant()}";
-            translated = I18n.T(entityKey);
-            if (!string.IsNullOrWhiteSpace(translated) && !string.Equals(translated, entityKey, StringComparison.Ordinal))
-            {
-                return translated;
-            }
+            // 模板名为多语 Key 但未配置翻译时，尝试用实体菜单多语兜底（兼容单复数）
+            var menuLabel = TranslateMenuForEntity();
+            if (!string.IsNullOrWhiteSpace(menuLabel)) return menuLabel;
 
             return name;
         }
+    }
+
+    private string? TranslateMenuForEntity()
+    {
+        var upperEntity = EntityType.ToUpperInvariant();
+        foreach (var key in new[] { $"MENU_{upperEntity}S", $"MENU_{upperEntity}" })
+        {
+            var translated = I18n.T(key);
+            if (!string.IsNullOrWhiteSpace(translated) && !string.Equals(translated, key, StringComparison.Ordinal))
+            {
+                return translated;
+            }
+        }
+        return null;
     }
 
     protected override async Task OnInitializedAsync()
