@@ -16,6 +16,11 @@
   - 设计器能力增强：`PropertyEditor` 新增 `DataSetPicker` 和 `FieldPicker`，支持数据绑定配置。
   - 运行态数据收集：`EditValueManager` 支持递归收集嵌套控件的字段值，修复保存时数据丢失问题。
   - 视觉兜底：PageLoader/ListTemplateHost 使用 design token 外观，统一空态/错误态与重试按钮，模板加载失败使用 I18n 文案。
+- **列表页体验**：
+  - 行内操作按钮图标化（查看/编辑/删除），使用标准 `IconActionButton` 组件，横向排列且悬停显示多语提示，避免拉高行高。
+  - 客户列表移除非编辑态的保存类按钮，仅保留导出与新建入口。
+  - DataGrid 本地化列标题与动作，多语兜底；分页兜底为 PageSize=20，始终显示分页栏。
+  - E2E 截图更新（login/list/detail/edit），见 `artifacts/step1-login.png` ~ `step4-edit-save.png`。
 - **Template Regeneration**: Fixed "Regenerate Defaults" button unresponsiveness and timestamp behavior
   - Added missing `<AntContainer />` component to `MainLayout.razor` to enable Ant Design modals
   - Fixed i18n key from non-existent `BTN_CONFIRM` to `BTN_OK` in confirmation modal

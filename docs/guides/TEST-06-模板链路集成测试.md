@@ -16,6 +16,7 @@
 - 列表点击行后，详情页通过 PageLoader 渲染 runtime-layout，至少包含 1 个 Widget。
 - 进入编辑模式后可修改字段并保存，退出编辑模式无错误告警。
 - 测试步骤具备可重复性，可通过 Playwright 自动化脚本回放。
+- 列表页行内操作按钮图标化、分页可见，多语文案正确（标题/动作）。
 
 ---
 
@@ -52,8 +53,8 @@ Start-Sleep -Seconds 15
 - **预期**：跳转 `/dashboard`，无错误提示。
 
 ### TC-02：列表模板加载成功
-- **步骤**：访问 `/customer/list`。  
-- **预期**：出现 `.list-template-host` 或列表宿主区域，表格渲染 ≥1 行数据。
+- **步骤**：访问 `/customers`。  
+- **预期**：出现 `.list-template-host` 或列表宿主区域，表格渲染 ≥1 行数据；分页栏可见；行内操作按钮为图标且悬停有多语提示。
 
 ### TC-03：点击行进入详情模板
 - **步骤**：在表格点击首行。  
@@ -102,3 +103,4 @@ node scripts/test-template-e2e.js
 - 若编辑保存无响应：抓取网络面板确认保存接口返回码和报错信息。  
 - Playwright 运行失败时，查看 `artifacts/template-test-error.png` 截图定位 UI 问题。
 - 若需证据：检查 `artifacts/step*-*.png` 关键节点截图；如启用录屏，视频保存在 `SCREENSHOT_DIR` 下。
+- 最新执行：2025-12-10 14:20（Headless，BASE_URL=http://localhost:3000），截图：`artifacts/step1-login.png` ~ `step4-edit-save.png`，列表图标/分页可见。
