@@ -1,24 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
-
 public class TemplateRuntimeService
 {
     private readonly TemplateBindingService _bindingService;
     private readonly AccessService _accessService;
     private readonly ILogger<TemplateRuntimeService> _logger;
+    private readonly AppDbContext _db;
+    private readonly IDefaultTemplateService _defaultTemplateService;
 
     public TemplateRuntimeService(
         TemplateBindingService bindingService,
         AccessService accessService,
+        AppDbContext db,
+        IDefaultTemplateService defaultTemplateService,
         ILogger<TemplateRuntimeService> logger)
     {
         _bindingService = bindingService;
         _accessService = accessService;
+        _db = db;
+        _defaultTemplateService = defaultTemplateService;
         _logger = logger;
     }
 
@@ -31,8 +40,23 @@ public class TemplateRuntimeService
         request ??= new TemplateRuntimeRequest();
         var usage = request.UsageType;
 
-        var binding = await _bindingService.GetBindingAsync(entityType, usage, ct)
-            ?? throw new InvalidOperationException($"Template binding not found for entity '{entityType}' with usage '{usage}'.");
+        var normalized = entityType?.Trim() ?? string.Empty;
+        var altNormalized = normalized.EndsWith("s", StringComparison.OrdinalIgnoreCase)
+            ? normalized[..^1]
+            : $"{normalized}s";
+
+        var binding = await _bindingService.GetBindingAsync(normalized, usage, ct)
+                      ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
+
+        if (binding == null || !IsTemplateUsable(binding.Template))
+        {
+            binding = await RegenerateAndReloadBindingAsync(normalized, altNormalized, usage, ct);
+        }
+
+        if (binding == null || binding.Template == null)
+        {
+            throw new InvalidOperationException($"Template binding not found for entity '{entityType}' with usage '{usage}'.");
+        }
 
         if (binding.Template == null)
         {
@@ -75,5 +99,67 @@ public class TemplateRuntimeService
         }
 
         return descriptions.Count == 0 ? new[] { "None" } : descriptions;
+    }
+
+    private static bool IsTemplateUsable(FormTemplate? template)
+    {
+        if (template == null) return false;
+        if (string.IsNullOrWhiteSpace(template.LayoutJson)) return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(template.LayoutJson);
+            return doc.RootElement.ValueKind switch
+            {
+                JsonValueKind.Array => doc.RootElement.GetArrayLength() > 0,
+                JsonValueKind.Object => doc.RootElement.EnumerateObject().Any()
+                                        || (doc.RootElement.TryGetProperty("items", out var items)
+                                            && items.ValueKind == JsonValueKind.Object
+                                            && items.EnumerateObject().Any()),
+                _ => false
+            };
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<TemplateBinding?> RegenerateAndReloadBindingAsync(
+        string normalized,
+        string altNormalized,
+        FormTemplateUsageType usage,
+        CancellationToken ct)
+    {
+        try
+        {
+            var entity = await _db.EntityDefinitions
+                .Include(e => e.Fields)
+                .FirstOrDefaultAsync(e =>
+                    (e.EntityRoute ?? string.Empty).Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                    (e.EntityName ?? string.Empty).Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                    (e.EntityRoute ?? string.Empty).Equals(altNormalized, StringComparison.OrdinalIgnoreCase) ||
+                    (e.EntityName ?? string.Empty).Equals(altNormalized, StringComparison.OrdinalIgnoreCase),
+                    ct);
+
+            if (entity == null)
+            {
+                _logger.LogWarning("[TemplateRuntime] Cannot regenerate template: entity {EntityType} not found", normalized);
+                return await _bindingService.GetBindingAsync(normalized, usage, ct)
+                       ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
+            }
+
+            var result = await _defaultTemplateService.EnsureTemplatesAsync(entity, "runtime", force: true, ct);
+            _logger.LogInformation(
+                "[TemplateRuntime] Regenerated templates for {EntityType}, created={Created}, updated={Updated}",
+                normalized, result.Created.Count, result.Updated.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[TemplateRuntime] Failed to regenerate template for {EntityType}", normalized);
+        }
+
+        return await _bindingService.GetBindingAsync(normalized, usage, ct)
+               ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
     }
 }
