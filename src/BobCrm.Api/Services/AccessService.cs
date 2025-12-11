@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Access;
+using BobCrm.Api.Contracts.Requests.Access;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;

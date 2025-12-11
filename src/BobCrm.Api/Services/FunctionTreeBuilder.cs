@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Access;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;
