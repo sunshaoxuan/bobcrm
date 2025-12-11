@@ -1,4 +1,5 @@
 using BobCrm.Api.Base;
+using BobCrm.Api.Contracts.DTOs.DataSet;
 using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Abstractions;

@@ -1,4 +1,5 @@
-using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.DataSet;
+using BobCrm.Api.Contracts.Requests.DataSet;
 using BobCrm.Api.Services;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts;
