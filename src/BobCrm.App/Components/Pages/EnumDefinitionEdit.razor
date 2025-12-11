@@ -195,8 +195,8 @@
             _model = new EnumEditViewModel
             {
                 Code = enumDef.Code,
-                DisplayName = new MultilingualTextDto(enumDef.DisplayName),
-                Description = new MultilingualTextDto(enumDef.Description),
+                DisplayName = new MultilingualTextDto(enumDef.DisplayNameTranslations ?? new()),
+                Description = new MultilingualTextDto(enumDef.DescriptionTranslations ?? new()),
                 IsEnabled = enumDef.IsEnabled
             };
 
@@ -204,7 +204,7 @@
             {
                 TempId = Guid.NewGuid(),
                 Value = o.Value,
-                DisplayName = new MultilingualTextDto(o.DisplayName),
+                DisplayName = new MultilingualTextDto(o.DisplayNameTranslations ?? new()),
                 ColorTag = o.ColorTag,
                 IsEditing = false
             }).ToList();
@@ -319,7 +319,7 @@
                     Options = _options.Select(o => new EnumOptionDto
                     {
                         Value = o.Value,
-                        DisplayName = o.DisplayName ?? new(),
+                        DisplayNameTranslations = o.DisplayName != null ? new MultilingualText(o.DisplayName) : new MultilingualText(),
                         ColorTag = o.ColorTag,
                         SortOrder = 0,
                         IsEnabled = true
@@ -340,9 +340,9 @@
                     {
                         Value = o.Value,
                         DisplayName = o.DisplayName ?? new(),
+                        Description = new Dictionary<string, string?>(),
                         ColorTag = o.ColorTag,
-                        SortOrder = 0,
-                        Description = new Dictionary<string, string?>()
+                        SortOrder = 0
                     }).ToList()
                 };
                 await EnumService.CreateAsync(createRequest);

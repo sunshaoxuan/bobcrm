@@ -51,7 +51,7 @@
                         {
                             <tr>
                                 <td><Tag>@enumDef.Code</Tag></td>
-                                <td>@GetDisplayName(enumDef.DisplayName)</td>
+                                <td>@GetDisplayName(enumDef.DisplayName, enumDef.DisplayNameTranslations)</td>
                                 <td><span class="enum-option-count">@enumDef.Options.Count</span></td>
                                 <td>
                                     <Tag Color="@((enumDef.IsEnabled ? "green" : "red"))">
@@ -150,9 +150,14 @@
         }
     }
 
-    private string GetDisplayName(Dictionary<string, string?>? displayName)
+    private string GetDisplayName(string? single, Dictionary<string, string?>? translations)
     {
-        if (displayName == null) return string.Empty;
+        if (!string.IsNullOrWhiteSpace(single))
+        {
+            return single!;
+        }
+
+        if (translations == null) return string.Empty;
 
         var langOrder = new[]
         {
@@ -164,12 +169,12 @@
 
         foreach (var lang in langOrder)
         {
-            if (displayName.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
+            if (translations.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
             {
                 return value!;
             }
         }
 
-        return displayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+        return translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
     }
 }

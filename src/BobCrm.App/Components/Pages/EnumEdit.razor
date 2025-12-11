@@ -1,6 +1,7 @@
 @page "/system/enums/create"
 @page "/system/enums/edit/{Id:guid}"
 @using BobCrm.Api.Contracts.DTOs
+@using BobCrm.App.Models
 @using AntDesign
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
@@ -50,13 +51,13 @@
                     </FormItem>
 
                     <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")" Required>
-                        <MultilingualInput @bind-Translations="_enumDef.DisplayName"
+                        <MultilingualInput @bind-Value="_displayName"
                                            Languages="@_supportedLanguages"
                                            Required="true" />
                     </FormItem>
 
                     <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
-                        <MultilingualInput @bind-Translations="_enumDef.Description"
+                        <MultilingualInput @bind-Value="_description"
                                            Languages="@_supportedLanguages"
                                            InputType="textarea" />
                     </FormItem>
@@ -117,22 +118,15 @@
                 {
                     Id = Guid.NewGuid(),
                     Code = string.Empty,
-                    DisplayName = new Dictionary<string, string?>
-                    {
-                        { "zh", "" },
-                        { "en", "" },
-                        { "ja", "" }
-                    },
-                    Description = new Dictionary<string, string?>
-                    {
-                        { "zh", "" },
-                        { "en", "" },
-                        { "ja", "" }
-                    },
+                    DisplayNameTranslations = new MultilingualText(),
+                    DescriptionTranslations = new MultilingualText(),
                     IsEnabled = true,
                     IsSystem = false,
                     Options = new List<EnumOptionDto>()
                 };
+                _displayName = new MultilingualTextDto(new Dictionary<string, string?> { { "zh", "" }, { "en", "" }, { "ja", "" } });
+                _description = new MultilingualTextDto(new Dictionary<string, string?> { { "zh", "" }, { "en", "" }, { "ja", "" } });
+                InitializeOptionModels();
             }
             else
             {
@@ -145,6 +139,9 @@
                     NavigateBack();
                     return;
                 }
+                _displayName = new MultilingualTextDto(_enumDef.DisplayNameTranslations ?? new());
+                _description = new MultilingualTextDto(_enumDef.DescriptionTranslations ?? new());
+                InitializeOptionModels();
             }
         }
         catch (Exception ex)
@@ -172,7 +169,7 @@
             return;
         }
 
-        if (!_enumDef.DisplayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+        if (!_displayName.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
         {
             Toast.Error(I18n.T("MSG_DISPLAY_NAME_REQUIRED"));
             return;
@@ -181,6 +178,19 @@
         try
         {
             _saving = true;
+            _enumDef.DisplayNameTranslations = new MultilingualText(_displayName);
+            _enumDef.DescriptionTranslations = new MultilingualText(_description);
+            foreach (var opt in _enumDef.Options)
+            {
+                if (_optionDisplayNames.TryGetValue(opt.Id, out var dn))
+                {
+                    opt.DisplayNameTranslations = new MultilingualText(dn);
+                }
+                if (_optionDescriptions.TryGetValue(opt.Id, out var desc))
+                {
+                    opt.DescriptionTranslations = new MultilingualText(desc);
+                }
+            }
 
             if (_isCreateMode)
             {
@@ -188,14 +198,14 @@
                 var request = new CreateEnumDefinitionRequest
                 {
                     Code = _enumDef.Code,
-                    DisplayName = _enumDef.DisplayName,
-                    Description = _enumDef.Description,
+                    DisplayName = _enumDef.DisplayNameTranslations ?? new(),
+                    Description = _enumDef.DescriptionTranslations ?? new(),
                     IsEnabled = _enumDef.IsEnabled,
                     Options = _enumDef.Options.Select(o => new CreateEnumOptionRequest
                     {
                         Value = o.Value,
-                        DisplayName = o.DisplayName,
-                        Description = o.Description,
+                        DisplayName = o.DisplayNameTranslations ?? new(),
+                        Description = o.DescriptionTranslations ?? new(),
                         SortOrder = o.SortOrder,
                         ColorTag = o.ColorTag,
                         Icon = o.Icon
@@ -210,8 +220,8 @@
                 // 更新现有枚举
                 var request = new UpdateEnumDefinitionRequest
                 {
-                    DisplayName = _enumDef.DisplayName,
-                    Description = _enumDef.Description,
+                    DisplayName = _enumDef.DisplayNameTranslations ?? new(),
+                    Description = _enumDef.DescriptionTranslations ?? new(),
                     IsEnabled = _enumDef.IsEnabled,
                     Options = _enumDef.Options
                 };
@@ -233,6 +243,12 @@
         }
     }
 
+    private void InitializeOptionModels()
+    {
+        _optionDisplayNames = _enumDef?.Options.ToDictionary(o => o.Id, o => new MultilingualTextDto(o.DisplayNameTranslations ?? new())) ?? new();
+        _optionDescriptions = _enumDef?.Options.ToDictionary(o => o.Id, o => new MultilingualTextDto(o.DescriptionTranslations ?? new())) ?? new();
+    }
+
     /// <summary>
     /// 返回枚举管理页
     /// </summary>
@@ -240,4 +256,9 @@
     {
         Nav.NavigateTo("/system/enums");
     }
+
+    private MultilingualTextDto _displayName = new();
+    private MultilingualTextDto _description = new();
+    private Dictionary<Guid, MultilingualTextDto> _optionDisplayNames = new();
+    private Dictionary<Guid, MultilingualTextDto> _optionDescriptions = new();
 }

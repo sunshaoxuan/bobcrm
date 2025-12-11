@@ -54,7 +54,7 @@
                         <strong>@context.Code</strong>
                     </Column>
                     <Column Title="@I18n.T("ENUM_COL_DISPLAY_NAME")" TData="string">
-                        @GetDisplayName(context.DisplayName)
+                        @GetDisplayName(context.DisplayName, context.DisplayNameTranslations)
                     </Column>
                     <Column Title="@I18n.T("LBL_ENUM_OPTIONS")" TData="int" Width="120px" Align="ColumnAlign.Center">
                         <Tag>@string.Format(I18n.T("ENUM_OPTIONS_COUNT"), context.Options.Count)</Tag>
@@ -121,13 +121,13 @@
                     <strong>@_viewingEnum.Code</strong>
                 </DescriptionsItem>
                 <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_ZH")'>
-                    @(_viewingEnum.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
+                    @(GetDisplayName(_viewingEnum.DisplayName, _viewingEnum.DisplayNameTranslations, "zh-CN") ?? "-")
                 </DescriptionsItem>
                 <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_JA")'>
-                    @(_viewingEnum.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
+                    @(GetDisplayName(_viewingEnum.DisplayName, _viewingEnum.DisplayNameTranslations, "ja-JP") ?? "-")
                 </DescriptionsItem>
                 <DescriptionsItem Title='@I18n.T("ENUM_COL_NAME_EN")'>
-                    @(_viewingEnum.DisplayName?.GetValueOrDefault("en-US") ?? "-")
+                    @(GetDisplayName(_viewingEnum.DisplayName, _viewingEnum.DisplayNameTranslations, "en-US") ?? "-")
                 </DescriptionsItem>
                 <DescriptionsItem Title="@I18n.T("ENUM_COL_STATUS")">
                     @if (_viewingEnum.IsEnabled)
@@ -140,7 +140,7 @@
                     }
                 </DescriptionsItem>
                 <DescriptionsItem Title="@I18n.T("ENUM_COL_DESCRIPTION")" Span="2">
-                    @(_viewingEnum.Description?.GetValueOrDefault(I18n.CurrentLang) ?? "-")
+                    @(GetDisplayName(_viewingEnum.Description, _viewingEnum.DescriptionTranslations, I18n.CurrentLang) ?? "-")
                 </DescriptionsItem>
             </Descriptions>
 
@@ -155,13 +155,13 @@
                     <strong>@context.Value</strong>
                 </Column>
                 <Column Title='@I18n.T("ENUM_COL_NAME_ZH")' TData="string">
-                    @(context.DisplayName?.GetValueOrDefault("zh-CN") ?? "-")
+                    @(GetDisplayName(context.DisplayName, context.DisplayNameTranslations, "zh-CN") ?? "-")
                 </Column>
                 <Column Title='@I18n.T("ENUM_COL_NAME_JA")' TData="string">
-                    @(context.DisplayName?.GetValueOrDefault("ja-JP") ?? "-")
+                    @(GetDisplayName(context.DisplayName, context.DisplayNameTranslations, "ja-JP") ?? "-")
                 </Column>
                 <Column Title='@I18n.T("ENUM_COL_NAME_EN")' TData="string">
-                    @(context.DisplayName?.GetValueOrDefault("en-US") ?? "-")
+                    @(GetDisplayName(context.DisplayName, context.DisplayNameTranslations, "en-US") ?? "-")
                 </Column>
                 <Column Title="@I18n.T("LBL_COLOR_TAG")" TData="string" Width="120px" Align="ColumnAlign.Center">
                     @if (!string.IsNullOrEmpty(context.ColorTag))
@@ -225,7 +225,8 @@
         {
             query = query.Where(e =>
                 e.Code.Contains(_search, StringComparison.OrdinalIgnoreCase)
-                || (e.DisplayName != null && e.DisplayName.Values.Any(v =>
+                || (!string.IsNullOrWhiteSpace(e.DisplayName) && e.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase))
+                || (e.DisplayNameTranslations != null && e.DisplayNameTranslations.Values.Any(v =>
                     v != null && v.Contains(_search, StringComparison.OrdinalIgnoreCase))));
         }
 
@@ -237,15 +238,33 @@
         return query.OrderBy(e => e.Code);
     }
 
-    private string GetDisplayName(Dictionary<string, string?>? displayName)
+    private string GetDisplayName(string? single, Dictionary<string, string?>? translations, string? lang = null)
     {
-        if (displayName == null || displayName.Count == 0)
+        if (!string.IsNullOrWhiteSpace(single))
+        {
+            return single!;
+        }
+
+        if (translations == null || translations.Count == 0)
             return "-";
 
-        if (displayName.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrEmpty(name))
-            return name;
+        var langOrder = new[]
+        {
+            lang ?? I18n.CurrentLang,
+            "ja",
+            "zh",
+            "en"
+        };
 
-        return displayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? "-";
+        foreach (var l in langOrder)
+        {
+            if (translations.TryGetValue(l, out var name) && !string.IsNullOrWhiteSpace(name))
+            {
+                return name!;
+            }
+        }
+
+        return translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "-";
     }
 
     private void NavigateToCreate()
@@ -308,8 +327,6 @@
         }
     }
 }
-
-
 
 
 

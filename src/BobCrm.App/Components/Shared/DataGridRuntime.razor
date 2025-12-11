@@ -1,5 +1,6 @@
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services
+@using BobCrm.Api.Contracts.DTOs
 @using System.Text.Json
 @using System.Linq
 @using System.Globalization
@@ -433,7 +434,12 @@
                 var values = JsonSerializer.Deserialize<List<string>>(value);
                 if (values != null)
                 {
-                    var labels = values.Select(v => enumDef.Options.FirstOrDefault(o => o.Value == v)?.DisplayName.GetValueOrDefault(I18n.CurrentLang) ?? v);
+                    var labels = values.Select(v =>
+                    {
+                        var opt = enumDef.Options.FirstOrDefault(o => o.Value == v);
+                        var label = ResolveDisplayName(opt?.DisplayName, opt?.DisplayNameTranslations);
+                        return string.IsNullOrWhiteSpace(label) ? v : label;
+                    });
                     return string.Join(", ", labels);
                 }
             }
@@ -443,7 +449,8 @@
         }
 
         var option = enumDef.Options.FirstOrDefault(o => o.Value == value);
-        return option?.DisplayName.GetValueOrDefault(I18n.CurrentLang) ?? value; 
+        var display = ResolveDisplayName(option?.DisplayName, option?.DisplayNameTranslations);
+        return string.IsNullOrWhiteSpace(display) ? value : display;
     }
 
     private string GetTableStyle()
@@ -704,5 +711,33 @@
         public int Page { get; set; }
         public int PageSize { get; set; }
         public int TotalPages { get; set; }
+    }
+
+    private string ResolveDisplayName(string? single, MultilingualText? translations)
+    {
+        if (!string.IsNullOrWhiteSpace(single))
+        {
+            return single!;
+        }
+
+        if (translations == null || translations.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (translations.TryGetValue(I18n.CurrentLang, out var current) && !string.IsNullOrWhiteSpace(current))
+        {
+            return current!;
+        }
+
+        foreach (var lang in new[] { "zh", "en", "ja" })
+        {
+            if (translations.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                return value!;
+            }
+        }
+
+        return translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
     }
 }

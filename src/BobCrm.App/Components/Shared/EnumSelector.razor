@@ -252,12 +252,34 @@ else
     /// </summary>
     private string GetDisplayName(EnumOptionDto option)
     {
-        if (option.DisplayName.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrEmpty(name))
+        if (!string.IsNullOrWhiteSpace(option.DisplayName))
         {
-            return name;
+            return option.DisplayName!;
         }
 
-        return option.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? option.Value;
+        var translations = option.DisplayNameTranslations;
+        if (translations != null)
+        {
+            if (translations.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrWhiteSpace(name))
+            {
+                return name!;
+            }
+
+            foreach (var lang in new[] { "zh", "en", "ja" })
+            {
+                if (translations.TryGetValue(lang, out var fallback) && !string.IsNullOrWhiteSpace(fallback))
+                {
+                    return fallback!;
+                }
+            }
+
+            var any = translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(any))
+            {
+                return any!;
+            }
+        }
+
+        return option.Value;
     }
 }
-

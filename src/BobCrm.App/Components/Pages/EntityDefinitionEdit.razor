@@ -1353,11 +1353,35 @@
 
     private string GetEnumDisplayName(EnumDefinitionDto enumDef)
     {
-        if (enumDef.DisplayName.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrEmpty(name))
+        if (!string.IsNullOrWhiteSpace(enumDef.DisplayName))
         {
-            return name;
+            return enumDef.DisplayName!;
         }
-        return enumDef.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? enumDef.Code;
+
+        var translations = enumDef.DisplayNameTranslations;
+        if (translations != null)
+        {
+            if (translations.TryGetValue(I18n.CurrentLang, out var name) && !string.IsNullOrWhiteSpace(name))
+            {
+                return name!;
+            }
+
+            foreach (var lang in new[] { "zh", "en", "ja" })
+            {
+                if (translations.TryGetValue(lang, out var fallback) && !string.IsNullOrWhiteSpace(fallback))
+                {
+                    return fallback!;
+                }
+            }
+
+            var any = translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
+            if (!string.IsNullOrWhiteSpace(any))
+            {
+                return any!;
+            }
+        }
+
+        return enumDef.Code;
     }
 
     private string? GetInterfaceFieldLabel(string? propertyName)
@@ -1690,7 +1714,6 @@
         public string? ReferenceTable { get; init; }
     }
 }
-
 
 
 

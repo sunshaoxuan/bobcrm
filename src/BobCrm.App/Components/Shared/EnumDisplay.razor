@@ -119,7 +119,7 @@ else
                     _option = enumDef.Options.FirstOrDefault(o => o.Value == Value);
                     if (_option != null)
                     {
-                        _displayValue = GetDisplayName(_option.DisplayName);
+                        _displayValue = GetDisplayName(_option.DisplayName, _option.DisplayNameTranslations);
                     }
                     else
                     {
@@ -145,13 +145,31 @@ else
     /// <summary>
     /// Get display name of enum option
     /// </summary>
-    private string GetDisplayName(Dictionary<string, string?> displayName)
+    private string GetDisplayName(string? single, MultilingualText? translations)
     {
-        if (displayName.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrEmpty(name))
+        if (!string.IsNullOrWhiteSpace(single))
         {
-            return name;
+            return single!;
         }
 
-        return displayName.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v)) ?? Value ?? string.Empty;
+        if (translations == null || translations.Count == 0)
+        {
+            return Value ?? string.Empty;
+        }
+
+        if (translations.TryGetValue(CurrentLanguage, out var name) && !string.IsNullOrWhiteSpace(name))
+        {
+            return name!;
+        }
+
+        foreach (var lang in new[] { "zh", "en", "ja" })
+        {
+            if (translations.TryGetValue(lang, out var fallback) && !string.IsNullOrWhiteSpace(fallback))
+            {
+                return fallback!;
+            }
+        }
+
+        return translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? Value ?? string.Empty;
     }
 }

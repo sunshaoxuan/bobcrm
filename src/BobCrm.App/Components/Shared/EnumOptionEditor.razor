@@ -2,6 +2,7 @@
 @using AntDesign
 @inject I18nService I18n
 @inject ToastService Toast
+@using BobCrm.App.Models
 
 @*
     EnumOptionEditor - 枚举选项编辑器
@@ -32,7 +33,7 @@
                         </div>
                         <div class="option-info">
                             <Tag Color="@(option.IsEnabled ? "blue" : "default")">@option.Value</Tag>
-                            <span class="option-display-name">@GetDisplayName(option.DisplayName)</span>
+                            <span class="option-display-name">@GetDisplayName(option.DisplayName, option.DisplayNameTranslations)</span>
                             @if (!string.IsNullOrEmpty(option.ColorTag))
                             {
                                 <Tag Color="@option.ColorTag">@option.ColorTag</Tag>
@@ -60,13 +61,13 @@
                                 </FormItem>
 
                                 <FormItem Label="@I18n.T("LBL_DISPLAY_NAME")">
-                                    <MultilingualInput @bind-Translations="option.DisplayName"
+                                    <MultilingualInput @bind-Value="_optionDisplayNames[option.Id]"
                                                        Languages="@_supportedLanguages"
                                                        Required="true" />
                                 </FormItem>
 
                                 <FormItem Label="@I18n.T("LBL_DESCRIPTION")">
-                                    <MultilingualInput @bind-Translations="option.Description"
+                                    <MultilingualInput @bind-Value="_optionDescriptions[option.Id]"
                                                        Languages="@_supportedLanguages"
                                                        InputType="textarea" />
                                 </FormItem>
@@ -141,6 +142,14 @@
 
     private Guid? _expandedOptionId;
     private readonly string[] _supportedLanguages = new[] { "zh", "en", "ja" };
+    private Dictionary<Guid, MultilingualTextDto> _optionDisplayNames = new();
+    private Dictionary<Guid, MultilingualTextDto> _optionDescriptions = new();
+
+    protected override void OnParametersSet()
+    {
+        _optionDisplayNames = Options.ToDictionary(o => o.Id, o => new MultilingualTextDto(o.DisplayNameTranslations ?? new()));
+        _optionDescriptions = Options.ToDictionary(o => o.Id, o => new MultilingualTextDto(o.DescriptionTranslations ?? new()));
+    }
 
     /// <summary>
     /// 添加新选项
@@ -151,27 +160,20 @@
         {
             Id = Guid.NewGuid(),
             Value = $"OPTION_{Options.Count + 1}",
-            DisplayName = new Dictionary<string, string?>
-            {
-                { "zh", "" },
-                { "en", "" },
-                { "ja", "" }
-            },
-            Description = new Dictionary<string, string?>
-            {
-                { "zh", "" },
-                { "en", "" },
-                { "ja", "" }
-            },
+            DisplayNameTranslations = new MultilingualText(),
+            DescriptionTranslations = new MultilingualText(),
             SortOrder = Options.Count,
             IsEnabled = true
         };
 
         Options.Add(newOption);
+        _optionDisplayNames[newOption.Id] = new MultilingualTextDto(new Dictionary<string, string?> { { "zh", "" }, { "en", "" }, { "ja", "" } });
+        _optionDescriptions[newOption.Id] = new MultilingualTextDto(new Dictionary<string, string?> { { "zh", "" }, { "en", "" }, { "ja", "" } });
         _expandedOptionId = newOption.Id;
 
         if (OptionsChanged.HasDelegate)
         {
+            SyncTranslations();
             await OptionsChanged.InvokeAsync(Options);
         }
     }
@@ -188,9 +190,13 @@
         {
             Options[i].SortOrder = i;
         }
+        _optionDisplayNames.Clear();
+        _optionDescriptions.Clear();
+        OnParametersSet();
 
         if (OptionsChanged.HasDelegate)
         {
+            SyncTranslations();
             await OptionsChanged.InvokeAsync(Options);
         }
 
@@ -212,6 +218,7 @@
 
             if (OptionsChanged.HasDelegate)
             {
+                SyncTranslations();
                 await OptionsChanged.InvokeAsync(Options);
             }
         }
@@ -232,6 +239,7 @@
 
             if (OptionsChanged.HasDelegate)
             {
+                SyncTranslations();
                 await OptionsChanged.InvokeAsync(Options);
             }
         }
@@ -248,18 +256,44 @@
     /// <summary>
     /// 获取显示名称
     /// </summary>
-    private string GetDisplayName(Dictionary<string, string?> displayName)
+    private string GetDisplayName(string? single, Dictionary<string, string?>? translations)
     {
+        if (!string.IsNullOrWhiteSpace(single))
+        {
+            return single!;
+        }
+
+        if (translations == null || translations.Count == 0)
+        {
+            return "-";
+        }
+
         var langOrder = new[] { I18n.CurrentLang, "zh", "en", "ja" };
 
         foreach (var lang in langOrder)
         {
-            if (displayName.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
+            if (translations.TryGetValue(lang, out var value) && !string.IsNullOrWhiteSpace(value))
             {
                 return value!;
             }
         }
 
-        return displayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+        return translations.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
+    }
+
+    private void SyncTranslations()
+    {
+        foreach (var option in Options)
+        {
+            if (_optionDisplayNames.TryGetValue(option.Id, out var dn))
+            {
+                option.DisplayNameTranslations = new MultilingualText(dn);
+            }
+
+            if (_optionDescriptions.TryGetValue(option.Id, out var desc))
+            {
+                option.DescriptionTranslations = new MultilingualText(desc);
+            }
+        }
     }
 }
