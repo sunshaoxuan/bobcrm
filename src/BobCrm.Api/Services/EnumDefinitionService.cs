@@ -1,5 +1,7 @@
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Enum;
+using BobCrm.Api.Contracts.Requests.Enum;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;

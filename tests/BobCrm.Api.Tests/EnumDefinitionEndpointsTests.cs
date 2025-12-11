@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Enum;
+using BobCrm.Api.Contracts.Requests.Enum;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;

@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
-using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Enum;
+using BobCrm.Api.Contracts.Requests.Enum;
 
 namespace BobCrm.App.Services;
 
