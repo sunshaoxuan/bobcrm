@@ -37,8 +37,9 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         var firstEntity = entityArray[0];
         Assert.True(firstEntity.TryGetProperty("entityType", out _), "应该包含entityType");
         Assert.True(firstEntity.TryGetProperty("entityName", out _), "应该包含entityName");
-        Assert.True(firstEntity.TryGetProperty("displayName", out var displayName), "应该包含displayName");
-        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // displayName 应该是 Dictionary 序列化的 JSON 对象
+        Assert.False(firstEntity.TryGetProperty("displayName", out _), "默认应返回多语字典，单语字段缺失");
+        Assert.True(firstEntity.TryGetProperty("displayNameTranslations", out var displayName), "应该包含displayNameTranslations");
+        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // 多语字典
         Assert.True(firstEntity.TryGetProperty("apiEndpoint", out _), "应该包含apiEndpoint");
     }
 
@@ -171,10 +172,27 @@ public class EntityMetadataTests : IClassFixture<TestWebAppFactory>
         
         Assert.True(customerEntity.TryGetProperty("entityName", out var entityName), "应该包含entityName字段");
         Assert.Equal("Customer", entityName.GetString());
-
+        
         // 验证 displayName 是多语言字典
-        Assert.True(customerEntity.TryGetProperty("displayName", out var displayName), "应该包含displayName字段");
-        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // displayName 应该是 Dictionary 序列化的 JSON 对象
+        Assert.False(customerEntity.TryGetProperty("displayName", out _), "默认应返回多语字典，单语字段缺失");
+        Assert.True(customerEntity.TryGetProperty("displayNameTranslations", out var displayName), "应该包含displayNameTranslations字段");
+        Assert.Equal(JsonValueKind.Object, displayName.ValueKind); // displayNameTranslations 应该是 Dictionary 序列化的 JSON 对象
+    }
+
+    [Fact]
+    public async Task GetAvailableEntities_WithLang_Returns_SingleLanguage()
+    {
+        var client = _factory.CreateClient();
+
+        var resp = await client.GetAsync("/api/entities?lang=ja");
+        resp.EnsureSuccessStatusCode();
+
+        var entities = (await resp.ReadAsJsonAsync()).UnwrapData();
+        Assert.Equal(JsonValueKind.Array, entities.ValueKind);
+
+        var firstEntity = entities.EnumerateArray().First();
+        Assert.True(firstEntity.TryGetProperty("displayName", out var displayName), "单语模式应包含displayName字符串");
+        Assert.Equal(JsonValueKind.String, displayName.ValueKind);
+        Assert.False(firstEntity.TryGetProperty("displayNameTranslations", out _), "单语模式不应包含多语字典");
     }
 }
-

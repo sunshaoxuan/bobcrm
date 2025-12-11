@@ -7,6 +7,7 @@ using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.Requests.Entity;
 using BobCrm.Api.Contracts.Responses.Entity;
+using BobCrm.Api.Extensions;
 using EntityFieldDto = BobCrm.Api.Contracts.Responses.Entity.FieldMetadataDto;
 
 namespace BobCrm.Api.Endpoints;
@@ -47,30 +48,20 @@ public static class EntityDefinitionEndpoints
         }
 
         // 获取可用实体列表（公共端点，不需要认证）
-        entitiesGroup.MapGet("", async (AppDbContext db) =>
+        entitiesGroup.MapGet("", async (string? lang, HttpContext http, AppDbContext db) =>
         {
+            var targetLang = LangHelper.GetLang(http, lang);
             var entities = await db.EntityDefinitions
                 .Where(ed => ed.IsEnabled && ed.Status == EntityStatus.Published)
                 .OrderBy(ed => ed.Order)
-                .Select(ed => new EntitySummaryDto
-                {
-                    EntityType = ed.EntityRoute,
-                    EntityRoute = ed.EntityRoute,
-                    EntityName = ed.EntityName,
-                    DisplayName = null,
-                    Description = null,
-                    DisplayNameTranslations = ed.DisplayName != null ? new MultilingualText(ed.DisplayName) : null,
-                    DescriptionTranslations = ed.Description != null ? new MultilingualText(ed.Description) : null,
-                    ApiEndpoint = ed.ApiEndpoint,
-                    Icon = ed.Icon,
-                    Category = ed.Category,
-                    IsRootEntity = ed.IsRootEntity,
-                    IsEnabled = ed.IsEnabled,
-                    Status = ed.Status
-                })
+                .AsNoTracking()
                 .ToListAsync();
 
-            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(entities));
+            var dtos = entities
+                .Select(ed => ed.ToSummaryDto(targetLang))
+                .ToList();
+
+            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(dtos));
         })
         .WithName("GetAvailableEntities")
         .WithSummary("获取可用实体列表")
@@ -160,29 +151,25 @@ public static class EntityDefinitionEndpoints
         .AllowAnonymous();
 
         // 获取所有实体（包括禁用的）- 需要管理员权限
-        entitiesGroup.MapGet("/all", async (AppDbContext db) =>
+        entitiesGroup.MapGet("/all", async (string? lang, HttpContext http, AppDbContext db) =>
         {
+            var targetLang = LangHelper.GetLang(http, lang);
             var entities = await db.EntityDefinitions
                 .OrderBy(ed => ed.Order)
-                .Select(ed => new EntitySummaryDto
-                {
-                    EntityType = ed.FullTypeName,
-                    EntityRoute = ed.EntityRoute,
-                    EntityName = ed.EntityName,
-                    DisplayName = null,
-                    Description = null,
-                    DisplayNameTranslations = ed.DisplayName != null ? new MultilingualText(ed.DisplayName) : null,
-                    DescriptionTranslations = ed.Description != null ? new MultilingualText(ed.Description) : null,
-                    ApiEndpoint = ed.ApiEndpoint,
-                    Icon = ed.Icon,
-                    Category = ed.Category,
-                    IsEnabled = ed.IsEnabled,
-                    IsRootEntity = ed.IsRootEntity,
-                    Status = ed.Status
-                })
+                .AsNoTracking()
                 .ToListAsync();
 
-            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(entities));
+            var dtos = entities
+                .Select(ed =>
+                {
+                    var dto = ed.ToSummaryDto(targetLang);
+                    // 保持原有行为：管理员视图 EntityType 使用 FullTypeName 便于调试
+                    dto.EntityType = ed.FullTypeName ?? dto.EntityType;
+                    return dto;
+                })
+                .ToList();
+
+            return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(dtos));
         })
         .WithName("GetAllEntities")
         .WithSummary("获取所有实体列表（包括禁用的）")

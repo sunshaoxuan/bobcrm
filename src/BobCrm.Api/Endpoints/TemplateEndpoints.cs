@@ -8,7 +8,9 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Extensions;
 using BobCrm.Api.Services;
+using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Endpoints;
@@ -232,6 +234,7 @@ public static class TemplateEndpoints
         .WithDescription("按优先级获取模板：用户默认 > 系统默认 > 第一个创建的模板");
 
         group.MapGet("/menu-bindings", async (
+            string? lang,
             ClaimsPrincipal user,
             AppDbContext db,
             ILocalization loc,
@@ -240,7 +243,7 @@ public static class TemplateEndpoints
             string? viewState,
             CancellationToken ct) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var targetLang = LangHelper.GetLang(http, lang);
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             if (string.IsNullOrWhiteSpace(uid))
             {
@@ -249,21 +252,6 @@ public static class TemplateEndpoints
 
             var resolvedViewState = viewState ?? "DetailView";
             var now = DateTime.UtcNow;
-
-            // Get system default language for display name resolution
-            string systemLanguage;
-            try
-            {
-                systemLanguage = await db.SystemSettings
-                    .AsNoTracking()
-                    .Select(s => s.DefaultLanguage)
-                    .FirstOrDefaultAsync(ct) ?? "zh";
-            }
-            catch
-            {
-                // If SystemSettings table doesn't exist yet (during initialization), default to Chinese
-                systemLanguage = "zh";
-            }
 
             var accessibleFunctionIds = await db.RoleAssignments
                 .Where(a => a.UserId == uid &&
@@ -308,9 +296,17 @@ public static class TemplateEndpoints
                 .Where(ed => ed.EntityRoute != null && entityTypeSet.Contains(ed.EntityRoute))
                 .ToDictionaryAsync(
                     ed => ed.EntityRoute!,
-                    ed => new EntityMenuMetadata(
-                        ResolveDisplayName(ed, systemLanguage),
-                        ResolveRoute(ed)),
+                    ed =>
+                    {
+                        var summary = ed.ToSummaryDto(targetLang);
+                        var displayNameSingle = summary.DisplayName
+                            ?? summary.DisplayNameTranslations?.Resolve(targetLang ?? string.Empty)
+                            ?? ed.EntityName;
+                        return new EntityMenuMetadata(
+                            displayNameSingle,
+                            summary.DisplayNameTranslations,
+                            ResolveRoute(ed));
+                    },
                     StringComparer.OrdinalIgnoreCase,
                     ct);
 
@@ -366,16 +362,24 @@ public static class TemplateEndpoints
                 entityMetadata.TryGetValue(binding.EntityType, out var metadata);
                 var displayName = metadata?.DisplayName ?? node.Name;
                 var resolvedRoute = metadata?.Route ?? node.Route;
+                var displayNameTranslations = metadata?.DisplayNameTranslations ??
+                    (node.DisplayName == null ? null : new MultilingualText(node.DisplayName));
+                var resolvedMenuName = !string.IsNullOrWhiteSpace(targetLang)
+                    ? (displayNameTranslations?.Resolve(targetLang) ?? displayName ?? node.Name)
+                    : null;
 
                 var menuPayload = new
                 {
                     node.Id,
                     Code = NormalizeMenuCode(node.Code),
-                    Name = displayName,
+                    Name = resolvedMenuName ?? displayName,
                     node.DisplayNameKey,
-                    DisplayName = node.DisplayName == null
+                    DisplayName = string.IsNullOrWhiteSpace(targetLang)
                         ? null
-                        : new Dictionary<string, string?>(node.DisplayName, StringComparer.OrdinalIgnoreCase),
+                        : resolvedMenuName ?? displayName,
+                    DisplayNameTranslations = string.IsNullOrWhiteSpace(targetLang)
+                        ? displayNameTranslations
+                        : null,
                     Route = resolvedRoute,
                     node.Icon,
                     node.SortOrder
@@ -513,28 +517,6 @@ public static class TemplateEndpoints
         return code;
     }
 
-    private static string ResolveDisplayName(EntityDefinition definition, string preferredLanguage)
-    {
-        if (definition.DisplayName != null)
-        {
-            // Try preferred language first
-            if (definition.DisplayName.TryGetValue(preferredLanguage, out var preferredValue) &&
-                !string.IsNullOrWhiteSpace(preferredValue))
-            {
-                return preferredValue!;
-            }
-
-            // Fall back to first available translation
-            var fallbackValue = definition.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-            if (!string.IsNullOrWhiteSpace(fallbackValue))
-            {
-                return fallbackValue!;
-            }
-        }
-
-        return definition.EntityName;
-    }
-
     private static string? ResolveRoute(EntityDefinition definition)
     {
         if (string.IsNullOrWhiteSpace(definition.ApiEndpoint))
@@ -550,7 +532,5 @@ public static class TemplateEndpoints
         return route;
     }
 
-    private sealed record EntityMenuMetadata(string DisplayName, string? Route);
+    private sealed record EntityMenuMetadata(string DisplayName, MultilingualText? DisplayNameTranslations, string? Route);
 }
-
-

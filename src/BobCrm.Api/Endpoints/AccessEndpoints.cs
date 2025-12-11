@@ -29,7 +29,7 @@ public static class AccessEndpoints
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            var tree = await treeBuilder.BuildAsync(nodes, ct);
+            var tree = await treeBuilder.BuildAsync(nodes, lang: null, ct: ct);
             return Results.Ok(tree);
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
@@ -43,14 +43,15 @@ public static class AccessEndpoints
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            var tree = await treeBuilder.BuildAsync(nodes, ct);
+            var tree = await treeBuilder.BuildAsync(nodes, lang: null, ct: ct);
             return Results.Ok(tree);
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/functions/me", async (
+            string? lang,
+            HttpContext http,
             ClaimsPrincipal user,
-            [FromServices] AppDbContext db,
-            [FromServices] FunctionTreeBuilder treeBuilder,
+            [FromServices] AccessService accessService,
             CancellationToken ct) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -59,55 +60,8 @@ public static class AccessEndpoints
                 return Results.Unauthorized();
             }
 
-            var now = DateTime.UtcNow;
-            var functionIds = await db.RoleAssignments
-                .AsNoTracking()
-                .Where(a => a.UserId == userId &&
-                            (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
-                            (!a.ValidTo.HasValue || a.ValidTo >= now))
-                .Join(db.RoleFunctionPermissions.AsNoTracking(),
-                    a => a.RoleId,
-                    rfp => rfp.RoleId,
-                    (assignment, permission) => permission.FunctionId)
-                .Distinct()
-                .ToListAsync(ct);
-
-            var nodes = await db.FunctionNodes
-                .AsNoTracking()
-                .Include(f => f.Template)
-                .OrderBy(f => f.SortOrder)
-                .ToListAsync(ct);
-
-            if (nodes.Count == 0)
-            {
-                return Results.Ok(new List<FunctionNodeDto>());
-            }
-
-            var dict = nodes.ToDictionary(n => n.Id);
-            var allowed = new HashSet<Guid>(functionIds);
-            if (nodes.FirstOrDefault(n => n.Code == "APP.ROOT") is { } rootNode)
-            {
-                allowed.Add(rootNode.Id);
-            }
-
-            foreach (var id in functionIds)
-            {
-                var current = id;
-                while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
-                {
-                    var parentId = node.ParentId.Value;
-                    allowed.Add(parentId);
-                    current = parentId;
-                }
-            }
-
-            var filtered = nodes.Where(n => allowed.Contains(n.Id)).ToList();
-            if (filtered.Count == 0)
-            {
-                return Results.Ok(new List<FunctionNodeDto>());
-            }
-
-            var tree = await treeBuilder.BuildAsync(filtered, ct);
+            var targetLang = LangHelper.GetLang(http, lang);
+            var tree = await accessService.GetMyFunctionsAsync(userId, targetLang, ct);
             return Results.Ok(tree);
         });
 
@@ -524,7 +478,8 @@ public static class AccessEndpoints
             ParentId = node.ParentId,
             Code = node.Code,
             Name = node.Name,
-            DisplayNameTranslations = node.DisplayName != null ? new BobCrm.Api.Contracts.DTOs.MultilingualText(node.DisplayName) : null,
+            DisplayName = null,
+            DisplayNameTranslations = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,

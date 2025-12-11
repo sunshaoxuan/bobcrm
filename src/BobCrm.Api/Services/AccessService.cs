@@ -335,6 +335,69 @@ public class AccessService
         return node;
     }
 
+    public async Task<List<FunctionNodeDto>> GetMyFunctionsAsync(string userId, string? lang = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new ArgumentException("UserId is required.", nameof(userId));
+        }
+
+        var now = DateTime.UtcNow;
+        var functionIds = await _db.RoleAssignments
+            .AsNoTracking()
+            .Where(a => a.UserId == userId &&
+                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                        (!a.ValidTo.HasValue || a.ValidTo >= now))
+            .Join(_db.RoleFunctionPermissions.AsNoTracking(),
+                a => a.RoleId,
+                rfp => rfp.RoleId,
+                (assignment, permission) => permission.FunctionId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var nodes = await _db.FunctionNodes
+            .AsNoTracking()
+            .Include(f => f.Template)
+            .OrderBy(f => f.SortOrder)
+            .ToListAsync(ct);
+
+        if (nodes.Count == 0)
+        {
+            return new List<FunctionNodeDto>();
+        }
+
+        var dict = nodes.ToDictionary(n => n.Id);
+        var allowed = new HashSet<Guid>(functionIds);
+        if (nodes.FirstOrDefault(n => n.Code == "APP.ROOT") is { } rootNode)
+        {
+            allowed.Add(rootNode.Id);
+        }
+
+        foreach (var id in functionIds)
+        {
+            var current = id;
+            while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
+            {
+                var parentId = node.ParentId.Value;
+                if (!allowed.Add(parentId))
+                {
+                    break;
+                }
+
+                current = parentId;
+            }
+        }
+
+        var filtered = nodes.Where(n => allowed.Contains(n.Id)).ToList();
+        if (filtered.Count == 0)
+        {
+            return new List<FunctionNodeDto>();
+        }
+
+        var treeBuilder = new FunctionTreeBuilder(_db, _multilingual);
+        return await treeBuilder.BuildAsync(filtered, lang, ct);
+    }
+
     public async Task DeleteFunctionAsync(Guid id, CancellationToken ct = default)
     {
         var node = await _db.FunctionNodes

@@ -99,4 +99,49 @@ public class FunctionTreeBuilderTests
             option.IsDefault &&
             option.TemplateName == template.Name);
     }
+
+    [Fact]
+    public async Task BuildAsync_WithLang_ShouldReturnSingleLanguageDisplayName()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var db = new AppDbContext(options);
+        db.LocalizationResources.Add(new LocalizationResource
+        {
+            Key = "MENU_TEST_NODE",
+            Translations = new Dictionary<string, string>
+            {
+                ["ja"] = "テストノード",
+                ["en"] = "Test Node"
+            }
+        });
+
+        var node = new FunctionNode
+        {
+            Code = "APP.ROOT",
+            Name = "Root",
+            SortOrder = 0,
+            DisplayNameKey = "MENU_TEST_NODE"
+        };
+
+        db.FunctionNodes.Add(node);
+        await db.SaveChangesAsync();
+
+        var logger = NullLogger<MultilingualFieldService>.Instance;
+        var multilingual = new MultilingualFieldService(db, logger);
+        var builder = new FunctionTreeBuilder(db, multilingual);
+        var nodes = await db.FunctionNodes
+            .AsNoTracking()
+            .OrderBy(n => n.SortOrder)
+            .ToListAsync();
+
+        var tree = await builder.BuildAsync(nodes, "ja");
+
+        tree.Should().HaveCount(1);
+        var dto = tree[0];
+        dto.DisplayName.Should().Be("テストノード");
+        dto.DisplayNameTranslations.Should().BeNull();
+    }
 }

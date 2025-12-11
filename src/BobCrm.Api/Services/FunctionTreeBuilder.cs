@@ -7,6 +7,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
@@ -28,6 +29,7 @@ public class FunctionTreeBuilder
 
     public async Task<List<FunctionNodeDto>> BuildAsync(
         IReadOnlyCollection<FunctionNode> nodes,
+        string? lang = null,
         CancellationToken ct = default)
     {
         if (nodes == null)
@@ -40,12 +42,16 @@ public class FunctionTreeBuilder
             return new List<FunctionNodeDto>();
         }
 
+        var normalizedLang = string.IsNullOrWhiteSpace(lang)
+            ? null
+            : lang.Trim().ToLowerInvariant();
+
         var localizedNames = await LoadLocalizedNamesAsync(nodes, ct);
         var templateMetadata = await LoadTemplateMetadataAsync(nodes, ct);
 
         var dtoLookup = nodes.ToDictionary(
             n => n.Id,
-            n => CreateDto(n, localizedNames, templateMetadata));
+            n => CreateDto(n, localizedNames, templateMetadata, normalizedLang));
         var parentMap = nodes.ToDictionary(n => n.Id, n => n.ParentId);
 
         List<FunctionNodeDto> roots = new();
@@ -198,9 +204,10 @@ public class FunctionTreeBuilder
     private static FunctionNodeDto CreateDto(
         FunctionNode node,
         IReadOnlyDictionary<Guid, MultilingualText?> localizedNames,
-        IReadOnlyDictionary<Guid, TemplateMetadata> templateMetadata)
+        IReadOnlyDictionary<Guid, TemplateMetadata> templateMetadata,
+        string? lang)
     {
-        localizedNames.TryGetValue(node.Id, out var displayName);
+        var (displayName, translations) = ResolveDisplayName(node, localizedNames, lang);
         templateMetadata.TryGetValue(node.Id, out var metadata);
 
         return new FunctionNodeDto
@@ -209,7 +216,8 @@ public class FunctionTreeBuilder
             ParentId = node.ParentId,
             Code = node.Code,
             Name = node.Name,
-            DisplayNameTranslations = displayName,
+            DisplayName = displayName,
+            DisplayNameTranslations = translations,
             Route = node.Route,
             Icon = node.Icon,
             IsMenu = node.IsMenu,
@@ -225,6 +233,27 @@ public class FunctionTreeBuilder
     private sealed record TemplateMetadata(
         List<FunctionTemplateOptionDto> Options,
         List<FunctionNodeTemplateBindingDto> Bindings);
+
+    private static (string? displayName, MultilingualText? translations) ResolveDisplayName(
+        FunctionNode node,
+        IReadOnlyDictionary<Guid, MultilingualText?> localizedNames,
+        string? lang)
+    {
+        localizedNames.TryGetValue(node.Id, out var displayNameTranslations);
+
+        if (!string.IsNullOrWhiteSpace(lang))
+        {
+            var resolved = displayNameTranslations?.Resolve(lang) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(resolved))
+            {
+                resolved = node.Name;
+            }
+
+            return (resolved, null);
+        }
+
+        return (null, displayNameTranslations);
+    }
 
     private static bool CreatesCycle(Guid childId, Guid parentId, Dictionary<Guid, Guid?> parentMap)
     {

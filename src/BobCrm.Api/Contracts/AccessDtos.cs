@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 
@@ -21,6 +22,15 @@ public record FunctionNodeDto
     public Guid? ParentId { get; init; }
     public string Code { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
+    /// <summary>
+    /// 单语显示名（单语模式返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayName { get; init; }
+    /// <summary>
+    /// 多语显示名（向后兼容返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public MultilingualText? DisplayNameTranslations { get; init; }
     public string? Route { get; init; }
     public string? Icon { get; init; }
