@@ -1,0 +1,84 @@
+# ARCH-30 任务开发指南
+
+本目录包含 ARCH-30 系统级多语API优化项目的所有任务开发指南。
+
+## 📁 文档结构
+
+```
+docs/tasks/arch-30/
+├── README.md                           # 本文件
+├── task-0.1-multilingual-helper.md     # 多语辅助类开发指南
+├── task-0.2-dto-extensions.md          # DTO扩展方法开发指南
+├── task-0.3-dto-definitions.md         # DTO定义更新指南
+├── task-1.1-api-functions-me.md        # 用户功能菜单API改造指南
+├── task-1.2-api-menu-bindings.md       # 导航菜单API改造指南
+├── task-1.3-api-entities.md            # 实体列表API改造指南
+└── ... (后续任务)
+```
+
+## 🎯 使用方式
+
+### 1. 开发者（AI或人类）
+每个任务开始前，阅读对应的开发指南文档，按步骤执行。
+
+### 2. 代码评审者
+根据开发指南中的验收标准检查完成质量。
+
+### 3. 项目管理者
+跟踪各任务的完成状态和Git提交记录。
+
+## 📊 任务进度跟踪
+
+| 任务ID | 状态 | 文档 | 开发者 | 提交ID | 完成日期 |
+|--------|------|------|--------|--------|----------|
+| Task 0.1 | ✅ 完成 | [task-0.1-multilingual-helper.md](task-0.1-multilingual-helper.md) | AI | 84ced12, e4abe03 | 2025-12-11 |
+| Task 0.2 | 🚧 进行中 | [task-0.2-dto-extensions.md](task-0.2-dto-extensions.md) | - | - | - |
+| Task 0.3 | ⏳ 待开始 | [task-0.3-dto-definitions.md](task-0.3-dto-definitions.md) | - | - | - |
+| Task 1.1 | ⏳ 待开始 | task-1.1-api-functions-me.md | - | - | - |
+| Task 1.2 | ⏳ 待开始 | task-1.2-api-menu-bindings.md | - | - | - |
+| Task 1.3 | ⏳ 待开始 | task-1.3-api-entities.md | - | - | - |
+
+## 🔗 相关文档
+
+- [ARCH-30-工作计划.md](../../design/ARCH-30-工作计划.md) - 整体工作计划
+- [ARCH-30-实体字段显示名多语元数据驱动设计.md](../../design/ARCH-30-实体字段显示名多语元数据驱动设计.md) - 设计文档
+
+## 📝 文档模板
+
+每个任务开发指南遵循统一的模板结构：
+
+1. **任务概述** - 目标、范围、依赖
+2. **前置条件检查** - 必须满足的条件
+3. **文件操作清单** - 新建/修改的文件
+4. **实现步骤** - 详细的分步指导
+5. **测试指南** - 测试用例和验证方法
+6. **Git 提交规范** - 提交信息模板
+7. **验收标准** - 完成检查清单
+8. **常见问题** - 预防和解决方案
+
+## ⚙️ 提交规范
+
+所有任务的Git提交必须包含：
+```
+<type>(<scope>): <subject>
+
+<body>
+
+Ref: ARCH-30 Task X.X
+```
+
+## 📈 质量标准
+
+每个任务完成必须满足：
+- ✅ 编译成功（Debug + Release）
+- ✅ 所有测试通过
+- ✅ 代码覆盖率 ≥ 80%
+- ✅ 包含完整XML注释
+- ✅ Git提交信息规范
+- ✅ 文档同步更新
+
+---
+
+**最后更新**: 2025-12-11
+**维护者**: ARCH-30 项目组
+
