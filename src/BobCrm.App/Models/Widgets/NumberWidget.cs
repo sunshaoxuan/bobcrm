@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("number", "LBL_NUMBER", "Outline.FieldNumber", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 数字输入控件
 /// </summary>

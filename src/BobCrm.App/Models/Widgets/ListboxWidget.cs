@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("listbox", "LBL_LISTBOX", "Outline.UnorderedList", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 列表框控件
 /// 下拉选择框

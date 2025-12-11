@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("orgtree", "LBL_ORGTREE", "Outline.Apartment", WidgetRegistry.WidgetCategory.Data)]
 /// <summary>
 /// 组织树控件 - 显示和操作组织节点的树形结构
 /// </summary>

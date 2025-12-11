@@ -1,5 +1,9 @@
+using AntDesign;
+using BobCrm.App.Services.Widgets;
+
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("subform", "LBL_SUBFORM", "Outline.Subnode", WidgetRegistry.WidgetCategory.Data)]
 /// <summary>
 /// SubForm 主从表单控件 - 用于处理一对多关系
 /// 例如：订单-订单项、客户-联系人等

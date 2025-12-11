@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("calendar", "LBL_CALENDAR", "Outline.Calendar", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 日历控件
 /// 用于日期选择

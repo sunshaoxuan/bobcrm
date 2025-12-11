@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("datagrid", "LBL_DATAGRID", "Outline.Table", WidgetRegistry.WidgetCategory.Data)]
 /// <summary>
 /// 数据网格控件 - 通用列表/表格控件,支持数据源绑定、分页、排序、筛选
 /// </summary>

@@ -1,8 +1,10 @@
 using BobCrm.App.Services.Widgets;
 using BobCrm.App.Services.Widgets.Rendering;
+using AntDesign;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("tabbox", "LBL_TABBOX", "Outline.Appstore", WidgetRegistry.WidgetCategory.Layout)]
 /// <summary>
 /// Tabs 容器控件
 /// </summary>

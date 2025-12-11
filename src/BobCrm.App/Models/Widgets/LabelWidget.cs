@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Components;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("label", "LBL_LABEL", "Outline.FileText", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 标签控件
 /// 纯文本显示，不能编辑

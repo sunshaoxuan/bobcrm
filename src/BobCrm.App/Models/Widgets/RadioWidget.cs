@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("radio", "LBL_RADIO", "Outline.DotChart", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 单选按钮组控件
 /// </summary>

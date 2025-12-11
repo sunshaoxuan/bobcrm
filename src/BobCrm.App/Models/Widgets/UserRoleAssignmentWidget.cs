@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
 using Microsoft.AspNetCore.Components;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("userrole", "LBL_USERROLE", "Outline.UserSwitch", WidgetRegistry.WidgetCategory.Data)]
 /// <summary>
 /// 用户角色分配控件 - 显示和编辑用户的角色分配
 /// </summary>

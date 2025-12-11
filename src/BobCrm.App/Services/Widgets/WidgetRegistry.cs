@@ -1,3 +1,4 @@
+using System.Reflection;
 using AntDesign;
 using BobCrm.App.Models.Widgets;
 
@@ -5,6 +6,11 @@ namespace BobCrm.App.Services.Widgets;
 
 /// <summary>
 /// 注册所有页面可用的控件类型，集中管理图标、默认标签与创建逻辑。
+/// 说明：这里的“写死”并非偷工减料，而是前端的白名单 + 工厂模式，
+/// 用来：
+/// 1) 防止运行态注入任意未知组件（安全性、稳定性）；
+/// 2) 为每个类型附带图标、多语 Label Key 和默认属性；
+/// 3) 后续如需动态扩展，可改为从后端/配置加载清单，再统一注册到 _definitions。
 /// </summary>
 public static class WidgetRegistry
 {
@@ -30,9 +36,11 @@ public static class WidgetRegistry
 
     static WidgetRegistry()
     {
-        var defs = new[]
+        var builtIn = new[]
         {
             new WidgetDefinition("textbox", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
+            // Alias for default template generator output ("text")
+            new WidgetDefinition("text", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
             new WidgetDefinition("number", "LBL_NUMBER", IconType.Outline.FieldNumber, WidgetCategory.Basic, () => new NumberWidget()),
             new WidgetDefinition("select", "LBL_SELECT", IconType.Outline.Select, WidgetCategory.Basic, () => new SelectWidget()),
             new WidgetDefinition("checkbox", "LBL_CHECKBOX", IconType.Outline.CheckSquare, WidgetCategory.Basic, () => new CheckboxWidget()),
@@ -59,10 +67,17 @@ public static class WidgetRegistry
             new WidgetDefinition("userrole", "LBL_USERROLE", IconType.Outline.UserSwitch, WidgetCategory.Data, () => new UserRoleAssignmentWidget()),
         };
 
-        _definitions = defs.ToDictionary(d => d.Type.ToLowerInvariant());
-        BasicWidgets = defs.Where(d => d.Category == WidgetCategory.Basic).ToList();
-        LayoutWidgets = defs.Where(d => d.Category == WidgetCategory.Layout && d.Type != "tab").ToList(); // tab 是内部使用
-        DataWidgets = defs.Where(d => d.Category == WidgetCategory.Data).ToList();
+        var dynamic = DiscoverWidgets();
+        var merged = builtIn
+            .Concat(dynamic)
+            .GroupBy(d => d.Type.ToLowerInvariant())
+            .Select(g => g.First()) // built-in 优先，动态补充
+            .ToList();
+
+        _definitions = merged.ToDictionary(d => d.Type.ToLowerInvariant());
+        BasicWidgets = merged.Where(d => d.Category == WidgetCategory.Basic).ToList();
+        LayoutWidgets = merged.Where(d => d.Category == WidgetCategory.Layout && d.Type != "tab").ToList(); // tab 是内部使用
+        DataWidgets = merged.Where(d => d.Category == WidgetCategory.Data).ToList();
     }
 
     public static WidgetDefinition GetDefinition(string type)
@@ -102,6 +117,24 @@ public static class WidgetRegistry
         }
 
         return widget;
+    }
+
+    private static IEnumerable<WidgetDefinition> DiscoverWidgets()
+    {
+        var asm = typeof(WidgetRegistry).Assembly;
+        var candidates = asm.GetTypes()
+            .Where(t => !t.IsAbstract && typeof(DraggableWidget).IsAssignableFrom(t));
+
+        foreach (var type in candidates)
+        {
+            var meta = type.GetCustomAttribute<WidgetMetadataAttribute>();
+            if (meta == null) continue;
+            if (string.IsNullOrWhiteSpace(meta.Type) || string.IsNullOrWhiteSpace(meta.LabelKey)) continue;
+            if (type.GetConstructor(Type.EmptyTypes) == null) continue; // 需要无参构造
+
+            Func<DraggableWidget> factory = () => (DraggableWidget)Activator.CreateInstance(type)!;
+            yield return new WidgetDefinition(meta.Type, meta.LabelKey, meta.Icon, meta.Category, factory);
+        }
     }
 
     private static void EnsureTabContainerDefaults(TabContainerWidget tabContainer)

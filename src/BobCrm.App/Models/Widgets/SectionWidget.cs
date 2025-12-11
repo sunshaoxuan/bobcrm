@@ -1,5 +1,9 @@
+using AntDesign;
+using BobCrm.App.Services.Widgets;
+
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("section", "LBL_SECTION", "Outline.AppstoreAdd", WidgetRegistry.WidgetCategory.Layout)]
 /// <summary>
 /// Section/Block 容器控件
 /// 可配置的多块容器，块内可放子控件，支持背景色、大小与对齐

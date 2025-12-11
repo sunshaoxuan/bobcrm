@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using AntDesign;
+using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("textarea", "LBL_TEXTAREA", "Outline.FileText", WidgetRegistry.WidgetCategory.Basic)]
 /// <summary>
 /// 多行文本输入控件
 /// </summary>
@@ -63,13 +66,13 @@ public class TextareaWidget : TextWidget
             builder.OpenElement(4, "textarea");
             builder.AddAttribute(5, "class", "runtime-field-input");
             builder.AddAttribute(6, "style", "min-height:80px; resize:vertical;");
-            builder.AddContent(7, value);
             if (context.ValueSetter != null)
             {
-                builder.AddAttribute(8, "oninput",
+                builder.AddAttribute(7, "oninput",
                     callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
                         e => context.ValueSetter!(e.Value?.ToString())));
             }
+            builder.AddContent(8, value);
             builder.CloseElement(); // textarea
             builder.CloseElement(); // container
         }

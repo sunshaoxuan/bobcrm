@@ -1,5 +1,9 @@
+using AntDesign;
+using BobCrm.App.Services.Widgets;
+
 namespace BobCrm.App.Models.Widgets;
 
+[WidgetMetadata("panel", "LBL_PANEL", "Outline.Appstore", WidgetRegistry.WidgetCategory.Layout)]
 /// <summary>
 /// Panel 容器控件
 /// </summary>
