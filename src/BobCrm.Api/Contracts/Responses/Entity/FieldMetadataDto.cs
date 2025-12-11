@@ -9,6 +9,10 @@ public class FieldMetadataDto
 {
     public Guid Id { get; set; }
     public string PropertyName { get; set; } = string.Empty;
+    /// <summary>
+    /// 显示名资源Key（接口字段），用于调试和回溯
+    /// </summary>
+    public string? DisplayNameKey { get; set; }
     public MultilingualText? DisplayName { get; set; }
     public string DataType { get; set; } = string.Empty;
     public int? Length { get; set; }

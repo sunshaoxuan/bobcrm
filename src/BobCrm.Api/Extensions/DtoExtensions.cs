@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.Responses.Entity;
@@ -12,6 +14,8 @@ namespace BobCrm.Api.Extensions;
 /// </summary>
 public static class DtoExtensions
 {
+    private static readonly ConcurrentDictionary<Type, PropertyInfo?> DisplayNameKeyPropertyCache = new();
+
     /// <summary>
     /// 转换为实体摘要 DTO（支持单语/多语双模式）
     /// </summary>
@@ -38,13 +42,14 @@ public static class DtoExtensions
 
         if (lang != null)
         {
-            var displayName = entity.DisplayName.Resolve(lang);
-            var description = entity.Description?.Resolve(lang);
+            // TODO [ARCH-30 Task 0.3]: 待 DTO 添加 string DisplayName 字段后改为直接赋值字符串
+            var resolvedDisplayName = entity.DisplayName.Resolve(lang);
+            dto.DisplayName = new MultilingualText { { lang, resolvedDisplayName } };
 
-            dto.DisplayName = new MultilingualText { { lang, displayName } };
-            if (description != null)
+            if (entity.Description != null)
             {
-                dto.Description = new MultilingualText { { lang, description } };
+                var resolvedDescription = entity.Description.Resolve(lang);
+                dto.Description = new MultilingualText { { lang, resolvedDescription } };
             }
         }
         else
@@ -69,6 +74,10 @@ public static class DtoExtensions
         {
             Id = field.Id,
             PropertyName = field.PropertyName,
+            // TODO [ARCH-30]: 待 FieldMetadata 基类添加 DisplayNameKey 属性后改为直接属性访问
+            DisplayNameKey = DisplayNameKeyPropertyCache
+                .GetOrAdd(field.GetType(), t => t.GetProperty("DisplayNameKey"))
+                ?.GetValue(field) as string,
             DataType = field.DataType,
             Length = field.Length,
             Precision = field.Precision,
@@ -110,7 +119,8 @@ public static class DtoExtensions
     /// <returns>解析后的显示名</returns>
     private static string ResolveFieldDisplayName(FieldMetadata field, ILocalization loc, string lang)
     {
-        var displayNameKey = field.GetType().GetProperty("DisplayNameKey")?.GetValue(field) as string;
+        var propertyInfo = DisplayNameKeyPropertyCache.GetOrAdd(field.GetType(), t => t.GetProperty("DisplayNameKey"));
+        var displayNameKey = propertyInfo?.GetValue(field) as string;
 
         if (!string.IsNullOrWhiteSpace(displayNameKey))
         {
