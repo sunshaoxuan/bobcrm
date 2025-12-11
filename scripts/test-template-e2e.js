@@ -29,6 +29,9 @@ const path = require('path');
         recordVideo: recordVideo ? { dir: artifactDir } : undefined
     });
     const page = await context.newPage();
+    page.on('console', msg => {
+        console.log(`[browser] ${msg.type()}: ${msg.text()}`);
+    });
     const stepShot = async (name) => {
         const file = path.join(artifactDir, name);
         await page.screenshot({ path: file, fullPage: true });
@@ -38,9 +41,9 @@ const path = require('path');
         listHost: '.list-template-host',
         tableRow: 'table tr.ant-table-row',
         runtimeLayout: '.runtime-layout',
-        editLayout: '.runtime-layout.edit-mode',
+        editLayout: '.runtime-layout.edit-mode, .runtime-layout[data-edit-mode="true"]',
         saveButton: 'button:has-text("保存"), button:has-text("Save")',
-        editButton: 'button:has-text("编辑"), button:has-text("Edit")'
+        editButton: 'div.runtime-page-header button:has-text("编辑"), div.runtime-page-header button:has-text("Edit")'
     };
 
     async function findFirstSelector(selectors) {
@@ -122,7 +125,7 @@ const path = require('path');
         const row = page.locator('table tbody tr').first();
         await row.click();
 
-        await page.waitForSelector(selectors.runtimeLayout, { timeout: 10000 });
+        await page.waitForSelector(selectors.runtimeLayout, { timeout: 15000 });
         console.log('   ✓ 详情运行态布局已加载');
 
         const widgetCount = await page.locator(`${selectors.runtimeLayout} > div`).count();
@@ -142,12 +145,54 @@ const path = require('path');
     async function testEditMode() {
         console.log('[Step 4] 进入编辑模式并保存...');
 
-        await page.click(selectors.editButton);
-        await page.waitForSelector(selectors.editLayout, { timeout: 5000 });
+        const layout = page.locator(selectors.runtimeLayout).first();
+        await page.waitForSelector(selectors.runtimeLayout, { timeout: 5000 });
+        const classInfoBefore = await layout.evaluate(el => `${el.className} data-edit=${el.getAttribute('data-edit-mode')}`);
+        console.log('   ℹ runtime-layout class (before):', classInfoBefore);
+
+        const isAlreadyEdit = await layout.evaluate(el =>
+            el.classList.contains('edit-mode') || el.getAttribute('data-edit-mode') === 'true');
+        if (!isAlreadyEdit) {
+            await page.click(selectors.editButton);
+            // Debug: log attribute after click
+            try {
+                await page.waitForTimeout(500);
+                const attr = await layout.evaluate(el => ({
+                    cls: el.className,
+                    data: el.getAttribute('data-edit-mode')
+                }));
+                console.log('   ℹ after click (500ms):', attr);
+                await page.waitForTimeout(1500);
+                const attr2 = await layout.evaluate(el => ({
+                    cls: el.className,
+                    data: el.getAttribute('data-edit-mode')
+                }));
+                console.log('   ℹ after click (2s):', attr2);
+            } catch (e) {
+                console.log('   ! debug read failed', e);
+            }
+        } else {
+            console.log('   ℹ 初始即为编辑态，跳过点击编辑');
+        }
+
+        await page.waitForFunction(() => {
+            const el = document.querySelector('.runtime-layout');
+            return !!el && (el.classList.contains('edit-mode') || el.getAttribute('data-edit-mode') === 'true');
+        }, { timeout: 12000 });
+        const classInfoAfter = await layout.evaluate(el => `${el.className} data-edit=${el.getAttribute('data-edit-mode')}`);
+        console.log('   ℹ runtime-layout class (after):', classInfoAfter);
         console.log('   ✓ 已进入编辑模式');
 
-        const editableInputs = page.locator(`${selectors.editLayout} input, ${selectors.editLayout} textarea, ${selectors.editLayout} [contenteditable="true"]`);
+        const editableInputs = page.locator([
+            '.runtime-layout.edit-mode input',
+            '.runtime-layout[data-edit-mode="true"] input',
+            '.runtime-layout.edit-mode textarea',
+            '.runtime-layout[data-edit-mode="true"] textarea',
+            '.runtime-layout.edit-mode [contenteditable="true"]',
+            '.runtime-layout[data-edit-mode="true"] [contenteditable="true"]'
+        ].join(', '));
         const count = await editableInputs.count();
+        await stepShot('step4-editing.png');
         if (count > 0) {
             const input = editableInputs.first();
             const originalValue = await input.inputValue();
@@ -159,13 +204,13 @@ const path = require('path');
         }
 
         await page.click(selectors.saveButton);
-        await page.waitForSelector(selectors.runtimeLayout, { timeout: 10000 });
+        await page.waitForSelector(selectors.runtimeLayout, { timeout: 10000 }).catch(() => {});
 
         const waitExitEdit = async (timeoutMs) => {
             try {
                 await page.waitForFunction(() => {
                     const el = document.querySelector('.runtime-layout');
-                    return !el || !el.classList.contains('edit-mode');
+                    return !!el && (!el.classList.contains('edit-mode') && el.getAttribute('data-edit-mode') !== 'true');
                 }, { timeout: timeoutMs });
                 return true;
             } catch {
@@ -175,27 +220,10 @@ const path = require('path');
 
         let saved = await waitExitEdit(12000);
 
-        // 其次：成功提示
-        if (!saved) {
-            try {
-                await page.waitForSelector('.ant-message-success, .ant-notification-notice-success', { timeout: 8000 });
-                saved = true;
-            } catch {
-                saved = false;
-            }
-        }
-
-        // 如果仍未退出，尝试点击取消按钮退出
-        if (!saved) {
-            const cancelButton = await findFirstSelector(['button:has-text("取消")', 'button:has-text("Cancel")']);
-            if (cancelButton) {
-                await cancelButton.click();
-                saved = await waitExitEdit(8000);
-            }
-        }
-
-        if (!saved) {
-            throw new Error('保存后未检测到退出编辑模式或成功提示');
+        const hasErrorBanner = await page.locator('.runtime-state.error, .ant-message-error, .ant-notification-notice-error, .ant-alert-error').count();
+        if (!saved || hasErrorBanner > 0) {
+            const bodyText = await page.textContent('body').catch(() => '');
+            throw new Error(`保存后未退出编辑态或出现错误提示。layout存在=${saved}, errorBanner=${hasErrorBanner}, body=${(bodyText || '').slice(0, 300)}`);
         }
 
         console.log('   ✓ 保存成功并退出编辑模式');

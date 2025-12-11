@@ -9,7 +9,9 @@
       "Bash(dotnet build:*)",
       "Bash(Select-String -Pattern \"(error|warning)\" -Context 0,2)",
       "Bash(Select-Object -First 50)",
-      "Bash(dotnet ef migrations add:*)"
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
