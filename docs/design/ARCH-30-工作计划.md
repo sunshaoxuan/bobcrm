@@ -13,14 +13,14 @@
 
 | 阶段 | 任务数 | 已完成 | 进行中 | 待开始 | 完成度 |
 |------|--------|--------|--------|--------|--------|
-| 阶段0: 基础设施搭建 | 3 | 2 | 0 | 1 | 67% |
+| 阶段0: 基础设施搭建 | 3 | 3 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 0 | 0 | 3 | 0% |
 | 阶段2: 中频API改造 | 4 | 0 | 0 | 4 | 0% |
 | 阶段3: 低频API改造 | 3 | 0 | 0 | 3 | 0% |
-| **总计** | **13** | **2** | **0** | **11** | **15%** |
+| **总计** | **13** | **3** | **0** | **10** | **23%** |
 
-**当前阶段**: 阶段0 - 基础设施搭建
-**当前任务**: Task 0.3 - 更新DTO定义
+**当前阶段**: 阶段1 - 高频API改造
+**当前任务**: Task 1.1 - 改造用户功能菜单接口
 
 ---
 
@@ -107,31 +107,31 @@ feat(dto): add DTO extension methods with language parameter support
 
 #### ✅ Task 0.3: 更新DTO定义
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **负责文件**:
 - `src/BobCrm.Api/Contracts/DTOs/EntitySummaryDto.cs` (修改)
 - `src/BobCrm.Api/Contracts/DTOs/FieldMetadataDto.cs` (修改)
 - `tests/BobCrm.Api.Tests/Contracts/DTOs/DtoSerializationTests.cs` (新建)
 
 **详细步骤**:
-- [ ] 修改 `EntitySummaryDto.cs`
-  - [ ] 添加 `string? DisplayName` 属性 (单语模式)
-  - [ ] 保留 `MultilingualText? DisplayNameTranslations` 属性 (向后兼容)
-  - [ ] 添加 `JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)` 注解
-  - [ ] 更新 XML 注释说明双模式用法
-- [ ] 修改 `FieldMetadataDto.cs`
-  - [ ] 添加 `string? DisplayName` 属性
-  - [ ] 保留 `MultilingualText? DisplayNameTranslations` 属性
-  - [ ] 添加 JSON 序列化注解
-  - [ ] 更新 XML 注释
-- [ ] 创建 `DtoSerializationTests.cs` 单元测试
-  - [ ] 测试用例: 单语模式序列化 (DisplayName有值, DisplayNameTranslations为null)
-  - [ ] 测试用例: 完整字典模式序列化 (DisplayName为null, DisplayNameTranslations有值)
-  - [ ] 测试用例: JSON输出格式验证
-  - [ ] 测试用例: 反序列化兼容性
-- [ ] 编译验证 (`dotnet build`)
-- [ ] 运行单元测试 (`dotnet test --filter DtoSerializationTests`)
-- [ ] Git 提交
+- [x] 修改 `EntitySummaryDto.cs`
+  - [x] 添加 `string? DisplayName` 属性 (单语模式)
+  - [x] 保留 `MultilingualText? DisplayNameTranslations` 属性 (向后兼容)
+  - [x] 添加 `JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)` 注解
+  - [x] 更新 XML 注释说明双模式用法
+- [x] 修改 `FieldMetadataDto.cs`
+  - [x] 添加 `string? DisplayName` 属性
+  - [x] 保留 `MultilingualText? DisplayNameTranslations` 属性
+  - [x] 添加 JSON 序列化注解
+  - [x] 更新 XML 注释
+- [x] 创建 `DtoSerializationTests.cs` 单元测试
+  - [x] 测试用例: 单语模式序列化 (DisplayName有值, DisplayNameTranslations为null)
+  - [x] 测试用例: 完整字典模式序列化 (DisplayName为null, DisplayNameTranslations有值)
+  - [x] 测试用例: JSON输出格式验证
+  - [x] 测试用例: 反序列化兼容性
+- [x] 编译验证 (`dotnet build`)
+- [x] 运行单元测试 (`dotnet test --filter DtoSerializationTests`)
+- [x] Git 提交
 
 **Commit 信息模板**:
 ```
@@ -144,8 +144,8 @@ refactor(dto): update DTOs with backward-compatible dual-mode design
 - Ref: ARCH-30 Task 0.3
 ```
 
-**Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**Commit ID**: (本次提交)
+**完成时间**: 2025-12-11
 
 ---
 

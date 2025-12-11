@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Contracts.Responses.Entity;
@@ -10,10 +11,19 @@ public class FieldMetadataDto
     public Guid Id { get; set; }
     public string PropertyName { get; set; } = string.Empty;
     /// <summary>
-    /// 显示名资源Key（接口字段），用于调试和回溯
+    /// 显示名资源Key（接口字段），用于调试和回溯，始终返回
     /// </summary>
     public string? DisplayNameKey { get; set; }
-    public MultilingualText? DisplayName { get; set; }
+    /// <summary>
+    /// 单语显示名（单语模式）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayName { get; set; }
+    /// <summary>
+    /// 多语显示名（向后兼容）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DisplayNameTranslations { get; set; }
     public string DataType { get; set; } = string.Empty;
     public int? Length { get; set; }
     public int? Precision { get; set; }

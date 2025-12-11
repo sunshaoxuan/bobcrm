@@ -17,7 +17,6 @@ public class DtoExtensionsTests
     public void ToSummaryDto_WithLang_ReturnsSingleLanguage()
     {
         // Arrange
-        // TODO [Task 0.3]: 单语模式应该返回 string，而不是单键字典
         var entity = new EntityDefinition
         {
             EntityName = "Customer",
@@ -41,17 +40,16 @@ public class DtoExtensionsTests
         var dto = entity.ToSummaryDto("zh");
 
         // Assert
-        Assert.NotNull(dto.DisplayName);
-        Assert.Single(dto.DisplayName!);
-        Assert.Equal("客户", dto.DisplayName!["zh"]);
-        Assert.Equal("客户实体", dto.Description!["zh"]);
+        Assert.Equal("客户", dto.DisplayName);
+        Assert.Equal("客户实体", dto.Description);
+        Assert.Null(dto.DisplayNameTranslations);
+        Assert.Null(dto.DescriptionTranslations);
     }
 
     [Fact]
     public void ToSummaryDto_WithoutLang_ReturnsMultilingual()
     {
         // Arrange
-        // TODO [Task 0.3]: 多语模式将使用 DisplayNameTranslations 保持兼容
         var entity = new EntityDefinition
         {
             EntityName = "Customer",
@@ -67,9 +65,10 @@ public class DtoExtensionsTests
         var dto = entity.ToSummaryDto(lang: null);
 
         // Assert
-        Assert.NotNull(dto.DisplayName);
-        Assert.Equal("客户", dto.DisplayName!["zh"]);
-        Assert.Equal("顧客", dto.DisplayName!["ja"]);
+        Assert.Null(dto.DisplayName);
+        Assert.NotNull(dto.DisplayNameTranslations);
+        Assert.Equal("客户", dto.DisplayNameTranslations!["zh"]);
+        Assert.Equal("顧客", dto.DisplayNameTranslations!["ja"]);
     }
 
     [Fact]
@@ -90,8 +89,8 @@ public class DtoExtensionsTests
         var dto = field.ToFieldDto(mockLoc.Object, "zh");
 
         // Assert
-        Assert.NotNull(dto.DisplayName);
-        Assert.Equal("编码", dto.DisplayName!["zh"]);
+        Assert.Equal("编码", dto.DisplayName);
+        Assert.Null(dto.DisplayNameTranslations);
         Assert.Equal("LBL_FIELD_CODE", dto.DisplayNameKey);
         mockLoc.Verify(l => l.T("LBL_FIELD_CODE", "zh"), Times.Once);
     }
@@ -100,7 +99,6 @@ public class DtoExtensionsTests
     public void ToFieldDto_WithDisplayNameDict_UsesResolve()
     {
         // Arrange
-        // TODO [Task 0.3]: 单语模式返回 string 而非字典
         var field = new FieldMetadata
         {
             PropertyName = "CustomField",
@@ -118,8 +116,8 @@ public class DtoExtensionsTests
         var dto = field.ToFieldDto(mockLoc.Object, "ja");
 
         // Assert
-        Assert.NotNull(dto.DisplayName);
-        Assert.Equal("カスタムフィールド", dto.DisplayName!["ja"]);
+        Assert.Equal("カスタムフィールド", dto.DisplayName);
+        Assert.Null(dto.DisplayNameTranslations);
         mockLoc.Verify(l => l.T(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -127,7 +125,6 @@ public class DtoExtensionsTests
     public void ToFieldDto_WithoutLang_ReturnsMultilingual()
     {
         // Arrange
-        // TODO [Task 0.3]: 多语模式将迁移到 DisplayNameTranslations
         var field = new FieldMetadata
         {
             PropertyName = "Name",
@@ -145,8 +142,10 @@ public class DtoExtensionsTests
         var dto = field.ToFieldDto(mockLoc.Object, lang: null);
 
         // Assert
-        Assert.Equal("名称", dto.DisplayName!["zh"]);
-        Assert.Equal("Name", dto.DisplayName!["en"]);
+        Assert.Null(dto.DisplayName);
+        Assert.NotNull(dto.DisplayNameTranslations);
+        Assert.Equal("名称", dto.DisplayNameTranslations!["zh"]);
+        Assert.Equal("Name", dto.DisplayNameTranslations!["en"]);
         mockLoc.Verify(l => l.T(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -167,7 +166,8 @@ public class DtoExtensionsTests
         var dto = field.ToFieldDto(mockLoc.Object, "zh");
 
         // Assert
-        Assert.Equal("UnknownField", dto.DisplayName!["zh"]);
+        Assert.Equal("UnknownField", dto.DisplayName);
+        Assert.Null(dto.DisplayNameTranslations);
         mockLoc.Verify(l => l.T(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -198,8 +198,10 @@ public class DtoExtensionsTests
         var multiLangDto = entity.ToSummaryDto(null);
         var singleLangDto = entity.ToSummaryDto("zh");
 
-        var multiLangJson = JsonSerializer.Serialize(multiLangDto);
-        var singleLangJson = JsonSerializer.Serialize(singleLangDto);
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+        var multiLangJson = JsonSerializer.Serialize(multiLangDto, options);
+        var singleLangJson = JsonSerializer.Serialize(singleLangDto, options);
 
         // Assert
         Assert.True(singleLangJson.Length < multiLangJson.Length,
@@ -207,9 +209,8 @@ public class DtoExtensionsTests
 
         var reduction = 1.0 - ((double)singleLangJson.Length / multiLangJson.Length);
 
-        // TODO [Task 0.3]: 目标提升到 >= 50%；当前字典实现只能达到约 20-40%
-        Assert.True(reduction >= 0.2,
-            $"预期至少减少 20%，实际减少: {reduction:P}");
+        Assert.True(reduction >= 0.5,
+            $"预期至少减少 50%，实际减少: {reduction:P}");
     }
 
     private class FieldMetadataWithKey : FieldMetadata

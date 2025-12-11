@@ -42,20 +42,27 @@ public static class DtoExtensions
 
         if (lang != null)
         {
-            // TODO [ARCH-30 Task 0.3]: 待 DTO 添加 string DisplayName 字段后改为直接赋值字符串
             var resolvedDisplayName = entity.DisplayName.Resolve(lang);
-            dto.DisplayName = new MultilingualText { { lang, resolvedDisplayName } };
+            dto.DisplayName = resolvedDisplayName;
+            dto.DisplayNameTranslations = null;
 
             if (entity.Description != null)
             {
                 var resolvedDescription = entity.Description.Resolve(lang);
-                dto.Description = new MultilingualText { { lang, resolvedDescription } };
+                dto.Description = resolvedDescription;
+                dto.DescriptionTranslations = null;
             }
         }
         else
         {
-            dto.DisplayName = new MultilingualText(entity.DisplayName ?? new Dictionary<string, string?>());
-            dto.Description = new MultilingualText(entity.Description ?? new Dictionary<string, string?>());
+            dto.DisplayName = null;
+            dto.Description = null;
+            dto.DisplayNameTranslations = entity.DisplayName != null
+                ? new MultilingualText(entity.DisplayName)
+                : null;
+            dto.DescriptionTranslations = entity.Description != null
+                ? new MultilingualText(entity.Description)
+                : null;
         }
 
         return dto;
@@ -97,11 +104,15 @@ public static class DtoExtensions
         if (lang != null)
         {
             var displayName = ResolveFieldDisplayName(field, loc, lang);
-            dto.DisplayName = new MultilingualText { { lang, displayName } };
+            dto.DisplayName = displayName;
+            dto.DisplayNameTranslations = null;
         }
         else
         {
-            dto.DisplayName = new MultilingualText(field.DisplayName ?? new Dictionary<string, string?>());
+            dto.DisplayName = null;
+            dto.DisplayNameTranslations = field.DisplayName != null
+                ? new MultilingualText(field.DisplayName)
+                : null;
         }
 
         return dto;
