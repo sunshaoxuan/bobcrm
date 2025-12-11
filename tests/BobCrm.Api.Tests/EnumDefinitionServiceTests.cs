@@ -74,6 +74,23 @@ public class EnumDefinitionServiceTests : IDisposable
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GetAllAsync_WithLang_ReturnsSingleLanguage()
+    {
+        // Arrange
+        await SeedTestEnumsAsync();
+
+        // Act
+        var result = await _service.GetAllAsync(includeDisabled: false, lang: "zh");
+
+        // Assert
+        Assert.All(result, e =>
+        {
+            Assert.NotNull(e.DisplayName);
+            Assert.Null(e.DisplayNameTranslations);
+        });
+    }
+
     #endregion
 
     #region GetByIdAsync Tests
@@ -246,7 +263,9 @@ public class EnumDefinitionServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("更新后", result.DisplayName["zh"]);
+        Assert.Null(result.DisplayName);
+        Assert.NotNull(result.DisplayNameTranslations);
+        Assert.Equal("更新后", result.DisplayNameTranslations!["zh"]);
         Assert.False(result.IsEnabled);
     }
 
@@ -382,7 +401,9 @@ public class EnumDefinitionServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         var updated = result.First(o => o.Id == option.Id);
-        Assert.Equal("更新选项", updated.DisplayName["zh"]);
+        Assert.Null(updated.DisplayName);
+        Assert.NotNull(updated.DisplayNameTranslations);
+        Assert.Equal("更新选项", updated.DisplayNameTranslations!["zh"]);
         Assert.Equal(99, updated.SortOrder);
         Assert.False(updated.IsEnabled);
         Assert.Equal("red", updated.ColorTag);

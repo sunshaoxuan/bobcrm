@@ -1,6 +1,7 @@
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
@@ -22,7 +23,7 @@ public class EnumDefinitionService
     /// <summary>
     /// 获取所有枚举定义
     /// </summary>
-    public async Task<List<EnumDefinitionDto>> GetAllAsync(bool includeDisabled = false)
+    public async Task<List<EnumDefinitionDto>> GetAllAsync(bool includeDisabled = false, string? lang = null)
     {
         var query = _db.EnumDefinitions
             .Include(e => e.Options)
@@ -34,37 +35,37 @@ public class EnumDefinitionService
         }
 
         var enums = await query.OrderBy(e => e.Code).ToListAsync();
-        return enums.Select(MapToDto).ToList();
+        return enums.Select(e => MapToDto(e, lang)).ToList();
     }
 
     /// <summary>
     /// 根据ID获取枚举定义
     /// </summary>
-    public async Task<EnumDefinitionDto?> GetByIdAsync(Guid id)
+    public async Task<EnumDefinitionDto?> GetByIdAsync(Guid id, string? lang = null)
     {
         var enumDef = await _db.EnumDefinitions
             .Include(e => e.Options)
             .FirstOrDefaultAsync(e => e.Id == id);
 
-        return enumDef == null ? null : MapToDto(enumDef);
+        return enumDef == null ? null : MapToDto(enumDef, lang);
     }
 
     /// <summary>
     /// 根据Code获取枚举定义
     /// </summary>
-    public async Task<EnumDefinitionDto?> GetByCodeAsync(string code)
+    public async Task<EnumDefinitionDto?> GetByCodeAsync(string code, string? lang = null)
     {
         var enumDef = await _db.EnumDefinitions
             .Include(e => e.Options)
             .FirstOrDefaultAsync(e => e.Code == code);
 
-        return enumDef == null ? null : MapToDto(enumDef);
+        return enumDef == null ? null : MapToDto(enumDef, lang);
     }
 
     /// <summary>
     /// 获取枚举的所有选项
     /// </summary>
-    public async Task<List<EnumOptionDto>> GetOptionsAsync(Guid enumId, bool includeDisabled = false)
+    public async Task<List<EnumOptionDto>> GetOptionsAsync(Guid enumId, bool includeDisabled = false, string? lang = null)
     {
         var query = _db.EnumOptions
             .Where(o => o.EnumDefinitionId == enumId);
@@ -75,7 +76,7 @@ public class EnumDefinitionService
         }
 
         var options = await query.OrderBy(o => o.SortOrder).ToListAsync();
-        return options.Select(MapOptionToDto).ToList();
+        return options.Select(o => MapOptionToDto(o, lang)).ToList();
     }
 
     /// <summary>
@@ -119,7 +120,7 @@ public class EnumDefinitionService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Created enum definition: {Code}", request.Code);
-        return MapToDto(enumDef);
+        return MapToDto(enumDef, null);
     }
 
     /// <summary>
@@ -151,7 +152,7 @@ public class EnumDefinitionService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Updated enum definition: {Code}", enumDef.Code);
-        return MapToDto(enumDef);
+        return MapToDto(enumDef, null);
     }
 
     /// <summary>
@@ -223,34 +224,60 @@ public class EnumDefinitionService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Updated options for enum: {Code}", enumDef.Code);
-        return enumDef.Options.Select(MapOptionToDto).ToList();
+        return enumDef.Options.Select(o => MapOptionToDto(o, null)).ToList();
     }
 
     // 映射方法
-    private static EnumDefinitionDto MapToDto(EnumDefinition entity)
+    private static EnumDefinitionDto MapToDto(EnumDefinition entity, string? lang)
     {
+        var resolvedDisplayName = !string.IsNullOrWhiteSpace(lang)
+            ? entity.DisplayName.Resolve(lang)
+            : null;
+        var resolvedDescription = !string.IsNullOrWhiteSpace(lang)
+            ? entity.Description.Resolve(lang)
+            : null;
+
         return new EnumDefinitionDto
         {
             Id = entity.Id,
             Code = entity.Code,
-            DisplayName = entity.DisplayName,
-            Description = entity.Description,
+            DisplayName = resolvedDisplayName,
+            Description = resolvedDescription,
+            DisplayNameTranslations = string.IsNullOrWhiteSpace(lang) && entity.DisplayName != null
+                ? new MultilingualText(entity.DisplayName)
+                : null,
+            DescriptionTranslations = string.IsNullOrWhiteSpace(lang) && entity.Description != null
+                ? new MultilingualText(entity.Description)
+                : null,
             IsSystem = entity.IsSystem,
             IsEnabled = entity.IsEnabled,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Options = entity.Options.Select(MapOptionToDto).ToList()
+            Options = entity.Options.Select(o => MapOptionToDto(o, lang)).ToList()
         };
     }
 
-    private static EnumOptionDto MapOptionToDto(EnumOption entity)
+    private static EnumOptionDto MapOptionToDto(EnumOption entity, string? lang)
     {
+        var resolvedDisplayName = !string.IsNullOrWhiteSpace(lang)
+            ? entity.DisplayName.Resolve(lang)
+            : null;
+        var resolvedDescription = !string.IsNullOrWhiteSpace(lang)
+            ? entity.Description.Resolve(lang)
+            : null;
+
         return new EnumOptionDto
         {
             Id = entity.Id,
             Value = entity.Value,
-            DisplayName = entity.DisplayName,
-            Description = entity.Description,
+            DisplayName = resolvedDisplayName,
+            Description = resolvedDescription,
+            DisplayNameTranslations = string.IsNullOrWhiteSpace(lang) && entity.DisplayName != null
+                ? new MultilingualText(entity.DisplayName)
+                : null,
+            DescriptionTranslations = string.IsNullOrWhiteSpace(lang) && entity.Description != null
+                ? new MultilingualText(entity.Description)
+                : null,
             SortOrder = entity.SortOrder,
             IsEnabled = entity.IsEnabled,
             ColorTag = entity.ColorTag,

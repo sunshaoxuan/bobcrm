@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace BobCrm.Api.Contracts.DTOs;
 
@@ -9,8 +10,26 @@ public class EnumDefinitionDto
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
-    public Dictionary<string, string?> DisplayName { get; set; } = new();
-    public Dictionary<string, string?> Description { get; set; } = new();
+    /// <summary>
+    /// 单语显示名（单语模式返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayName { get; set; }
+    /// <summary>
+    /// 单语描述（单语模式返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
+    /// <summary>
+    /// 多语显示名（向后兼容）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DisplayNameTranslations { get; set; }
+    /// <summary>
+    /// 多语描述（向后兼容）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DescriptionTranslations { get; set; }
     public bool IsSystem { get; set; }
     public bool IsEnabled { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -25,8 +44,26 @@ public class EnumOptionDto
 {
     public Guid Id { get; set; }
     public string Value { get; set; } = string.Empty;
-    public Dictionary<string, string?> DisplayName { get; set; } = new();
-    public Dictionary<string, string?> Description { get; set; } = new();
+    /// <summary>
+    /// 单语显示名（单语模式返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayName { get; set; }
+    /// <summary>
+    /// 单语描述（单语模式返回）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
+    /// <summary>
+    /// 多语显示名（向后兼容）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DisplayNameTranslations { get; set; }
+    /// <summary>
+    /// 多语描述（向后兼容）
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DescriptionTranslations { get; set; }
     public int SortOrder { get; set; }
     public bool IsEnabled { get; set; }
     public string? ColorTag { get; set; }

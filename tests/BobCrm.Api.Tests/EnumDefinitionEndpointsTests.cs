@@ -165,7 +165,8 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal("更新后名称", result.DisplayName["zh"]);
+        Assert.NotNull(result.DisplayNameTranslations);
+        Assert.Equal("更新后名称", result.DisplayNameTranslations!["zh"]);
         Assert.False(result.IsEnabled);
     }
 
@@ -230,6 +231,32 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
         var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
         Assert.NotNull(options);
         Assert.NotEmpty(options);
+    }
+
+    [Fact]
+    public async Task GetAllEnums_WithLang_ReturnsSingleLanguagePayload()
+    {
+        // Arrange
+        await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync("/api/enums?lang=ja");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        Assert.NotNull(enums);
+        Assert.NotEmpty(enums);
+
+        var first = enums!.First();
+        Assert.NotNull(first.DisplayName);
+        Assert.Null(first.DisplayNameTranslations);
+        Assert.All(first.Options, opt =>
+        {
+            Assert.NotNull(opt.DisplayName);
+            Assert.Null(opt.DisplayNameTranslations);
+        });
     }
 
     #region Helper Methods

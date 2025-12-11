@@ -20,10 +20,13 @@ public static class EnumDefinitionEndpoints
 
         // GET /api/enums - 获取所有枚举定义
         group.MapGet("/", async (
+            HttpContext http,
+            [FromQuery] string? lang,
             [FromServices] EnumDefinitionService service,
             [FromQuery] bool includeDisabled = false) =>
         {
-            var enums = await service.GetAllAsync(includeDisabled);
+            var targetLang = LangHelper.GetLang(http, lang);
+            var enums = await service.GetAllAsync(includeDisabled, targetLang);
             return Results.Ok(enums);
         })
         .WithName("GetAllEnums")
@@ -33,14 +36,15 @@ public static class EnumDefinitionEndpoints
         // GET /api/enums/{id} - 根据ID获取枚举定义
         group.MapGet("/{id:guid}", async (
             Guid id,
+            [FromQuery] string? lang,
             [FromServices] EnumDefinitionService service,
             ILocalization loc,
             HttpContext http) =>
         {
-            var lang = LangHelper.GetLang(http);
-            var enumDef = await service.GetByIdAsync(id);
+            var targetLang = LangHelper.GetLang(http, lang);
+            var enumDef = await service.GetByIdAsync(id, targetLang);
             return enumDef == null
-                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", targetLang), "ENUM_NOT_FOUND"))
                 : Results.Ok(enumDef);
         })
         .WithName("GetEnumById")
@@ -51,14 +55,15 @@ public static class EnumDefinitionEndpoints
         // GET /api/enums/by-code/{code} - 根据Code获取枚举定义
         group.MapGet("/by-code/{code}", async (
             string code,
+            [FromQuery] string? lang,
             [FromServices] EnumDefinitionService service,
             ILocalization loc,
             HttpContext http) =>
         {
-            var lang = LangHelper.GetLang(http);
-            var enumDef = await service.GetByCodeAsync(code);
+            var targetLang = LangHelper.GetLang(http, lang);
+            var enumDef = await service.GetByCodeAsync(code, targetLang);
             return enumDef == null
-                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", targetLang), "ENUM_NOT_FOUND"))
                 : Results.Ok(enumDef);
         })
         .WithName("GetEnumByCode")
@@ -69,13 +74,14 @@ public static class EnumDefinitionEndpoints
         // GET /api/enums/{id}/options - 获取枚举的所有选项
         group.MapGet("/{id:guid}/options", async (
             Guid id,
+            [FromQuery] string? lang,
             [FromServices] EnumDefinitionService service,
             ILocalization loc,
             HttpContext http,
             [FromQuery] bool includeDisabled = false) =>
         {
-            var lang = LangHelper.GetLang(http);
-            var options = await service.GetOptionsAsync(id, includeDisabled);
+            var targetLang = LangHelper.GetLang(http, lang);
+            var options = await service.GetOptionsAsync(id, includeDisabled, targetLang);
             return Results.Ok(options);
         })
         .WithName("GetEnumOptions")
