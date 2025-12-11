@@ -15,15 +15,16 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.FieldActionService FieldActions
 @inject BobCrm.App.Services.TemplateRuntimeClient TemplateRuntime
+@inject BobCrm.App.Services.FieldService FieldService
 @inject IRuntimeWidgetRenderer RuntimeRenderer
 
 <AuthChecker>
 @if (loading)
 {
-    <div class="runtime-state loading">
-        <strong>@I18n.T("LBL_LOADING")</strong>
-        <span>@I18n.T("LBL_LOADING")...</span>
-    </div>
+        <div class="runtime-state loading">
+            <strong>@I18n.T("LBL_LOADING")</strong>
+            <span>@I18n.T("LBL_LOADING")...</span>
+        </div>
 }
 else if (error != null)
 {
@@ -44,7 +45,7 @@ else if (entityData != null)
 
             @if (!isEditMode)
             {
-                <Button Type="@ButtonType.Primary" OnClick="EnterEditMode">
+                <Button Type="@ButtonType.Primary" OnClick="EnterEditModeAsync">
                     @I18n.T("MODE_EDIT")
                 </Button>
             }
@@ -54,7 +55,7 @@ else if (entityData != null)
                     <Button Type="@ButtonType.Primary" OnClick="SaveChanges" Loading="@saving">
                         @I18n.T("BTN_SAVE")
                     </Button>
-                    <Button OnClick="CancelEdit">
+                    <Button OnClick="CancelEditAsync">
                         @I18n.T("BTN_CANCEL")
                     </Button>
                 </div>
@@ -84,17 +85,29 @@ else if (entityData != null)
         </div>
     }
 
-        @if (isEditMode)
+        @{
+            // Basic fields are special-cased: check if widgets exist so we can render fallbacks.
+            var hasCodeWidget = HasWidgetForField("code");
+            var hasNameWidget = HasWidgetForField("name");
+        }
+
+        @if (isEditMode && (!hasCodeWidget || !hasNameWidget))
     {
         <div class="runtime-basic-grid">
-            <div class="runtime-field-group">
-                <label class="runtime-field-label">@I18n.T("COL_CODE")</label>
-                <input class="runtime-field-input" value="@editCode" @oninput="e => editCode = e.Value?.ToString() ?? string.Empty" />
-            </div>
-            <div class="runtime-field-group">
-                <label class="runtime-field-label">@I18n.T("COL_NAME")</label>
-                <input class="runtime-field-input" value="@editName" @oninput="e => editName = e.Value?.ToString() ?? string.Empty" />
-            </div>
+            @if (!hasCodeWidget)
+            {
+                <div class="runtime-field-group">
+                    <label class="runtime-field-label">@I18n.T("COL_CODE")</label>
+                    <input class="runtime-field-input" value="@editCode" @oninput="e => editCode = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            }
+            @if (!hasNameWidget)
+            {
+                <div class="runtime-field-group">
+                    <label class="runtime-field-label">@I18n.T("COL_NAME")</label>
+                    <input class="runtime-field-input" value="@editName" @oninput="e => editName = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            }
         </div>
     }
 
@@ -102,7 +115,7 @@ else if (entityData != null)
         @{
             var visibleWidgets = layoutWidgets.Where(w => w.Visible).ToList();
         }
-        <div class="runtime-layout @(isEditMode ? "edit-mode" : "")">
+        <div class="runtime-layout @(isEditMode ? "edit-mode" : "")" data-edit-mode="@isEditMode.ToString().ToLowerInvariant()">
             @if (!visibleWidgets.Any())
             {
                 <div class="runtime-empty">
@@ -148,6 +161,7 @@ else if (entityData != null)
 
     private readonly EditValueManager editValueManager = new();
     private readonly TabStateManager tabStateManager = new();
+    private Dictionary<string, string> fieldLabels = new(StringComparer.OrdinalIgnoreCase);
     
     private string editCode = string.Empty;
     private string editName = string.Empty;
@@ -181,6 +195,7 @@ else if (entityData != null)
             runtimeContext = null;
             appliedScopes = Array.Empty<string>();
             string? layoutJson = null;
+            fieldLabels = await LoadFieldLabels();
 
             var runtime = await TemplateRuntime.GetRuntimeAsync(EntityType, TemplateUsageType.Detail);
             if (runtime != null)
@@ -191,6 +206,10 @@ else if (entityData != null)
                     .Distinct(System.StringComparer.OrdinalIgnoreCase)
                     .ToArray() ?? Array.Empty<string>();
                 layoutJson = runtime.Template.LayoutJson;
+            }
+            else
+            {
+                error = I18n.T("PL_LOAD_TEMPLATE_FAILED");
             }
 
             if (string.IsNullOrWhiteSpace(layoutJson))
@@ -210,6 +229,10 @@ else if (entityData != null)
                         layoutJson = template.LayoutJson;
                     }
                 }
+                else
+                {
+                    error = string.Format(I18n.T("PL_LOAD_TEMPLATE_FAILED"), templateResp.StatusCode);
+                }
 
                 // 2. Legacy fallback：如果仍然没有 layout，则走老的用户布局接口
                 if (string.IsNullOrWhiteSpace(layoutJson))
@@ -219,6 +242,10 @@ else if (entityData != null)
                     {
                         var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                         layoutJson = layoutDoc.GetRawText();
+                    }
+                    else
+                    {
+                        error = string.Format(I18n.T("PL_LOAD_TEMPLATE_FAILED"), layoutResp.StatusCode);
                     }
                 }
             }
@@ -398,6 +425,81 @@ else if (entityData != null)
         return "";
     }
 
+    private async Task<Dictionary<string, string>> LoadFieldLabels()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // 预置基础字段的资源翻译，确保实体定义缺失时仍能落地多语
+        var baseResourceMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "code", I18n.T("COL_CODE") },
+            { "name", I18n.T("COL_NAME") },
+            { "extdata", I18n.T("COL_EXT_DATA") },
+            { "ext_data", I18n.T("COL_EXT_DATA") },
+            { "extendeddata", I18n.T("COL_EXT_DATA") },
+            { "version", I18n.T("COL_VERSION") },
+            { "id", I18n.T("COL_ID") }
+        };
+        foreach (var kv in baseResourceMap)
+        {
+            if (!string.IsNullOrWhiteSpace(kv.Value))
+            {
+                result[kv.Key] = kv.Value!;
+            }
+        }
+
+        try
+        {
+            var defs = await FieldService.GetDefinitionsAsync();
+            foreach (var def in defs.Where(d => !string.IsNullOrWhiteSpace(d.key)))
+            {
+                var label = def.label ?? string.Empty;
+                // 如果 label 看起来是资源 Key，尝试翻译
+                if (!string.IsNullOrWhiteSpace(label) && label.Any(char.IsUpper) && label.Contains('_'))
+                {
+                    var translated = I18n.T(label);
+                    if (!string.Equals(translated, label, StringComparison.OrdinalIgnoreCase))
+                    {
+                        label = translated;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(label))
+                {
+                    result[def.key] = label;
+                }
+            }
+        }
+        catch
+        {
+            // 忽略，使用预置基础字段即可
+        }
+
+        return result;
+    }
+
+    private bool HasWidgetForField(string fieldKey)
+    {
+        if (string.IsNullOrWhiteSpace(fieldKey)) return false;
+        return HasWidgetRecursive(layoutWidgets, fieldKey);
+    }
+
+    private bool HasWidgetRecursive(IEnumerable<DraggableWidget> widgets, string fieldKey)
+    {
+        foreach (var widget in widgets)
+        {
+            if (!string.IsNullOrWhiteSpace(widget.DataField) &&
+                string.Equals(widget.DataField, fieldKey, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (widget.Children != null && widget.Children.Count > 0 && HasWidgetRecursive(widget.Children, fieldKey))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private RenderFragment RenderRuntimeWidget(DraggableWidget widget, RuntimeWidgetRenderMode mode) => builder =>
     {
         var label = GetWidgetLabel(widget);
@@ -421,23 +523,122 @@ else if (entityData != null)
 
     private string GetWidgetLabel(DraggableWidget widget)
     {
-        // Resolve label from entity data if provided
+        var englishLabelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Customer Code", "COL_CODE" },
+            { "Customer Name", "COL_NAME" },
+            { "Extended Data", "COL_EXT_DATA" },
+            { "Version", "COL_VERSION" },
+            { "ID", "COL_ID" }
+        };
+
+        // 1) 设计态/模板 label：如果像资源 Key（大写/下划线），先尝试多语；如果是常见英文标签，尝试映射资源；否则原文
+        if (!string.IsNullOrWhiteSpace(widget.Label))
+        {
+            var label = widget.Label!;
+            var looksLikeKey = label.Any(char.IsUpper) && label.Contains('_');
+            if (looksLikeKey)
+            {
+                var translated = I18n.T(label);
+                if (!string.Equals(translated, label, StringComparison.OrdinalIgnoreCase))
+                    return translated;
+            }
+            // 如果模板 label 是常见英文标签，尝试映射到资源
+            if (englishLabelMap.TryGetValue(label, out var mappedKey))
+            {
+                var translated = I18n.T(mappedKey);
+                if (!string.Equals(translated, mappedKey, StringComparison.OrdinalIgnoreCase))
+                    return translated;
+            }
+
+            // 如果模板 label 等于字段名（常见英文占位），后续还有兜底翻译；否则直接用模板 label
+            if (!string.Equals(label, widget.DataField, StringComparison.OrdinalIgnoreCase))
+            {
+                return label;
+            }
+        }
+
+        // 2) 运行态返回的字段标签（字段定义/数据多语）
         if (!string.IsNullOrWhiteSpace(widget.DataField) && entityData.HasValue)
         {
             if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
             {
                 foreach (var field in fieldsElement.EnumerateArray())
                 {
-                    if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
-                        keyProp.GetString() == widget.DataField &&
-                        field.TryGetProperty("label", out System.Text.Json.JsonElement labelProp))
+                    if (field.TryGetProperty("key", out var keyProp) &&
+                        string.Equals(keyProp.GetString(), widget.DataField, System.StringComparison.OrdinalIgnoreCase) &&
+                        field.TryGetProperty("label", out var labelProp))
                     {
-                        return labelProp.GetString() ?? widget.Label ?? widget.Type;
+                        var labelText = labelProp.GetString();
+                        if (!string.IsNullOrWhiteSpace(labelText))
+                        {
+                            return labelText!;
+                        }
                     }
                 }
             }
         }
-        return widget.Label ?? widget.Type;
+
+        // 3) 实体字段定义的显示名（多语）
+        if (!string.IsNullOrWhiteSpace(widget.DataField) &&
+            fieldLabels.TryGetValue(widget.DataField!, out var defLabel) &&
+            !string.IsNullOrWhiteSpace(defLabel))
+        {
+            return defLabel!;
+        }
+
+        // 4) 兜底：尝试字段名对应的多语键（COL_xxx 或常见英文映射），否则数据字段名，再否则类型
+        if (!string.IsNullOrWhiteSpace(widget.DataField))
+        {
+            var key = widget.DataField!;
+            var normalizedKey = key.Replace("-", "_").Replace(".", "_").ToLowerInvariant();
+
+            // 映射基础字段到资源 Key
+            var baseResourceMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "code", "COL_CODE" },
+                { "name", "COL_NAME" },
+                { "extdata", "COL_EXT_DATA" },
+                { "ext_data", "COL_EXT_DATA" },
+                { "extendeddata", "COL_EXT_DATA" },
+                { "version", "COL_VERSION" },
+                { "id", "COL_ID" }
+            };
+
+            // 先按基础字段映射
+            if (baseResourceMap.TryGetValue(normalizedKey, out var baseKey))
+            {
+                var translatedBase = I18n.T(baseKey);
+                if (!string.Equals(translatedBase, baseKey, StringComparison.OrdinalIgnoreCase))
+                    return translatedBase;
+            }
+
+            // 再按通用 COL_xxx
+            var resourceKey = $"COL_{normalizedKey}".ToUpperInvariant();
+            var translated = I18n.T(resourceKey);
+            if (!string.Equals(translated, resourceKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return translated;
+            }
+
+            // 如果模板 label 是常见英文，尝试翻译
+            if (!string.IsNullOrWhiteSpace(widget.Label) && englishLabelMap.TryGetValue(widget.Label!, out var mappedKey))
+            {
+                var translatedLabel = I18n.T(mappedKey);
+                if (!string.Equals(translatedLabel, mappedKey, StringComparison.OrdinalIgnoreCase))
+                    return translatedLabel;
+            }
+
+            // 尝试直接翻译字段名（如果资源表用字段名作为键）
+            var translatedByName = I18n.T(key);
+            if (!string.Equals(translatedByName, key, StringComparison.OrdinalIgnoreCase))
+            {
+                return translatedByName;
+            }
+            return key;
+        }
+
+        return widget.Type;
     }
 
     private string GetFieldValue(string? key)
@@ -449,33 +650,55 @@ else if (entityData != null)
             foreach (var field in fieldsElement.EnumerateArray())
             {
                 if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
-                    keyProp.GetString() == key &&
+                    string.Equals(keyProp.GetString(), key, System.StringComparison.OrdinalIgnoreCase) &&
                     field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
                 {
                     return valueProp.GetString() ?? string.Empty;
                 }
             }
         }
+
+        // Fallback: case-insensitive lookup on top-level properties (API 直接投影的字段)
+        try
+        {
+            foreach (var prop in entityData.Value.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, key, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.ToString();
+                }
+            }
+        }
+        catch
+        {
+            // ignore
+        }
         return string.Empty;
     }
 
-    private void EnterEditMode()
+    private async Task EnterEditModeAsync()
     {
         isEditMode = true;
-        
-        // Initialize edit values
-        editCode = GetEntityCode();
-        editName = GetEntityDisplayName();
-        editValueManager.InitializeFromWidgets(layoutWidgets, GetFieldValue);
-        
-        StateHasChanged();
+        try
+        {
+            // Initialize edit values
+            editCode = GetEntityCode();
+            editName = GetEntityDisplayName();
+            editValueManager.InitializeFromWidgets(layoutWidgets, GetFieldValue);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PageLoader] EnterEditMode failed: {ex.Message}");
+            error = string.Format(I18n.T("PL_LOAD_EXCEPTION"), ex.Message);
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void CancelEdit()
+    private async Task CancelEditAsync()
     {
         isEditMode = false;
         editValueManager.Clear();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ReloadPage()
@@ -489,8 +712,47 @@ else if (entityData != null)
         {
             saving = true;
 
-            // Collect all field values
-            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, null);
+            // Collect only dynamic-field payloads (skip base columns like Code/Name/Id/Version)
+            HashSet<string>? allowedKeys = null;
+            if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
+            {
+                allowedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var field in fieldsElement.EnumerateArray())
+                {
+                    if (field.TryGetProperty("key", out var keyProp))
+                    {
+                        var key = keyProp.GetString();
+                        if (!string.IsNullOrWhiteSpace(key))
+                        {
+                            allowedKeys.Add(key!);
+                        }
+                    }
+                }
+            }
+
+            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, allowedKeys);
+
+            // 补齐模板未覆盖但后端定义为必填的字段：用现有数据回填，避免必填校验失败
+            if (allowedKeys != null && entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement2))
+            {
+                var existingKeys = new HashSet<string>(fieldPayloads.Select(f => f.key), StringComparer.OrdinalIgnoreCase);
+                foreach (var field in fieldsElement2.EnumerateArray())
+                {
+                    if (!field.TryGetProperty("key", out var keyProp)) continue;
+                    var key = keyProp.GetString();
+                    if (string.IsNullOrWhiteSpace(key) || existingKeys.Contains(key))
+                        continue;
+
+                    object? valueObj = null;
+                    if (field.TryGetProperty("value", out var valProp))
+                    {
+                        try { valueObj = System.Text.Json.JsonSerializer.Deserialize<object>(valProp.GetRawText()); }
+                        catch { valueObj = valProp.ToString(); }
+                    }
+
+                    fieldPayloads.Add(new FieldPayload { key = key!, value = valueObj });
+                }
+            }
             
             // Persist to API
             var payload = new
@@ -499,6 +761,12 @@ else if (entityData != null)
                 name = editName,
                 fields = fieldPayloads
             };
+            try
+            {
+                var debugJson = System.Text.Json.JsonSerializer.Serialize(payload);
+                Console.WriteLine($"[PageLoader] Save payload: {debugJson}");
+            }
+            catch { }
 
             var client = await Auth.CreateClientWithAuthAsync();
             var resp = await client.PutAsJsonAsync($"/api/{EntityType}s/{Id}", payload);
@@ -510,7 +778,8 @@ else if (entityData != null)
             }
             else
             {
-                error = string.Format(I18n.T("PL_SAVE_FAILED"), resp.StatusCode);
+                var respBody = await resp.Content.ReadAsStringAsync();
+                error = string.Format(I18n.T("PL_SAVE_FAILED"), $"{resp.StatusCode}: {respBody}");
             }
         }
         catch (Exception ex)
@@ -529,5 +798,3 @@ else if (entityData != null)
         I18n.OnChanged -= HandleI18nChanged;
     }
 }
-
-
