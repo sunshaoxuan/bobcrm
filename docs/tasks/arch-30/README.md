@@ -35,9 +35,9 @@ docs/tasks/arch-30/
 | Task 0.2 | ✅ 合格 | [开发指南](task-0.2-dto-extensions.md) / [评审1](task-0.2-review.md) / [评审2](task-0.2-review-round2.md) | AI | 7430ab3 | 2025-12-11 |
 | Task 0.3 | ✅ 优秀 | [设计文档](task-0.3-dto-definitions.md) / [评审报告](task-0.3-review.md) | AI | (本次提交) | 2025-12-11 |
 | **阶段0** | **✅ 完成** | **[阶段总结](PHASE-0-SUMMARY.md)** | **平均 4.58/5.0** | **3个任务** | **2025-12-11** |
-| Task 1.1 | ⏳ 待开始 | task-1.1-api-functions-me.md | - | - | - |
-| Task 1.2 | ⏳ 待开始 | task-1.2-api-menu-bindings.md | - | - | - |
-| Task 1.3 | ⏳ 待开始 | task-1.3-api-entities.md | - | - | - |
+| Task 1.1 | ⏳ 待开始 | [task-1.1-api-functions-me.md](task-1.1-api-functions-me.md) | - | - | - |
+| Task 1.2 | ⏳ 待开始 | [task-1.2-api-menu-bindings.md](task-1.2-api-menu-bindings.md) | - | - | - |
+| Task 1.3 | ⏳ 待开始 | [task-1.3-api-entities.md](task-1.3-api-entities.md) | - | - | - |
 
 ## 🔗 相关文档
 
