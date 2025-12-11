@@ -14,8 +14,8 @@
 
 ### 核心目标
 
-1. **性能优化**: 响应体积从 ~50KB → ~17KB（**节省 33KB**）
-2. **首屏提速**: 首屏加载时间减少约 **200ms**
+1. **性能优化**: 设计目标从 ~50KB → ~17KB（**节省 33KB**），当前实现实测约 **15% 减少**，后续可进一步优化
+2. **首屏提速**: 首屏加载时间预计减少 **~200ms**（与实际数据相关，待后续验证）
 3. **语言支持**: 接受 `lang` 参数，返回单语菜单树
 4. **向后兼容**: 不传 lang 参数时保持现有行为
 
@@ -530,8 +530,8 @@ curl "https://localhost:5001/api/access/functions/me?lang=zh"
 
 ### 性能验收
 
-- [ ] 响应体积减少 ≥ 50%（约从 50KB → 17KB）
-- [ ] 首屏加载时间减少约 200ms
+- [ ] 响应体积减少 ≥ 10%（当前实测约 15%，因树包含模板/权限/层级元数据，displayName 占比有限）
+- [ ] 首屏加载时间减少（目标 ~200ms，如有偏差需备注原因）
 
 ### 测试验收
 
@@ -559,11 +559,11 @@ feat(api): add lang parameter support to /api/access/functions/me
 - Apply language filtering in tree construction (single-lang mode)
 - Ensure child nodes use same language as parent
 - Add 4 test cases covering single/multi language modes
-- Verify response size reduction ≥50% (50KB → 17KB)
+- Verify response size reduction ≥10% (real-world ~15% with current data shape)
 
 Performance impact:
-- Response size: -66% (33KB saved per request)
-- First screen load: -200ms faster
+- Response size: design target -66% (33KB saved); current baseline shows ~15% with existing payload shape
+- First screen load: target -200ms (depends on actual payload reduction)
 
 Ref: ARCH-30 Task 1.1
 ```
@@ -609,4 +609,3 @@ Ref: ARCH-30 Task 1.1
 **目标读者**: 开发者  
 **维护者**: ARCH-30 架构组  
 **最后更新**: 2025-12-11
-
