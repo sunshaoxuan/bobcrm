@@ -479,7 +479,7 @@ Ref: ARCH-30 Tech Debt - Single Type Per File"
 
 ## 📚 参考文档
 
-- [代码规范文档](../../standards/CODING-STANDARDS.md)
+- [STD-04 开发规范](../../process/STD-04-开发规范.md) § 3.4（单一类型原则）
 - [Task 2.2 代码评审](task-2.2-review.md)
 - [ARCH-30 设计文档](../../design/ARCH-30-实体字段显示名多语元数据驱动设计.md)
 

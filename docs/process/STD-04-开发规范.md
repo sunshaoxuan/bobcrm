@@ -150,6 +150,90 @@ public class MyService
 }
 ```
 
+### 3.4 单一类型原则 (One Type Per File)
+
+> **重要**: 2025-12-11 新增 - ARCH-30 Task 2.2 代码评审发现
+
+**核心原则**: 每个 `.cs` 文件应该只包含**一个公共类型**（class/record/struct/interface/enum）。
+
+#### 例外情况
+以下情况允许多个类型在同一文件：
+1. **私有辅助类型** - `private class InternalHelper { }`
+2. **文件作用域类型** (C# 11+) - `file class InternalCache { }`
+3. **紧密相关的泛型特化** - `SuccessResponse<T>` 和 `SuccessResponse`
+
+#### 错误示例
+❌ **违规**：一个文件包含多个公共类型
+```csharp
+// EnumDefinitionDto.cs (7个公共类型 - 违规)
+namespace BobCrm.Api.Contracts.DTOs;
+
+public class EnumDefinitionDto { }          // ❌ 应独立
+public class EnumOptionDto { }              // ❌ 应独立
+public class CreateEnumDefinitionRequest { } // ❌ 应独立
+public class CreateEnumOptionRequest { }     // ❌ 应独立
+public class UpdateEnumDefinitionRequest { } // ❌ 应独立
+public class UpdateEnumOptionsRequest { }    // ❌ 应独立
+public class UpdateEnumOptionRequest { }     // ❌ 应独立
+```
+
+#### 正确示例
+✅ **正确**：按目录和类型组织
+```
+Contracts/
+├── DTOs/
+│   ├── EnumDefinitionDto.cs (1个类型)
+│   └── EnumOptionDto.cs (1个类型)
+└── Requests/
+    └── Enum/
+        ├── CreateEnumDefinitionRequest.cs (1个类型)
+        ├── UpdateEnumDefinitionRequest.cs (1个类型)
+        ├── CreateEnumOptionRequest.cs (1个类型)
+        ├── UpdateEnumOptionsRequest.cs (1个类型)
+        └── UpdateEnumOptionRequest.cs (1个类型)
+```
+
+#### 目录组织规范
+
+**DTOs 目录**: `Contracts/DTOs/`
+- 数据传输对象（Data Transfer Objects）
+- 命名：`{EntityName}Dto.cs`
+
+**Requests 目录**: `Contracts/Requests/{Domain}/`
+- API 请求对象（按领域组织）
+- 命名：`Create{EntityName}Request.cs`, `Update{EntityName}Request.cs` 等
+
+**Responses 目录**: `Contracts/Responses/{Domain}/`
+- API 响应对象（复杂响应）
+- 命名：`{Action}{EntityName}Response.cs`
+
+#### 违规原因
+1. **单一职责原则** (SRP) - 每个文件只负责一个类型
+2. **代码导航** - 文件名即类型名，易于查找
+3. **版本控制** - 减少合并冲突
+4. **可维护性** - 修改一个类型不影响其他类型
+5. **IDE 支持** - 更好的重构、跳转、搜索体验
+
+#### 检测脚本
+使用 PowerShell 检测多类文件：
+```powershell
+$files = Get-ChildItem -Path src/BobCrm.Api/Contracts -Recurse -Filter "*.cs"
+foreach ($file in $files) {
+    $content = Get-Content $file.FullName -Raw
+    $matches = [regex]::Matches(
+        $content, 
+        '^\s*(public|internal|private|protected)?\s*(sealed|abstract|static)?\s*(class|record|struct|interface|enum)\s+\w+', 
+        [System.Text.RegularExpressions.RegexOptions]::Multiline
+    )
+    if ($matches.Count -gt 1) {
+        Write-Host "$($file.FullName.Replace((Get-Location).Path + '\', '')): $($matches.Count) types"
+    }
+}
+```
+
+#### 技术债追踪
+当前项目中发现的多类文件违规详见：`docs/tasks/arch-30/TECH-DEBT.md`
+
 ---
 
 ## 4. 数据库设计规范

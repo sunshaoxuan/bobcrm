@@ -514,87 +514,41 @@ Contracts/Requests/Enum/
 
 ## 📝 代码规范制定
 
-### 规范1: 一个文件一个类型
+**已补充到**: `docs/process/STD-04-开发规范.md` § 3.4
 
-**标题**: 单一类型原则 (One Type Per File)
+### 规范1: 单一类型原则 (One Type Per File)
 
-**规则**:
-```markdown
-## 单一类型原则
+**核心原则**: 每个 `.cs` 文件应该只包含**一个公共类型**（class/record/struct/interface/enum）。
 
-### 规则
-每个 `.cs` 文件应该只包含一个公共类型（class/record/struct/interface/enum）。
+**详细规则参见**: `STD-04-开发规范.md` § 3.4
 
-### 例外
-- 私有内部辅助类型（private/file-scoped）可以在同一文件
-- 紧密相关的泛型特化（如 SuccessResponse<T> 和 SuccessResponse）
-
-### 示例
-
-❌ 错误：
-```csharp
-// EnumDefinitionDto.cs
-public class EnumDefinitionDto { }
-public class EnumOptionDto { }  // ❌ 应独立文件
-public class CreateEnumDefinitionRequest { }  // ❌ 应独立文件
-```
-
-✅ 正确：
-```csharp
-// EnumDefinitionDto.cs
-public class EnumDefinitionDto { }
-
-// EnumOptionDto.cs
-public class EnumOptionDto { }
-
-// CreateEnumDefinitionRequest.cs
-public class CreateEnumDefinitionRequest { }
-```
-
-### 原因
-1. 遵循单一职责原则 (SRP)
-2. 便于代码导航和搜索
-3. 降低合并冲突风险
-4. 提高代码可维护性
-```
+**要点摘要**:
+- ✅ 每个文件一个公共类型
+- ✅ 例外：私有辅助类型、文件作用域类型、泛型特化
+- ✅ 按目录组织：DTOs / Requests / Responses
+- ✅ 文件名与类型名一致
 
 ---
 
 ### 规范2: 目录结构约定
 
-**标题**: DTO/Request/Response 目录组织
+**详细规则参见**: `STD-04-开发规范.md` § 3.4
 
-**规则**:
-```markdown
-## 目录结构约定
-
-### DTO 目录
-`Contracts/DTOs/` - 数据传输对象
-
-### Request 目录
-`Contracts/Requests/{Domain}/` - 请求对象（按领域组织）
-
-示例：
+**目录组织**:
 ```
 Contracts/
-├── DTOs/
+├── DTOs/                    # 数据传输对象
 │   ├── EnumDefinitionDto.cs
-│   ├── EnumOptionDto.cs
-│   └── ...
-├── Requests/
+│   └── EnumOptionDto.cs
+├── Requests/                # 请求对象（按领域）
 │   ├── Enum/
 │   │   ├── CreateEnumDefinitionRequest.cs
-│   │   ├── UpdateEnumDefinitionRequest.cs
-│   │   └── ...
+│   │   └── UpdateEnumDefinitionRequest.cs
 │   ├── Entity/
-│   │   ├── CreateEntityRequest.cs
-│   │   └── ...
 │   └── Access/
-│       ├── CreateRoleRequest.cs
-│       └── ...
-└── Responses/
-    └── (Response对象，按需组织)
-```
+└── Responses/               # 响应对象（按领域）
+    ├── Entity/
+    └── Common/
 ```
 
 ---
