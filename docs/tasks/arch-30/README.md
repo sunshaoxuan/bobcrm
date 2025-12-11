@@ -32,7 +32,7 @@ docs/tasks/arch-30/
 | 任务ID | 状态 | 文档 | 开发者 | 提交ID | 完成日期 |
 |--------|------|------|--------|--------|----------|
 | Task 0.1 | ✅ 完成 | [task-0.1-multilingual-helper.md](task-0.1-multilingual-helper.md) | AI | 84ced12, e4abe03 | 2025-12-11 |
-| Task 0.2 | 🚧 进行中 | [task-0.2-dto-extensions.md](task-0.2-dto-extensions.md) | - | - | - |
+| Task 0.2 | ✅ 完成 | [task-0.2-dto-extensions.md](task-0.2-dto-extensions.md) | AI | c9b57a1 | 2025-12-11 |
 | Task 0.3 | ⏳ 待开始 | [task-0.3-dto-definitions.md](task-0.3-dto-definitions.md) | - | - | - |
 | Task 1.1 | ⏳ 待开始 | task-1.1-api-functions-me.md | - | - | - |
 | Task 1.2 | ⏳ 待开始 | task-1.2-api-menu-bindings.md | - | - | - |
@@ -81,4 +81,3 @@ Ref: ARCH-30 Task X.X
 
 **最后更新**: 2025-12-11
 **维护者**: ARCH-30 项目组
-
