@@ -961,7 +961,13 @@ feat(api): add lang parameter support to function management endpoints
 ```
 
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-11
+**评审结果**: ✅ 优秀（4.9/5.0）- [评审报告](../tasks/arch-30/task-2.4-review.md)
+
+**关键实现亮点**:
+- ✅ 使用 `ToDtoAsync` 方法复用 `FunctionTreeBuilder` 逻辑，确保一致性
+- ✅ 7个测试用例完整覆盖，包括树形结构语言一致性验证
+- ✅ POST/PUT 端点通过查询字符串传递 `lang` 参数
 
 ---
 
