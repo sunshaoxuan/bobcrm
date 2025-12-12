@@ -627,7 +627,8 @@ feat(api): add lang parameter support to enum endpoints
 ```
 
 **Commit ID**: _(待填写)_
-**完成时间**: 2025-12-12
+**完成时间**: 2025-12-11
+**评审结果**: ✅ 合格（4.6/5.0）- [评审报告](../tasks/arch-30/task-2.2-review-final.md)
 
 ---
 
