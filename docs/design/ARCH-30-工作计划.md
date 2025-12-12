@@ -492,7 +492,7 @@ feat(api): add lang parameter support to entity-definitions endpoints
 ```
 
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-11
 
 ---
 
