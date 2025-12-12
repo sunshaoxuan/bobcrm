@@ -16,13 +16,13 @@
 | 阶段0: 基础设施搭建 | 3 | 3 | 0 | 0 | 100% |
 | 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
-| 阶段2: 中频API改造 | 4 | 2 | 0 | 2 | 50% |
+| 阶段2: 中频API改造 | 4 | 3 | 0 | 1 | 75% |
 | 阶段3: 低频API改造 | 3 | 0 | 0 | 3 | 0% |
 | 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
-| **总计** | **19** | **12** | **0** | **7** | **63%** |
+| **总计** | **19** | **13** | **0** | **6** | **68%** |
 
 **当前阶段**: 阶段2 - 中频API改造
-**当前任务**: Task 2.3 - 改造实体域接口
+**当前任务**: Task 2.4 - 改造功能节点管理接口组
 
 ---
 
@@ -757,27 +757,206 @@ feat(api): add lang parameter support to entity-domain endpoints
 
 **状态**: ⏳ 待开始
 **涉及端点**:
-- `GET /api/access/functions`
-- `POST /api/access/functions`
-- `PUT /api/access/functions/{id}`
-- `GET /api/access/functions/tree`
+- `GET /api/access/functions` - 功能节点列表（管理员）
+- `GET /api/access/functions/manage` - 功能节点管理列表
+- `POST /api/access/functions` - 创建功能节点
+- `PUT /api/access/functions/{id}` - 更新功能节点
+- `GET /api/access/functions/me` - 用户功能菜单（已在Task 1.1完成）
+
+**负责文件**:
+- `src/BobCrm.Api/Endpoints/AccessEndpoints.cs` (修改)
+- `src/BobCrm.Api/Services/AccessService.cs` (修改)
+- `src/BobCrm.Api/Services/FunctionTreeBuilder.cs` (已支持lang参数，无需修改)
+- `tests/BobCrm.Api.Tests/AccessEndpointsTests.cs` (新建/修改)
+
+---
+
+##### 🤖 AI 任务提示词
+
+```
+## 任务: ARCH-30 Task 2.4 - 改造功能节点管理接口组支持多语参数
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
+需要为功能节点管理相关端点添加 `lang` 参数支持，实现单语/多语双模式响应。
+注意：`GET /api/access/functions/me` 已在 Task 1.1 完成，本次只需改造管理类端点。
+
+### 参考文件
+- 已完成示例: `src/BobCrm.Api/Endpoints/AccessEndpoints.cs` (Task 1.1 的 `/api/access/functions/me`)
+- 树构建器: `src/BobCrm.Api/Services/FunctionTreeBuilder.cs` (已支持lang参数)
+- DTO定义: `src/BobCrm.Api/Contracts/DTOs/Access/FunctionNodeDto.cs` (已在Task 1.1更新为双模式)
+- 测试示例: `tests/BobCrm.Api.Tests/AccessFunctionsApiTests.cs` (Task 1.1的测试)
+
+### 关键设计决策（从 Task 2.2/2.3 继承）
+
+**向后兼容性规则**：
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 lang 参数时返回多语字典（即使有 Accept-Language 头也忽略）
+- 错误消息使用 `uiLang = LangHelper.GetLang(http)` 获取
+
+**代码模式**：
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   var uiLang = LangHelper.GetLang(http);  // 用于错误消息
+
+**树形结构处理**：
+- `FunctionTreeBuilder.BuildAsync()` 已支持 `lang` 参数（第33行）
+- 递归处理子节点时，`lang` 参数会自动传递到所有子节点
+- 无需额外处理树形结构的语言传递
+
+### 详细步骤
+
+#### 步骤 2.4.1: 分析现有功能节点管理端点
+
+1. 打开 `src/BobCrm.Api/Endpoints/AccessEndpoints.cs`
+2. 找出以下需要改造的端点：
+   - `GET /api/access/functions` (第24行) - 功能节点列表，目前传 `lang: null`
+   - `GET /api/access/functions/manage` (第38行) - 管理列表，目前传 `lang: null`
+   - `POST /api/access/functions` (第70行) - 创建功能节点，返回DTO需要支持lang
+   - `PUT /api/access/functions/{id}` (第100行) - 更新功能节点，返回DTO需要支持lang
+3. 注意：`GET /api/access/functions/me` 已在 Task 1.1 完成，无需修改
+
+#### 步骤 2.4.2: 修改 GET /api/access/functions 端点
+
+1. 定位到第24行的 `MapGet("/functions")` 端点
+2. 添加 `string? lang` 查询参数和 `HttpContext http` 参数
+3. 使用向后兼容模式解析语言：
+   ```csharp
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   ```
+4. 将 `lang: null` 改为 `lang: targetLang`
+5. 示例代码：
+   ```csharp
+   group.MapGet("/functions", async (
+       string? lang,
+       HttpContext http,
+       [FromServices] AppDbContext db,
+       [FromServices] FunctionTreeBuilder treeBuilder,
+       CancellationToken ct) =>
+   {
+       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+       var nodes = await db.FunctionNodes
+           .AsNoTracking()
+           .Include(f => f.Template)
+           .OrderBy(f => f.SortOrder)
+           .ToListAsync(ct);
+       var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
+       return Results.Ok(tree);
+   }).RequireFunction("BAS.AUTH.ROLE.PERM");
+   ```
+
+#### 步骤 2.4.3: 修改 GET /api/access/functions/manage 端点
+
+1. 定位到第38行的 `MapGet("/functions/manage")` 端点
+2. 添加 `string? lang` 查询参数和 `HttpContext http` 参数
+3. 使用相同的语言解析逻辑
+4. 将 `lang: null` 改为 `lang: targetLang`
+
+#### 步骤 2.4.4: 修改 POST /api/access/functions 端点
+
+1. 定位到第70行的 `MapPost("/functions")` 端点
+2. 添加 `string? lang` 查询参数（注意：POST请求的lang参数通常通过查询字符串传递）
+3. 解析语言：`var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
+4. 修改返回的DTO转换：
+   - 当前使用 `ToDto(node)` 方法（第92行）
+   - 需要检查 `ToDto` 方法是否支持lang参数
+   - 如果不支持，需要创建新的转换方法或修改现有方法
+5. 如果 `ToDto` 方法不支持lang，可以：
+   - 选项A：修改 `ToDto` 方法签名添加 `string? lang` 参数
+   - 选项B：使用 `FunctionTreeBuilder` 构建单个节点的DTO（推荐）
+   - 选项C：直接构造 `FunctionNodeDto` 并应用双模式逻辑
+
+#### 步骤 2.4.5: 修改 PUT /api/access/functions/{id} 端点
+
+1. 定位到第100行的 `MapPut("/functions/{id:guid}")` 端点
+2. 添加 `string? lang` 查询参数
+3. 使用相同的语言解析逻辑
+4. 修改返回的DTO转换（与POST相同）
+
+#### 步骤 2.4.6: 检查 ToDto 方法
+
+1. 在 `AccessEndpoints.cs` 中查找 `ToDto` 方法定义
+2. 检查该方法是否支持lang参数
+3. 如果不支持，需要：
+   - 修改方法签名添加 `string? lang` 参数
+   - 在方法内部应用双模式逻辑（参考 `FunctionTreeBuilder.ResolveDisplayName`）
+   - 或者使用 `FunctionTreeBuilder` 来构建DTO
+
+#### 步骤 2.4.7: 添加测试
+
+1. 创建/更新 `tests/BobCrm.Api.Tests/AccessEndpointsTests.cs`
+2. 测试场景：
+   - `GetFunctions_WithoutLang_ReturnsTranslationsMode` - 无lang返回多语字典
+   - `GetFunctions_WithLang_ReturnsSingleLanguageMode` - 有lang返回单语
+   - `GetFunctionsManage_WithoutLang_ReturnsTranslationsMode` - 管理列表无lang
+   - `GetFunctionsManage_WithLang_ReturnsSingleLanguageMode` - 管理列表有lang
+   - `CreateFunction_WithLang_ReturnsSingleLanguageMode` - 创建后返回单语
+   - `UpdateFunction_WithLang_ReturnsSingleLanguageMode` - 更新后返回单语
+   - `TreeStructure_LanguageConsistency` - 验证树形结构所有节点使用相同语言
+3. 参考 `AccessFunctionsApiTests.cs` 的测试结构
+4. 使用 `SeedFunctionNodeAsync()` 准备测试数据
+
+#### 步骤 2.4.8: 编译验证
+
+   dotnet build src/BobCrm.Api/BobCrm.Api.csproj
+   dotnet test --filter "AccessEndpointsTests"
+
+### 验收标准
+
+- [ ] GET /api/access/functions 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/access/functions/manage 支持 ?lang=zh/ja/en 参数
+- [ ] POST /api/access/functions 支持 ?lang=zh/ja/en 参数（返回单语）
+- [ ] PUT /api/access/functions/{id} 支持 ?lang=zh/ja/en 参数（返回单语）
+- [ ] 无 lang 参数时返回多语字典 (向后兼容)
+- [ ] 无 lang 参数时忽略 Accept-Language 头
+- [ ] 有 lang 参数时返回单语字符串
+- [ ] 树形结构所有节点使用相同语言（FunctionTreeBuilder已处理）
+- [ ] 所有单元测试通过
+
+### Commit 信息
+
+feat(api): add lang parameter to function management endpoints
+
+- Add lang query parameter to GET /api/access/functions
+- Add lang query parameter to GET /api/access/functions/manage
+- Add lang query parameter to POST /api/access/functions
+- Add lang query parameter to PUT /api/access/functions/{id}
+- Update ToDto method to support lang parameter (if needed)
+- Leverage FunctionTreeBuilder for consistent tree language handling
+- Add comprehensive tests for all endpoints
+- Maintain backward compatibility (ignore Accept-Language when no lang param)
+- Ref: ARCH-30 Task 2.4
+```
+
+---
 
 **详细步骤**:
-- [ ] 步骤 2.4.1: 修改所有 AccessEndpoints 相关端点
-- [ ] 步骤 2.4.2: 修改 AccessService 方法
-- [ ] 步骤 2.4.3: 更新 FunctionNodeDto
-- [ ] 步骤 2.4.4: 处理树形结构的语言传递
-- [ ] 步骤 2.4.5: 添加测试
-- [ ] 步骤 2.4.6: 更新文档
+- [ ] 步骤 2.4.1: 分析现有功能节点管理端点
+- [ ] 步骤 2.4.2: 修改 GET /api/access/functions 端点
+- [ ] 步骤 2.4.3: 修改 GET /api/access/functions/manage 端点
+- [ ] 步骤 2.4.4: 修改 POST /api/access/functions 端点
+- [ ] 步骤 2.4.5: 修改 PUT /api/access/functions/{id} 端点
+- [ ] 步骤 2.4.6: 检查并修改 ToDto 方法（如需要）
+- [ ] 步骤 2.4.7: 添加单元测试（7个测试用例）
+- [ ] 步骤 2.4.8: 编译验证 (`dotnet build && dotnet test`)
+- [ ] 步骤 2.4.9: Git 提交
+
+**关键设计决策**:
+- `FunctionTreeBuilder` 已支持 `lang` 参数，无需额外处理树形结构
+- POST/PUT 返回的单个节点DTO需要支持lang参数
+- 需要检查 `ToDto` 方法是否需要修改
 
 **Commit 信息模板**:
 ```
 feat(api): add lang parameter support to function management endpoints
 
-- Support lang parameter for all function CRUD operations
-- Handle language propagation in tree structures
-- Update DTOs and service methods
-- Add tests for tree navigation
+- Add lang query parameter to GET /api/access/functions
+- Add lang query parameter to GET /api/access/functions/manage
+- Add lang query parameter to POST /api/access/functions
+- Add lang query parameter to PUT /api/access/functions/{id}
+- Update ToDto method to support lang parameter (if needed)
+- Leverage FunctionTreeBuilder for consistent tree language handling
+- Add comprehensive tests for all endpoints
+- Maintain backward compatibility (ignore Accept-Language when no lang param)
 - Ref: ARCH-30 Task 2.4
 ```
 
