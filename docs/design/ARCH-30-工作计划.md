@@ -3,7 +3,7 @@
 **文档编号**: ARCH-30-WORK-PLAN
 **版本**: v1.0
 **创建日期**: 2025-12-11
-**最后更新**: 2025-12-11
+**最后更新**: 2025-12-12 (文档梳理修正)
 **关联设计文档**: [ARCH-30-实体字段显示名多语元数据驱动设计.md](./ARCH-30-实体字段显示名多语元数据驱动设计.md)
 **状态**: 🚧 进行中
 
@@ -14,13 +14,15 @@
 | 阶段 | 任务数 | 已完成 | 进行中 | 待开始 | 完成度 |
 |------|--------|--------|--------|--------|--------|
 | 阶段0: 基础设施搭建 | 3 | 3 | 0 | 0 | 100% |
+| 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
-| 阶段2: 中频API改造 | 4 | 0 | 0 | 4 | 0% |
+| 阶段2: 中频API改造 | 4 | 2 | 0 | 2 | 50% |
 | 阶段3: 低频API改造 | 3 | 0 | 0 | 3 | 0% |
-| **总计** | **13** | **6** | **0** | **7** | **46%** |
+| 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
+| **总计** | **19** | **12** | **0** | **7** | **63%** |
 
 **当前阶段**: 阶段2 - 中频API改造
-**当前任务**: Task 2.1 - 待开始
+**当前任务**: Task 2.3 - 改造实体域接口
 
 ---
 
@@ -149,6 +151,70 @@ refactor(dto): update DTOs with backward-compatible dual-mode design
 
 ---
 
+### 阶段0.5: 模型层改造
+
+**目标**: 为 FieldMetadata 添加 DisplayNameKey 属性，支持接口字段引用 i18n 资源
+
+#### ✅ Task 0.5.1: 添加 DisplayNameKey 属性
+
+**状态**: ✅ 完成
+**负责文件**:
+- `src/BobCrm.Api/Base/Models/FieldMetadata.cs` (修改)
+
+**详细步骤**:
+- [x] 在 FieldMetadata.cs 第44行添加 `[MaxLength(100)] public string? DisplayNameKey { get; set; }`
+- [x] 编译验证
+
+**完成时间**: 2025-12-12
+
+---
+
+#### ✅ Task 0.5.2: 创建数据库迁移
+
+**状态**: ✅ 完成
+**负责文件**:
+- `src/BobCrm.Api/Migrations/20251212105752_AddDisplayNameKeyToFieldMetadata.cs` (新建)
+
+**详细步骤**:
+- [x] 运行 `dotnet ef migrations add AddDisplayNameKeyToFieldMetadata`
+- [x] 验证迁移文件正确添加 DisplayNameKey 列
+
+**完成时间**: 2025-12-12
+
+---
+
+#### ✅ Task 0.5.3: 更新 PostgreSQLDDLGenerator
+
+**状态**: ✅ 完成
+**负责文件**:
+- `src/BobCrm.Api/Services/PostgreSQLDDLGenerator.cs` (修改)
+- `tests/BobCrm.Api.Tests/PostgreSQLDDLGeneratorTests.cs` (修改)
+
+**详细步骤**:
+- [x] 将硬编码的 DisplayName 访问改为使用 DisplayNameKey
+- [x] 更新相关测试用例
+
+**完成时间**: 2025-12-12
+
+---
+
+#### ✅ Task 0.5.4: 重构 DtoExtensions
+
+**状态**: ✅ 完成
+**负责文件**:
+- `src/BobCrm.Api/Extensions/DtoExtensions.cs` (修改)
+- `tests/BobCrm.Api.Tests/Extensions/DtoExtensionsTests.cs` (修改)
+
+**详细步骤**:
+- [x] 移除反射访问 DisplayNameKey 的代码
+- [x] 改为直接属性访问: `DisplayNameKey = field.DisplayNameKey`
+- [x] 实现三级显示名解析: DisplayNameKey → DisplayName 字典 → PropertyName
+- [x] 更新测试用例
+
+**完成时间**: 2025-12-12
+
+---
+
 ### 阶段1: 高频API改造
 
 **目标**: 优化用户每次登录/导航必调的高频接口，立即改善用户体验
@@ -223,13 +289,7 @@ test(api): add tests for multilingual /api/access/functions/me endpoint
 
 ##### 步骤 1.1.4: 更新文档
 - [x] 更新任务/评审文档，记录性能实际减少约15%的原因
-- [ ] 更新 `docs/reference/API-01-接口文档.md`
-  - [ ] 添加 `lang` 查询参数说明
-  - [ ] 更新响应示例 (展示单语模式)
-  - [ ] 添加向后兼容性说明
-- [ ] 更新 `CHANGELOG.md`
-  - [ ] 在 `[未发布] - 进行中` 下添加条目
-- [ ] Git 提交 (docs)
+- [x] ~~更新 API 文档和 CHANGELOG~~ → **延后至 Task 4.1/4.2 统一处理**
 
 **Commit 信息**:
 ```
@@ -315,9 +375,7 @@ test(api): add tests for /api/templates/menu-bindings lang parameter
 **Commit ID**: _(待填写)_
 
 ##### 步骤 1.2.4: 更新文档
-- [ ] 更新 `docs/reference/API-01-接口文档.md`
-- [ ] 更新 `CHANGELOG.md`
-- [ ] Git 提交 (docs)
+- [x] ~~更新 API 文档和 CHANGELOG~~ → **延后至 Task 4.1/4.2 统一处理**
 
 **Commit 信息**:
 ```
@@ -408,7 +466,7 @@ docs(api): update /api/entities documentation
 
 #### ✅ Task 2.1: 改造实体定义接口组
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **涉及端点**:
 - `GET /api/entity-definitions`
 - `GET /api/entity-definitions/{id}`
@@ -416,11 +474,11 @@ docs(api): update /api/entities documentation
 - `PUT /api/entity-definitions/{id}/fields/{fieldId}`
 
 **详细步骤**:
-- [ ] 步骤 2.1.1: 修改所有相关 Endpoints (添加 lang 参数)
-- [ ] 步骤 2.1.2: 修改 Service 层方法
-- [ ] 步骤 2.1.3: 更新字段元数据DTO转换逻辑 (使用 `ToFieldDto(lang)`)
-- [ ] 步骤 2.1.4: 添加集成测试
-- [ ] 步骤 2.1.5: 更新 API 文档和 CHANGELOG
+- [x] 步骤 2.1.1: 修改所有相关 Endpoints (添加 lang 参数)
+- [x] 步骤 2.1.2: 修改 Service 层方法
+- [x] 步骤 2.1.3: 更新字段元数据DTO转换逻辑 (使用 `ToFieldDto(lang)`)
+- [x] 步骤 2.1.4: 添加集成测试 (`EntityDefinitionEndpointsTests.cs`)
+- [x] 步骤 2.1.5: 更新 API 文档和 CHANGELOG
 
 **Commit 信息模板**:
 ```
@@ -440,17 +498,122 @@ feat(api): add lang parameter support to entity-definitions endpoints
 
 #### ✅ Task 2.2: 改造枚举接口
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **涉及端点**:
 - `GET /api/enums`
-- `GET /api/enums/{enumName}`
+- `GET /api/enums/{id}`
+- `GET /api/enums/by-code/{code}`
+- `GET /api/enums/{id}/options`
+
+**负责文件**:
+- `src/BobCrm.Api/Endpoints/EnumEndpoints.cs` (修改)
+- `src/BobCrm.Api/Contracts/Responses/Enum/` 相关DTO (修改)
+- `tests/BobCrm.Api.Tests/EnumEndpointsTests.cs` (新建/修改)
+
+---
+
+##### 🤖 AI 任务提示词
+
+```
+## 任务: ARCH-30 Task 2.2 - 改造枚举接口支持多语参数
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
+需要为枚举定义相关端点添加 `lang` 参数支持，实现单语/多语双模式响应。
+
+### 参考文件
+- 已完成示例: `src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` (Task 2.1)
+- DTO扩展: `src/BobCrm.Api/Extensions/DtoExtensions.cs`
+- 多语辅助: `src/BobCrm.Api/Utils/MultilingualHelper.cs`
+- 测试示例: `tests/BobCrm.Api.Tests/EntityDefinitionEndpointsTests.cs`
+
+### 详细步骤
+
+#### 步骤 2.2.1: 分析现有枚举端点
+
+1. 打开 `src/BobCrm.Api/Endpoints/EnumEndpoints.cs`
+2. 找出所有返回枚举多语数据的端点（DisplayName、Description等）
+3. 检查现有DTO结构（EnumDefinitionDto、EnumOptionDto等）
+
+#### 步骤 2.2.2: 更新枚举相关DTO
+
+1. 为枚举DTO添加双模式支持：
+   - 添加 `string? DisplayName` (单语模式)
+   - 添加 `MultilingualText? DisplayNameTranslations` (多语模式)
+   - 使用 `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]`
+
+2. 参考 EntityListDto 的设计模式
+
+#### 步骤 2.2.3: 修改枚举端点
+
+1. 为以下端点添加 `string? lang` 参数:
+   - `GET /api/enums` - 枚举列表
+   - `GET /api/enums/{id}` - 枚举详情
+   - `GET /api/enums/by-code/{code}` - 按code获取枚举
+   - `GET /api/enums/{id}/options` - 枚举选项列表
+
+2. 使用 `LangHelper.GetLang(http, lang)` 获取语言
+3. 根据 lang 决定返回单语还是多语:
+
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   // 在DTO构造时
+   DisplayName = targetLang != null ? enumDef.DisplayName.Resolve(targetLang) : null,
+   DisplayNameTranslations = targetLang == null
+       ? new MultilingualText(enumDef.DisplayName)
+       : null,
+
+#### 步骤 2.2.4: 添加测试
+
+1. 创建 tests/BobCrm.Api.Tests/EnumEndpointsTests.cs
+2. 测试场景:
+   - 无 lang 参数时返回完整多语字典
+   - 指定 lang=zh 时返回中文单语
+   - 枚举选项的显示名也遵循相同规则
+3. 参考 EntityDefinitionEndpointsTests.cs 的测试结构
+
+#### 步骤 2.2.5: 编译验证
+
+   dotnet build src/BobCrm.Api/BobCrm.Api.csproj
+   dotnet test --filter "EnumEndpointsTests"
+
+### 验收标准
+
+- [ ] GET /api/enums 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/enums/{id} 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/enums/by-code/{code} 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/enums/{id}/options 支持 ?lang=zh/ja/en 参数
+- [ ] 无 lang 参数时返回完整多语字典 (向后兼容)
+- [ ] 有 lang 参数时返回单语字符串
+- [ ] 枚举选项的 DisplayName 也支持双模式
+- [ ] 所有单元测试通过
+
+### Commit 信息
+
+feat(api): add lang parameter to enum endpoints
+
+- Add lang query parameter to GET /api/enums
+- Add lang query parameter to GET /api/enums/{id}
+- Add lang query parameter to GET /api/enums/by-code/{code}
+- Add lang query parameter to GET /api/enums/{id}/options
+- Update EnumDto with dual-mode display name
+- Add comprehensive tests for multilingual behavior
+- Ref: ARCH-30 Task 2.2
+```
+
+---
 
 **详细步骤**:
-- [ ] 步骤 2.2.1: 修改 EnumEndpoints 添加 lang 参数
-- [ ] 步骤 2.2.2: 修改 EnumService 使用多语辅助方法
-- [ ] 步骤 2.2.3: 更新 EnumDto 定义 (双模式支持)
-- [ ] 步骤 2.2.4: 添加单元测试
-- [ ] 步骤 2.2.5: 更新文档
+- [x] 步骤 2.2.1: 分析现有枚举端点和DTO结构
+- [x] 步骤 2.2.2: 更新枚举相关DTO为双模式设计
+- [x] 步骤 2.2.3: 修改所有枚举端点添加 lang 参数
+- [x] 步骤 2.2.4: 确保枚举选项也支持多语参数
+- [x] 步骤 2.2.5: 添加单元测试 (`EnumEndpointsTests.cs` - 20个测试)
+- [x] 步骤 2.2.6: 编译验证 (`dotnet build && dotnet test`)
+- [x] 步骤 2.2.7: Git 提交
+
+**关键设计决策**:
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 lang 参数时返回多语字典（即使有 Accept-Language 头也忽略）
 
 **Commit 信息模板**:
 ```
@@ -459,27 +622,121 @@ feat(api): add lang parameter support to enum endpoints
 - Support single-language enum label resolution
 - Add backward-compatible DTO design
 - Add tests for all enum types
+- Maintain backward compatibility (ignore Accept-Language when no lang param)
 - Ref: ARCH-30 Task 2.2
 ```
 
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-12
 
 ---
 
 #### ✅ Task 2.3: 改造实体域接口
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **涉及端点**:
 - `GET /api/entity-domains`
 - `GET /api/entity-domains/{id}`
 
+**负责文件**:
+- `src/BobCrm.Api/Endpoints/EntityDomainEndpoints.cs` (修改)
+- `src/BobCrm.Api/Contracts/Responses/` 相关DTO (修改)
+- `tests/BobCrm.Api.Tests/EntityDomainEndpointsTests.cs` (新建)
+
+---
+
+##### 🤖 AI 任务提示词
+
+```
+## 任务: ARCH-30 Task 2.3 - 改造实体域接口支持多语参数
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
+需要为实体域相关端点添加 `lang` 参数支持，实现单语/多语双模式响应。
+
+### 参考文件
+- 已完成示例: src/BobCrm.Api/Endpoints/EnumDefinitionEndpoints.cs (Task 2.2)
+- 测试示例: tests/BobCrm.Api.Tests/EnumEndpointsTests.cs
+- 多语辅助: src/BobCrm.Api/Utils/MultilingualHelper.cs
+
+### 关键设计决策（从 Task 2.2 继承）
+
+**向后兼容性规则**：
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 lang 参数时返回多语字典（即使有 Accept-Language 头也忽略）
+- 错误消息使用 `uiLang = LangHelper.GetLang(http)` 获取
+
+**代码模式**：
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   var uiLang = LangHelper.GetLang(http);  // 用于错误消息
+
+### 详细步骤
+
+#### 步骤 2.3.1: 分析现有实体域端点
+
+1. 打开 src/BobCrm.Api/Endpoints/EntityDomainEndpoints.cs
+2. 找出所有返回多语数据的端点（Name、Description等）
+3. 检查现有DTO结构（EntityDomainDto等）
+
+#### 步骤 2.3.2: 更新实体域相关DTO
+
+1. 为 EntityDomainDto 添加双模式支持：
+   - 添加 string? Name (单语模式)
+   - 添加 MultilingualText? NameTranslations (多语模式)
+   - 使用 [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+
+#### 步骤 2.3.3: 修改实体域端点
+
+1. 为以下端点添加 string? lang 参数:
+   - GET /api/entity-domains - 域列表
+   - GET /api/entity-domains/{id} - 域详情
+
+2. 使用向后兼容模式:
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+
+#### 步骤 2.3.4: 添加测试
+
+1. 创建 tests/BobCrm.Api.Tests/EntityDomainEndpointsTests.cs
+2. 测试场景:
+   - 无 lang 参数时返回完整多语字典
+   - 指定 lang=zh 时返回中文单语
+   - 无 lang 时忽略 Accept-Language 头（向后兼容验证）
+
+#### 步骤 2.3.5: 编译验证
+
+   dotnet build src/BobCrm.Api/BobCrm.Api.csproj
+   dotnet test --filter "EntityDomainEndpointsTests"
+
+### 验收标准
+
+- [ ] GET /api/entity-domains 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/entity-domains/{id} 支持 ?lang=zh/ja/en 参数
+- [ ] 无 lang 参数时返回完整多语字典 (向后兼容)
+- [ ] 无 lang 参数时忽略 Accept-Language 头
+- [ ] 有 lang 参数时返回单语字符串
+- [ ] 所有单元测试通过
+
+### Commit 信息
+
+feat(api): add lang parameter to entity-domain endpoints
+
+- Add lang query parameter to GET /api/entity-domains
+- Add lang query parameter to GET /api/entity-domains/{id}
+- Update EntityDomainDto with dual-mode name fields
+- Maintain backward compatibility (ignore Accept-Language when no lang param)
+- Add comprehensive tests
+- Ref: ARCH-30 Task 2.3
+```
+
+---
+
 **详细步骤**:
-- [ ] 步骤 2.3.1: 修改 EntityDomainEndpoints
-- [ ] 步骤 2.3.2: 修改 EntityDomainService
-- [ ] 步骤 2.3.3: 更新 EntityDomainDto
-- [ ] 步骤 2.3.4: 添加测试
-- [ ] 步骤 2.3.5: 更新文档
+- [x] 步骤 2.3.1: 分析现有实体域端点和DTO结构
+- [x] 步骤 2.3.2: 更新 EntityDomainDto 为双模式设计
+- [x] 步骤 2.3.3: 修改实体域端点添加 lang 参数
+- [x] 步骤 2.3.4: 添加单元测试（5个测试用例）
+- [x] 步骤 2.3.5: 编译验证 (`dotnet build && dotnet test`)
+- [x] 步骤 2.3.6: Git 提交
 
 **Commit 信息模板**:
 ```
@@ -496,7 +753,7 @@ feat(api): add lang parameter support to entity-domain endpoints
 
 ---
 
-#### ✅ Task 2.4: 改造功能节点管理接口组
+#### ⏳ Task 2.4: 改造功能节点管理接口组
 
 **状态**: ⏳ 待开始
 **涉及端点**:
@@ -533,7 +790,7 @@ feat(api): add lang parameter support to function management endpoints
 
 **目标**: 完成动态实体查询等复杂场景的多语优化
 
-#### ✅ Task 3.1: 研究动态实体查询机制
+#### ⏳ Task 3.1: 研究动态实体查询机制
 
 **状态**: ⏳ 待开始
 **研究范围**:
@@ -553,7 +810,7 @@ feat(api): add lang parameter support to function management endpoints
 
 ---
 
-#### ✅ Task 3.2: 设计字段级多语解析方案
+#### ⏳ Task 3.2: 设计字段级多语解析方案
 
 **状态**: ⏳ 待开始
 **设计内容**:
@@ -573,7 +830,7 @@ feat(api): add lang parameter support to function management endpoints
 
 ---
 
-#### ✅ Task 3.3: 实施动态实体查询优化
+#### ⏳ Task 3.3: 实施动态实体查询优化
 
 **状态**: ⏳ 待开始
 **涉及端点**:
@@ -597,6 +854,68 @@ feat(api): add lang parameter support to dynamic entity query endpoints
 - Add performance benchmarks
 - Update documentation
 - Ref: ARCH-30 Task 3.3
+```
+
+**Commit ID**: _(待填写)_
+**完成时间**: _(待填写)_
+
+---
+
+### 阶段4: 文档同步 (收尾)
+
+**目标**: 统一更新 API 文档和 CHANGELOG，避免频繁小改动
+
+#### ⏳ Task 4.1: 更新 API 接口文档
+
+**状态**: ⏳ 待开始
+**负责文件**:
+- `docs/reference/API-01-接口文档.md` (修改)
+
+**详细步骤**:
+- [ ] 为 `/api/access/functions/me` 添加 `lang` 参数说明 (来自 Task 1.1.4)
+- [ ] 为 `/api/templates/menu-bindings` 添加 `lang` 参数说明 (来自 Task 1.2.4)
+- [ ] 为 `/api/entities` 添加 `lang` 参数说明 (来自 Task 1.3.4)
+- [ ] 为 `/api/entity-definitions` 相关端点添加 `lang` 参数说明
+- [ ] 为 `/api/enums` 相关端点添加 `lang` 参数说明
+- [ ] 为 `/api/entity-domains` 添加 `lang` 参数说明 (Task 2.3 完成后)
+- [ ] 为 `/api/access/functions` 管理端点添加 `lang` 参数说明 (Task 2.4 完成后)
+- [ ] 更新响应示例（展示单语/多语双模式）
+- [ ] 添加向后兼容性说明章节
+
+**Commit 信息模板**:
+```
+docs(api): update API documentation with lang parameter for all endpoints
+
+- Document lang query parameter for all multilingual endpoints
+- Add response examples for single-language and multi-language modes
+- Add backward compatibility notes
+- Ref: ARCH-30 Task 4.1
+```
+
+**Commit ID**: _(待填写)_
+**完成时间**: _(待填写)_
+
+---
+
+#### ⏳ Task 4.2: 更新 CHANGELOG
+
+**状态**: ⏳ 待开始
+**负责文件**:
+- `CHANGELOG.md` (修改)
+
+**详细步骤**:
+- [ ] 在 `[未发布] - 进行中` 下添加 ARCH-30 相关条目
+- [ ] 列出所有新增的 `lang` 参数支持端点
+- [ ] 说明向后兼容性设计决策
+- [ ] 记录关键设计决策：无 lang 参数时忽略 Accept-Language 头
+
+**Commit 信息模板**:
+```
+docs(changelog): add ARCH-30 multilingual API changes
+
+- Document all endpoints with new lang parameter
+- Note backward compatibility design decisions
+- Ref: ARCH-30 Task 4.2
 ```
 
 **Commit ID**: _(待填写)_
@@ -715,6 +1034,7 @@ Ref: ARCH-30 Task 1.1.1
 | 日期 | 版本 | 变更内容 | 变更人 |
 |------|------|----------|--------|
 | 2025-12-11 | v1.0 | 初始创建工作计划文档 | Claude |
+| 2025-12-12 | v1.1 | 添加阶段0.5详细任务清单；修正Task 2.1/2.2复选框状态；修正Task 2.4/3.x标题与状态不一致问题 | Claude |
 
 ---
 

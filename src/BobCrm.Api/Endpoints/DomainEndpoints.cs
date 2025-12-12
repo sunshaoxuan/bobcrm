@@ -1,5 +1,11 @@
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Responses.Entity;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -12,39 +18,70 @@ public static class DomainEndpoints
             .WithTags("Entity Domains")
             .WithOpenApi();
 
-        group.MapGet("/", async (AppDbContext db) =>
+        group.MapGet("/", async (
+            HttpContext http,
+            [FromQuery] string? lang,
+            AppDbContext db) =>
         {
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+
             var domains = await db.EntityDomains
                 .AsNoTracking()
                 .Where(d => d.IsEnabled)
                 .OrderBy(d => d.SortOrder)
                 .ThenBy(d => d.Code)
-                .Select(d => new EntityDomainResponse
+                .Select(d => new EntityDomainDto
                 {
                     Id = d.Id,
                     Code = d.Code,
-                    Name = d.Name,
+                    Name = targetLang != null ? d.Name.Resolve(targetLang) : null,
+                    NameTranslations = targetLang == null ? new MultilingualText(d.Name) : null,
                     SortOrder = d.SortOrder,
                     IsSystem = d.IsSystem
                 })
                 .ToListAsync();
 
-            return Results.Json(domains);
+            return Results.Ok(domains);
         })
         .WithName("GetEntityDomains")
         .WithSummary("Get entity domain list")
         .WithDescription("Return available entity domains with multilingual names.");
 
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            HttpContext http,
+            [FromQuery] string? lang,
+            AppDbContext db,
+            ILocalization loc) =>
+        {
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+            var uiLang = LangHelper.GetLang(http);
+
+            var domain = await db.EntityDomains
+                .AsNoTracking()
+                .Where(d => d.IsEnabled)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (domain == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", uiLang), "ENTITY_DOMAIN_NOT_FOUND"));
+            }
+
+            return Results.Ok(new EntityDomainDto
+            {
+                Id = domain.Id,
+                Code = domain.Code,
+                Name = targetLang != null ? domain.Name.Resolve(targetLang) : null,
+                NameTranslations = targetLang == null ? new MultilingualText(domain.Name) : null,
+                SortOrder = domain.SortOrder,
+                IsSystem = domain.IsSystem
+            });
+        })
+        .WithName("GetEntityDomainById")
+        .WithSummary("Get entity domain by id")
+        .Produces<EntityDomainDto>(200)
+        .Produces<ErrorResponse>(404);
+
         return app;
     }
-
-    private sealed class EntityDomainResponse
-    {
-        public Guid Id { get; set; }
-        public string Code { get; set; } = string.Empty;
-        public Dictionary<string, string?>? Name { get; set; }
-        public int SortOrder { get; set; }
-        public bool IsSystem { get; set; }
-    }
 }
-
