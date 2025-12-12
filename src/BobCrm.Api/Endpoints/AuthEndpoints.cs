@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Infrastructure;
-using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Requests.Auth;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.Responses.Auth;
 
@@ -26,7 +26,7 @@ public static class AuthEndpoints
             UserManager<IdentityUser> um,
             IEmailSender email,
             ILocalization loc,
-            RegisterDto dto,
+            RegisterRequest dto,
             LinkGenerator links,
             HttpContext http,
             ILogger<Program> logger) =>
@@ -98,7 +98,7 @@ public static class AuthEndpoints
             SignInManager<IdentityUser> sm,
             IRefreshTokenStore rts,
             IConfiguration cfg,
-            LoginDto dto,
+            LoginRequest dto,
             ILocalization loc,
             HttpContext http,
             ILogger<Program> logger) =>
@@ -174,7 +174,7 @@ public static class AuthEndpoints
             ILogger<Program> logger,
             HttpContext http,
             ILocalization loc,
-            RefreshDto dto) =>
+            RefreshRequest dto) =>
         {
             var clientIp = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             logger.LogInformation("[Auth] Refresh token request from {Ip}", clientIp);
@@ -220,7 +220,7 @@ public static class AuthEndpoints
             ILogger<Program> logger,
             HttpContext http,
             ILocalization loc,
-            LogoutDto dto) =>
+            LogoutRequest dto) =>
         {
             var lang = LangHelper.GetLang(http);
             if (!string.IsNullOrWhiteSpace(dto.RefreshToken))
@@ -298,7 +298,7 @@ public static class AuthEndpoints
             ILogger<Program> logger,
             ILocalization loc,
             HttpContext http,
-            ChangePasswordDto dto) =>
+            ChangePasswordRequest dto) =>
         {
             var lang = LangHelper.GetLang(http);
             if (user?.Identity?.IsAuthenticated != true)

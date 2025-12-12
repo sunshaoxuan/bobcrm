@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Template;
+using BobCrm.Api.Contracts.Requests.Template;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;

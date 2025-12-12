@@ -1,6 +1,7 @@
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base;
-using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Template;
+using BobCrm.Api.Contracts.Requests.Template;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Core.Persistence;
 using Microsoft.Extensions.Logging;

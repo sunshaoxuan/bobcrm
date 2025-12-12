@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BobCrm.Api.Contracts;
-using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.User;
+using BobCrm.Api.Contracts.Requests.User;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Middleware;

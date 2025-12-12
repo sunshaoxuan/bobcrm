@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Contracts.DTOs.Template;
 
 namespace BobCrm.Api.Contracts.DTOs;
 

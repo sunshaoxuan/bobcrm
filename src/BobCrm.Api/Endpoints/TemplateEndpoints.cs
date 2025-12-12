@@ -8,6 +8,8 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.DTOs.Template;
+using BobCrm.Api.Contracts.Requests.Template;
 using BobCrm.Api.Extensions;
 using BobCrm.Api.Services;
 using BobCrm.Api.Utils;
