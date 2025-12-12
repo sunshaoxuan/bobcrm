@@ -825,25 +825,10 @@ ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
    var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
    ```
 4. 将 `lang: null` 改为 `lang: targetLang`
-5. 示例代码：
-   ```csharp
-   group.MapGet("/functions", async (
-       string? lang,
-       HttpContext http,
-       [FromServices] AppDbContext db,
-       [FromServices] FunctionTreeBuilder treeBuilder,
-       CancellationToken ct) =>
-   {
-       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-       var nodes = await db.FunctionNodes
-           .AsNoTracking()
-           .Include(f => f.Template)
-           .OrderBy(f => f.SortOrder)
-           .ToListAsync(ct);
-       var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
-       return Results.Ok(tree);
-   }).RequireFunction("BAS.AUTH.ROLE.PERM");
-   ```
+5. 示例代码（参考）：
+   - 添加 `string? lang` 和 `HttpContext http` 参数
+   - 使用 `var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
+   - 将 `treeBuilder.BuildAsync(nodes, lang: null, ct: ct)` 改为 `treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct)`
 
 #### 步骤 2.4.3: 修改 GET /api/access/functions/manage 端点
 
@@ -1237,37 +1222,14 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 - 需要实现缓存管理逻辑
 - 缓存失效需要处理
 
-**实现细节**：
-```csharp
-// 伪代码示例
-public class FieldMetadataCache
-{
-    private readonly IMemoryCache _cache;
-    private readonly AppDbContext _db;
-    
-    public async Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
-        string fullTypeName, 
-        string? lang)
-    {
-        var cacheKey = $"FieldMetadata:{fullTypeName}";
-        if (!_cache.TryGetValue(cacheKey, out var metadata))
-        {
-            // 从数据库加载
-            var entity = await _db.EntityDefinitions
-                .Include(e => e.Fields)
-                .FirstOrDefaultAsync(e => e.FullTypeName == fullTypeName);
-            
-            // 转换为DTO（应用lang参数）
-            metadata = entity.Fields
-                .Select(f => ToFieldDto(f, lang))
-                .ToDictionary(f => f.PropertyName);
-            
-            _cache.Set(cacheKey, metadata, TimeSpan.FromMinutes(30));
-        }
-        return metadata;
-    }
-}
-```
+**实现细节**（伪代码示例）：
+- 创建 `FieldMetadataCache` 类，注入 `IMemoryCache` 和 `AppDbContext`
+- 实现 `GetFieldMetadataAsync(fullTypeName, lang)` 方法：
+  - 使用缓存键 `FieldMetadata:{fullTypeName}`
+  - 缓存未命中时，从数据库加载 `EntityDefinition` 和所有 `FieldMetadata`
+  - 使用 `ToFieldDto(f, lang)` 转换为DTO
+  - 缓存30分钟
+- 实现 `InvalidateCache(fullTypeName)` 方法清除缓存
 
 #### 方案C: 在代码生成时注入字段元数据静态属性
 
@@ -1303,27 +1265,18 @@ public class FieldMetadataCache
 2. 设计缓存失效策略：
    - 实体定义更新时清除缓存
    - 设置过期时间（如30分钟）
-3. 设计缓存服务接口：
-   ```csharp
-   public interface IFieldMetadataCache
-   {
-       Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
-           string fullTypeName, 
-           string? lang);
-       void InvalidateCache(string fullTypeName);
-   }
-   ```
+3. 设计缓存服务接口（参考）：
+   - 接口名：`IFieldMetadataCache`
+   - 方法1：`Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(string fullTypeName, string? lang)`
+   - 方法2：`void InvalidateCache(string fullTypeName)`
 
 #### 步骤 3.2.3: 设计DTO转换器
 
-1. 设计动态实体查询结果DTO：
-   ```csharp
-   public class DynamicEntityQueryResultDto
-   {
-       public Dictionary<string, object> Data { get; set; } = new();
-       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
-   }
-   ```
+1. 设计动态实体查询结果DTO（参考）：
+   - 类名：`DynamicEntityQueryResultDto`
+   - 属性1：`Dictionary<string, object> Data` - 实体数据
+   - 属性2：`Dictionary<string, FieldMetadataDto>? FieldMetadata` - 字段元数据（可空）
+   - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 2. 或设计字段级元数据DTO（参考 `FieldMetadataDto`）：
    - `DisplayName` (string?) - 单语模式
    - `DisplayNameTranslations` (MultilingualText?) - 多语模式
