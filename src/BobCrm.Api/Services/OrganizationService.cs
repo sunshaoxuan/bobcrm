@@ -1,4 +1,5 @@
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Requests.Organization;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
