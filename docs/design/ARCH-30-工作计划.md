@@ -440,9 +440,9 @@ test(api): add lang parameter tests for /api/entities
 **Commit ID**: _(待填写)_
 
 ##### 步骤 1.3.4: 更新文档
-- [ ] 更新 `docs/reference/API-01-接口文档.md`
-- [ ] 更新 `CHANGELOG.md`
-- [ ] Git 提交 (docs)
+- [x] ~~更新 `docs/reference/API-01-接口文档.md`~~ → **延后至 Task 4.1/4.2 统一处理**
+- [x] ~~更新 `CHANGELOG.md`~~ → **延后至 Task 4.1/4.2 统一处理**
+- [x] Git 提交 (docs)
 
 **Commit 信息**:
 ```
@@ -478,7 +478,7 @@ docs(api): update /api/entities documentation
 - [x] 步骤 2.1.2: 修改 Service 层方法
 - [x] 步骤 2.1.3: 更新字段元数据DTO转换逻辑 (使用 `ToFieldDto(lang)`)
 - [x] 步骤 2.1.4: 添加集成测试 (`EntityDefinitionEndpointsTests.cs`)
-- [x] 步骤 2.1.5: 更新 API 文档和 CHANGELOG
+- [x] 步骤 2.1.5: ~~更新 API 文档和 CHANGELOG~~ → **延后至 Task 4.1/4.2 统一处理**
 
 **Commit 信息模板**:
 ```
@@ -514,7 +514,7 @@ feat(api): add lang parameter support to entity-definitions endpoints
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 2.2 - 改造枚举接口支持多语参数
 
 ### 背景
@@ -578,14 +578,14 @@ ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
 
 ### 验收标准
 
-- [ ] GET /api/enums 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/enums/{id} 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/enums/by-code/{code} 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/enums/{id}/options 支持 ?lang=zh/ja/en 参数
-- [ ] 无 lang 参数时返回完整多语字典 (向后兼容)
-- [ ] 有 lang 参数时返回单语字符串
-- [ ] 枚举选项的 DisplayName 也支持双模式
-- [ ] 所有单元测试通过
+- [x] GET /api/enums 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/enums/{id} 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/enums/by-code/{code} 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/enums/{id}/options 支持 ?lang=zh/ja/en 参数
+- [x] 无 lang 参数时返回完整多语字典 (向后兼容)
+- [x] 有 lang 参数时返回单语字符串
+- [x] 枚举选项的 DisplayName 也支持双模式
+- [x] 所有单元测试通过
 
 ### Commit 信息
 
@@ -647,7 +647,7 @@ feat(api): add lang parameter support to enum endpoints
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 2.3 - 改造实体域接口支持多语参数
 
 ### 背景
@@ -709,12 +709,12 @@ ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
 
 ### 验收标准
 
-- [ ] GET /api/entity-domains 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/entity-domains/{id} 支持 ?lang=zh/ja/en 参数
-- [ ] 无 lang 参数时返回完整多语字典 (向后兼容)
-- [ ] 无 lang 参数时忽略 Accept-Language 头
-- [ ] 有 lang 参数时返回单语字符串
-- [ ] 所有单元测试通过
+- [x] GET /api/entity-domains 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/entity-domains/{id} 支持 ?lang=zh/ja/en 参数
+- [x] 无 lang 参数时返回完整多语字典 (向后兼容)
+- [x] 无 lang 参数时忽略 Accept-Language 头
+- [x] 有 lang 参数时返回单语字符串
+- [x] 所有单元测试通过
 
 ### Commit 信息
 
@@ -773,7 +773,7 @@ feat(api): add lang parameter support to entity-domain endpoints
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 2.4 - 改造功能节点管理接口组支持多语参数
 
 ### 背景
@@ -902,15 +902,15 @@ ARCH-30 系统级多语API架构优化项目，阶段2中频API改造。
 
 ### 验收标准
 
-- [ ] GET /api/access/functions 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/access/functions/manage 支持 ?lang=zh/ja/en 参数
-- [ ] POST /api/access/functions 支持 ?lang=zh/ja/en 参数（返回单语）
-- [ ] PUT /api/access/functions/{id} 支持 ?lang=zh/ja/en 参数（返回单语）
-- [ ] 无 lang 参数时返回多语字典 (向后兼容)
-- [ ] 无 lang 参数时忽略 Accept-Language 头
-- [ ] 有 lang 参数时返回单语字符串
-- [ ] 树形结构所有节点使用相同语言（FunctionTreeBuilder已处理）
-- [ ] 所有单元测试通过
+- [x] GET /api/access/functions 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/access/functions/manage 支持 ?lang=zh/ja/en 参数
+- [x] POST /api/access/functions 支持 ?lang=zh/ja/en 参数（返回单语）
+- [x] PUT /api/access/functions/{id} 支持 ?lang=zh/ja/en 参数（返回单语）
+- [x] 无 lang 参数时返回多语字典 (向后兼容)
+- [x] 无 lang 参数时忽略 Accept-Language 头
+- [x] 有 lang 参数时返回单语字符串
+- [x] 树形结构所有节点使用相同语言（FunctionTreeBuilder已处理）
+- [x] 所有单元测试通过
 
 ### Commit 信息
 
@@ -994,7 +994,7 @@ feat(api): add lang parameter support to function management endpoints
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 3.1 - 研究动态实体查询机制
 
 ### 背景
@@ -1083,41 +1083,32 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 #### 步骤 3.1.7: 编写研究报告
 
 1. 创建 `docs/research/ARCH-30-动态实体多语研究报告.md`
-2. 报告结构：
-   ```markdown
-   # ARCH-30 动态实体多语研究报告
-   
-   ## 1. 动态实体代码生成机制
-   - 代码生成流程
-   - 字段元数据在生成代码中的位置
-   - 编译时注入的可能性
-   
-   ## 2. 动态实体编译和加载机制
-   - 编译流程
-   - 程序集缓存机制
-   - 运行时类型访问能力
-   
-   ## 3. 查询结果转换流程
-   - 当前转换机制
-   - 字段元数据访问方式
-   - DTO转换点
-   
-   ## 4. 字段元数据存储
-   - 存储位置
-   - 访问方式
-   - 更新机制
-   
-   ## 5. 解析时机分析
-   - 编译时注入方案分析
-   - 运行时查询方案分析
-   - 预加载缓存方案分析
-   - 推荐方案及理由
-   
-   ## 6. 结论和建议
-   - 最佳解析时机
-   - 性能考虑
-   - 实现建议
-   ```
+2. 报告结构（参考模板）：
+   - 章节1: 动态实体代码生成机制
+     - 代码生成流程
+     - 字段元数据在生成代码中的位置
+     - 编译时注入的可能性
+   - 章节2: 动态实体编译和加载机制
+     - 编译流程
+     - 程序集缓存机制
+     - 运行时类型访问能力
+   - 章节3: 查询结果转换流程
+     - 当前转换机制
+     - 字段元数据访问方式
+     - DTO转换点
+   - 章节4: 字段元数据存储
+     - 存储位置
+     - 访问方式
+     - 更新机制
+   - 章节5: 解析时机分析
+     - 编译时注入方案分析
+     - 运行时查询方案分析
+     - 预加载缓存方案分析
+     - 推荐方案及理由
+   - 章节6: 结论和建议
+     - 最佳解析时机
+     - 性能考虑
+     - 实现建议
 3. 包含代码示例和流程图（如需要）
 
 ### 验收标准
@@ -1178,7 +1169,7 @@ docs(research): add dynamic entity multilingual research report
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 3.2 - 设计字段级多语解析方案
 
 ### 背景
@@ -1424,7 +1415,7 @@ docs(design): add dynamic entity field-level multilingual design
 
 ##### 🤖 AI 任务提示词
 
-```
+```markdown
 ## 任务: ARCH-30 Task 3.3 - 实施动态实体查询优化
 
 ### 背景
