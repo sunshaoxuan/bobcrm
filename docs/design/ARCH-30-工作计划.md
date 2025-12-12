@@ -16,13 +16,13 @@
 | 阶段0: 基础设施搭建 | 3 | 3 | 0 | 0 | 100% |
 | 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
-| 阶段2: 中频API改造 | 4 | 3 | 0 | 1 | 75% |
+| 阶段2: 中频API改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段3: 低频API改造 | 3 | 0 | 0 | 3 | 0% |
 | 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
-| **总计** | **19** | **13** | **0** | **6** | **68%** |
+| **总计** | **19** | **14** | **0** | **5** | **74%** |
 
-**当前阶段**: 阶段2 - 中频API改造
-**当前任务**: Task 2.4 - 改造功能节点管理接口组
+**当前阶段**: 阶段3 - 低频API改造
+**当前任务**: Task 3.1 - 研究动态实体查询机制
 
 ---
 
@@ -753,9 +753,9 @@ feat(api): add lang parameter support to entity-domain endpoints
 
 ---
 
-#### ⏳ Task 2.4: 改造功能节点管理接口组
+#### ✅ Task 2.4: 改造功能节点管理接口组
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **涉及端点**:
 - `GET /api/access/functions` - 功能节点列表（管理员）
 - `GET /api/access/functions/manage` - 功能节点管理列表
@@ -930,15 +930,15 @@ feat(api): add lang parameter to function management endpoints
 ---
 
 **详细步骤**:
-- [ ] 步骤 2.4.1: 分析现有功能节点管理端点
-- [ ] 步骤 2.4.2: 修改 GET /api/access/functions 端点
-- [ ] 步骤 2.4.3: 修改 GET /api/access/functions/manage 端点
-- [ ] 步骤 2.4.4: 修改 POST /api/access/functions 端点
-- [ ] 步骤 2.4.5: 修改 PUT /api/access/functions/{id} 端点
-- [ ] 步骤 2.4.6: 检查并修改 ToDto 方法（如需要）
-- [ ] 步骤 2.4.7: 添加单元测试（7个测试用例）
-- [ ] 步骤 2.4.8: 编译验证 (`dotnet build && dotnet test`)
-- [ ] 步骤 2.4.9: Git 提交
+- [x] 步骤 2.4.1: 分析现有功能节点管理端点
+- [x] 步骤 2.4.2: 修改 GET /api/access/functions 端点
+- [x] 步骤 2.4.3: 修改 GET /api/access/functions/manage 端点
+- [x] 步骤 2.4.4: 修改 POST /api/access/functions 端点
+- [x] 步骤 2.4.5: 修改 PUT /api/access/functions/{id} 端点
+- [x] 步骤 2.4.6: 创建 ToDtoAsync 方法（使用FunctionTreeBuilder）
+- [x] 步骤 2.4.7: 添加单元测试（7个测试用例）
+- [x] 步骤 2.4.8: 编译验证 (`dotnet build && dotnet test`)
+- [x] 步骤 2.4.9: Git 提交
 
 **关键设计决策**:
 - `FunctionTreeBuilder` 已支持 `lang` 参数，无需额外处理树形结构
