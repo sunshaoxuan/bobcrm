@@ -983,14 +983,179 @@ feat(api): add lang parameter support to function management endpoints
 - 字段级多语元数据的存储位置
 - 查询结果到 DTO 的转换流程
 
-**详细步骤**:
-- [ ] 阅读 `src/BobCrm.Api/Services/DynamicEntityService.cs`
-- [ ] 阅读 `src/BobCrm.Api/Services/CodeGeneration/CSharpCodeGenerator.cs`
-- [ ] 分析动态编译的实体类如何访问字段元数据
-- [ ] 确定字段 DisplayName 的解析时机 (编译时 vs 运行时)
-- [ ] 编写研究报告文档: `docs/research/ARCH-30-动态实体多语研究报告.md`
+**负责文件**:
+- `src/BobCrm.Api/Services/DynamicEntityService.cs` (研究)
+- `src/BobCrm.Api/Services/CSharpCodeGenerator.cs` (研究)
+- `src/BobCrm.Api/Services/ReflectionPersistenceService.cs` (研究)
+- `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs` (研究)
+- `docs/research/ARCH-30-动态实体多语研究报告.md` (新建)
 
-**输出物**: 研究报告文档
+---
+
+##### 🤖 AI 任务提示词
+
+```
+## 任务: ARCH-30 Task 3.1 - 研究动态实体查询机制
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
+需要深入研究动态实体查询机制，为字段级多语解析方案设计提供基础。
+
+### 研究目标
+1. 理解动态实体的代码生成、编译和加载机制
+2. 分析字段元数据（DisplayName、DisplayNameKey）的存储和访问方式
+3. 确定查询结果到DTO的转换流程
+4. 识别字段DisplayName解析的最佳时机（编译时 vs 运行时）
+
+### 参考文件
+- 动态实体服务: `src/BobCrm.Api/Services/DynamicEntityService.cs`
+- 代码生成器: `src/BobCrm.Api/Services/CSharpCodeGenerator.cs`
+- 持久化服务: `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
+- 动态实体端点: `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
+- 实体定义模型: `src/BobCrm.Api/Base/Models/EntityDefinition.cs`
+- 字段元数据模型: `src/BobCrm.Api/Base/Models/FieldMetadata.cs`
+
+### 详细研究步骤
+
+#### 步骤 3.1.1: 研究动态实体代码生成机制
+
+1. 打开 `src/BobCrm.Api/Services/CSharpCodeGenerator.cs`
+2. 分析 `GenerateEntityClass()` 方法：
+   - 如何生成实体类代码
+   - 如何处理字段属性
+   - 是否在生成的代码中包含字段元数据（DisplayName、DisplayNameKey）
+3. 检查生成的代码中是否包含字段显示名的多语信息
+4. 记录发现：字段元数据是否在编译时注入到实体类中
+
+#### 步骤 3.1.2: 研究动态实体编译和加载机制
+
+1. 打开 `src/BobCrm.Api/Services/DynamicEntityService.cs`
+2. 分析以下方法：
+   - `CompileEntityAsync()` - 编译单个实体
+   - `CompileMultipleEntitiesAsync()` - 批量编译
+   - `GetEntityType()` - 获取已加载的实体类型
+   - `CreateEntityInstance()` - 创建实体实例
+   - `GetEntityProperties()` - 获取实体属性
+3. 理解程序集缓存机制（`_loadedAssemblies`）
+4. 确定动态编译的实体类是否可以访问字段元数据
+
+#### 步骤 3.1.3: 研究查询结果转换流程
+
+1. 打开 `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
+2. 分析以下方法：
+   - `QueryAsync()` - 查询实体列表
+   - `GetByIdAsync()` - 根据ID获取实体
+   - 查询结果如何转换为DTO或JSON
+3. 检查查询结果是否包含字段元数据
+4. 确定当前是否有字段显示名的解析逻辑
+
+#### 步骤 3.1.4: 研究动态实体端点
+
+1. 打开 `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
+2. 分析以下端点：
+   - `POST /api/dynamic-entities/{fullTypeName}/query` - 查询列表
+   - `GET /api/dynamic-entities/{fullTypeName}/{id}` - 获取单个实体
+3. 检查当前是否支持 `lang` 参数
+4. 分析查询结果的返回格式（当前返回原始实体对象还是DTO）
+
+#### 步骤 3.1.5: 分析字段元数据存储
+
+1. 打开 `src/BobCrm.Api/Base/Models/FieldMetadata.cs`
+2. 确认字段元数据包含：
+   - `DisplayName` (Dictionary<string, string?>) - 多语字典
+   - `DisplayNameKey` (string?) - i18n资源键
+3. 检查 `EntityDefinition.Fields` 关系
+4. 确定字段元数据在数据库中的存储位置
+
+#### 步骤 3.1.6: 确定解析时机
+
+分析以下问题：
+1. **编译时注入**：是否可以在代码生成时将字段元数据注入到实体类中？
+   - 优点：运行时无需查询元数据
+   - 缺点：元数据更新需要重新编译
+2. **运行时查询**：在查询结果转换时查询字段元数据？
+   - 优点：元数据更新无需重新编译
+   - 缺点：每次查询都需要访问数据库
+3. **预加载缓存**：在查询前预加载实体定义的字段元数据并缓存？
+   - 优点：平衡性能和灵活性
+   - 缺点：需要缓存管理
+
+#### 步骤 3.1.7: 编写研究报告
+
+1. 创建 `docs/research/ARCH-30-动态实体多语研究报告.md`
+2. 报告结构：
+   ```markdown
+   # ARCH-30 动态实体多语研究报告
+   
+   ## 1. 动态实体代码生成机制
+   - 代码生成流程
+   - 字段元数据在生成代码中的位置
+   - 编译时注入的可能性
+   
+   ## 2. 动态实体编译和加载机制
+   - 编译流程
+   - 程序集缓存机制
+   - 运行时类型访问能力
+   
+   ## 3. 查询结果转换流程
+   - 当前转换机制
+   - 字段元数据访问方式
+   - DTO转换点
+   
+   ## 4. 字段元数据存储
+   - 存储位置
+   - 访问方式
+   - 更新机制
+   
+   ## 5. 解析时机分析
+   - 编译时注入方案分析
+   - 运行时查询方案分析
+   - 预加载缓存方案分析
+   - 推荐方案及理由
+   
+   ## 6. 结论和建议
+   - 最佳解析时机
+   - 性能考虑
+   - 实现建议
+   ```
+3. 包含代码示例和流程图（如需要）
+
+### 验收标准
+
+- [ ] 研究报告文档已创建
+- [ ] 包含动态实体代码生成机制分析
+- [ ] 包含查询结果转换流程分析
+- [ ] 包含字段元数据存储和访问分析
+- [ ] 包含解析时机分析（编译时 vs 运行时）
+- [ ] 包含推荐方案及理由
+- [ ] 文档结构清晰，包含代码示例
+
+### Commit 信息
+
+docs(research): add dynamic entity multilingual research report
+
+- Analyze dynamic entity code generation mechanism
+- Analyze query result conversion flow
+- Analyze field metadata storage and access
+- Evaluate parsing timing options (compile-time vs runtime)
+- Recommend optimal solution with rationale
+- Ref: ARCH-30 Task 3.1
+```
+
+---
+
+**详细步骤**:
+- [ ] 步骤 3.1.1: 研究动态实体代码生成机制
+- [ ] 步骤 3.1.2: 研究动态实体编译和加载机制
+- [ ] 步骤 3.1.3: 研究查询结果转换流程
+- [ ] 步骤 3.1.4: 研究动态实体端点
+- [ ] 步骤 3.1.5: 分析字段元数据存储
+- [ ] 步骤 3.1.6: 确定解析时机
+- [ ] 步骤 3.1.7: 编写研究报告
+
+**输出物**: 研究报告文档 `docs/research/ARCH-30-动态实体多语研究报告.md`
+
+**Commit ID**: _(待填写)_
 **完成时间**: _(待填写)_
 
 ---
@@ -1003,14 +1168,240 @@ feat(api): add lang parameter support to function management endpoints
 - DTO 转换器的字段级语言解析逻辑
 - 性能优化: 避免对每条记录都查询字段元数据
 
-**详细步骤**:
-- [ ] 设计方案A: 在查询结果转换时附加字段元数据
-- [ ] 设计方案B: 预加载实体定义的字段元数据, 缓存后批量解析
-- [ ] 设计方案C: 在代码生成时注入字段元数据静态属性
-- [ ] 评估各方案的性能影响
-- [ ] 选择最优方案并编写设计文档更新
+**负责文件**:
+- `docs/research/ARCH-30-动态实体多语研究报告.md` (参考)
+- `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (更新)
+- `src/BobCrm.Api/Services/ReflectionPersistenceService.cs` (设计修改点)
+- `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs` (设计修改点)
 
-**输出物**: 设计文档更新 (ARCH-30 新增章节)
+---
+
+##### 🤖 AI 任务提示词
+
+```
+## 任务: ARCH-30 Task 3.2 - 设计字段级多语解析方案
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
+基于 Task 3.1 的研究结果，设计字段级多语解析方案，实现动态实体查询结果的字段显示名多语支持。
+
+### 参考文件
+- 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
+- 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
+- 持久化服务: `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
+- 动态实体端点: `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
+- DTO扩展: `src/BobCrm.Api/Extensions/DtoExtensions.cs` (参考ToFieldDto实现)
+- 多语辅助: `src/BobCrm.Api/Utils/MultilingualHelper.cs`
+
+### 关键设计决策（从阶段1/2继承）
+
+**向后兼容性规则**：
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 lang 参数时返回多语字典（即使有 Accept-Language 头也忽略）
+- 错误消息使用 `uiLang = LangHelper.GetLang(http)` 获取
+
+**代码模式**：
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   var uiLang = LangHelper.GetLang(http);  // 用于错误消息
+
+### 设计方案评估
+
+#### 方案A: 在查询结果转换时附加字段元数据
+
+**实现思路**：
+1. 在 `ReflectionPersistenceService.QueryAsync()` 返回结果后
+2. 根据 `fullTypeName` 查询 `EntityDefinition` 和 `FieldMetadata`
+3. 为每条记录附加字段元数据（DisplayName、DisplayNameTranslations）
+4. 根据 `lang` 参数解析单语或多语
+
+**优点**：
+- 实现简单，无需修改代码生成器
+- 元数据更新无需重新编译实体
+- 灵活性高
+
+**缺点**：
+- 每次查询都需要访问数据库获取字段元数据
+- 性能开销较大（N+1查询问题）
+
+**性能优化**：
+- 可以缓存实体定义的字段元数据（按 `fullTypeName` 缓存）
+- 缓存失效策略：实体定义更新时清除缓存
+
+#### 方案B: 预加载实体定义的字段元数据，缓存后批量解析（推荐）
+
+**实现思路**：
+1. 在查询前，根据 `fullTypeName` 预加载 `EntityDefinition` 和所有 `FieldMetadata`
+2. 使用内存缓存（如 `IMemoryCache`）缓存字段元数据
+3. 在结果转换时，使用缓存的字段元数据批量解析
+4. 根据 `lang` 参数应用双模式逻辑
+
+**优点**：
+- 性能优秀（一次查询获取所有字段元数据）
+- 支持缓存，减少数据库访问
+- 元数据更新无需重新编译
+- 灵活性高
+
+**缺点**：
+- 需要实现缓存管理逻辑
+- 缓存失效需要处理
+
+**实现细节**：
+```csharp
+// 伪代码示例
+public class FieldMetadataCache
+{
+    private readonly IMemoryCache _cache;
+    private readonly AppDbContext _db;
+    
+    public async Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
+        string fullTypeName, 
+        string? lang)
+    {
+        var cacheKey = $"FieldMetadata:{fullTypeName}";
+        if (!_cache.TryGetValue(cacheKey, out var metadata))
+        {
+            // 从数据库加载
+            var entity = await _db.EntityDefinitions
+                .Include(e => e.Fields)
+                .FirstOrDefaultAsync(e => e.FullTypeName == fullTypeName);
+            
+            // 转换为DTO（应用lang参数）
+            metadata = entity.Fields
+                .Select(f => ToFieldDto(f, lang))
+                .ToDictionary(f => f.PropertyName);
+            
+            _cache.Set(cacheKey, metadata, TimeSpan.FromMinutes(30));
+        }
+        return metadata;
+    }
+}
+```
+
+#### 方案C: 在代码生成时注入字段元数据静态属性
+
+**实现思路**：
+1. 修改 `CSharpCodeGenerator.GenerateEntityClass()`
+2. 在生成的实体类中添加静态属性，包含字段元数据
+3. 运行时通过反射访问静态属性获取字段元数据
+
+**优点**：
+- 运行时无需查询数据库
+- 性能最优
+
+**缺点**：
+- 元数据更新需要重新编译实体
+- 代码生成器复杂度增加
+- 灵活性低
+
+### 详细设计步骤
+
+#### 步骤 3.2.1: 评估各方案
+
+1. 基于 Task 3.1 的研究报告，评估三个方案
+2. 考虑因素：
+   - 性能影响（查询时间、内存使用）
+   - 实现复杂度
+   - 维护成本
+   - 灵活性（元数据更新频率）
+3. 推荐方案：**方案B（预加载+缓存）**
+
+#### 步骤 3.2.2: 设计字段元数据缓存机制
+
+1. 设计缓存键：`FieldMetadata:{fullTypeName}`
+2. 设计缓存失效策略：
+   - 实体定义更新时清除缓存
+   - 设置过期时间（如30分钟）
+3. 设计缓存服务接口：
+   ```csharp
+   public interface IFieldMetadataCache
+   {
+       Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
+           string fullTypeName, 
+           string? lang);
+       void InvalidateCache(string fullTypeName);
+   }
+   ```
+
+#### 步骤 3.2.3: 设计DTO转换器
+
+1. 设计动态实体查询结果DTO：
+   ```csharp
+   public class DynamicEntityQueryResultDto
+   {
+       public Dictionary<string, object> Data { get; set; } = new();
+       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
+   }
+   ```
+2. 或设计字段级元数据DTO（参考 `FieldMetadataDto`）：
+   - `DisplayName` (string?) - 单语模式
+   - `DisplayNameTranslations` (MultilingualText?) - 多语模式
+   - 使用 `JsonIgnore(Condition = WhenWritingNull)`
+
+#### 步骤 3.2.4: 设计端点修改方案
+
+1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`：
+   - 添加 `string? lang` 查询参数
+   - 在返回结果中附加字段元数据
+2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`：
+   - 添加 `string? lang` 查询参数
+   - 在返回结果中附加字段元数据
+
+#### 步骤 3.2.5: 设计性能优化策略
+
+1. 字段元数据缓存（按 `fullTypeName`）
+2. 批量加载字段元数据（一次查询获取所有字段）
+3. 延迟加载（仅在需要时加载字段元数据）
+4. 考虑分页场景：字段元数据只需加载一次，适用于所有记录
+
+#### 步骤 3.2.6: 编写设计文档更新
+
+1. 更新 `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
+2. 新增章节：**阶段3 - 动态实体字段级多语解析**
+3. 包含内容：
+   - 方案选择及理由
+   - 缓存机制设计
+   - DTO设计
+   - 端点修改方案
+   - 性能优化策略
+   - 实现流程图（如需要）
+
+### 验收标准
+
+- [ ] 设计方案文档已更新
+- [ ] 包含三个方案的详细评估
+- [ ] 包含推荐方案及理由
+- [ ] 包含缓存机制设计
+- [ ] 包含DTO设计
+- [ ] 包含端点修改方案
+- [ ] 包含性能优化策略
+- [ ] 设计文档结构清晰，包含代码示例
+
+### Commit 信息
+
+docs(design): add dynamic entity field-level multilingual design
+
+- Evaluate three design options (A/B/C)
+- Recommend solution B (preload + cache)
+- Design field metadata cache mechanism
+- Design DTO structure for query results
+- Design endpoint modification plan
+- Add performance optimization strategies
+- Ref: ARCH-30 Task 3.2
+```
+
+---
+
+**详细步骤**:
+- [ ] 步骤 3.2.1: 评估各方案（基于Task 3.1研究报告）
+- [ ] 步骤 3.2.2: 设计字段元数据缓存机制
+- [ ] 步骤 3.2.3: 设计DTO转换器
+- [ ] 步骤 3.2.4: 设计端点修改方案
+- [ ] 步骤 3.2.5: 设计性能优化策略
+- [ ] 步骤 3.2.6: 编写设计文档更新
+
+**输出物**: 设计文档更新 `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (新增章节)
+
+**Commit ID**: _(待填写)_
 **完成时间**: _(待填写)_
 
 ---
@@ -1019,27 +1410,280 @@ feat(api): add lang parameter support to function management endpoints
 
 **状态**: ⏳ 待开始
 **涉及端点**:
-- `POST /api/dynamic-entities/{type}/query`
-- `GET /api/dynamic-entities/{type}/{id}`
+- `POST /api/dynamic-entities/{fullTypeName}/query`
+- `GET /api/dynamic-entities/{fullTypeName}/{id}`
 
-**详细步骤**:
-- [ ] 步骤 3.3.1: 实现选定方案的代码
-- [ ] 步骤 3.3.2: 修改 DynamicEntityService
-- [ ] 步骤 3.3.3: 更新查询结果DTO
-- [ ] 步骤 3.3.4: 添加性能测试 (对比优化前后查询时间)
-- [ ] 步骤 3.3.5: 添加功能测试
-- [ ] 步骤 3.3.6: 更新文档
+**负责文件**:
+- `src/BobCrm.Api/Services/FieldMetadataCache.cs` (新建)
+- `src/BobCrm.Api/Services/ReflectionPersistenceService.cs` (修改)
+- `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs` (修改)
+- `src/BobCrm.Api/Contracts/Responses/DynamicEntity/` (新建DTO)
+- `tests/BobCrm.Api.Tests/DynamicEntityEndpointsTests.cs` (新建/修改)
 
-**Commit 信息模板**:
+---
+
+##### 🤖 AI 任务提示词
+
 ```
+## 任务: ARCH-30 Task 3.3 - 实施动态实体查询优化
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
+基于 Task 3.2 的设计方案，实施动态实体查询的字段级多语解析功能。
+
+### 参考文件
+- 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (Task 3.2输出)
+- 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
+- 持久化服务: `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
+- 动态实体端点: `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
+- DTO扩展: `src/BobCrm.Api/Extensions/DtoExtensions.cs` (参考ToFieldDto)
+- 多语辅助: `src/BobCrm.Api/Utils/MultilingualHelper.cs`
+
+### 关键设计决策（从阶段1/2继承）
+
+**向后兼容性规则**：
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 lang 参数时返回多语字典（即使有 Accept-Language 头也忽略）
+- 错误消息使用 `uiLang = LangHelper.GetLang(http)` 获取
+
+**代码模式**：
+   var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+   var uiLang = LangHelper.GetLang(http);  // 用于错误消息
+
+### 详细实施步骤
+
+#### 步骤 3.3.1: 创建字段元数据缓存服务
+
+1. 创建 `src/BobCrm.Api/Services/FieldMetadataCache.cs`
+2. 实现接口：
+   ```csharp
+   public interface IFieldMetadataCache
+   {
+       Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
+           string fullTypeName, 
+           string? lang);
+       void InvalidateCache(string fullTypeName);
+   }
+   ```
+3. 实现缓存逻辑：
+   - 使用 `IMemoryCache` 缓存字段元数据
+   - 缓存键：`FieldMetadata:{fullTypeName}`
+   - 缓存过期时间：30分钟
+   - 从数据库加载时使用 `ToFieldDto(lang)` 扩展方法
+4. 在 `Program.cs` 中注册服务：
+   ```csharp
+   builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();
+   ```
+
+#### 步骤 3.3.2: 创建动态实体查询结果DTO
+
+1. 创建 `src/BobCrm.Api/Contracts/Responses/DynamicEntity/DynamicEntityQueryResultDto.cs`
+2. 设计DTO结构（两种方案可选）：
+
+   **方案A: 字段元数据作为独立对象**
+   ```csharp
+   public class DynamicEntityQueryResultDto
+   {
+       public List<Dictionary<string, object>> Data { get; set; } = new();
+       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
+       public int Total { get; set; }
+   }
+   ```
+
+   **方案B: 字段元数据嵌入到每条记录**（推荐，更符合前端使用习惯）
+   ```csharp
+   public class DynamicEntityRecordDto
+   {
+       public Dictionary<string, object> Data { get; set; } = new();
+       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
+   }
+   ```
+
+3. 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
+
+#### 步骤 3.3.3: 修改 ReflectionPersistenceService
+
+1. 在 `ReflectionPersistenceService` 中注入 `IFieldMetadataCache`
+2. 创建新方法 `QueryWithMetadataAsync()`：
+   ```csharp
+   public async Task<DynamicEntityQueryResultDto> QueryWithMetadataAsync(
+       string fullTypeName,
+       QueryOptions? options = null,
+       string? lang = null)
+   {
+       // 1. 执行原有查询逻辑
+       var results = await QueryAsync(fullTypeName, options);
+       
+       // 2. 获取字段元数据（使用缓存）
+       var fieldMetadata = await _fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, lang);
+       
+       // 3. 构建返回DTO
+       return new DynamicEntityQueryResultDto
+       {
+           Data = results.Select(r => ConvertToDictionary(r)).ToList(),
+           FieldMetadata = fieldMetadata,
+           Total = await CountAsync(fullTypeName, options?.Filters)
+       };
+   }
+   ```
+3. 创建辅助方法 `ConvertToDictionary()` 将实体对象转换为字典
+
+#### 步骤 3.3.4: 修改动态实体端点
+
+1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`：
+   ```csharp
+   group.MapPost("/{fullTypeName}/query", async (
+       string fullTypeName,
+       [FromBody] QueryRequest request,
+       [FromQuery] string? lang,
+       ReflectionPersistenceService persistenceService,
+       ILocalization loc,
+       HttpContext http,
+       ILogger<Program> logger) =>
+   {
+       var uiLang = LangHelper.GetLang(http);
+       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+       
+       try
+       {
+           var options = new QueryOptions { /* ... */ };
+           var result = await persistenceService.QueryWithMetadataAsync(
+               fullTypeName, 
+               options, 
+               targetLang);
+           
+           return Results.Ok(result);
+       }
+       catch (Exception ex)
+       {
+           // 错误处理
+       }
+   })
+   ```
+
+2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`：
+   ```csharp
+   group.MapGet("/{fullTypeName}/{id:int}", async (
+       string fullTypeName,
+       int id,
+       [FromQuery] string? lang,
+       ReflectionPersistenceService persistenceService,
+       IFieldMetadataCache fieldMetadataCache,
+       ILocalization loc,
+       HttpContext http,
+       ILogger<Program> logger) =>
+   {
+       var uiLang = LangHelper.GetLang(http);
+       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+       
+       try
+       {
+           var entity = await persistenceService.GetByIdAsync(fullTypeName, id);
+           if (entity == null)
+               return Results.NotFound(...);
+           
+           // 获取字段元数据
+           var fieldMetadata = await fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang);
+           
+           return Results.Ok(new
+           {
+               data = ConvertToDictionary(entity),
+               fieldMetadata = fieldMetadata
+           });
+       }
+       catch (Exception ex)
+       {
+           // 错误处理
+       }
+   })
+   ```
+
+#### 步骤 3.3.5: 添加功能测试
+
+1. 创建/更新 `tests/BobCrm.Api.Tests/DynamicEntityEndpointsTests.cs`
+2. 测试场景：
+   - `QueryDynamicEntities_WithoutLang_ReturnsTranslationsMode` - 无lang返回多语字典
+   - `QueryDynamicEntities_WithLang_ReturnsSingleLanguageMode` - 有lang返回单语
+   - `GetDynamicEntityById_WithoutLang_ReturnsTranslationsMode` - 详情无lang返回多语
+   - `GetDynamicEntityById_WithLang_ReturnsSingleLanguageMode` - 详情有lang返回单语
+   - `FieldMetadata_Cache_Works` - 验证缓存机制
+   - `FieldMetadata_DisplayNameKey_Resolved` - 验证DisplayNameKey解析
+
+#### 步骤 3.3.6: 添加性能测试
+
+1. 创建性能测试方法：
+   ```csharp
+   [Fact]
+   public async Task QueryPerformance_WithCache_IsAcceptable()
+   {
+       // 1. 第一次查询（缓存未命中）
+       var sw1 = Stopwatch.StartNew();
+       var result1 = await QueryWithMetadataAsync(...);
+       sw1.Stop();
+       
+       // 2. 第二次查询（缓存命中）
+       var sw2 = Stopwatch.StartNew();
+       var result2 = await QueryWithMetadataAsync(...);
+       sw2.Stop();
+       
+       // 验证：第二次查询应该明显快于第一次
+       Assert.True(sw2.ElapsedMilliseconds < sw1.ElapsedMilliseconds * 0.5);
+   }
+   ```
+2. 对比优化前后的查询时间
+3. 验证缓存效果
+
+#### 步骤 3.3.7: 编译验证
+
+```bash
+dotnet build src/BobCrm.Api/BobCrm.Api.csproj
+dotnet test --filter "DynamicEntityEndpointsTests"
+```
+
+### 验收标准
+
+- [ ] POST /api/dynamic-entities/{fullTypeName}/query 支持 ?lang=zh/ja/en 参数
+- [ ] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?lang=zh/ja/en 参数
+- [ ] 无 lang 参数时返回多语字典 (向后兼容)
+- [ ] 无 lang 参数时忽略 Accept-Language 头
+- [ ] 有 lang 参数时返回单语字符串
+- [ ] 字段元数据缓存机制正常工作
+- [ ] DisplayNameKey 正确解析
+- [ ] 性能测试通过（缓存有效）
+- [ ] 所有单元测试通过
+
+### Commit 信息
+
 feat(api): add lang parameter support to dynamic entity query endpoints
 
 - Implement field-level multilingual metadata resolution
+- Add FieldMetadataCache service with IMemoryCache
+- Create DynamicEntityQueryResultDto with field metadata
+- Update ReflectionPersistenceService with QueryWithMetadataAsync
+- Add lang parameter to query and get-by-id endpoints
+- Add comprehensive tests (functional + performance)
 - Optimize performance with metadata caching
-- Add performance benchmarks
-- Update documentation
+- Maintain backward compatibility (ignore Accept-Language when no lang param)
 - Ref: ARCH-30 Task 3.3
 ```
+
+---
+
+**详细步骤**:
+- [ ] 步骤 3.3.1: 创建字段元数据缓存服务
+- [ ] 步骤 3.3.2: 创建动态实体查询结果DTO
+- [ ] 步骤 3.3.3: 修改 ReflectionPersistenceService
+- [ ] 步骤 3.3.4: 修改动态实体端点
+- [ ] 步骤 3.3.5: 添加功能测试
+- [ ] 步骤 3.3.6: 添加性能测试
+- [ ] 步骤 3.3.7: 编译验证 (`dotnet build && dotnet test`)
+- [ ] 步骤 3.3.8: Git 提交
+
+**关键实现点**:
+- 使用 `IMemoryCache` 缓存字段元数据
+- 复用 `ToFieldDto(lang)` 扩展方法
+- 支持双模式（单语/多语）
+- 性能优化：批量加载+缓存
 
 **Commit ID**: _(待填写)_
 **完成时间**: _(待填写)_
