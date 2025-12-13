@@ -1397,28 +1397,14 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 #### 步骤 3.3.2: 创建动态实体查询结果DTO
 
 1. 创建 `src/BobCrm.Api/Contracts/Responses/DynamicEntity/DynamicEntityQueryResultDto.cs`
-2. 设计DTO结构（两种方案可选）：
-
-   **方案A: 字段元数据作为独立对象**
-   ```csharp
-   public class DynamicEntityQueryResultDto
-   {
-       public List<Dictionary<string, object>> Data { get; set; } = new();
-       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
-       public int Total { get; set; }
-   }
-   ```
-
-   **方案B: 字段元数据嵌入到每条记录**（推荐，更符合前端使用习惯）
-   ```csharp
-   public class DynamicEntityRecordDto
-   {
-       public Dictionary<string, object> Data { get; set; } = new();
-       public Dictionary<string, FieldMetadataDto>? FieldMetadata { get; set; }
-   }
-   ```
-
-3. 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
+2. 基于 Task 3.2 的设计方案，实现DTO结构（参考结构）：
+   - 类名：`DynamicEntityQueryResultDto`
+   - 属性1：`List<Dictionary<string, object>> Data` - 实体数据列表
+   - 属性2：`DynamicEntityMetaDto? Meta` - 元数据对象（可空）
+   - 属性3：`int Total` - 总数
+   - 嵌套类：`DynamicEntityMetaDto`，包含 `List<FieldMetadataDto>? Fields` 属性
+   - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
+3. 字段元数据DTO复用现有的 `FieldMetadataDto`（已支持双模式）
 
 #### 步骤 3.3.3: 修改动态实体端点（在端点层拼装meta.fields）
 
