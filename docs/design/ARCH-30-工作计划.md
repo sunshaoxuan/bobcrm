@@ -1193,97 +1193,40 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
    var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
    var uiLang = LangHelper.GetLang(http);  // 用于错误消息
 
-### 设计方案评估（基于 Task 3.1 研究结论）
+### 设计方案（基于 Task 3.1 研究结论）
 
-**研究结论回顾**：
+**Task 3.1 研究结论**：
 - 字段显示名解析应发生在"元数据返回层"（EntityDefinition/FieldMetadata/FunctionTree DTO等），而不是动态实体数据查询返回层
 - 动态实体查询结果保持"纯数据对象"更符合职责分离：数据值 vs 元数据标签
-- 如果必须在动态查询响应中携带列信息，建议在端点层拼装 `meta.fields`
+- **推荐方案**：在端点层拼装 `meta.fields`，使用运行时预加载/缓存实体字段元数据 + 批量加载i18n资源
 
-#### 方案A: 在查询结果转换时附加字段元数据（不推荐）
+**设计原则**：
+- **职责分离**：数据值（`data`）与元数据标签（`meta.fields`）分离
+- **性能优化**：使用 `IMemoryCache` 缓存字段元数据，按 `FullTypeName` 缓存
+- **可复用性**：复用现有能力（`DtoExtensions.ToFieldDto()`、`ILocalization` 缓存）
 
-**实现思路**：
-1. 在 `ReflectionPersistenceService.QueryAsync()` 返回结果后
-2. 根据 `fullTypeName` 查询 `EntityDefinition` 和 `FieldMetadata`
-3. 为每条记录附加字段元数据（DisplayName、DisplayNameTranslations）
-4. 根据 `lang` 参数解析单语或多语
+**返回结构**（基于 Task 3.1 研究报告 7.2 节）：
+- 根对象包含：`data`（数组）、`meta`（对象）、`total`（整数）
+- `meta.fields` 是字段元数据数组，每个字段包含：`propertyName`、`displayNameKey`、`displayName`
+- 示例结构：`{ "meta": { "fields": [...] }, "data": [...], "total": 123 }`
 
-**优点**：
-- 实现简单，无需修改代码生成器
-- 元数据更新无需重新编译实体
-- 灵活性高
+**双模式逻辑**：
+- 单语模式（显式 `?lang=xx`）：输出 `displayName`（string）
+- 多语模式（无 `lang`）：接口字段输出 `displayNameKey`，自定义字段输出 `displayNameTranslations`
 
-**缺点**：
-- 每次查询都需要访问数据库获取字段元数据
-- 性能开销较大（N+1查询问题）
-- **违反职责分离原则**：将元数据标签混入数据值
-
-**结论**：不推荐，因为违反了"数据值 vs 元数据标签"的职责分离原则。
-
-#### 方案B: 在端点层拼装 meta.fields（推荐，符合研究结论）
-
-**实现思路**（基于 Task 3.1 研究结论）：
-1. 动态实体查询端点返回结构（参考）：
-   - 根对象包含：`data`（数组）、`meta`（对象）、`total`（整数）
-   - `meta.fields` 是字段元数据数组，每个字段包含：`propertyName`、`displayNameKey`、`displayName`
-   - 示例结构：`{ "meta": { "fields": [...] }, "data": [...], "total": 123 }`
-2. 在端点层，根据 `fullTypeName` 预加载字段元数据（使用缓存）
-3. 根据 `lang` 参数应用双模式逻辑：
-   - 单语模式（显式 `?lang=xx`）：输出 `displayName`（string）
-   - 多语模式（无 `lang`）：接口字段输出 `displayNameKey`，自定义字段输出 `displayNameTranslations`
-4. 使用 `IMemoryCache` 缓存字段元数据，按 `EntityDefinitionId` 或 `FullTypeName` 缓存
-
-**优点**：
-- **符合职责分离**：数据值（`data`）与元数据标签（`meta.fields`）分离
-- 性能优秀（一次查询获取所有字段元数据，支持缓存）
-- 元数据更新无需重新编译
-- 灵活性高
-- 可复用现有能力：`DtoExtensions.ToFieldDto()`、`ILocalization` 缓存
-
-**缺点**：
-- 需要实现缓存管理逻辑
-- 缓存失效需要处理（EntityDefinition/FieldMetadata 更新、i18n资源变更）
-
-**实现细节**（参考 Task 3.1 研究报告 6.4 节）：
+**缓存机制**（参考 Task 3.1 研究报告 6.4 节）：
 - 维度1：按 `EntityDefinitionId` 或 `FullTypeName` 缓存字段元数据
 - 维度2：按 `ILocalization.GetCacheVersion()` + `EntityDefinition.UpdatedAt` 作为缓存失效条件
 - 可复用：`DtoExtensions.ResolveFieldDisplayName(...)`、`MultilingualFieldService.LoadResourcesAsync(...)`
 
-#### 方案C: 在代码生成时注入字段元数据静态属性（不推荐）
-
-**实现思路**：
-1. 修改 `CSharpCodeGenerator.GenerateEntityClass()`
-2. 在生成的实体类中添加静态属性，包含字段元数据
-3. 运行时通过反射访问静态属性获取字段元数据
-
-**优点**：
-- 运行时无需查询数据库
-- 性能最优
-
-**缺点**：
-- 元数据更新需要重新编译实体
-- 代码生成器复杂度增加
-- 灵活性低
-- **与现有架构的"元数据DB即单一真实来源"会出现双写/一致性挑战**
-
-**结论**：不推荐，仅在确实需要"纯运行时类型自描述"时考虑（Task 3.1 研究报告 6.2 节）。
-
 ### 详细设计步骤
 
-#### 步骤 3.2.1: 评估各方案
+#### 步骤 3.2.1: 确认设计方案
 
-1. **基于 Task 3.1 的研究报告结论**，评估三个方案
-2. 考虑因素：
-   - 职责分离（数据值 vs 元数据标签）
-   - 性能影响（查询时间、内存使用）
-   - 实现复杂度
-   - 维护成本
-   - 灵活性（元数据更新频率）
-   - 与现有架构的一致性
-3. **推荐方案：方案B（在端点层拼装 meta.fields，使用预加载+缓存）**
-   - 符合研究结论：字段显示名解析应发生在"元数据返回层"
-   - 符合职责分离：数据值（`data`）与元数据标签（`meta.fields`）分离
-   - 性能优秀，支持缓存
+1. **基于 Task 3.1 的研究报告结论**，确认采用"在端点层拼装 meta.fields"方案
+2. 确认设计原则：
+   - 职责分离：数据值（`data`）与元数据标签（`meta.fields`）分离
+   - 性能优化：使用缓存机制
    - 可复用现有能力
 
 #### 步骤 3.2.2: 设计字段元数据缓存机制
@@ -1336,9 +1279,9 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 1. 更新 `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
 2. 新增章节：**阶段3 - 动态实体字段级多语解析**
 3. 包含内容：
-   - 方案选择及理由
+   - 设计方案确认（基于 Task 3.1 研究结论）
    - 缓存机制设计
-   - DTO设计
+   - DTO设计（meta.fields结构）
    - 端点修改方案
    - 性能优化策略
    - 实现流程图（如需要）
@@ -1346,10 +1289,9 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 ### 验收标准
 
 - [ ] 设计方案文档已更新
-- [ ] 包含三个方案的详细评估
-- [ ] 包含推荐方案及理由
+- [ ] 基于 Task 3.1 研究结论确认设计方案
 - [ ] 包含缓存机制设计
-- [ ] 包含DTO设计
+- [ ] 包含DTO设计（meta.fields结构）
 - [ ] 包含端点修改方案
 - [ ] 包含性能优化策略
 - [ ] 设计文档结构清晰，包含代码示例
@@ -1358,10 +1300,9 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 docs(design): add dynamic entity field-level multilingual design
 
-- Evaluate three design options (A/B/C)
-- Recommend solution B (preload + cache)
+- Based on Task 3.1 research conclusion: use meta.fields approach
 - Design field metadata cache mechanism
-- Design DTO structure for query results
+- Design DTO structure with meta.fields
 - Design endpoint modification plan
 - Add performance optimization strategies
 - Ref: ARCH-30 Task 3.2
