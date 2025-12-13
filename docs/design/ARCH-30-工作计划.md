@@ -17,9 +17,9 @@
 | 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
 | 阶段2: 中频API改造 | 4 | 4 | 0 | 0 | 100% |
-| 阶段3: 低频API改造 | 3 | 1 | 0 | 2 | 33% |
+| 阶段3: 低频API改造 | 3 | 2 | 0 | 1 | 67% |
 | 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
-| **总计** | **19** | **14** | **0** | **5** | **74%** |
+| **总计** | **19** | **15** | **0** | **4** | **79%** |
 
 **当前阶段**: 阶段3 - 低频API改造
 **当前任务**: Task 3.2 - 设计字段级多语解析方案（基于 Task 3.1 研究结论）
@@ -1144,9 +1144,9 @@ docs(research): add dynamic entity multilingual research report
 
 ---
 
-#### ⏳ Task 3.2: 设计字段级多语解析方案
+#### ✅ Task 3.2: 设计字段级多语解析方案
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **设计内容**:
 - 动态实体查询返回结果中的字段元数据注入机制
 - DTO 转换器的字段级语言解析逻辑
@@ -1288,13 +1288,13 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 ### 验收标准
 
-- [ ] 设计方案文档已更新
-- [ ] 基于 Task 3.1 研究结论确认设计方案
-- [ ] 包含缓存机制设计
-- [ ] 包含DTO设计（meta.fields结构）
-- [ ] 包含端点修改方案
-- [ ] 包含性能优化策略
-- [ ] 设计文档结构清晰，包含代码示例
+- [x] 设计方案文档已更新
+- [x] 基于 Task 3.1 研究结论确认设计方案
+- [x] 包含缓存机制设计
+- [x] 包含DTO设计（meta.fields结构）
+- [x] 包含端点修改方案（含 includeMeta 参数）
+- [x] 包含性能优化策略
+- [x] 设计文档结构清晰，包含代码示例
 
 ### Commit 信息
 
@@ -1311,17 +1311,26 @@ docs(design): add dynamic entity field-level multilingual design
 ---
 
 **详细步骤**:
-- [ ] 步骤 3.2.1: 确认设计方案（基于Task 3.1研究结论）
-- [ ] 步骤 3.2.2: 设计字段元数据缓存机制
-- [ ] 步骤 3.2.3: 设计DTO结构（meta.fields）
-- [ ] 步骤 3.2.4: 设计端点修改方案
-- [ ] 步骤 3.2.5: 设计性能优化策略
-- [ ] 步骤 3.2.6: 编写设计文档更新
+- [x] 步骤 3.2.1: 确认设计方案（基于Task 3.1研究结论）
+- [x] 步骤 3.2.2: 设计字段元数据缓存机制
+- [x] 步骤 3.2.3: 设计DTO结构（meta.fields）
+- [x] 步骤 3.2.4: 设计端点修改方案
+- [x] 步骤 3.2.5: 设计性能优化策略
+- [x] 步骤 3.2.6: 编写设计文档更新
 
 **输出物**: 设计文档更新 `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (新增章节)
 
+**关键设计亮点**:
+- ✅ 返回结构：`{ "meta": { "fields": [...] }, "data": [...], "total": 123 }`
+- ✅ 双模式规则：仅显式 `?lang=xx` 才输出单语，无 `lang` 返回多语
+- ✅ DTO设计：`DynamicEntityQueryResultDto` + `DynamicEntityMetaDto`
+- ✅ 缓存机制：`IFieldMetadataCache` 接口，按 `fullTypeName` 缓存
+- ✅ 向后兼容：GET by id 使用 `includeMeta=true` 参数避免破坏性变更
+- ✅ 复用现有能力：`field.ToFieldDto(loc, lang)` 三级优先级逻辑
+
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-12
+**评审结果**: ✅ 待评审
 
 ---
 
@@ -1350,6 +1359,12 @@ docs(design): add dynamic entity field-level multilingual design
 ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 基于 Task 3.2 的设计方案，实施动态实体查询的字段级多语解析功能。
 
+**Task 3.2 设计要点回顾**：
+- 返回结构：`{ "meta": { "fields": [...] }, "data": [...], "total": 123 }`
+- 缓存接口：`IFieldMetadataCache.GetFieldsAsync(fullTypeName, loc, lang, ct)` 返回 `IReadOnlyList<FieldMetadataDto>`
+- 向后兼容：GET by id 使用 `includeMeta=true` 参数避免破坏性变更
+- 双模式规则：仅显式 `?lang=xx` 才输出单语，无 `lang` 返回多语（忽略 Accept-Language）
+
 ### 参考文件
 - 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (Task 3.2输出)
 - 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
@@ -1374,25 +1389,30 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 #### 步骤 3.3.1: 创建字段元数据缓存服务
 
 1. 创建 `src/BobCrm.Api/Services/FieldMetadataCache.cs`
-2. 实现接口（参考结构）：
+2. 实现接口（基于 Task 3.2 设计，参考结构）：
    - 接口名：`IFieldMetadataCache`
-   - 方法1：`Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(string fullTypeName, string? lang)`
-   - 方法2：`void InvalidateCache(string fullTypeName)`
-3. 实现缓存逻辑：
+   - 方法1：`Task<IReadOnlyList<FieldMetadataDto>> GetFieldsAsync(string fullTypeName, ILocalization loc, string? lang, CancellationToken ct)`
+   - 方法2：`void Invalidate(string fullTypeName)`
+3. 实现缓存逻辑（参考 Task 3.2 设计文档 3.2.5 节）：
    - 使用 `IMemoryCache` 缓存字段元数据
-   - 缓存键：`FieldMetadata:{fullTypeName}`
-   - 缓存过期时间：30分钟
-   - 从数据库加载时使用 `ToFieldDto(lang)` 扩展方法
+   - 缓存键：`FieldMetadata:{fullTypeName}`（基础元数据）
+   - 可选：按语言缓存 DTO 视图：`FieldMetadata:{fullTypeName}:{lang}:{i18nVersion}`
+   - 缓存过期时间：30分钟（滑动/绝对过期）
+   - DB 查询：按 `fullTypeName` 加载 `EntityDefinition`（含 `Fields`），一次性取全字段
+   - DTO 映射：对每个字段调用 `field.ToFieldDto(loc, lang)`（复用已有逻辑）
+   - 避免 N+1：接口字段翻译走 `ILocalization` 内部缓存
 4. 在 `Program.cs` 中注册服务：`builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();`
 
 #### 步骤 3.3.2: 创建动态实体查询结果DTO
 
 1. 创建 `src/BobCrm.Api/Contracts/Responses/DynamicEntity/DynamicEntityQueryResultDto.cs`
-2. 基于 Task 3.2 的设计方案，实现DTO结构（参考结构）：
+2. 基于 Task 3.2 的设计方案，实现DTO结构（参考 Task 3.2 设计文档 3.2.4 节）：
    - 类名：`DynamicEntityQueryResultDto`
-   - 属性1：`List<Dictionary<string, object>> Data` - 实体数据列表
+   - 属性1：`List<object> Data` - 实体数据列表（`Dictionary<string, object>` 的列表）
    - 属性2：`DynamicEntityMetaDto? Meta` - 元数据对象（可空）
    - 属性3：`int Total` - 总数
+   - 属性4：`int Page` - 页码
+   - 属性5：`int PageSize` - 每页大小
    - 嵌套类：`DynamicEntityMetaDto`，包含 `List<FieldMetadataDto>? Fields` 属性
    - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 3. 字段元数据DTO复用现有的 `FieldMetadataDto`（已支持双模式）
@@ -1401,20 +1421,24 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 **注意**：根据 Task 3.1 研究结论和 Task 3.2 设计方案，字段元数据应在端点层拼装，而不是在 `ReflectionPersistenceService` 中。
 
-1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`（参考实现）：
-   - 添加 `string? lang` 查询参数和 `IFieldMetadataCache fieldMetadataCache` 参数
+1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`（基于 Task 3.2 设计）：
+   - 添加 `string? lang` 查询参数和 `IFieldMetadataCache fieldMetadataCache`、`ILocalization loc` 参数
    - 使用 `var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
    - 调用 `persistenceService.QueryAsync(fullTypeName, options)` 获取数据
-   - 调用 `fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang)` 获取字段元数据
-   - 构建返回DTO：`{ "data": [...], "meta": { "fields": [...] }, "total": 123 }`
+   - 调用 `fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct)` 获取字段元数据
+   - 构建返回DTO：`{ "data": [...], "meta": { "fields": [...] }, "total": 123, "page": 1, "pageSize": 100 }`
    - 遵循 ARCH-30 统一规则：显式 `?lang=xx` 才输出单语，无 `lang` 输出多语
+   - `meta` 字段为增量字段，兼容旧客户端忽略未知字段
 
-2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`（参考实现）：
-   - 添加 `string? lang` 查询参数和 `IFieldMetadataCache fieldMetadataCache` 参数
+2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`（基于 Task 3.2 设计，避免破坏性变更）：
+   - 添加 `string? lang` 和 `bool? includeMeta`（可选，默认 false）查询参数
+   - 添加 `IFieldMetadataCache fieldMetadataCache`、`ILocalization loc` 参数
    - 使用 `var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
    - 调用 `persistenceService.GetByIdAsync(fullTypeName, id)` 获取实体
-   - 调用 `fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang)` 获取字段元数据
-   - 构建返回DTO：`{ "data": {...}, "meta": { "fields": [...] } }`
+   - 当 `includeMeta == true` 时：
+     - 调用 `fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct)` 获取字段元数据
+     - 构建返回DTO：`{ "data": {...}, "meta": { "fields": [...] } }`
+   - 当 `includeMeta == false` 或未提供时：保持现状，返回实体对象（向后兼容）
 
 #### 步骤 3.3.5: 添加功能测试
 
@@ -1445,13 +1469,15 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 ### 验收标准
 
 - [ ] POST /api/dynamic-entities/{fullTypeName}/query 支持 ?lang=zh/ja/en 参数
+- [ ] POST /api/dynamic-entities/{fullTypeName}/query 返回结构包含 meta.fields
 - [ ] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?lang=zh/ja/en 参数
-- [ ] 无 lang 参数时返回多语字典 (向后兼容)
-- [ ] 无 lang 参数时忽略 Accept-Language 头
+- [ ] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?includeMeta=true 参数（避免破坏性变更）
+- [ ] 无 lang 参数时返回多语字典（向后兼容，忽略 Accept-Language 头）
 - [ ] 有 lang 参数时返回单语字符串
-- [ ] 字段元数据缓存机制正常工作
-- [ ] DisplayNameKey 正确解析
-- [ ] 性能测试通过（缓存有效）
+- [ ] 字段元数据缓存机制正常工作（IFieldMetadataCache）
+- [ ] DisplayNameKey 正确解析（接口字段）
+- [ ] DisplayNameTranslations 正确解析（自定义字段）
+- [ ] 性能测试通过（缓存有效，第二次查询明显快于第一次）
 - [ ] 所有单元测试通过
 
 ### Commit 信息
