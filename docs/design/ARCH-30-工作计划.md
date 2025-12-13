@@ -1223,18 +1223,10 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 #### 方案B: 在端点层拼装 meta.fields（推荐，符合研究结论）
 
 **实现思路**（基于 Task 3.1 研究结论）：
-1. 动态实体查询端点返回结构：
-   ```json
-   {
-     "meta": {
-       "fields": [
-         { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE", "displayName": "编码" }
-       ]
-     },
-     "data": [ ... ],
-     "total": 123
-   }
-   ```
+1. 动态实体查询端点返回结构（参考）：
+   - 根对象包含：`data`（数组）、`meta`（对象）、`total`（整数）
+   - `meta.fields` 是字段元数据数组，每个字段包含：`propertyName`、`displayNameKey`、`displayName`
+   - 示例结构：`{ "meta": { "fields": [...] }, "data": [...], "total": 123 }`
 2. 在端点层，根据 `fullTypeName` 预加载字段元数据（使用缓存）
 3. 根据 `lang` 参数应用双模式逻辑：
    - 单语模式（显式 `?lang=xx`）：输出 `displayName`（string）
@@ -1307,29 +1299,18 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 #### 步骤 3.2.3: 设计DTO结构
 
-1. 设计动态实体查询结果DTO（基于 Task 3.1 研究结论）：
-   ```csharp
-   public class DynamicEntityQueryResultDto
-   {
-       public List<Dictionary<string, object>> Data { get; set; } = new();
-       public DynamicEntityMetaDto? Meta { get; set; }
-       public int Total { get; set; }
-   }
-   
-   public class DynamicEntityMetaDto
-   {
-       public List<FieldMetadataDto>? Fields { get; set; }
-   }
-   ```
+1. 设计动态实体查询结果DTO（基于 Task 3.1 研究结论，参考结构）：
+   - 类名：`DynamicEntityQueryResultDto`
+   - 属性1：`List<Dictionary<string, object>> Data` - 实体数据列表
+   - 属性2：`DynamicEntityMetaDto? Meta` - 元数据对象（可空）
+   - 属性3：`int Total` - 总数
+   - 嵌套类：`DynamicEntityMetaDto`，包含 `List<FieldMetadataDto>? Fields` 属性
+   - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 2. 字段元数据DTO复用现有的 `FieldMetadataDto`（已支持双模式）：
    - `DisplayName` (string?) - 单语模式
    - `DisplayNameTranslations` (MultilingualText?) - 多语模式
    - `DisplayNameKey` (string?) - i18n资源键（接口字段）
    - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
-2. 或设计字段级元数据DTO（参考 `FieldMetadataDto`）：
-   - `DisplayName` (string?) - 单语模式
-   - `DisplayNameTranslations` (MultilingualText?) - 多语模式
-   - 使用 `JsonIgnore(Condition = WhenWritingNull)`
 
 #### 步骤 3.2.4: 设计端点修改方案
 
