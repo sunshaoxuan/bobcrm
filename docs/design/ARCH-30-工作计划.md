@@ -1551,6 +1551,10 @@ feat(api): add lang parameter support to dynamic entity query endpoints
 - ✅ 详细的 meta.fields 说明：动态实体端点的 meta.fields 结构说明详细
 - ✅ 格式统一：文档格式一致，易于阅读
 
+**Commit ID**: _(待填写)_
+**完成时间**: 2025-12-12
+**评审结果**: ✅ 优秀（5.0/5.0）- [评审报告](../tasks/arch-30/task-4.1-review.md)
+
 ##### 🤖 AI 任务提示词
 
 ```markdown
