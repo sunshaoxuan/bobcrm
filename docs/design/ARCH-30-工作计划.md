@@ -1140,7 +1140,7 @@ docs(research): add dynamic entity multilingual research report
 
 **Commit ID**: _(待填写)_
 **完成时间**: 2025-12-12
-**评审结果**: ✅ 优秀（5.0/5.0）
+**评审结果**: ✅ 优秀（5.0/5.0）- [评审报告](../tasks/arch-30/task-3.1-review.md)
 
 ---
 
