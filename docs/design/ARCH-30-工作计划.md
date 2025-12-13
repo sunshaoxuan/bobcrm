@@ -1544,13 +1544,159 @@ feat(api): add lang parameter support to dynamic entity query endpoints
 - [ ] 添加向后兼容性说明章节
 - [ ] 添加 `meta.fields` 结构说明（Task 3.3 新增）
 
-**Commit 信息模板**:
-```
+##### 🤖 AI 任务提示词
+
+```markdown
+## 任务: ARCH-30 Task 4.1 - 更新 API 接口文档
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段4文档同步。
+基于已完成的所有任务（阶段1-3），统一更新 API 接口文档，记录所有新增的 `lang` 参数支持和响应结构变更。
+
+### 参考文件
+- API文档: `docs/reference/API-01-接口文档.md`
+- 工作计划: `docs/design/ARCH-30-工作计划.md` (查看已完成任务列表)
+- 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
+
+### 需要更新的端点列表
+
+#### 阶段1：高频API改造
+1. **GET /api/access/functions/me** (Task 1.1)
+   - 新增 `lang` 查询参数（可选）
+   - 响应：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+2. **GET /api/templates/menu-bindings** (Task 1.2)
+   - 新增 `lang` 查询参数（可选），支持 `Accept-Language` 头
+   - 响应：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+3. **GET /api/entities** 和 **GET /api/entities/all** (Task 1.3)
+   - 新增 `lang` 查询参数（可选），支持 `Accept-Language` 头
+   - 响应：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+#### 阶段2：中频API改造
+4. **GET /api/entity-definitions** 相关端点 (Task 2.1)
+   - 新增 `lang` 查询参数（可选）
+   - 响应：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+5. **GET /api/enums** 相关端点 (Task 2.2)
+   - 新增 `lang` 查询参数（可选）
+   - 响应：单语模式返回 `displayName`/`description`（string），多语模式返回 `displayNameTranslations`/`descriptionTranslations`（MultilingualText）
+
+6. **GET /api/entity-domains** 和 **GET /api/entity-domains/{id}** (Task 2.3)
+   - 新增 `lang` 查询参数（可选）
+   - 响应：单语模式返回 `name`（string），多语模式返回 `nameTranslations`（MultilingualText）
+
+7. **GET /api/access/functions** 和 **GET /api/access/functions/manage** (Task 2.4)
+   - 新增 `lang` 查询参数（可选）
+   - **POST /api/access/functions** 和 **PUT /api/access/functions/{id}** 也支持 `lang` 查询参数
+   - 响应：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+#### 阶段3：低频API改造
+8. **POST /api/dynamic-entities/{fullTypeName}/query** (Task 3.3)
+   - 新增 `lang` 查询参数（可选）
+   - 响应结构新增 `meta.fields` 字段（字段元数据数组）
+   - 响应示例：
+     ```json
+     {
+       "meta": {
+         "fields": [
+           {
+             "propertyName": "Code",
+             "displayNameKey": "LBL_FIELD_CODE",
+             "displayName": "编码"  // 单语模式
+           }
+         ]
+       },
+       "data": [...],
+       "total": 123,
+       "page": 1,
+       "pageSize": 100
+     }
+     ```
+
+9. **GET /api/dynamic-entities/{fullTypeName}/{id}** (Task 3.3)
+   - 新增 `lang` 查询参数（可选）
+   - 新增 `includeMeta` 查询参数（可选，默认 false）
+   - 当 `includeMeta=true` 时，返回 `{ meta: { fields: [...] }, data: {...} }`
+   - 当 `includeMeta=false` 或未提供时，返回实体对象（向后兼容）
+
+### 统一规则说明
+
+**向后兼容性规则**：
+- 只有显式传 `?lang=xx` 才进入单语模式
+- 无 `lang` 参数时返回多语字典（即使有 `Accept-Language` 头也忽略，除非端点明确支持）
+- 错误消息使用 `uiLang = LangHelper.GetLang(http)` 获取
+
+**双模式响应结构**：
+- **单语模式**（`?lang=xx`）：
+  - 输出 `displayName`（string）
+  - `displayNameTranslations` 为 null（不序列化）
+- **多语模式**（无 `lang`）：
+  - 接口字段：输出 `displayNameKey`（不展开多语字典）
+  - 自定义字段：输出 `displayNameTranslations`（MultilingualText 字典）
+  - `displayName` 为 null（不序列化）
+
+### 详细更新步骤
+
+#### 步骤 4.1.1: 更新端点文档结构
+
+1. 为每个端点添加 **查询参数** 章节（如果还没有）
+2. 在查询参数中添加 `lang` 参数说明：
+   - 参数名：`lang`
+   - 类型：`string?`（可选）
+   - 说明：语言代码（zh/ja/en），仅显式传参才进入单语模式
+   - 示例：`?lang=zh`
+
+3. 对于支持 `Accept-Language` 的端点（如 `/api/templates/menu-bindings`），说明：
+   - 如果未提供 `lang` 参数，将使用 `Accept-Language` 头作为默认语言
+
+#### 步骤 4.1.2: 更新响应示例
+
+1. 为每个端点添加两个响应示例：
+   - **单语模式示例**（`?lang=zh`）：
+     - 展示 `displayName` 字段（string）
+     - 说明 `displayNameTranslations` 为 null（不序列化）
+   - **多语模式示例**（无 `lang` 参数）：
+     - 展示 `displayNameTranslations` 字段（MultilingualText 字典）
+     - 说明 `displayName` 为 null（不序列化）
+
+2. 对于动态实体端点，添加 `meta.fields` 结构说明：
+   - 说明 `meta.fields` 是字段元数据数组
+   - 展示字段元数据的结构（`propertyName`、`displayNameKey`、`displayName`、`displayNameTranslations`）
+   - 说明单语模式和多语模式的区别
+
+#### 步骤 4.1.3: 添加向后兼容性说明章节
+
+1. 在文档开头或适当位置添加 **向后兼容性** 章节
+2. 说明：
+   - 所有新增的 `lang` 参数都是可选的
+   - 无 `lang` 参数时，响应保持向后兼容（返回多语字典）
+   - 显式传 `?lang=xx` 时，响应体积减小（仅返回单语字符串）
+
+#### 步骤 4.1.4: 添加 meta.fields 结构说明（Task 3.3）
+
+1. 为动态实体端点添加 `meta.fields` 结构说明
+2. 说明：
+   - `meta.fields` 是字段元数据数组，包含字段的显示名、类型等信息
+   - 字段元数据支持双模式（单语/多语）
+   - `meta` 字段为增量字段，兼容旧客户端忽略未知字段
+
+### 验收标准
+
+- [ ] 所有已改造的端点都添加了 `lang` 参数说明
+- [ ] 每个端点都有单语模式和多语模式的响应示例
+- [ ] 向后兼容性说明章节已添加
+- [ ] `meta.fields` 结构说明已添加（动态实体端点）
+- [ ] 文档格式统一，易于阅读
+
+### Commit 信息
+
 docs(api): update API documentation with lang parameter for all endpoints
 
-- Document lang query parameter for all multilingual endpoints
+- Document lang query parameter for all multilingual endpoints (Phase 1-3)
 - Add response examples for single-language and multi-language modes
 - Add backward compatibility notes
+- Add meta.fields structure documentation (Task 3.3)
 - Ref: ARCH-30 Task 4.1
 ```
 
