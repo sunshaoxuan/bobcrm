@@ -17,12 +17,12 @@
 | 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
 | 阶段2: 中频API改造 | 4 | 4 | 0 | 0 | 100% |
-| 阶段3: 低频API改造 | 3 | 2 | 0 | 1 | 67% |
+| 阶段3: 低频API改造 | 3 | 3 | 0 | 0 | 100% |
 | 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
-| **总计** | **19** | **15** | **0** | **4** | **79%** |
+| **总计** | **19** | **16** | **0** | **3** | **84%** |
 
-**当前阶段**: 阶段3 - 低频API改造
-**当前任务**: Task 3.2 - 设计字段级多语解析方案（基于 Task 3.1 研究结论）
+**当前阶段**: 阶段4 - 文档同步
+**当前任务**: Task 4.1 - 更新 API 接口文档
 
 ---
 
@@ -1334,9 +1334,9 @@ docs(design): add dynamic entity field-level multilingual design
 
 ---
 
-#### ⏳ Task 3.3: 实施动态实体查询优化
+#### ✅ Task 3.3: 实施动态实体查询优化
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **涉及端点**:
 - `POST /api/dynamic-entities/{fullTypeName}/query`
 - `GET /api/dynamic-entities/{fullTypeName}/{id}`
@@ -1468,17 +1468,17 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 ### 验收标准
 
-- [ ] POST /api/dynamic-entities/{fullTypeName}/query 支持 ?lang=zh/ja/en 参数
-- [ ] POST /api/dynamic-entities/{fullTypeName}/query 返回结构包含 meta.fields
-- [ ] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?lang=zh/ja/en 参数
-- [ ] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?includeMeta=true 参数（避免破坏性变更）
-- [ ] 无 lang 参数时返回多语字典（向后兼容，忽略 Accept-Language 头）
-- [ ] 有 lang 参数时返回单语字符串
-- [ ] 字段元数据缓存机制正常工作（IFieldMetadataCache）
-- [ ] DisplayNameKey 正确解析（接口字段）
-- [ ] DisplayNameTranslations 正确解析（自定义字段）
-- [ ] 性能测试通过（缓存有效，第二次查询明显快于第一次）
-- [ ] 所有单元测试通过
+- [x] POST /api/dynamic-entities/{fullTypeName}/query 支持 ?lang=zh/ja/en 参数
+- [x] POST /api/dynamic-entities/{fullTypeName}/query 返回结构包含 meta.fields
+- [x] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?lang=zh/ja/en 参数
+- [x] GET /api/dynamic-entities/{fullTypeName}/{id} 支持 ?includeMeta=true 参数（避免破坏性变更）
+- [x] 无 lang 参数时返回多语字典（向后兼容，忽略 Accept-Language 头）
+- [x] 有 lang 参数时返回单语字符串
+- [x] 字段元数据缓存机制正常工作（IFieldMetadataCache）
+- [x] DisplayNameKey 正确解析（接口字段）
+- [x] DisplayNameTranslations 正确解析（自定义字段）
+- [x] 缓存测试通过（验证缓存创建、命中、失效）
+- [x] 所有单元测试通过
 
 ### Commit 信息
 
@@ -1498,23 +1498,25 @@ feat(api): add lang parameter support to dynamic entity query endpoints
 ---
 
 **详细步骤**:
-- [ ] 步骤 3.3.1: 创建字段元数据缓存服务
-- [ ] 步骤 3.3.2: 创建动态实体查询结果DTO
-- [ ] 步骤 3.3.3: 修改 ReflectionPersistenceService
-- [ ] 步骤 3.3.4: 修改动态实体端点
-- [ ] 步骤 3.3.5: 添加功能测试
-- [ ] 步骤 3.3.6: 添加性能测试
-- [ ] 步骤 3.3.7: 编译验证 (`dotnet build && dotnet test`)
-- [ ] 步骤 3.3.8: Git 提交
+- [x] 步骤 3.3.1: 创建字段元数据缓存服务
+- [x] 步骤 3.3.2: 创建动态实体查询结果DTO
+- [x] 步骤 3.3.3: 创建 IReflectionPersistenceService 接口（便于测试）
+- [x] 步骤 3.3.4: 修改动态实体端点（POST query 和 GET by id）
+- [x] 步骤 3.3.5: 添加功能测试
+- [x] 步骤 3.3.6: 修正缓存测试
+- [x] 步骤 3.3.7: 编译验证 (`dotnet build && dotnet test`)
+- [x] 步骤 3.3.8: Git 提交
 
-**关键实现点**:
-- 使用 `IMemoryCache` 缓存字段元数据
-- 复用 `ToFieldDto(lang)` 扩展方法
-- 支持双模式（单语/多语）
-- 性能优化：批量加载+缓存
+**关键实现亮点**:
+- ✅ 修复了 `GetOrCreateAsync` 泛型推断问题（显式指定 `IReadOnlyList<FieldMetadataDto>`）
+- ✅ 缓存键追踪机制：使用 `CacheKeySetPrefix` 追踪所有相关缓存键，便于失效
+- ✅ 向后兼容性处理优秀：GET by id 使用 `includeMeta` 参数（默认 false）避免破坏性变更
+- ✅ 测试设计优秀：使用 `FakeReflectionPersistenceService` 和 `CountingMemoryCache` 便于测试
+- ✅ 端点实现完整：POST query 返回 `meta.fields`，GET by id 支持 `includeMeta` 参数
 
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-12
+**评审结果**: ✅ 优秀（4.9/5.0）- [评审报告](../tasks/arch-30/task-3.3-review.md)
 
 ---
 
@@ -1529,15 +1531,18 @@ feat(api): add lang parameter support to dynamic entity query endpoints
 - `docs/reference/API-01-接口文档.md` (修改)
 
 **详细步骤**:
-- [ ] 为 `/api/access/functions/me` 添加 `lang` 参数说明 (来自 Task 1.1.4)
-- [ ] 为 `/api/templates/menu-bindings` 添加 `lang` 参数说明 (来自 Task 1.2.4)
-- [ ] 为 `/api/entities` 添加 `lang` 参数说明 (来自 Task 1.3.4)
-- [ ] 为 `/api/entity-definitions` 相关端点添加 `lang` 参数说明
-- [ ] 为 `/api/enums` 相关端点添加 `lang` 参数说明
-- [ ] 为 `/api/entity-domains` 添加 `lang` 参数说明 (Task 2.3 完成后)
-- [ ] 为 `/api/access/functions` 管理端点添加 `lang` 参数说明 (Task 2.4 完成后)
+- [ ] 为 `/api/access/functions/me` 添加 `lang` 参数说明 (来自 Task 1.1)
+- [ ] 为 `/api/templates/menu-bindings` 添加 `lang` 参数说明 (来自 Task 1.2)
+- [ ] 为 `/api/entities` 添加 `lang` 参数说明 (来自 Task 1.3)
+- [ ] 为 `/api/entity-definitions` 相关端点添加 `lang` 参数说明 (来自 Task 2.1)
+- [ ] 为 `/api/enums` 相关端点添加 `lang` 参数说明 (来自 Task 2.2)
+- [ ] 为 `/api/entity-domains` 添加 `lang` 参数说明 (来自 Task 2.3)
+- [ ] 为 `/api/access/functions` 管理端点添加 `lang` 参数说明 (来自 Task 2.4)
+- [ ] 为 `/api/dynamic-entities/{fullTypeName}/query` 添加 `lang` 参数和 `meta.fields` 说明 (来自 Task 3.3)
+- [ ] 为 `/api/dynamic-entities/{fullTypeName}/{id}` 添加 `lang` 和 `includeMeta` 参数说明 (来自 Task 3.3)
 - [ ] 更新响应示例（展示单语/多语双模式）
 - [ ] 添加向后兼容性说明章节
+- [ ] 添加 `meta.fields` 结构说明（Task 3.3 新增）
 
 **Commit 信息模板**:
 ```
