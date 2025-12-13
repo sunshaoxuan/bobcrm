@@ -17,12 +17,12 @@
 | 阶段0.5: 模型层改造 | 4 | 4 | 0 | 0 | 100% |
 | 阶段1: 高频API改造 | 3 | 3 | 0 | 0 | 100% |
 | 阶段2: 中频API改造 | 4 | 4 | 0 | 0 | 100% |
-| 阶段3: 低频API改造 | 3 | 0 | 0 | 3 | 0% |
+| 阶段3: 低频API改造 | 3 | 1 | 0 | 2 | 33% |
 | 阶段4: 文档同步 | 2 | 0 | 0 | 2 | 0% |
 | **总计** | **19** | **14** | **0** | **5** | **74%** |
 
 **当前阶段**: 阶段3 - 低频API改造
-**当前任务**: Task 3.1 - 研究动态实体查询机制
+**当前任务**: Task 3.2 - 设计字段级多语解析方案
 
 ---
 
@@ -961,9 +961,9 @@ feat(api): add lang parameter support to function management endpoints
 
 **目标**: 完成动态实体查询等复杂场景的多语优化
 
-#### ⏳ Task 3.1: 研究动态实体查询机制
+#### ✅ Task 3.1: 研究动态实体查询机制
 
-**状态**: ⏳ 待开始
+**状态**: ✅ 完成
 **研究范围**:
 - 动态实体 CRUD 的代码生成机制
 - 字段级多语元数据的存储位置
@@ -1099,13 +1099,13 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 ### 验收标准
 
-- [ ] 研究报告文档已创建
-- [ ] 包含动态实体代码生成机制分析
-- [ ] 包含查询结果转换流程分析
-- [ ] 包含字段元数据存储和访问分析
-- [ ] 包含解析时机分析（编译时 vs 运行时）
-- [ ] 包含推荐方案及理由
-- [ ] 文档结构清晰，包含代码示例
+- [x] 研究报告文档已创建
+- [x] 包含动态实体代码生成机制分析
+- [x] 包含查询结果转换流程分析
+- [x] 包含字段元数据存储和访问分析
+- [x] 包含解析时机分析（编译时 vs 运行时）
+- [x] 包含推荐方案及理由
+- [x] 文档结构清晰，包含代码示例
 
 ### Commit 信息
 
@@ -1122,18 +1122,25 @@ docs(research): add dynamic entity multilingual research report
 ---
 
 **详细步骤**:
-- [ ] 步骤 3.1.1: 研究动态实体代码生成机制
-- [ ] 步骤 3.1.2: 研究动态实体编译和加载机制
-- [ ] 步骤 3.1.3: 研究查询结果转换流程
-- [ ] 步骤 3.1.4: 研究动态实体端点
-- [ ] 步骤 3.1.5: 分析字段元数据存储
-- [ ] 步骤 3.1.6: 确定解析时机
-- [ ] 步骤 3.1.7: 编写研究报告
+- [x] 步骤 3.1.1: 研究动态实体代码生成机制
+- [x] 步骤 3.1.2: 研究动态实体编译和加载机制
+- [x] 步骤 3.1.3: 研究查询结果转换流程
+- [x] 步骤 3.1.4: 研究动态实体端点
+- [x] 步骤 3.1.5: 分析字段元数据存储
+- [x] 步骤 3.1.6: 确定解析时机
+- [x] 步骤 3.1.7: 编写研究报告
 
 **输出物**: 研究报告文档 `docs/research/ARCH-30-动态实体多语研究报告.md`
 
+**关键发现**:
+- ✅ 动态实体查询链路当前不做DTO转换，直接返回运行时实体对象
+- ✅ 字段显示名解析最佳落点是元数据API，而非动态实体数据查询本身
+- ✅ 推荐方案：运行时预加载/缓存实体字段元数据 + 批量加载i18n资源
+- ✅ 若需在查询响应中携带列信息，建议在端点层拼装 `meta.fields`
+
 **Commit ID**: _(待填写)_
-**完成时间**: _(待填写)_
+**完成时间**: 2025-12-12
+**评审结果**: ✅ 优秀（5.0/5.0）
 
 ---
 
@@ -1160,7 +1167,12 @@ docs(research): add dynamic entity multilingual research report
 
 ### 背景
 ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
-基于 Task 3.1 的研究结果，设计字段级多语解析方案，实现动态实体查询结果的字段显示名多语支持。
+基于 Task 3.1 的研究结果，设计字段级多语解析方案。
+
+**重要发现（来自 Task 3.1 研究报告）**：
+- 动态实体查询链路当前不做DTO转换，直接返回运行时实体对象
+- **字段显示名解析最佳落点是元数据API（EntityDefinition/FieldMetadata DTO），而不是动态实体数据查询本身**
+- 若未来需要"查询结果携带列元数据（字段名/显示名）"，推荐运行时预加载/缓存实体字段元数据 + 批量加载i18n资源，在端点层拼装 `meta.fields`
 
 ### 参考文件
 - 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
@@ -1181,9 +1193,14 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
    var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
    var uiLang = LangHelper.GetLang(http);  // 用于错误消息
 
-### 设计方案评估
+### 设计方案评估（基于 Task 3.1 研究结论）
 
-#### 方案A: 在查询结果转换时附加字段元数据
+**研究结论回顾**：
+- 字段显示名解析应发生在"元数据返回层"（EntityDefinition/FieldMetadata/FunctionTree DTO等），而不是动态实体数据查询返回层
+- 动态实体查询结果保持"纯数据对象"更符合职责分离：数据值 vs 元数据标签
+- 如果必须在动态查询响应中携带列信息，建议在端点层拼装 `meta.fields`
+
+#### 方案A: 在查询结果转换时附加字段元数据（不推荐）
 
 **实现思路**：
 1. 在 `ReflectionPersistenceService.QueryAsync()` 返回结果后
@@ -1199,39 +1216,48 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 **缺点**：
 - 每次查询都需要访问数据库获取字段元数据
 - 性能开销较大（N+1查询问题）
+- **违反职责分离原则**：将元数据标签混入数据值
 
-**性能优化**：
-- 可以缓存实体定义的字段元数据（按 `fullTypeName` 缓存）
-- 缓存失效策略：实体定义更新时清除缓存
+**结论**：不推荐，因为违反了"数据值 vs 元数据标签"的职责分离原则。
 
-#### 方案B: 预加载实体定义的字段元数据，缓存后批量解析（推荐）
+#### 方案B: 在端点层拼装 meta.fields（推荐，符合研究结论）
 
-**实现思路**：
-1. 在查询前，根据 `fullTypeName` 预加载 `EntityDefinition` 和所有 `FieldMetadata`
-2. 使用内存缓存（如 `IMemoryCache`）缓存字段元数据
-3. 在结果转换时，使用缓存的字段元数据批量解析
-4. 根据 `lang` 参数应用双模式逻辑
+**实现思路**（基于 Task 3.1 研究结论）：
+1. 动态实体查询端点返回结构：
+   ```json
+   {
+     "meta": {
+       "fields": [
+         { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE", "displayName": "编码" }
+       ]
+     },
+     "data": [ ... ],
+     "total": 123
+   }
+   ```
+2. 在端点层，根据 `fullTypeName` 预加载字段元数据（使用缓存）
+3. 根据 `lang` 参数应用双模式逻辑：
+   - 单语模式（显式 `?lang=xx`）：输出 `displayName`（string）
+   - 多语模式（无 `lang`）：接口字段输出 `displayNameKey`，自定义字段输出 `displayNameTranslations`
+4. 使用 `IMemoryCache` 缓存字段元数据，按 `EntityDefinitionId` 或 `FullTypeName` 缓存
 
 **优点**：
-- 性能优秀（一次查询获取所有字段元数据）
-- 支持缓存，减少数据库访问
+- **符合职责分离**：数据值（`data`）与元数据标签（`meta.fields`）分离
+- 性能优秀（一次查询获取所有字段元数据，支持缓存）
 - 元数据更新无需重新编译
 - 灵活性高
+- 可复用现有能力：`DtoExtensions.ToFieldDto()`、`ILocalization` 缓存
 
 **缺点**：
 - 需要实现缓存管理逻辑
-- 缓存失效需要处理
+- 缓存失效需要处理（EntityDefinition/FieldMetadata 更新、i18n资源变更）
 
-**实现细节**（伪代码示例）：
-- 创建 `FieldMetadataCache` 类，注入 `IMemoryCache` 和 `AppDbContext`
-- 实现 `GetFieldMetadataAsync(fullTypeName, lang)` 方法：
-  - 使用缓存键 `FieldMetadata:{fullTypeName}`
-  - 缓存未命中时，从数据库加载 `EntityDefinition` 和所有 `FieldMetadata`
-  - 使用 `ToFieldDto(f, lang)` 转换为DTO
-  - 缓存30分钟
-- 实现 `InvalidateCache(fullTypeName)` 方法清除缓存
+**实现细节**（参考 Task 3.1 研究报告 6.4 节）：
+- 维度1：按 `EntityDefinitionId` 或 `FullTypeName` 缓存字段元数据
+- 维度2：按 `ILocalization.GetCacheVersion()` + `EntityDefinition.UpdatedAt` 作为缓存失效条件
+- 可复用：`DtoExtensions.ResolveFieldDisplayName(...)`、`MultilingualFieldService.LoadResourcesAsync(...)`
 
-#### 方案C: 在代码生成时注入字段元数据静态属性
+#### 方案C: 在代码生成时注入字段元数据静态属性（不推荐）
 
 **实现思路**：
 1. 修改 `CSharpCodeGenerator.GenerateEntityClass()`
@@ -1246,18 +1272,27 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 - 元数据更新需要重新编译实体
 - 代码生成器复杂度增加
 - 灵活性低
+- **与现有架构的"元数据DB即单一真实来源"会出现双写/一致性挑战**
+
+**结论**：不推荐，仅在确实需要"纯运行时类型自描述"时考虑（Task 3.1 研究报告 6.2 节）。
 
 ### 详细设计步骤
 
 #### 步骤 3.2.1: 评估各方案
 
-1. 基于 Task 3.1 的研究报告，评估三个方案
+1. **基于 Task 3.1 的研究报告结论**，评估三个方案
 2. 考虑因素：
+   - 职责分离（数据值 vs 元数据标签）
    - 性能影响（查询时间、内存使用）
    - 实现复杂度
    - 维护成本
    - 灵活性（元数据更新频率）
-3. 推荐方案：**方案B（预加载+缓存）**
+   - 与现有架构的一致性
+3. **推荐方案：方案B（在端点层拼装 meta.fields，使用预加载+缓存）**
+   - 符合研究结论：字段显示名解析应发生在"元数据返回层"
+   - 符合职责分离：数据值（`data`）与元数据标签（`meta.fields`）分离
+   - 性能优秀，支持缓存
+   - 可复用现有能力
 
 #### 步骤 3.2.2: 设计字段元数据缓存机制
 
@@ -1270,12 +1305,26 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
    - 方法1：`Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(string fullTypeName, string? lang)`
    - 方法2：`void InvalidateCache(string fullTypeName)`
 
-#### 步骤 3.2.3: 设计DTO转换器
+#### 步骤 3.2.3: 设计DTO结构
 
-1. 设计动态实体查询结果DTO（参考）：
-   - 类名：`DynamicEntityQueryResultDto`
-   - 属性1：`Dictionary<string, object> Data` - 实体数据
-   - 属性2：`Dictionary<string, FieldMetadataDto>? FieldMetadata` - 字段元数据（可空）
+1. 设计动态实体查询结果DTO（基于 Task 3.1 研究结论）：
+   ```csharp
+   public class DynamicEntityQueryResultDto
+   {
+       public List<Dictionary<string, object>> Data { get; set; } = new();
+       public DynamicEntityMetaDto? Meta { get; set; }
+       public int Total { get; set; }
+   }
+   
+   public class DynamicEntityMetaDto
+   {
+       public List<FieldMetadataDto>? Fields { get; set; }
+   }
+   ```
+2. 字段元数据DTO复用现有的 `FieldMetadataDto`（已支持双模式）：
+   - `DisplayName` (string?) - 单语模式
+   - `DisplayNameTranslations` (MultilingualText?) - 多语模式
+   - `DisplayNameKey` (string?) - i18n资源键（接口字段）
    - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 2. 或设计字段级元数据DTO（参考 `FieldMetadataDto`）：
    - `DisplayName` (string?) - 单语模式
@@ -1286,10 +1335,13 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`：
    - 添加 `string? lang` 查询参数
-   - 在返回结果中附加字段元数据
+   - 在端点层调用 `FieldMetadataCache.GetFieldMetadataAsync(fullTypeName, lang)` 获取字段元数据
+   - 返回结构：`{ "data": [...], "meta": { "fields": [...] }, "total": 123 }`
+   - 遵循 ARCH-30 统一规则：显式 `?lang=xx` 才输出单语，无 `lang` 输出多语
 2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`：
    - 添加 `string? lang` 查询参数
-   - 在返回结果中附加字段元数据
+   - 在端点层获取字段元数据并拼装到响应中
+   - 返回结构：`{ "data": {...}, "meta": { "fields": [...] } }`
 
 #### 步骤 3.2.5: 设计性能优化策略
 
