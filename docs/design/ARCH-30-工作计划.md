@@ -1724,16 +1724,170 @@ docs(api): update API documentation with lang parameter for all endpoints
 
 **详细步骤**:
 - [ ] 在 `[未发布] - 进行中` 下添加 ARCH-30 相关条目
-- [ ] 列出所有新增的 `lang` 参数支持端点
+- [ ] 列出所有新增的 `lang` 参数支持端点（9个端点）
 - [ ] 说明向后兼容性设计决策
-- [ ] 记录关键设计决策：无 lang 参数时忽略 Accept-Language 头
+- [ ] 记录关键设计决策：无 lang 参数时忽略 Accept-Language 头（除3个高频端点）
+- [ ] 说明动态实体端点的 meta.fields 和 includeMeta 参数
 
-**Commit 信息模板**:
+##### 🤖 AI 任务提示词
+
+```markdown
+## 任务: ARCH-30 Task 4.2 - 更新 CHANGELOG
+
+### 背景
+ARCH-30 系统级多语API架构优化项目，阶段4文档同步。
+基于已完成的所有任务（阶段1-3），更新 CHANGELOG.md，记录所有新增的 `lang` 参数支持和响应结构变更。
+
+### 参考文件
+- CHANGELOG: `CHANGELOG.md`
+- API文档: `docs/reference/API-01-接口文档.md` (Task 4.1 输出)
+- 工作计划: `docs/design/ARCH-30-工作计划.md` (查看已完成任务列表)
+
+### 需要记录的变更
+
+#### 阶段1：高频API改造
+1. **GET /api/access/functions/me** (Task 1.1)
+   - 新增 `lang` 查询参数（可选）
+   - 支持 `Accept-Language` 头（未传 `lang` 时生效）
+   - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+2. **GET /api/templates/menu-bindings** (Task 1.2)
+   - 新增 `lang` 查询参数（可选）
+   - 支持 `Accept-Language` 头（未传 `lang` 时生效）
+   - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+3. **GET /api/entities** 和 **GET /api/entities/all** (Task 1.3)
+   - 新增 `lang` 查询参数（可选）
+   - 支持 `Accept-Language` 头（未传 `lang` 时生效）
+   - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+#### 阶段2：中频API改造
+4. **GET /api/entity-definitions** 相关端点 (Task 2.1)
+   - 新增 `lang` 查询参数（可选）
+   - 忽略 `Accept-Language` 头（仅显式 `?lang=xx` 才单语）
+   - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+5. **GET /api/enums** 相关端点 (Task 2.2)
+   - 新增 `lang` 查询参数（可选，4个端点：列表、详情、按代码查询、选项列表）
+   - 忽略 `Accept-Language` 头（仅显式 `?lang=xx` 才单语）
+   - 响应支持双模式：单语模式返回 `displayName`/`description`（string），多语模式返回 `displayNameTranslations`/`descriptionTranslations`（MultilingualText）
+
+6. **GET /api/entity-domains** 和 **GET /api/entity-domains/{id}** (Task 2.3)
+   - 新增 `lang` 查询参数（可选）
+   - 忽略 `Accept-Language` 头（仅显式 `?lang=xx` 才单语）
+   - 响应支持双模式：单语模式返回 `name`（string），多语模式返回 `nameTranslations`（MultilingualText）
+
+7. **GET /api/access/functions** 和 **GET /api/access/functions/manage** (Task 2.4)
+   - 新增 `lang` 查询参数（可选）
+   - **POST /api/access/functions** 和 **PUT /api/access/functions/{id}** 也支持 `lang` 查询参数
+   - 忽略 `Accept-Language` 头（仅显式 `?lang=xx` 才单语）
+   - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+
+#### 阶段3：低频API改造
+8. **POST /api/dynamic-entities/{fullTypeName}/query** (Task 3.3)
+   - 新增 `lang` 查询参数（可选）
+   - 忽略 `Accept-Language` 头（仅显式 `?lang=xx` 才单语）
+   - 响应结构新增 `meta.fields` 字段（字段元数据数组）
+   - 字段元数据支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameKey`/`displayNameTranslations`
+
+9. **GET /api/dynamic-entities/{fullTypeName}/{id}** (Task 3.3)
+   - 新增 `lang` 查询参数（可选）
+   - 新增 `includeMeta` 查询参数（可选，默认 `false`）
+   - 当 `includeMeta=true` 时，返回 `{ meta: { fields: [...] }, data: {...} }`
+   - 当 `includeMeta=false` 或未提供时，返回实体对象（向后兼容）
+
+### 关键设计决策
+
+1. **向后兼容性**：
+   - 所有新增的 `lang`/`includeMeta` 查询参数均为可选
+   - 未传 `lang` 时：端点保持既有默认行为（多语模式或基于 `Accept-Language` 的单语模式，取决于端点）
+   - 动态实体 `GET /api/dynamic-entities/{fullTypeName}/{id}` 默认不返回 `meta`；仅 `includeMeta=true` 才返回 `{ meta, data }`
+
+2. **Accept-Language 处理规则**：
+   - 仅以下端点在未传 `lang` 时会使用 `Accept-Language` 作为默认语言：
+     - `GET /api/access/functions/me`
+     - `GET /api/templates/menu-bindings`
+     - `GET /api/entities`、`GET /api/entities/all`
+   - 其余已改造端点：只有显式传 `?lang=xx` 才进入单语模式；未传 `lang` 时忽略 `Accept-Language`
+
+3. **双模式响应结构**：
+   - **单语模式**（`?lang=xx`）：输出 `displayName`/`description`/`name` 等 `string`，`displayNameTranslations` 为 null（不序列化）
+   - **多语模式**（无 `lang`）：接口字段输出 `displayNameKey`（不展开多语字典），自定义字段输出 `displayNameTranslations`（MultilingualText 字典），`displayName` 为 null（不序列化）
+
+### 详细更新步骤
+
+#### 步骤 4.2.1: 在 CHANGELOG 中添加 ARCH-30 条目
+
+1. 在 `[未发布] - 进行中` 章节下添加 **Added** 子章节（如果还没有）
+2. 添加 ARCH-30 条目，格式如下：
+
+```markdown
+### Added
+- **[ARCH-30] 系统级多语API架构优化**：
+  - 新增 `lang` 查询参数支持（可选，`zh|ja|en`），覆盖 9 个端点
+  - 响应支持双模式：单语模式返回 `displayName`（string），多语模式返回 `displayNameTranslations`（MultilingualText）
+  - 动态实体查询端点新增 `meta.fields` 字段（字段元数据数组）
+  - 动态实体详情端点新增 `includeMeta` 查询参数（可选，默认 `false`）
 ```
+
+#### 步骤 4.2.2: 列出所有新增 lang 参数支持端点
+
+在 ARCH-30 条目下，按阶段列出所有端点：
+
+```markdown
+  - **阶段1 - 高频API改造**（3个端点）：
+    - `GET /api/access/functions/me`（支持 `Accept-Language` 头）
+    - `GET /api/templates/menu-bindings`（支持 `Accept-Language` 头）
+    - `GET /api/entities`、`GET /api/entities/all`（支持 `Accept-Language` 头）
+  - **阶段2 - 中频API改造**（4个端点组）：
+    - `GET /api/entity-definitions` 相关端点
+    - `GET /api/enums` 相关端点（列表、详情、按代码查询、选项列表）
+    - `GET /api/entity-domains`、`GET /api/entity-domains/{id}`
+    - `GET /api/access/functions`、`GET /api/access/functions/manage`、`POST /api/access/functions`、`PUT /api/access/functions/{id}`
+  - **阶段3 - 低频API改造**（2个端点）：
+    - `POST /api/dynamic-entities/{fullTypeName}/query`（新增 `meta.fields` 字段）
+    - `GET /api/dynamic-entities/{fullTypeName}/{id}`（新增 `includeMeta` 参数）
+```
+
+#### 步骤 4.2.3: 说明向后兼容性设计决策
+
+在 ARCH-30 条目下添加向后兼容性说明：
+
+```markdown
+  - **向后兼容性**：
+    - 所有新增的 `lang`/`includeMeta` 查询参数均为可选
+    - 未传 `lang` 时：端点保持既有默认行为（多语模式或基于 `Accept-Language` 的单语模式，取决于端点）
+    - 动态实体 `GET /api/dynamic-entities/{fullTypeName}/{id}` 默认不返回 `meta`；仅 `includeMeta=true` 才返回 `{ meta, data }`
+```
+
+#### 步骤 4.2.4: 记录关键设计决策
+
+在 ARCH-30 条目下添加关键设计决策说明：
+
+```markdown
+  - **关键设计决策**：
+    - 仅 3 个高频端点在未传 `lang` 时会使用 `Accept-Language` 作为默认语言
+    - 其余已改造端点：只有显式传 `?lang=xx` 才进入单语模式；未传 `lang` 时忽略 `Accept-Language`
+    - 双模式响应结构：单语模式输出 `displayName`（string），多语模式输出 `displayNameTranslations`（MultilingualText 字典）
+```
+
+### 验收标准
+
+- [ ] ARCH-30 条目已添加到 `[未发布] - 进行中` 章节
+- [ ] 所有 9 个端点都已列出
+- [ ] 向后兼容性设计决策已说明
+- [ ] 关键设计决策已记录（Accept-Language 处理规则、双模式响应结构）
+- [ ] 动态实体端点的 `meta.fields` 和 `includeMeta` 参数已说明
+- [ ] 格式符合 CHANGELOG 规范
+
+### Commit 信息
+
 docs(changelog): add ARCH-30 multilingual API changes
 
-- Document all endpoints with new lang parameter
+- Document all 9 endpoints with new lang parameter support
 - Note backward compatibility design decisions
+- Record key design decisions (Accept-Language handling, dual-mode response structure)
+- Document dynamic entity endpoints (meta.fields and includeMeta parameter)
 - Ref: ARCH-30 Task 4.2
 ```
 
