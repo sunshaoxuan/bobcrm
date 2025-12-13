@@ -1374,25 +1374,16 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 #### 步骤 3.3.1: 创建字段元数据缓存服务
 
 1. 创建 `src/BobCrm.Api/Services/FieldMetadataCache.cs`
-2. 实现接口：
-   ```csharp
-   public interface IFieldMetadataCache
-   {
-       Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(
-           string fullTypeName, 
-           string? lang);
-       void InvalidateCache(string fullTypeName);
-   }
-   ```
+2. 实现接口（参考结构）：
+   - 接口名：`IFieldMetadataCache`
+   - 方法1：`Task<Dictionary<string, FieldMetadataDto>> GetFieldMetadataAsync(string fullTypeName, string? lang)`
+   - 方法2：`void InvalidateCache(string fullTypeName)`
 3. 实现缓存逻辑：
    - 使用 `IMemoryCache` 缓存字段元数据
    - 缓存键：`FieldMetadata:{fullTypeName}`
    - 缓存过期时间：30分钟
    - 从数据库加载时使用 `ToFieldDto(lang)` 扩展方法
-4. 在 `Program.cs` 中注册服务：
-   ```csharp
-   builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();
-   ```
+4. 在 `Program.cs` 中注册服务：`builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();`
 
 #### 步骤 3.3.2: 创建动态实体查询结果DTO
 
@@ -1406,84 +1397,24 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
    - 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 3. 字段元数据DTO复用现有的 `FieldMetadataDto`（已支持双模式）
 
-#### 步骤 3.3.3: 修改动态实体端点（在端点层拼装meta.fields）
+#### 步骤 3.3.3: 修改动态实体端点实现
 
 **注意**：根据 Task 3.1 研究结论和 Task 3.2 设计方案，字段元数据应在端点层拼装，而不是在 `ReflectionPersistenceService` 中。
 
-1. 在端点层注入 `IFieldMetadataCache`
-2. 在端点中调用 `FieldMetadataCache.GetFieldMetadataAsync(fullTypeName, lang)` 获取字段元数据
-3. 将字段元数据拼装到返回DTO的 `Meta.Fields` 中
-4. 创建辅助方法 `ConvertToDictionary()` 将实体对象转换为字典（用于 `Data` 属性）
+1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`（参考实现）：
+   - 添加 `string? lang` 查询参数和 `IFieldMetadataCache fieldMetadataCache` 参数
+   - 使用 `var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
+   - 调用 `persistenceService.QueryAsync(fullTypeName, options)` 获取数据
+   - 调用 `fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang)` 获取字段元数据
+   - 构建返回DTO：`{ "data": [...], "meta": { "fields": [...] }, "total": 123 }`
+   - 遵循 ARCH-30 统一规则：显式 `?lang=xx` 才输出单语，无 `lang` 输出多语
 
-#### 步骤 3.3.4: 修改动态实体端点
-
-1. 修改 `POST /api/dynamic-entities/{fullTypeName}/query`：
-   ```csharp
-   group.MapPost("/{fullTypeName}/query", async (
-       string fullTypeName,
-       [FromBody] QueryRequest request,
-       [FromQuery] string? lang,
-       ReflectionPersistenceService persistenceService,
-       ILocalization loc,
-       HttpContext http,
-       ILogger<Program> logger) =>
-   {
-       var uiLang = LangHelper.GetLang(http);
-       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-       
-       try
-       {
-           var options = new QueryOptions { /* ... */ };
-           var result = await persistenceService.QueryWithMetadataAsync(
-               fullTypeName, 
-               options, 
-               targetLang);
-           
-           return Results.Ok(result);
-       }
-       catch (Exception ex)
-       {
-           // 错误处理
-       }
-   })
-   ```
-
-2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`：
-   ```csharp
-   group.MapGet("/{fullTypeName}/{id:int}", async (
-       string fullTypeName,
-       int id,
-       [FromQuery] string? lang,
-       ReflectionPersistenceService persistenceService,
-       IFieldMetadataCache fieldMetadataCache,
-       ILocalization loc,
-       HttpContext http,
-       ILogger<Program> logger) =>
-   {
-       var uiLang = LangHelper.GetLang(http);
-       var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-       
-       try
-       {
-           var entity = await persistenceService.GetByIdAsync(fullTypeName, id);
-           if (entity == null)
-               return Results.NotFound(...);
-           
-           // 获取字段元数据
-           var fieldMetadata = await fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang);
-           
-           return Results.Ok(new
-           {
-               data = ConvertToDictionary(entity),
-               fieldMetadata = fieldMetadata
-           });
-       }
-       catch (Exception ex)
-       {
-           // 错误处理
-       }
-   })
-   ```
+2. 修改 `GET /api/dynamic-entities/{fullTypeName}/{id}`（参考实现）：
+   - 添加 `string? lang` 查询参数和 `IFieldMetadataCache fieldMetadataCache` 参数
+   - 使用 `var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);`
+   - 调用 `persistenceService.GetByIdAsync(fullTypeName, id)` 获取实体
+   - 调用 `fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, targetLang)` 获取字段元数据
+   - 构建返回DTO：`{ "data": {...}, "meta": { "fields": [...] } }`
 
 #### 步骤 3.3.5: 添加功能测试
 
@@ -1507,10 +1438,9 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 #### 步骤 3.3.7: 编译验证
 
-```bash
-dotnet build src/BobCrm.Api/BobCrm.Api.csproj
-dotnet test --filter "DynamicEntityEndpointsTests"
-```
+执行以下命令验证：
+- `dotnet build src/BobCrm.Api/BobCrm.Api.csproj`
+- `dotnet test --filter "DynamicEntityEndpointsTests"`
 
 ### 验收标准
 
