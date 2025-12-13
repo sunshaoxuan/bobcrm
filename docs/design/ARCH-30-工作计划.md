@@ -1311,9 +1311,9 @@ docs(design): add dynamic entity field-level multilingual design
 ---
 
 **详细步骤**:
-- [ ] 步骤 3.2.1: 评估各方案（基于Task 3.1研究报告）
+- [ ] 步骤 3.2.1: 确认设计方案（基于Task 3.1研究结论）
 - [ ] 步骤 3.2.2: 设计字段元数据缓存机制
-- [ ] 步骤 3.2.3: 设计DTO转换器
+- [ ] 步骤 3.2.3: 设计DTO结构（meta.fields）
 - [ ] 步骤 3.2.4: 设计端点修改方案
 - [ ] 步骤 3.2.5: 设计性能优化策略
 - [ ] 步骤 3.2.6: 编写设计文档更新
@@ -1420,32 +1420,14 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 3. 使用 `JsonIgnore(Condition = WhenWritingNull)` 优化序列化
 
-#### 步骤 3.3.3: 修改 ReflectionPersistenceService
+#### 步骤 3.3.3: 修改动态实体端点（在端点层拼装meta.fields）
 
-1. 在 `ReflectionPersistenceService` 中注入 `IFieldMetadataCache`
-2. 创建新方法 `QueryWithMetadataAsync()`：
-   ```csharp
-   public async Task<DynamicEntityQueryResultDto> QueryWithMetadataAsync(
-       string fullTypeName,
-       QueryOptions? options = null,
-       string? lang = null)
-   {
-       // 1. 执行原有查询逻辑
-       var results = await QueryAsync(fullTypeName, options);
-       
-       // 2. 获取字段元数据（使用缓存）
-       var fieldMetadata = await _fieldMetadataCache.GetFieldMetadataAsync(fullTypeName, lang);
-       
-       // 3. 构建返回DTO
-       return new DynamicEntityQueryResultDto
-       {
-           Data = results.Select(r => ConvertToDictionary(r)).ToList(),
-           FieldMetadata = fieldMetadata,
-           Total = await CountAsync(fullTypeName, options?.Filters)
-       };
-   }
-   ```
-3. 创建辅助方法 `ConvertToDictionary()` 将实体对象转换为字典
+**注意**：根据 Task 3.1 研究结论和 Task 3.2 设计方案，字段元数据应在端点层拼装，而不是在 `ReflectionPersistenceService` 中。
+
+1. 在端点层注入 `IFieldMetadataCache`
+2. 在端点中调用 `FieldMetadataCache.GetFieldMetadataAsync(fullTypeName, lang)` 获取字段元数据
+3. 将字段元数据拼装到返回DTO的 `Meta.Fields` 中
+4. 创建辅助方法 `ConvertToDictionary()` 将实体对象转换为字典（用于 `Data` 属性）
 
 #### 步骤 3.3.4: 修改动态实体端点
 
@@ -1530,25 +1512,10 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 #### 步骤 3.3.6: 添加性能测试
 
-1. 创建性能测试方法：
-   ```csharp
-   [Fact]
-   public async Task QueryPerformance_WithCache_IsAcceptable()
-   {
-       // 1. 第一次查询（缓存未命中）
-       var sw1 = Stopwatch.StartNew();
-       var result1 = await QueryWithMetadataAsync(...);
-       sw1.Stop();
-       
-       // 2. 第二次查询（缓存命中）
-       var sw2 = Stopwatch.StartNew();
-       var result2 = await QueryWithMetadataAsync(...);
-       sw2.Stop();
-       
-       // 验证：第二次查询应该明显快于第一次
-       Assert.True(sw2.ElapsedMilliseconds < sw1.ElapsedMilliseconds * 0.5);
-   }
-   ```
+1. 创建性能测试方法（参考实现）：
+   - 测试缓存未命中场景：第一次查询字段元数据
+   - 测试缓存命中场景：第二次查询相同字段元数据
+   - 验证：第二次查询应该明显快于第一次（如：`sw2.ElapsedMilliseconds < sw1.ElapsedMilliseconds * 0.5`）
 2. 对比优化前后的查询时间
 3. 验证缓存效果
 
