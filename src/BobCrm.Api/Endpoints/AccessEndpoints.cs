@@ -22,30 +22,36 @@ public static class AccessEndpoints
         var group = app.MapGroup("/api/access").RequireAuthorization();
 
         group.MapGet("/functions", async (
+            string? lang,
+            HttpContext http,
             [FromServices] AppDbContext db,
             [FromServices] FunctionTreeBuilder treeBuilder,
             CancellationToken ct) =>
         {
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            var tree = await treeBuilder.BuildAsync(nodes, lang: null, ct: ct);
+            var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
             return Results.Ok(tree);
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/manage", async (
+            string? lang,
+            HttpContext http,
             [FromServices] AppDbContext db,
             [FromServices] FunctionTreeBuilder treeBuilder,
             CancellationToken ct) =>
         {
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
                 .Include(f => f.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
-            var tree = await treeBuilder.BuildAsync(nodes, lang: null, ct: ct);
+            var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
             return Results.Ok(tree);
         }).RequireFunction("SYS.SET.MENU");
 
@@ -68,13 +74,16 @@ public static class AccessEndpoints
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
+            [FromQuery] string? lang,
             [FromServices] AccessService service,
+            [FromServices] FunctionTreeBuilder treeBuilder,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             try
             {
                 var node = await service.CreateFunctionAsync(request, ct);
@@ -89,23 +98,26 @@ public static class AccessEndpoints
                     node.TemplateId,
                     TemplateName = node.Template?.Name
                 }, ct);
-                return Results.Ok(ToDto(node));
+                return Results.Ok(await ToDtoAsync(node, treeBuilder, targetLang, ct));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_CREATE_FAILED", lang), ex.Message), "FUNCTION_CREATE_FAILED"));
+                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_CREATE_FAILED", uiLang), ex.Message), "FUNCTION_CREATE_FAILED"));
             }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapPut("/functions/{id:guid}", async (Guid id,
             [FromBody] UpdateFunctionRequest request,
+            [FromQuery] string? lang,
             [FromServices] AccessService service,
+            [FromServices] FunctionTreeBuilder treeBuilder,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             try
             {
                 var node = await service.UpdateFunctionAsync(id, request, ct);
@@ -121,11 +133,11 @@ public static class AccessEndpoints
                     node.TemplateId,
                     TemplateName = node.Template?.Name
                 }, ct);
-                return Results.Ok(ToDto(node));
+                return Results.Ok(await ToDtoAsync(node, treeBuilder, targetLang, ct));
             }
             catch (InvalidOperationException ex)
             {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_UPDATE_FAILED", lang), ex.Message), "FUNCTION_UPDATE_FAILED"));
+                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_UPDATE_FAILED", uiLang), ex.Message), "FUNCTION_UPDATE_FAILED"));
             }
         }).RequireFunction("SYS.SET.MENU");
 
@@ -472,26 +484,14 @@ public static class AccessEndpoints
         };
     }
 
-    private static FunctionNodeDto ToDto(FunctionNode node)
+    private static async Task<FunctionNodeDto> ToDtoAsync(
+        FunctionNode node,
+        FunctionTreeBuilder treeBuilder,
+        string? lang,
+        CancellationToken ct)
     {
-        return new FunctionNodeDto
-        {
-            Id = node.Id,
-            ParentId = node.ParentId,
-            Code = node.Code,
-            Name = node.Name,
-            DisplayName = null,
-            DisplayNameTranslations = node.DisplayName != null ? new MultilingualText(node.DisplayName) : null,
-            Route = node.Route,
-            Icon = node.Icon,
-            IsMenu = node.IsMenu,
-            SortOrder = node.SortOrder,
-            TemplateId = node.TemplateId,
-            TemplateName = node.Template?.Name,
-            Children = new List<FunctionNodeDto>(),
-            TemplateOptions = new List<FunctionTemplateOptionDto>(),
-            TemplateBindings = new List<FunctionNodeTemplateBindingDto>()
-        };
+        var tree = await treeBuilder.BuildAsync(new[] { node }, lang: lang, ct: ct);
+        return tree[0];
     }
 
     private static object BuildExportNode(FunctionNode node, Dictionary<Guid, FunctionNode> lookup)

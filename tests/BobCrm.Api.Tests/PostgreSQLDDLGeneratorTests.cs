@@ -317,6 +317,8 @@ public class PostgreSQLDDLGeneratorTests
         // Assert
         fields.Should().HaveCount(1);
         fields[0].PropertyName.Should().Be("Id");
+        fields[0].DisplayNameKey.Should().Be("LBL_FIELD_ID");
+        fields[0].DisplayName.Should().BeNull();
         fields[0].DataType.Should().Be(FieldDataType.Integer);
         fields[0].IsRequired.Should().BeTrue();
     }
@@ -336,8 +338,8 @@ public class PostgreSQLDDLGeneratorTests
 
         // Assert
         fields.Should().HaveCount(2);
-        fields.Should().Contain(f => f.PropertyName == "Code");
-        fields.Should().Contain(f => f.PropertyName == "Name");
+        fields.Should().ContainSingle(f => f.PropertyName == "Code" && f.DisplayNameKey == "LBL_FIELD_CODE" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "Name" && f.DisplayNameKey == "LBL_FIELD_NAME" && f.DisplayName == null);
     }
 
     [Fact]
@@ -355,11 +357,11 @@ public class PostgreSQLDDLGeneratorTests
 
         // Assert
         fields.Should().HaveCount(5);
-        fields.Should().Contain(f => f.PropertyName == "CreatedAt");
-        fields.Should().Contain(f => f.PropertyName == "CreatedBy");
-        fields.Should().Contain(f => f.PropertyName == "UpdatedAt");
-        fields.Should().Contain(f => f.PropertyName == "UpdatedBy");
-        fields.Should().Contain(f => f.PropertyName == "Version");
+        fields.Should().ContainSingle(f => f.PropertyName == "CreatedAt" && f.DisplayNameKey == "LBL_FIELD_CREATED_AT" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "CreatedBy" && f.DisplayNameKey == "LBL_FIELD_CREATED_BY" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "UpdatedAt" && f.DisplayNameKey == "LBL_FIELD_UPDATED_AT" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "UpdatedBy" && f.DisplayNameKey == "LBL_FIELD_UPDATED_BY" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "Version" && f.DisplayNameKey == "LBL_FIELD_VERSION" && f.DisplayName == null);
     }
 
     [Fact]
@@ -378,6 +380,8 @@ public class PostgreSQLDDLGeneratorTests
         // Assert
         fields.Should().HaveCount(1);
         fields[0].PropertyName.Should().Be("Version");
+        fields[0].DisplayNameKey.Should().Be("LBL_FIELD_VERSION");
+        fields[0].DisplayName.Should().BeNull();
         fields[0].DefaultValue.Should().Be("1");
     }
 
@@ -396,9 +400,9 @@ public class PostgreSQLDDLGeneratorTests
 
         // Assert
         fields.Should().HaveCount(3);
-        fields.Should().Contain(f => f.PropertyName == "ValidFrom");
-        fields.Should().Contain(f => f.PropertyName == "ValidTo");
-        fields.Should().Contain(f => f.PropertyName == "VersionNo");
+        fields.Should().ContainSingle(f => f.PropertyName == "ValidFrom" && f.DisplayNameKey == "LBL_FIELD_VALID_FROM" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "ValidTo" && f.DisplayNameKey == "LBL_FIELD_VALID_TO" && f.DisplayName == null);
+        fields.Should().ContainSingle(f => f.PropertyName == "VersionNo" && f.DisplayNameKey == "LBL_FIELD_VERSION_NO" && f.DisplayName == null);
     }
 
     [Fact]

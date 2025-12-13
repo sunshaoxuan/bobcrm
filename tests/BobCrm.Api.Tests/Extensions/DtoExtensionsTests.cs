@@ -75,7 +75,7 @@ public class DtoExtensionsTests
     public void ToFieldDto_WithDisplayNameKey_UsesLocalization()
     {
         // Arrange
-        var field = new FieldMetadataWithKey
+        var field = new FieldMetadata
         {
             PropertyName = "Code",
             DisplayNameKey = "LBL_FIELD_CODE",
@@ -213,8 +213,4 @@ public class DtoExtensionsTests
             $"预期至少减少 50%，实际减少: {reduction:P}");
     }
 
-    private class FieldMetadataWithKey : FieldMetadata
-    {
-        public string? DisplayNameKey { get; set; }
-    }
 }

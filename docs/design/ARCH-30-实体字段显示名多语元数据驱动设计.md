@@ -519,12 +519,12 @@ case EntityInterfaceType.Archive:
 
 **端点设计**：
 ```csharp
-entitiesGroup.MapGet("/{entityType}/field-metadata",
-    async (string entityType, string? lang, AppDbContext db, ILocalization loc, HttpContext http) =>
-{
-    // ⭐ 方案B核心：获取语言参数（query优先，否则从Accept-Language）
-    var targetLang = lang ?? LangHelper.GetLang(http);
-    var candidates = BuildEntityCandidates(entityType);
+ entitiesGroup.MapGet("/{entityType}/field-metadata",
+     async (string entityType, string? lang, AppDbContext db, ILocalization loc, HttpContext http) =>
+ {
+     // ✅ 向后兼容：仅显式 ?lang=xx 才进入单语模式（无 lang 返回多语结构）
+     var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+     var candidates = BuildEntityCandidates(entityType);
 
     // 1. 查询实体定义
     var definition = await db.EntityDefinitions
@@ -1468,13 +1468,13 @@ public static void MapGet(string pattern,
     // 使用 lang 解析多语数据
 }
 
-// ✅ 可选：显式 lang 查询参数
-app.MapGet("/api/entities", async (string? lang, HttpContext http) =>
-{
-    var targetLang = lang ?? LangHelper.GetLang(http);
-    // ...
-});
-```
+ // ✅ 可选：显式 lang 查询参数
+ app.MapGet("/api/entities", async (string? lang, HttpContext http) =>
+ {
+     var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+     // ...
+ });
+ ```
 
 ##### 规范2：语言参数优先级
 
@@ -1865,16 +1865,17 @@ git commit -m "feat: update EntitySummaryDto with backward-compatible design
 1. **修改端点接受lang参数**
 ```csharp
 // 文件：BobCrm.Api/Endpoints/AccessEndpoints.cs (约第120行)
-app.MapGet("/api/access/functions/me", async (
-    string? lang,  // ⭐ 新增参数
-    HttpContext http,
-    ILocalization loc,
-    /* ... 其他参数 */) =>
-{
-    var targetLang = lang ?? LangHelper.GetLang(http);
-    // ... 后续逻辑
-});
-```
+ app.MapGet("/api/access/functions/me", async (
+     string? lang,  // ⭐ 新增参数
+     HttpContext http,
+     ILocalization loc,
+     /* ... 其他参数 */) =>
+ {
+     // 注：该端点属于高频路径，可允许 Accept-Language 作为默认语言来源（无 lang 时仍可能进入单语模式）
+     var targetLang = LangHelper.GetLang(http, lang);
+     // ... 后续逻辑
+ });
+ ```
 
 2. **修改 FunctionTreeBuilder 应用语言过滤**
 ```csharp
@@ -1974,22 +1975,22 @@ git commit -m "test: add lang parameter tests for /api/access/functions/me
 1. **修改系统语言为用户语言**
 ```csharp
 // 文件：BobCrm.Api/Endpoints/TemplateEndpoints.cs (约第254行)
-app.MapGet("/api/templates/menu-bindings", async (
-    string? lang,  // ⭐ 新增参数
-    HttpContext http,
-    ILocalization loc,
-    AppDbContext db,
-    CancellationToken ct) =>
-{
+ app.MapGet("/api/templates/menu-bindings", async (
+     string? lang,  // ⭐ 新增参数
+     HttpContext http,
+     ILocalization loc,
+     AppDbContext db,
+     CancellationToken ct) =>
+ {
     // ❌ 移除：使用系统语言
     // var systemLanguage = await db.SystemSettings...
 
-    // ✅ 使用用户语言
-    var targetLang = lang ?? LangHelper.GetLang(http);
+     // ✅ 使用用户语言
+     var targetLang = LangHelper.GetLang(http, lang);
 
-    // ... 后续使用targetLang解析显示名
-});
-```
+     // ... 后续使用targetLang解析显示名
+ });
+ ```
 
 **需要的测试**：
 ```csharp
@@ -2044,12 +2045,12 @@ git commit -m "fix: use user language instead of system language in menu binding
 **工作内容**：
 ```csharp
 // 文件：BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs (约第50行)
-entitiesGroup.MapGet("", async (
-    string? lang,  // ⭐ 新增参数
-    HttpContext http,
-    AppDbContext db) =>
-{
-    var targetLang = lang ?? LangHelper.GetLang(http);
+ entitiesGroup.MapGet("", async (
+     string? lang,  // ⭐ 新增参数
+     HttpContext http,
+     AppDbContext db) =>
+ {
+     var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
 
     var entities = await db.EntityDefinitions
         .Where(ed => ed.IsEnabled && ed.Status == "Published")
@@ -2118,17 +2119,17 @@ git commit -m "feat: optimize /api/entities with lang parameter
 **工作内容**：
 ```csharp
 // 文件：BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs
-app.MapGet("/api/entity-definitions", async (
-    string? lang,
-    HttpContext http,
-    AppDbContext db) =>
-{
-    var targetLang = lang ?? LangHelper.GetLang(http);
-    var definitions = await db.EntityDefinitions.ToListAsync();
-    var dtos = definitions.Select(d => d.ToSummaryDto(targetLang)).ToList();
-    return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(dtos));
-});
-```
+ app.MapGet("/api/entity-definitions", async (
+     string? lang,
+     HttpContext http,
+     AppDbContext db) =>
+ {
+     var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+     var definitions = await db.EntityDefinitions.ToListAsync();
+     var dtos = definitions.Select(d => d.ToSummaryDto(targetLang)).ToList();
+     return Results.Ok(new SuccessResponse<List<EntitySummaryDto>>(dtos));
+ });
+ ```
 
 **测试+提交**：（模式同Task 1.3）
 
@@ -2137,17 +2138,18 @@ app.MapGet("/api/entity-definitions", async (
 **工作内容**：
 ```csharp
 // 文件：BobCrm.Api/Endpoints/EnumDefinitionEndpoints.cs
-app.MapGet("/api/enums", async (
-    string? lang,
-    HttpContext http,
-    AppDbContext db) =>
-{
-    var targetLang = lang ?? LangHelper.GetLang(http);
-    var enums = await db.EnumDefinitions.ToListAsync();
-    var dtos = enums.Select(e => e.ToSummaryDto(targetLang)).ToList();
-    return Results.Ok(new SuccessResponse<List<EnumSummaryDto>>(dtos));
-});
-```
+ app.MapGet("/api/enums", async (
+     string? lang,
+     HttpContext http,
+     AppDbContext db) =>
+ {
+     // ✅ 向后兼容：仅显式 ?lang=xx 才进入单语模式
+     var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+     var enums = await db.EnumDefinitions.ToListAsync();
+     var dtos = enums.Select(e => e.ToSummaryDto(targetLang)).ToList();
+     return Results.Ok(new SuccessResponse<List<EnumSummaryDto>>(dtos));
+ });
+ ```
 
 **测试+提交**：（模式同Task 1.3）
 
@@ -2170,34 +2172,151 @@ app.MapGet("/api/enums", async (
 
 **范围**：动态实体查询相关API，使用频率较低，改造复杂度高
 
-##### Task 3.1：研究动态实体查询机制
-
-**工作内容**：
-1. 阅读 `DynamicEntityService` 源码
-2. 理解查询结果的多语字段处理机制
-3. 编写技术调研文档
-
-**输出**：技术调研报告（`docs/design/ARCH-30-动态实体多语查询技术调研.md`）
-
-**提交规范**：
-```bash
-git add docs/design/ARCH-30-动态实体多语查询技术调研.md
-git commit -m "docs: add technical research for dynamic entity i18n query
-
-- Analyze DynamicEntityService query mechanism
-- Identify multilingual field handling points
-- Propose optimization approach
-- Related to ARCH-30"
-```
-
-##### Task 3.2：设计字段级多语解析方案
-
-（根据Task 3.1的调研结果制定方案）
-
-##### Task 3.3：实施改造
-
-- `/api/dynamic-entities/{type}/query` (POST)
-- `/api/dynamic-entities/{type}/{id}` (GET)
+ ##### Task 3.1：研究动态实体查询机制
+ 
+ **工作内容**：
+ 1. 阅读 `DynamicEntityService` 源码
+ 2. 理解查询结果的多语字段处理机制
+ 3. 编写技术调研文档
+ 
+ **输出**：技术调研报告（`docs/research/ARCH-30-动态实体多语研究报告.md`）
+ 
+ **提交规范**：
+ ```bash
+ git add docs/research/ARCH-30-动态实体多语研究报告.md
+ git commit -m "docs(research): add dynamic entity i18n research report
+ 
+ - Analyze codegen/compile/query pipeline
+ - Identify field metadata & i18n resolve points
+ - Recommend meta.fields approach for Stage 3
+ - Ref: ARCH-30 Task 3.1"
+ ```
+ 
+ ##### Task 3.2：设计字段级多语解析方案
+ 
+ **目标**：为动态实体“数据查询”端点补齐字段级显示名能力，同时保持“数据值（data）/元数据标签（meta.fields）”职责分离。
+ 
+ **核心结论（承接 Task 3.1）**：
+ - 动态实体查询链路当前不做 DTO 转换，直接返回运行时实体对象；字段显示名不可能“自然出现”在结果中
+ - 字段显示名解析最佳落点是元数据层（EntityDefinition/FieldMetadata DTO），而不是数据查询返回本体
+ - 若查询响应需要列信息，推荐在端点层拼装 `meta.fields`，并配套字段元数据缓存（按 `fullTypeName`）
+ 
+ ###### 3.2.1 设计原则
+ 
+ - **职责分离**：`data` 仅包含实体数据；`meta.fields` 仅包含字段元数据（显示名、类型等）
+ - **向后兼容（lang 规则）**：仅显式 `?lang=xx` 才输出单语字符串；无 `lang` 返回多语结构（忽略 `Accept-Language`）
+ - **性能优先**：字段元数据按 `fullTypeName` 缓存；i18n 解析复用 `ILocalization` 内部缓存
+ - **复用现有能力**：复用 `DtoExtensions.ToFieldDto(field, loc, lang)` 的三级优先级逻辑（`DisplayNameKey` → `DisplayName` → `PropertyName`）
+ 
+ ###### 3.2.2 返回结构（meta.fields）
+ 
+ **Query（列表查询）**：在现有结构基础上增加 `meta`（增量字段，兼容旧客户端忽略未知字段）
+ 
+ ```json
+ {
+   "meta": {
+     "fields": [
+       {
+         "propertyName": "Code",
+         "displayNameKey": "LBL_FIELD_CODE",
+         "displayName": "编码"
+       },
+       {
+         "propertyName": "CustomField",
+         "displayNameTranslations": { "zh": "自定义字段", "en": "Custom Field" }
+       }
+     ]
+   },
+   "data": [ { "...": "..." } ],
+   "total": 123,
+   "page": 1,
+   "pageSize": 100
+ }
+ ```
+ 
+ **GetById（单体查询）**：
+ - 为避免破坏既有使用方，建议通过 `includeMeta=true` 控制是否包裹：
+   - `includeMeta=false`（默认）：保持现状，返回实体对象
+   - `includeMeta=true`：返回 `{ meta, data }`
+ 
+ ```json
+ {
+   "meta": { "fields": [ /* 同上 */ ] },
+   "data": { "...": "..." }
+ }
+ ```
+ 
+ ###### 3.2.3 双模式规则（字段显示名）
+ 
+ 统一采用阶段1/2 的规则：
+ 
+ ```csharp
+ var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+ var uiLang = LangHelper.GetLang(http); // 仅用于错误消息
+ ```
+ 
+ - `targetLang != null`（单语模式）：`FieldMetadataDto.DisplayName` 输出单语字符串；`DisplayNameTranslations` 为 null
+ - `targetLang == null`（多语模式，向后兼容）：
+   - 接口字段：输出 `DisplayNameKey`（不展开多语字典）
+   - 自定义字段：输出 `DisplayNameTranslations`（字典）；`DisplayName` 为 null
+ 
+ ###### 3.2.4 DTO 设计（建议）
+ 
+ 复用已有的 `FieldMetadataDto`（已支持双模式）作为 `meta.fields` 元素类型，并新增查询结果 DTO：
+ 
+ ```csharp
+ public class DynamicEntityQueryResultDto
+ {
+     public object? Meta { get; set; } // { fields: List<FieldMetadataDto> }
+     public List<object> Data { get; set; } = new();
+     public int Total { get; set; }
+     public int Page { get; set; }
+     public int PageSize { get; set; }
+ }
+ ```
+ 
+ 注：实现时可将 `Meta` 具体化为 `DynamicEntityMetaDto`，并使用 `JsonIgnore(WhenWritingNull)` 优化 payload。
+ 
+ ###### 3.2.5 字段元数据缓存机制（建议）
+ 
+ **缓存 Key**：
+ - 基础元数据：`FieldMetadata:{fullTypeName}`（存 FieldMetadata 的最小必要集合）
+ - 可选：按语言缓存 DTO 视图：`FieldMetadata:{fullTypeName}:{lang}:{i18nVersion}`
+ 
+ **失效策略**（推荐组合）：
+ - **主动失效**：实体定义/字段变更后，调用 `Invalidate(fullTypeName)`
+ - **被动过期**：30 分钟滑动/绝对过期（防止遗漏失效）
+ - **i18n 版本**：如缓存单语 DTO 视图，则使用 `ILocalization.GetCacheVersion()` 作为 version
+ 
+ **缓存服务接口（建议）**：
+ 
+ ```csharp
+ public interface IFieldMetadataCache
+ {
+     Task<IReadOnlyList<FieldMetadataDto>> GetFieldsAsync(string fullTypeName, ILocalization loc, string? lang, CancellationToken ct);
+     void Invalidate(string fullTypeName);
+ }
+ ```
+ 
+ 实现要点：
+ - DB 查询：按 `fullTypeName` 加载 `EntityDefinition`（含 `Fields`），一次性取全字段
+ - DTO 映射：对每个字段调用 `field.ToFieldDto(loc, lang)`（复用已有逻辑）
+ - 避免 N+1：接口字段翻译走 `ILocalization` 内部缓存；如需批量资源可选用 `MultilingualFieldService.LoadResourcesAsync(...)`
+ 
+ ###### 3.2.6 端点修改方案（Task 3.3 将实现）
+ 
+ - `POST /api/dynamic-entities/{fullTypeName}/query`
+   - 新增查询参数：`lang`（可选）
+   - 追加响应字段：`meta.fields`
+ 
+ - `GET /api/dynamic-entities/{fullTypeName}/{id}`
+   - 新增查询参数：`lang`（可选）、`includeMeta`（可选，默认 false）
+   - `includeMeta=true` 时返回 `{ meta, data }`
+ 
+ ##### Task 3.3：实施改造
+ 
+ - `/api/dynamic-entities/{type}/query` (POST)
+ - `/api/dynamic-entities/{type}/{id}` (GET)
 
 ---
 

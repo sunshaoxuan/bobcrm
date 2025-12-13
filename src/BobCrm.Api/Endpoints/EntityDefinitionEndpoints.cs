@@ -8,7 +8,7 @@ using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.Requests.Entity;
 using BobCrm.Api.Contracts.Responses.Entity;
 using BobCrm.Api.Extensions;
-using EntityFieldDto = BobCrm.Api.Contracts.Responses.Entity.FieldMetadataDto;
+using BobCrm.Api.Utils;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -69,9 +69,10 @@ public static class EntityDefinitionEndpoints
         .Produces<SuccessResponse<List<EntitySummaryDto>>>()
         .AllowAnonymous();
 
-        entitiesGroup.MapGet("/{entityType}/definition", async (string entityType, AppDbContext db, ILocalization loc, HttpContext http) =>
+        entitiesGroup.MapGet("/{entityType}/definition", async (string entityType, string? lang, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var candidates = BuildEntityCandidates(entityType);
 
             var definition = await db.EntityDefinitions
@@ -85,7 +86,7 @@ public static class EntityDefinitionEndpoints
 
             if (definition == null)
             {
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", uiLang), "ENTITY_NOT_FOUND"));
             }
 
             var dto = new EntityDefinitionDto
@@ -95,8 +96,14 @@ public static class EntityDefinitionEndpoints
                 EntityName = definition.EntityName,
                 FullTypeName = definition.FullTypeName,
                 EntityRoute = definition.EntityRoute,
-                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
-                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                DisplayName = targetLang != null ? definition.DisplayName.Resolve(targetLang) : null,
+                Description = targetLang != null ? definition.Description.Resolve(targetLang) : null,
+                DisplayNameTranslations = targetLang == null
+                    ? (definition.DisplayName != null ? new MultilingualText(definition.DisplayName) : new MultilingualText())
+                    : null,
+                DescriptionTranslations = targetLang == null
+                    ? (definition.Description != null ? new MultilingualText(definition.Description) : null)
+                    : null,
                 ApiEndpoint = definition.ApiEndpoint,
                 StructureType = definition.StructureType,
                 Status = definition.Status,
@@ -114,27 +121,8 @@ public static class EntityDefinitionEndpoints
                 Fields = definition.Fields
                     .Where(f => !f.IsDeleted)
                     .OrderBy(f => f.SortOrder)
-                    .Select(f => new EntityFieldDto
-                    {
-                        Id = f.Id,
-                        PropertyName = f.PropertyName,
-                        DisplayName = null,
-                        DisplayNameTranslations = f.DisplayName != null ? new MultilingualText(f.DisplayName) : null,
-                        DataType = f.DataType,
-                        Length = f.Length,
-                        Precision = f.Precision,
-                        Scale = f.Scale,
-                        IsRequired = f.IsRequired,
-                        IsEntityRef = f.IsEntityRef,
-                        ReferencedEntityId = f.ReferencedEntityId,
-                        TableName = f.TableName,
-                        SortOrder = f.SortOrder,
-                        DefaultValue = f.DefaultValue,
-                        ValidationRules = f.ValidationRules,
-                        Source = f.Source,
-                        EnumDefinitionId = f.EnumDefinitionId,
-                        IsMultiSelect = f.IsMultiSelect
-                    }).ToList(),
+                    .Select(f => f.ToFieldDto(loc, targetLang))
+                    .ToList(),
                 Interfaces = definition.Interfaces
                     .Where(i => i.IsEnabled)
                     .Select(i => new EntityInterfaceDto { Id = i.Id, InterfaceType = i.InterfaceType, IsEnabled = i.IsEnabled })
@@ -216,8 +204,9 @@ public static class EntityDefinitionEndpoints
         // ==================== 查询 ====================
 
         // 获取所有实体定义列表
-        group.MapGet("", async (AppDbContext db, HttpContext http) =>
+        group.MapGet("", async (string? lang, AppDbContext db, HttpContext http) =>
         {
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var definitions = await db.EntityDefinitions
                 .Include(ed => ed.Fields)
                 .Include(ed => ed.Interfaces)
@@ -229,8 +218,14 @@ public static class EntityDefinitionEndpoints
                     EntityName = ed.EntityName,
                     FullTypeName = ed.FullTypeName,
                     EntityRoute = ed.EntityRoute,
-                    DisplayName = new MultilingualText(ed.DisplayName ?? new Dictionary<string, string?>()),
-                    Description = new MultilingualText(ed.Description ?? new Dictionary<string, string?>()),
+                    DisplayName = targetLang != null ? ed.DisplayName.Resolve(targetLang) : null,
+                    Description = targetLang != null ? ed.Description.Resolve(targetLang) : null,
+                    DisplayNameTranslations = targetLang == null
+                        ? (ed.DisplayName != null ? new MultilingualText(ed.DisplayName) : new MultilingualText())
+                        : null,
+                    DescriptionTranslations = targetLang == null
+                        ? (ed.Description != null ? new MultilingualText(ed.Description) : null)
+                        : null,
                     ApiEndpoint = ed.ApiEndpoint,
                     StructureType = ed.StructureType,
                     Status = ed.Status,
@@ -262,16 +257,17 @@ public static class EntityDefinitionEndpoints
         .Produces<SuccessResponse<List<EntityListDto>>>();
 
         // 获取单个实体定义详情
-        group.MapGet("/{id:guid}", async (Guid id, AppDbContext db, ILocalization loc, HttpContext http) =>
+        group.MapGet("/{id:guid}", async (Guid id, string? lang, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var definition = await db.EntityDefinitions
                 .Include(ed => ed.Fields.OrderBy(f => f.SortOrder))
                 .Include(ed => ed.Interfaces)
                 .FirstOrDefaultAsync(ed => ed.Id == id);
 
             if (definition == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", uiLang), "ENTITY_NOT_FOUND"));
 
             var dto = new EntityDefinitionDto
             {
@@ -280,8 +276,14 @@ public static class EntityDefinitionEndpoints
                 EntityName = definition.EntityName,
                 FullTypeName = definition.FullTypeName,
                 EntityRoute = definition.EntityRoute,
-                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
-                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                DisplayName = targetLang != null ? definition.DisplayName.Resolve(targetLang) : null,
+                Description = targetLang != null ? definition.Description.Resolve(targetLang) : null,
+                DisplayNameTranslations = targetLang == null
+                    ? (definition.DisplayName != null ? new MultilingualText(definition.DisplayName) : new MultilingualText())
+                    : null,
+                DescriptionTranslations = targetLang == null
+                    ? (definition.Description != null ? new MultilingualText(definition.Description) : null)
+                    : null,
                 ApiEndpoint = definition.ApiEndpoint,
                 StructureType = definition.StructureType,
                 Status = definition.Status,
@@ -299,27 +301,8 @@ public static class EntityDefinitionEndpoints
                 Fields = definition.Fields
                     .Where(f => !f.IsDeleted)
                     .OrderBy(f => f.SortOrder)
-                    .Select(f => new EntityFieldDto
-                    {
-                        Id = f.Id,
-                        PropertyName = f.PropertyName,
-                        DisplayName = null,
-                        DisplayNameTranslations = f.DisplayName != null ? new MultilingualText(f.DisplayName) : null,
-                        DataType = f.DataType,
-                        Length = f.Length,
-                        Precision = f.Precision,
-                        Scale = f.Scale,
-                        IsRequired = f.IsRequired,
-                        IsEntityRef = f.IsEntityRef,
-                        ReferencedEntityId = f.ReferencedEntityId,
-                        TableName = f.TableName,
-                        SortOrder = f.SortOrder,
-                        DefaultValue = f.DefaultValue,
-                        ValidationRules = f.ValidationRules,
-                        Source = f.Source,
-                        EnumDefinitionId = f.EnumDefinitionId,
-                        IsMultiSelect = f.IsMultiSelect
-                    }).ToList(),
+                    .Select(f => f.ToFieldDto(loc, targetLang))
+                    .ToList(),
                 Interfaces = definition.Interfaces.Select(i => new EntityInterfaceDto
                 {
                     Id = i.Id,
@@ -337,9 +320,10 @@ public static class EntityDefinitionEndpoints
         .Produces<ErrorResponse>(404);
 
         // 根据实体类型名称获取实体定义（用于表单设计器）
-        group.MapGet("/by-type/{entityType}", async (string entityType, AppDbContext db, ILocalization loc, HttpContext http) =>
+        group.MapGet("/by-type/{entityType}", async (string entityType, string? lang, AppDbContext db, ILocalization loc, HttpContext http) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var normalized = entityType?.Trim();
 
             var definition = await db.EntityDefinitions
@@ -352,7 +336,7 @@ public static class EntityDefinitionEndpoints
                     ed.EntityName == normalized);
 
             if (definition == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", lang), "ENTITY_NOT_FOUND"));
+                return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", uiLang), "ENTITY_NOT_FOUND"));
 
             var dto = new EntityDefinitionDto
             {
@@ -361,8 +345,14 @@ public static class EntityDefinitionEndpoints
                 EntityName = definition.EntityName,
                 FullTypeName = definition.FullTypeName,
                 EntityRoute = definition.EntityRoute,
-                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
-                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                DisplayName = targetLang != null ? definition.DisplayName.Resolve(targetLang) : null,
+                Description = targetLang != null ? definition.Description.Resolve(targetLang) : null,
+                DisplayNameTranslations = targetLang == null
+                    ? (definition.DisplayName != null ? new MultilingualText(definition.DisplayName) : new MultilingualText())
+                    : null,
+                DescriptionTranslations = targetLang == null
+                    ? (definition.Description != null ? new MultilingualText(definition.Description) : null)
+                    : null,
                 ApiEndpoint = definition.ApiEndpoint,
                 StructureType = definition.StructureType,
                 Status = definition.Status,
@@ -380,27 +370,8 @@ public static class EntityDefinitionEndpoints
                 Fields = definition.Fields
                     .Where(f => !f.IsDeleted)
                     .OrderBy(f => f.SortOrder)
-                    .Select(f => new EntityFieldDto
-                    {
-                        Id = f.Id,
-                        PropertyName = f.PropertyName,
-                        DisplayName = null,
-                        DisplayNameTranslations = f.DisplayName != null ? new MultilingualText(f.DisplayName) : null,
-                        DataType = f.DataType,
-                        Length = f.Length,
-                        Precision = f.Precision,
-                        Scale = f.Scale,
-                        IsRequired = f.IsRequired,
-                        IsEntityRef = f.IsEntityRef,
-                        ReferencedEntityId = f.ReferencedEntityId,
-                        TableName = f.TableName,
-                        SortOrder = f.SortOrder,
-                        DefaultValue = f.DefaultValue,
-                        ValidationRules = f.ValidationRules,
-                        Source = f.Source,
-                        EnumDefinitionId = f.EnumDefinitionId,
-                        IsMultiSelect = f.IsMultiSelect
-                    }).ToList(),
+                    .Select(f => f.ToFieldDto(loc, targetLang))
+                    .ToList(),
                 Interfaces = definition.Interfaces.Select(i => new EntityInterfaceDto
                 {
                     Id = i.Id,
@@ -582,8 +553,12 @@ public static class EntityDefinitionEndpoints
                 EntityName = definition.EntityName,
                 FullTypeName = definition.FullTypeName,
                 EntityRoute = definition.EntityRoute,
-                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
-                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                DisplayNameTranslations = definition.DisplayName != null
+                    ? new MultilingualText(definition.DisplayName)
+                    : new MultilingualText(),
+                DescriptionTranslations = definition.Description != null
+                    ? new MultilingualText(definition.Description)
+                    : null,
                 ApiEndpoint = definition.ApiEndpoint,
                 StructureType = definition.StructureType,
                 Status = definition.Status,
@@ -881,8 +856,12 @@ public static class EntityDefinitionEndpoints
                 EntityName = definition.EntityName,
                 FullTypeName = definition.FullTypeName,
                 EntityRoute = definition.EntityRoute,
-                DisplayName = new MultilingualText(definition.DisplayName ?? new Dictionary<string, string?>()),
-                Description = new MultilingualText(definition.Description ?? new Dictionary<string, string?>()),
+                DisplayNameTranslations = definition.DisplayName != null
+                    ? new MultilingualText(definition.DisplayName)
+                    : new MultilingualText(),
+                DescriptionTranslations = definition.Description != null
+                    ? new MultilingualText(definition.Description)
+                    : null,
                 ApiEndpoint = definition.ApiEndpoint,
                 StructureType = definition.StructureType,
                 Status = definition.Status,

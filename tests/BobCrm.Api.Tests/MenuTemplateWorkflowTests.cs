@@ -92,7 +92,7 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         });
         assignResponse.EnsureSuccessStatusCode();
 
-        var menuBindingResponse = await userClient.GetAsync("/api/templates/menu-bindings?usageType=Detail");
+        var menuBindingResponse = await userClient.GetAsync("/api/templates/menu-bindings?usageType=Detail&lang=ja");
         menuBindingResponse.EnsureSuccessStatusCode();
         var bindingDoc = (await menuBindingResponse.ReadAsJsonAsync()).UnwrapData();
         var items = bindingDoc.EnumerateArray().ToList();
@@ -102,7 +102,7 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
 
         var menuInfo = workflowEntry.GetProperty("Menu");
         Assert.Equal($"CRM.CORE.{entity.EntityRoute.ToUpperInvariant()}", menuInfo.GetProperty("code").GetString());
-        // API returns menu name based on system default language (ja)
+        // Request with lang=ja to get Japanese display name (ARCH-30 dual-mode API)
         Assert.Equal(entity.DisplayName!["ja"], menuInfo.GetProperty("name").GetString());
         var expectedRoute = entity.ApiEndpoint.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
             ? entity.ApiEndpoint[4..]

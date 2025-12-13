@@ -10,6 +10,7 @@ namespace BobCrm.Api.Services;
 /// 使用反射实现动态实体的CRUD操作
 /// </summary>
 public class ReflectionPersistenceService
+    : IReflectionPersistenceService
 {
     private readonly AppDbContext _db;
     private readonly DynamicEntityService _dynamicEntityService;

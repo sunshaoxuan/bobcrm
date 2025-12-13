@@ -44,6 +44,14 @@
 - 公共端点 `/api/entities/{entityType}/definition`：返回实体字段与接口投影，支持大小写、`entity_` 前缀、单复数候选；供 Form Designer/实体树加载系统实体。
 - 文档：新增《GUIDE-07 模板默认与设计器更新说明》（模板生成、设计器、多语展示的更新要点与验证清单）。
 - Form Designer：DataGrid 设计态预览组件，展示列/搜索/刷新/分页占位。
+- **[ARCH-30] 系统级多语 API 架构优化（阶段1-3）**：
+  - 新增可选查询参数 `lang`（`zh|ja|en`），在多语端点支持单语/多语双模式响应。
+  - `Accept-Language` 仅在未传 `lang` 时对以下端点生效：`GET /api/access/functions/me`、`GET /api/templates/menu-bindings`、`GET /api/entities`、`GET /api/entities/all`；其余改造端点仅显式 `?lang=xx` 才进入单语模式。
+  - 已改造端点覆盖：
+    - 高频：`GET /api/access/functions/me`、`GET /api/templates/menu-bindings`、`GET /api/entities`、`GET /api/entities/all`
+    - 中频：`GET /api/entity-definitions`、`GET /api/entity-definitions/{id}`、`GET /api/enums*`、`GET /api/entity-domains*`、`GET /api/access/functions`、`GET /api/access/functions/manage`、`POST /api/access/functions`、`PUT /api/access/functions/{id}`
+    - 低频：`POST /api/dynamic-entities/{fullTypeName}/query`、`GET /api/dynamic-entities/{fullTypeName}/{id}`
+  - 动态实体查询：`POST /api/dynamic-entities/{fullTypeName}/query` 响应新增 `meta.fields`（字段元数据数组，支持双模式）；`GET /api/dynamic-entities/{fullTypeName}/{id}` 新增 `includeMeta`（默认 `false`，仅 `includeMeta=true` 返回 `{ meta, data }` 以保持向后兼容）。
 
 ### Changed
 - 默认模板生成：模板名改用 i18n Key `TEMPLATE_NAME_{USAGE}_{ENTITY}`；List 模板 DataGrid 默认带列、搜索、刷新、分页；Edit 模板新增 Back/Cancel 按钮；生成前强制调用 `GetInitialDefinition` 补全元数据。

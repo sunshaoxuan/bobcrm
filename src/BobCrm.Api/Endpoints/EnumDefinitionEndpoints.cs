@@ -26,7 +26,7 @@ public static class EnumDefinitionEndpoints
             [FromServices] EnumDefinitionService service,
             [FromQuery] bool includeDisabled = false) =>
         {
-            var targetLang = LangHelper.GetLang(http, lang);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var enums = await service.GetAllAsync(includeDisabled, targetLang);
             return Results.Ok(enums);
         })
@@ -42,10 +42,11 @@ public static class EnumDefinitionEndpoints
             ILocalization loc,
             HttpContext http) =>
         {
-            var targetLang = LangHelper.GetLang(http, lang);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+            var uiLang = LangHelper.GetLang(http);
             var enumDef = await service.GetByIdAsync(id, targetLang);
             return enumDef == null
-                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", targetLang), "ENUM_NOT_FOUND"))
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", uiLang), "ENUM_NOT_FOUND"))
                 : Results.Ok(enumDef);
         })
         .WithName("GetEnumById")
@@ -61,10 +62,11 @@ public static class EnumDefinitionEndpoints
             ILocalization loc,
             HttpContext http) =>
         {
-            var targetLang = LangHelper.GetLang(http, lang);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
+            var uiLang = LangHelper.GetLang(http);
             var enumDef = await service.GetByCodeAsync(code, targetLang);
             return enumDef == null
-                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", targetLang), "ENUM_NOT_FOUND"))
+                ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", uiLang), "ENUM_NOT_FOUND"))
                 : Results.Ok(enumDef);
         })
         .WithName("GetEnumByCode")
@@ -81,7 +83,7 @@ public static class EnumDefinitionEndpoints
             HttpContext http,
             [FromQuery] bool includeDisabled = false) =>
         {
-            var targetLang = LangHelper.GetLang(http, lang);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var options = await service.GetOptionsAsync(id, includeDisabled, targetLang);
             return Results.Ok(options);
         })

@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Reflection;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.Responses.Entity;
@@ -14,8 +12,6 @@ namespace BobCrm.Api.Extensions;
 /// </summary>
 public static class DtoExtensions
 {
-    private static readonly ConcurrentDictionary<Type, PropertyInfo?> DisplayNameKeyPropertyCache = new();
-
     /// <summary>
     /// 转换为实体摘要 DTO（支持单语/多语双模式）
     /// </summary>
@@ -81,10 +77,7 @@ public static class DtoExtensions
         {
             Id = field.Id,
             PropertyName = field.PropertyName,
-            // TODO [ARCH-30]: 待 FieldMetadata 基类添加 DisplayNameKey 属性后改为直接属性访问
-            DisplayNameKey = DisplayNameKeyPropertyCache
-                .GetOrAdd(field.GetType(), t => t.GetProperty("DisplayNameKey"))
-                ?.GetValue(field) as string,
+            DisplayNameKey = field.DisplayNameKey,
             DataType = field.DataType,
             Length = field.Length,
             Precision = field.Precision,
@@ -130,8 +123,7 @@ public static class DtoExtensions
     /// <returns>解析后的显示名</returns>
     private static string ResolveFieldDisplayName(FieldMetadata field, ILocalization loc, string lang)
     {
-        var propertyInfo = DisplayNameKeyPropertyCache.GetOrAdd(field.GetType(), t => t.GetProperty("DisplayNameKey"));
-        var displayNameKey = propertyInfo?.GetValue(field) as string;
+        var displayNameKey = field.DisplayNameKey;
 
         if (!string.IsNullOrWhiteSpace(displayNameKey))
         {

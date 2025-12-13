@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.DynamicEntity;
 using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,13 +26,17 @@ public static class DynamicEntityEndpoints
         // 查询实体列表
         group.MapPost("/{fullTypeName}/query", async (
             string fullTypeName,
+            [FromQuery] string? lang,
             [FromBody] QueryRequest request,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
+            IFieldMetadataCache fieldMetadataCache,
             ILocalization loc,
             HttpContext http,
+            CancellationToken ct,
             ILogger<Program> logger) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             try
             {
                 logger.LogInformation("[DynamicEntity] Querying {EntityType}", fullTypeName);
@@ -48,21 +53,27 @@ public static class DynamicEntityEndpoints
                 var results = await persistenceService.QueryAsync(fullTypeName, options);
                 var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
 
-                return Results.Ok(new
+                var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
+
+                return Results.Ok(new DynamicEntityQueryResultDto
                 {
-                    data = results,
-                    total = count,
-                    page = request.Skip.HasValue && request.Take.HasValue
+                    Meta = new DynamicEntityMetaDto
+                    {
+                        Fields = fields
+                    },
+                    Data = results,
+                    Total = count,
+                    Page = request.Skip.HasValue && request.Take.HasValue
                         ? (request.Skip.Value / request.Take.Value) + 1
                         : 1,
-                    pageSize = request.Take ?? 100
+                    PageSize = request.Take ?? 100
                 });
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "[DynamicEntity] Query failed: {Message}", ex.Message);
                 return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", lang), ex.Message),
+                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", uiLang), ex.Message),
                     "DYNAMIC_QUERY_FAILED"));
             }
         })
@@ -74,12 +85,17 @@ public static class DynamicEntityEndpoints
         group.MapGet("/{fullTypeName}/{id:int}", async (
             string fullTypeName,
             int id,
-            ReflectionPersistenceService persistenceService,
+            [FromQuery] string? lang,
+            [FromQuery] bool? includeMeta,
+            IReflectionPersistenceService persistenceService,
+            IFieldMetadataCache fieldMetadataCache,
             ILocalization loc,
             HttpContext http,
+            CancellationToken ct,
             ILogger<Program> logger) =>
         {
-            var lang = LangHelper.GetLang(http);
+            var uiLang = LangHelper.GetLang(http);
+            var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             try
             {
                 logger.LogInformation("[DynamicEntity] Getting {EntityType} with ID {Id}", fullTypeName, id);
@@ -88,8 +104,18 @@ public static class DynamicEntityEndpoints
 
                 if (entity == null)
                     return Results.NotFound(new ErrorResponse(
-                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", uiLang), id),
                         "DYNAMIC_ENTITY_NOT_FOUND"));
+
+                if (includeMeta == true)
+                {
+                    var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
+                    return Results.Ok(new
+                    {
+                        meta = new DynamicEntityMetaDto { Fields = fields },
+                        data = entity
+                    });
+                }
 
                 return Results.Ok(entity);
             }
@@ -97,19 +123,19 @@ public static class DynamicEntityEndpoints
             {
                 logger.LogError(ex, "[DynamicEntity] Get failed: {Message}", ex.Message);
                 return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", lang), ex.Message),
+                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", uiLang), ex.Message),
                     "DYNAMIC_QUERY_FAILED"));
             }
         })
         .WithName("GetDynamicEntityById")
         .WithSummary("根据ID查询动态实体")
-        .WithDescription("返回单个实体对象");
+        .WithDescription("返回单个实体对象；可选 includeMeta=true 返回 { meta, data }");
 
         // 原始SQL查询（表名）
         group.MapPost("/raw/{tableName}/query", async (
             string tableName,
             [FromBody] QueryRequest request,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
             ILocalization loc,
             HttpContext http,
             ILogger<Program> logger) =>
@@ -154,7 +180,7 @@ public static class DynamicEntityEndpoints
         group.MapPost("/{fullTypeName}", async (
             string fullTypeName,
             [FromBody] Dictionary<string, object> data,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
             HttpContext http,
             ILocalization loc,
             ILogger<Program> logger) =>
@@ -201,7 +227,7 @@ public static class DynamicEntityEndpoints
             string fullTypeName,
             int id,
             [FromBody] Dictionary<string, object> data,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
             HttpContext http,
             ILocalization loc,
             ILogger<Program> logger) =>
@@ -252,7 +278,7 @@ public static class DynamicEntityEndpoints
         group.MapDelete("/{fullTypeName}/{id:int}", async (
             string fullTypeName,
             int id,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
             ILocalization loc,
             HttpContext http,
             ILogger<Program> logger) =>
@@ -291,7 +317,7 @@ public static class DynamicEntityEndpoints
         group.MapPost("/{fullTypeName}/count", async (
             string fullTypeName,
             [FromBody] CountRequest request,
-            ReflectionPersistenceService persistenceService,
+            IReflectionPersistenceService persistenceService,
             ILocalization loc,
             HttpContext http,
             ILogger<Program> logger) =>

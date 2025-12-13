@@ -2,6 +2,25 @@
 
 > 本文档与《客户信息管理系统设计文档》配套，描述对外 API 契约。所有变更需先更新本文件。
 
+## 多语参数（ARCH-30）
+
+- 通用查询参数：`lang`（可选，`zh|ja|en`），示例：`?lang=zh`
+- 双模式响应（仅对支持该参数的端点生效）
+  - 单语模式：返回 `displayName`/`description`/`name` 等 `string`
+  - 多语模式：返回 `displayNameTranslations`/`descriptionTranslations`/`nameTranslations` 等 `MultilingualText`（字典）
+- `Accept-Language` 的处理
+  - 仅以下端点在未传 `lang` 时会使用 `Accept-Language` 作为默认语言：
+    - `GET /api/access/functions/me`
+    - `GET /api/templates/menu-bindings`
+    - `GET /api/entities`、`GET /api/entities/all`
+  - 其余已改造端点：只有显式传 `?lang=xx` 才进入单语模式；未传 `lang` 时忽略 `Accept-Language`
+
+## 向后兼容性（ARCH-30）
+
+- 所有新增的 `lang`/`includeMeta` 查询参数均为可选
+- 未传 `lang` 时：端点保持既有默认行为（多语模式或基于 `Accept-Language` 的单语模式，取决于端点）
+- 动态实体 `GET /api/dynamic-entities/{fullTypeName}/{id}` 默认不返回 `meta`；仅 `includeMeta=true` 才返回 `{ meta, data }`
+
 ## 认证与会话
 
 - 注册
@@ -181,3 +200,195 @@
   - 认证：需要（Bearer）
 
 > 说明：本地通过 MinIO（S3 兼容）实现，详见 `docs/ARCH-12-对象存储（MinIO-S3）使用说明.md`。
+
+## 权限与功能节点（ARCH-30）
+
+- 我的功能树（高频）
+  - GET `/api/access/functions/me`
+  - Query: `lang`（可选）
+  - Header（可选）：`Accept-Language`（未传 `lang` 时生效）
+  - Resp（多语模式，未传 `lang` 且无 `Accept-Language`）：
+    ```json
+    [
+      { "code": "SYS.SET.MENU", "displayNameTranslations": { "zh": "菜单管理", "ja": "メニュー管理", "en": "Menu Management" } }
+    ]
+    ```
+  - Resp（单语模式，`?lang=ja` 或 `Accept-Language: ja`）：
+    ```json
+    [
+      { "code": "SYS.SET.MENU", "displayName": "メニュー管理" }
+    ]
+    ```
+
+- 功能树（管理端点，忽略 `Accept-Language`）
+  - GET `/api/access/functions`
+  - GET `/api/access/functions/manage`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语）
+  - Resp（多语模式，未传 `lang`）：
+    ```json
+    [
+      { "code": "SYS.SET.MENU", "displayNameTranslations": { "zh": "菜单管理", "ja": "メニュー管理", "en": "Menu Management" } }
+    ]
+    ```
+  - Resp（单语模式，`?lang=en`）：
+    ```json
+    [
+      { "code": "SYS.SET.MENU", "displayName": "Menu Management" }
+    ]
+    ```
+
+- 创建/更新功能节点（返回体同上双模式）
+  - POST `/api/access/functions?lang=zh`
+  - PUT `/api/access/functions/{id}?lang=zh`
+  - Resp（多语模式，未传 `lang`，节选）：`{ "code": "TEST.FUNC", "displayNameTranslations": { "zh": "测试功能", "en": "Test Function" } }`
+  - Resp（单语模式，`?lang=zh`，节选）：`{ "code": "TEST.FUNC", "displayName": "测试功能" }`
+
+## 模板菜单绑定（ARCH-30）
+
+- 获取菜单与模板交集（高频）
+  - GET `/api/templates/menu-bindings`
+  - Query: `lang`（可选）、`viewState`（可选，默认 `DetailView`）
+  - Header（可选）：`Accept-Language`（未传 `lang` 时生效）
+  - Resp（多语模式，未传 `lang` 且无 `Accept-Language`，节选）：
+    ```json
+    [
+      {
+        "Menu": {
+          "code": "SYS.SET.MENU",
+          "displayNameKey": "LBL_MENU_MANAGEMENT",
+          "displayNameTranslations": { "zh": "菜单管理", "ja": "メニュー管理", "en": "Menu Management" }
+        }
+      }
+    ]
+    ```
+  - Resp（单语模式，`?lang=ja` 或 `Accept-Language: ja`，节选）：
+    ```json
+    [
+      { "Menu": { "code": "SYS.SET.MENU", "displayNameKey": "LBL_MENU_MANAGEMENT", "displayName": "メニュー管理" } }
+    ]
+    ```
+
+## 实体元数据（ARCH-30）
+
+- 可用实体列表（公共）
+  - GET `/api/entities`
+  - Query: `lang`（可选）
+  - Header（可选）：`Accept-Language`（未传 `lang` 时生效）
+  - Resp（多语模式，未传 `lang` 且无 `Accept-Language`）：
+    ```json
+    { "data": [ { "entityType": "customers", "displayNameTranslations": { "zh": "客户", "en": "Customer" } } ] }
+    ```
+  - Resp（单语模式，`?lang=en` 或 `Accept-Language: en`）：
+    ```json
+    { "data": [ { "entityType": "customers", "displayName": "Customer" } ] }
+    ```
+
+- 所有实体列表（管理员）
+  - GET `/api/entities/all`
+  - Query/Resp：同上
+
+## 实体定义管理（ARCH-30）
+
+- 实体定义列表（忽略 `Accept-Language`）
+  - GET `/api/entity-definitions`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语）
+  - Resp（多语模式，未传 `lang`，节选）：
+    ```json
+    { "data": [ { "entityName": "Customer", "displayNameTranslations": { "zh": "客户", "en": "Customer" } } ] }
+    ```
+  - Resp（单语模式，`?lang=zh`，节选）：
+    ```json
+    { "data": [ { "entityName": "Customer", "displayName": "客户" } ] }
+    ```
+
+- 实体定义详情（字段元数据双模式）
+  - GET `/api/entity-definitions/{id}`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语）
+  - Resp（多语模式，未传 `lang`，字段节选）：
+    ```json
+    {
+      "data": {
+        "fields": [
+          { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE" },
+          { "propertyName": "CustomField", "displayNameTranslations": { "zh": "自定义字段", "en": "Custom Field" } }
+        ]
+      }
+    }
+    ```
+  - Resp（单语模式，`?lang=zh`，字段节选）：
+    ```json
+    {
+      "data": {
+        "fields": [
+          { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE", "displayName": "编码" },
+          { "propertyName": "CustomField", "displayName": "自定义字段" }
+        ]
+      }
+    }
+    ```
+
+## 枚举定义（ARCH-30）
+
+- 枚举列表/详情（忽略 `Accept-Language`）
+  - GET `/api/enums?lang=zh`
+  - GET `/api/enums/{id}?lang=zh`
+  - GET `/api/enums/by-code/{code}?lang=zh`
+  - GET `/api/enums/{id}/options?lang=zh`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语）
+  - Resp（多语模式，未传 `lang`，节选）：
+    ```json
+    { "displayNameTranslations": { "zh": "状态", "en": "Status" }, "options": [ { "displayNameTranslations": { "zh": "启用", "en": "Enabled" } } ] }
+    ```
+  - Resp（单语模式，`?lang=zh`，节选）：
+    ```json
+    { "displayName": "状态", "options": [ { "displayName": "启用" } ] }
+    ```
+
+## 实体域（ARCH-30）
+
+- 域列表/详情（忽略 `Accept-Language`）
+  - GET `/api/entity-domains?lang=zh`
+  - GET `/api/entity-domains/{id}?lang=zh`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语）
+  - Resp（多语模式，未传 `lang`，节选）：
+    ```json
+    [ { "code": "core", "nameTranslations": { "zh": "核心", "en": "Core" } } ]
+    ```
+  - Resp（单语模式，`?lang=en`，节选）：
+    ```json
+    [ { "code": "core", "name": "Core" } ]
+    ```
+
+## 动态实体查询（ARCH-30）
+
+- 查询列表（新增 `meta.fields`）
+  - POST `/api/dynamic-entities/{fullTypeName}/query`
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语，未传 `lang` 忽略 `Accept-Language`）
+  - Resp（多语模式，未传 `lang`，节选）：
+    ```json
+    {
+      "meta": {
+        "fields": [
+          { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE" },
+          { "propertyName": "CustomField", "displayNameTranslations": { "zh": "自定义字段", "en": "Custom Field" } }
+        ]
+      },
+      "data": [],
+      "total": 0,
+      "page": 1,
+      "pageSize": 100
+    }
+    ```
+  - Resp（单语模式，`?lang=zh`，节选）：
+    ```json
+    { "meta": { "fields": [ { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE", "displayName": "编码" } ] } }
+    ```
+
+- 根据 ID 获取（向后兼容：默认不返回 `meta`）
+  - GET `/api/dynamic-entities/{fullTypeName}/{id}`
+  - Query: `lang`（可选）、`includeMeta`（可选，默认 `false`）
+  - Resp（默认，`includeMeta=false`）：直接返回实体对象，例如：`{ "id": 1, "code": "C001" }`
+  - Resp（`includeMeta=true`，节选）：
+    ```json
+    { "meta": { "fields": [ { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE" } ] }, "data": { "id": 1, "code": "C001" } }
+    ```

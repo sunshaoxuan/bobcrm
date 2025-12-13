@@ -37,6 +37,13 @@ public class FieldMetadata
     public string PropertyName { get; set; } = string.Empty;
 
     /// <summary>
+    /// 显示名资源 Key（用于接口字段）
+    /// 示例：LBL_FIELD_CODE, LBL_FIELD_CREATED_AT
+    /// </summary>
+    [MaxLength(100)]
+    public string? DisplayNameKey { get; set; }
+
+    /// <summary>
     /// 显示名（多语言）- PostgreSQL jsonb 类型
     /// 示例：{"ja": "価格", "zh": "价格", "en": "Price"}
     /// </summary>

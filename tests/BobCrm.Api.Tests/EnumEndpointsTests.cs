@@ -13,14 +13,14 @@ using Xunit;
 namespace BobCrm.Api.Tests;
 
 /// <summary>
-/// EnumDefinition API Endpoints 集成测试
+/// Enum API Endpoints 集成测试
 /// 测试 HTTP 端点行为
 /// </summary>
-public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
+public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 {
     private readonly TestWebAppFactory _factory;
 
-    public EnumDefinitionEndpointsTests(TestWebAppFactory factory)
+    public EnumEndpointsTests(TestWebAppFactory factory)
     {
         _factory = factory;
     }
@@ -222,7 +222,7 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
     public async Task GetEnumOptions_ReturnsOk_WithOptionsList()
     {
         // Arrange
-        var enumId = await SeedTestEnumWithOptionsAsync();
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
         var client = await CreateAuthenticatedClientAsync();
 
         // Act
@@ -239,7 +239,7 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
     public async Task GetAllEnums_WithLang_ReturnsSingleLanguagePayload()
     {
         // Arrange
-        await SeedTestEnumWithOptionsAsync();
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
         var client = await CreateAuthenticatedClientAsync();
 
         // Act
@@ -251,10 +251,194 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
         Assert.NotNull(enums);
         Assert.NotEmpty(enums);
 
-        var first = enums!.First();
+        var first = enums!.First(e => e.Id == enumId);
         Assert.NotNull(first.DisplayName);
         Assert.Null(first.DisplayNameTranslations);
         Assert.All(first.Options, opt =>
+        {
+            Assert.NotNull(opt.DisplayName);
+            Assert.Null(opt.DisplayNameTranslations);
+        });
+    }
+
+    [Fact]
+    public async Task GetAllEnums_WithoutLang_ReturnsTranslationsPayload()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync("/api/enums");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        Assert.NotNull(enums);
+        Assert.NotEmpty(enums);
+
+        var first = enums!.First(e => e.Id == enumId);
+        Assert.Null(first.DisplayName);
+        Assert.NotNull(first.DisplayNameTranslations);
+        Assert.Equal("带选项", first.DisplayNameTranslations!["zh"]);
+        Assert.Equal("オプション付き", first.DisplayNameTranslations!["ja"]);
+
+        Assert.All(first.Options, opt =>
+        {
+            Assert.Null(opt.DisplayName);
+            Assert.NotNull(opt.DisplayNameTranslations);
+        });
+    }
+
+    [Fact]
+    public async Task GetAllEnums_WithoutLang_IgnoresAcceptLanguageHeader()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+        client.DefaultRequestHeaders.Add("Accept-Language", "ja");
+
+        // Act
+        var response = await client.GetAsync("/api/enums");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        Assert.NotNull(enums);
+        Assert.NotEmpty(enums);
+
+        var first = enums!.First(e => e.Id == enumId);
+        Assert.Null(first.DisplayName);
+        Assert.NotNull(first.DisplayNameTranslations);
+    }
+
+    [Fact]
+    public async Task GetEnumById_WithoutLang_ReturnsTranslationsPayload()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/{enumId}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        Assert.NotNull(result);
+        Assert.Equal(enumId, result.Id);
+        Assert.Null(result.DisplayName);
+        Assert.NotNull(result.DisplayNameTranslations);
+        Assert.All(result.Options, opt =>
+        {
+            Assert.Null(opt.DisplayName);
+            Assert.NotNull(opt.DisplayNameTranslations);
+        });
+    }
+
+    [Fact]
+    public async Task GetEnumById_WithLang_ReturnsSingleLanguagePayload()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/{enumId}?lang=zh");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        Assert.NotNull(result);
+        Assert.Equal(enumId, result.Id);
+        Assert.Equal("带选项", result.DisplayName);
+        Assert.Null(result.DisplayNameTranslations);
+        Assert.All(result.Options, opt =>
+        {
+            Assert.NotNull(opt.DisplayName);
+            Assert.Null(opt.DisplayNameTranslations);
+        });
+    }
+
+    [Fact]
+    public async Task GetEnumByCode_WithoutLang_ReturnsTranslationsPayload()
+    {
+        // Arrange
+        var code = $"test_enum_by_code_translations_{Guid.NewGuid():N}";
+        await SeedTestEnumAsync(code: code);
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/by-code/{code}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        Assert.NotNull(result);
+        Assert.Equal(code, result.Code);
+        Assert.Null(result.DisplayName);
+        Assert.NotNull(result.DisplayNameTranslations);
+        Assert.Equal("测试枚举", result.DisplayNameTranslations!["zh"]);
+    }
+
+    [Fact]
+    public async Task GetEnumByCode_WithLang_ReturnsSingleLanguagePayload()
+    {
+        // Arrange
+        var code = $"test_enum_by_code_single_{Guid.NewGuid():N}";
+        await SeedTestEnumAsync(code: code);
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/by-code/{code}?lang=ja");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        Assert.NotNull(result);
+        Assert.Equal(code, result.Code);
+        Assert.NotNull(result.DisplayName);
+        Assert.Null(result.DisplayNameTranslations);
+    }
+
+    [Fact]
+    public async Task GetEnumOptions_WithoutLang_ReturnsTranslationsPayload()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/{enumId}/options");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
+        Assert.NotNull(options);
+        Assert.NotEmpty(options);
+        Assert.All(options!, opt =>
+        {
+            Assert.Null(opt.DisplayName);
+            Assert.NotNull(opt.DisplayNameTranslations);
+        });
+    }
+
+    [Fact]
+    public async Task GetEnumOptions_WithLang_ReturnsSingleLanguagePayload()
+    {
+        // Arrange
+        var (enumId, _) = await SeedTestEnumWithOptionsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        // Act
+        var response = await client.GetAsync($"/api/enums/{enumId}/options?lang=zh");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
+        Assert.NotNull(options);
+        Assert.NotEmpty(options);
+        Assert.All(options!, opt =>
         {
             Assert.NotNull(opt.DisplayName);
             Assert.Null(opt.DisplayNameTranslations);
@@ -271,8 +455,8 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
         var enumDef = new EnumDefinition
         {
             Code = code ?? $"test_enum_{Guid.NewGuid():N}",
-            DisplayName = new() { { "zh", "测试枚举" }, { "en", "Test Enum" } },
-            Description = new() { { "zh", "测试用" } },
+            DisplayName = new() { { "zh", "测试枚举" }, { "ja", "テスト列挙" }, { "en", "Test Enum" } },
+            Description = new() { { "zh", "测试用" }, { "ja", "テスト用" } },
             IsSystem = isSystem,
             IsEnabled = true
         };
@@ -282,27 +466,41 @@ public class EnumDefinitionEndpointsTests : IClassFixture<TestWebAppFactory>
         return enumDef.Id;
     }
 
-    private async Task<Guid> SeedTestEnumWithOptionsAsync()
+    private async Task<(Guid enumId, string code)> SeedTestEnumWithOptionsAsync()
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var code = $"test_with_opts_{Guid.NewGuid():N}";
         var enumDef = new EnumDefinition
         {
-            Code = $"test_with_opts_{Guid.NewGuid():N}",
-            DisplayName = new() { { "zh", "带选项" } },
+            Code = code,
+            DisplayName = new() { { "zh", "带选项" }, { "ja", "オプション付き" }, { "en", "With Options" } },
+            Description = new() { { "zh", "用于测试选项" }, { "ja", "オプションのテスト用" } },
             IsSystem = false,
             IsEnabled = true,
             Options = new List<EnumOption>
             {
-                new() { Value = "VAL1", DisplayName = new() { { "zh", "值1" } }, SortOrder = 0, IsEnabled = true },
-                new() { Value = "VAL2", DisplayName = new() { { "zh", "值2" } }, SortOrder = 1, IsEnabled = true }
+                new()
+                {
+                    Value = "VAL1",
+                    DisplayName = new() { { "zh", "值1" }, { "ja", "値1" }, { "en", "Value 1" } },
+                    SortOrder = 0,
+                    IsEnabled = true
+                },
+                new()
+                {
+                    Value = "VAL2",
+                    DisplayName = new() { { "zh", "值2" }, { "ja", "値2" }, { "en", "Value 2" } },
+                    SortOrder = 1,
+                    IsEnabled = true
+                }
             }
         };
 
         db.EnumDefinitions.Add(enumDef);
         await db.SaveChangesAsync();
-        return enumDef.Id;
+        return (enumDef.Id, code);
     }
 
     #endregion

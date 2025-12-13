@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BobCrm.Api.Contracts.DTOs;
 
 namespace BobCrm.Api.Contracts.Responses.Entity;
@@ -12,8 +13,19 @@ public class EntityListDto
     public string EntityName { get; set; } = string.Empty;
     public string FullTypeName { get; set; } = string.Empty;
     public string EntityRoute { get; set; } = string.Empty;
-    public MultilingualText? DisplayName { get; set; }
-    public MultilingualText? Description { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DisplayNameTranslations { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MultilingualText? DescriptionTranslations { get; set; }
+
     public string? ApiEndpoint { get; set; }
     public string StructureType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
