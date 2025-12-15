@@ -647,6 +647,133 @@ docs/
 
 ---
 
+## 14. Git 文件管理规范
+
+### 14.1 必须忽略的文件类型
+
+以下类型的文件**必须**加入 `.gitignore`，严禁提交到仓库：
+
+#### 14.1.1 构建产物
+```gitignore
+# 编译输出
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# 包管理
+node_modules/
+packages/
+```
+
+#### 14.1.2 测试产物
+```gitignore
+# Python 缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# E2E 测试输出
+tests/e2e/screenshots/
+tests/e2e/videos/
+tests/e2e/reports/
+
+# 临时调试脚本
+tests/e2e/debug_*.py
+```
+
+#### 14.1.3 本地配置
+```gitignore
+# IDE 本地设置
+.claude/settings.local.json
+*.local.json
+.env.local
+.env.*.local
+
+# 用户特定文件
+*.suo
+*.user
+```
+
+#### 14.1.4 日志与临时文件
+```gitignore
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+```
+
+### 14.2 应该提交的文件
+
+以下文件**应该**提交到仓库：
+
+| 类型 | 示例 | 说明 |
+|------|------|------|
+| 源代码 | `*.cs`, `*.razor`, `*.ts` | 所有业务逻辑代码 |
+| 测试代码 | `*Tests.cs`, `test_*.py` | 单元测试、集成测试、E2E测试代码 |
+| 配置模板 | `appsettings.json`, `.env.example` | 配置文件模板（不含敏感信息） |
+| 文档 | `docs/**/*.md` | 设计文档、指南、规范 |
+| 脚本 | `scripts/*.ps1`, `scripts/*.sh` | 构建、部署、工具脚本 |
+| 迁移 | `Migrations/*.cs` | EF Core 数据库迁移 |
+
+### 14.3 敏感信息处理
+
+**严禁**提交以下敏感信息：
+
+| 类型 | 处理方式 |
+|------|----------|
+| 数据库连接字符串 | 使用环境变量或 `.env.local` |
+| API 密钥 | 使用环境变量或密钥管理服务 |
+| 密码 | 使用环境变量，模板中使用占位符 |
+| 证书文件 | 加入 `.gitignore`，通过安全渠道分发 |
+
+**正确示例**:
+```json
+// appsettings.json (可提交)
+{
+  "ConnectionStrings": {
+    "Default": "${DB_CONNECTION_STRING}"
+  },
+  "Jwt": {
+    "Key": "${JWT_SECRET_KEY}"
+  }
+}
+```
+
+### 14.4 新增忽略规则流程
+
+当需要添加新的忽略规则时：
+
+1. **评估必要性**: 确认文件确实不应被版本控制
+2. **选择忽略范围**:
+   - 全局忽略: 添加到根目录 `.gitignore`
+   - 目录级忽略: 添加到特定目录的 `.gitignore`
+3. **添加注释**: 说明忽略原因
+4. **更新文档**: 如有必要，更新本规范
+
+**示例**:
+```gitignore
+# E2E 测试截图 - 每次运行自动生成，无需版本控制
+tests/e2e/screenshots/
+```
+
+### 14.5 检查清单
+
+提交代码前，确认：
+
+- [ ] 没有提交编译产物 (`bin/`, `obj/`)
+- [ ] 没有提交测试产物 (截图、视频、报告)
+- [ ] 没有提交本地配置 (`*.local.json`, `.env.local`)
+- [ ] 没有提交敏感信息 (密钥、密码、连接字符串)
+- [ ] 没有提交临时/调试文件 (`debug_*.py`, `*.tmp`)
+- [ ] 新增的忽略规则已添加注释说明
+
+---
+
 ## 附录：常用工具
 
 ### A. 开发工具

@@ -176,3 +176,40 @@ generated/
 full_status.txt
 status.txt
 database/
+
+# ============================================
+# E2E Test Artifacts (STD-04 Section 14)
+# ============================================
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# E2E test outputs (screenshots, videos, reports)
+tests/e2e/screenshots/
+tests/e2e/videos/
+tests/e2e/reports/
+tests/e2e/*.html
+
+# Debug scripts (temporary debugging files)
+tests/e2e/debug_*.py
+
+# Playwright state
+tests/e2e/.auth/
+
+# ============================================
+# IDE & Tool Local Settings
+# ============================================
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# VS Code workspace settings (optional, can be committed)
+# .vscode/settings.json
+
+# Local environment files
+.env.local
+.env.*.local
+*.local.json
