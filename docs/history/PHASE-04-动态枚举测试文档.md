@@ -121,7 +121,7 @@ await EnsureEnumAsync("customer_type", new Dictionary<string, string?>
 
 **Status**: ✅ Complete
 
-**File**: `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`
+**File**: `docs/guides/GUIDE-11-实体定义与动态实体操作指南.md`
 
 #### Added Section 4.3: 使用枚举字段
 
@@ -239,7 +239,7 @@ dotnet test --filter "FullyQualifiedName~Enum"
 
 ### Files Modified
 
-1. **User Guide**: `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`
+1. **User Guide**: `docs/guides/GUIDE-11-实体定义与动态实体操作指南.md`
    - Added section 4.3 (59 lines)
    - Comprehensive enum usage instructions
    - System enum reference table
@@ -324,7 +324,7 @@ dotnet test --filter "FullyQualifiedName~Enum"
   - ~33 lines added
 
 ### Documentation Files
-- **Modified**: `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`
+- **Modified**: `docs/guides/GUIDE-11-实体定义与动态实体操作指南.md`
   - Added section 4.3 (lines 99-158)
   - ~60 lines added
 
@@ -424,4 +424,3 @@ The Dynamic Enum System is now fully implemented, tested, and documented. It pro
 **Review Required**: Yes
 **Ready for Production**: Yes
 **Blockers**: None
-

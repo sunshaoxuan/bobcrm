@@ -309,37 +309,3 @@ public class RoslynCompiler
         }
     }
 }
-
-/// <summary>
-/// 编译结果
-/// </summary>
-public class CompilationResult
-{
-    public string AssemblyName { get; set; } = string.Empty;
-    public bool Success { get; set; }
-    public Assembly? Assembly { get; set; }
-    public List<string> LoadedTypes { get; set; } = new();
-    public List<CompilationError> Errors { get; set; } = new();
-    public AssemblyLoadContext? LoadContext { get; set; }
-}
-
-/// <summary>
-/// 编译错误
-/// </summary>
-public class CompilationError
-{
-    public string Code { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public int Line { get; set; }
-    public int Column { get; set; }
-    public string? FilePath { get; set; }
-}
-
-/// <summary>
-/// 语法验证结果
-/// </summary>
-public class ValidationResult
-{
-    public bool IsValid { get; set; } = true;
-    public List<CompilationError> Errors { get; set; } = new();
-}

@@ -194,5 +194,3 @@ public static class SetupEndpoints
         return app;
     }
 }
-
-public record AdminSetupDto(string Username, string Email, string Password);

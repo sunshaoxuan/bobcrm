@@ -222,38 +222,3 @@ public class DDLExecutionService
         await command.ExecuteNonQueryAsync();
     }
 }
-
-/// <summary>
-/// 表列信息
-/// </summary>
-public class TableColumnInfo
-{
-    public string ColumnName { get; set; } = string.Empty;
-    public string DataType { get; set; } = string.Empty;
-    public int? MaxLength { get; set; }
-    public string IsNullable { get; set; } = string.Empty;
-    public string? DefaultValue { get; set; }
-}
-
-/// <summary>
-/// DDL脚本类型
-/// </summary>
-public static class DDLScriptType
-{
-    public const string Create = "Create";
-    public const string Alter = "Alter";
-    public const string Drop = "Drop";
-    public const string Rollback = "Rollback";
-}
-
-/// <summary>
-/// DDL脚本状态
-/// </summary>
-public static class DDLScriptStatus
-{
-    public const string Pending = "Pending";
-    public const string Success = "Success";
-    public const string Failed = "Failed";
-    public const string RolledBack = "RolledBack";
-}
-

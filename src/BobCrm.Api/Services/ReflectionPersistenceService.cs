@@ -461,38 +461,3 @@ public class ReflectionPersistenceService
         return results;
     }
 }
-
-/// <summary>
-/// 查询选项
-/// </summary>
-public class QueryOptions
-{
-    public List<FilterCondition>? Filters { get; set; }
-    public string? OrderBy { get; set; }
-    public bool OrderByDescending { get; set; }
-    public int? Skip { get; set; }
-    public int? Take { get; set; }
-}
-
-/// <summary>
-/// 过滤条件
-/// </summary>
-public class FilterCondition
-{
-    public string Field { get; set; } = string.Empty;
-    public string Operator { get; set; } = "equals"; // equals, contains, greaterThan, lessThan
-    public object Value { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// 过滤操作符常量
-/// </summary>
-#pragma warning disable CS0108 // 成员隐藏继承的成员；缺少关键字 new
-public static class FilterOperator
-{
-    public const string Equals = "equals";
-    public const string Contains = "contains";
-    public const string GreaterThan = "greaterThan";
-    public const string LessThan = "lessThan";
-}
-#pragma warning restore CS0108

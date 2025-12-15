@@ -28,15 +28,17 @@
 - [UI-04-实体定义画面改版说明（归档，指向 ARCH-20/21）](design/UI-04-实体定义画面改版说明.md)
 
 ## 2. 指南与手册（guides/）
-- [FRONT-01-实体定义与动态实体操作指南](guides/FRONT-01-实体定义与动态实体操作指南.md)
-- [DEV-02-Roslyn环境配置](guides/DEV-02-Roslyn环境配置.md)
+- [GUIDE-11-实体定义与动态实体操作指南](guides/GUIDE-11-实体定义与动态实体操作指南.md)
+- [GUIDE-10-Roslyn环境配置](guides/GUIDE-10-Roslyn环境配置.md)
 - [GUIDE-05-动态枚举系统使用指南](guides/GUIDE-05-动态枚举系统使用指南.md)
 - [GUIDE-06-菜单编辑器使用指南](guides/GUIDE-06-菜单编辑器使用指南.md)
+- [GUIDE-08-中优先级I18n指南](guides/GUIDE-08-中优先级I18n指南.md)
 - [I18N-01-多语机制设计文档](guides/I18N-01-多语机制设计文档.md)
 - [I18N-02-元数据多语机制设计文档](guides/I18N-02-元数据多语机制设计文档.md)
 - [OPS-01-容器问题-设计说明](guides/OPS-01-容器问题-设计说明.md)
+- [OPS-02-容器问题-修复历史](guides/OPS-02-容器问题-修复历史.md)
 - [OPS-03-容器问题-故障排查](guides/OPS-03-容器问题-故障排查.md)
-- [TEST-00-测试综述](guides/TEST-00-测试综述.md)
+- [TEST-10-测试综述](guides/TEST-10-测试综述.md)
 - [TEST-01-测试指南](guides/TEST-01-测试指南.md)
 - [TEST-02-测试覆盖率报告](guides/TEST-02-测试覆盖率报告.md)
 - [TEST-03-实体发布与对齐测试覆盖报告](guides/TEST-03-实体发布与对齐测试覆盖报告.md)
@@ -54,15 +56,13 @@
 > 一次性的审计、评审、迁移记录和已完成的计划
 
 - [AUDIT-01-文档代码差距审计报告-2025-11](history/AUDIT-01-文档代码差距审计报告-2025-11.md)
+- [AUDIT-03-项目现状分析报告](history/AUDIT-03-项目现状分析报告.md)
 - [REVIEW-01-代码评审与改进清单-2025-11](history/REVIEW-01-代码评审与改进清单-2025-11.md)
 - [REVIEW-02-多语言功能代码评审-2025-11](history/REVIEW-02-多语言功能代码评审-2025-11.md)
 - [MIGRATION-01-系统实体模板化迁移记录](history/MIGRATION-01-系统实体模板化迁移记录.md)
 - [PROC-06-v0.6.0-开发计划](history/PROC-06-v0.6.0-开发计划.md) (已完成)
-- [UI-00-阶段0-差距报告](history/UI-00-阶段0-差距报告.md)
-- [UI-05-Phase3范围调整分析](history/UI-05-Phase3范围调整分析.md)
+- [UI-07-阶段0-差距报告](history/UI-07-阶段0-差距报告.md)
 - [GAP-01-架构与功能差距记录](history/GAP-01-架构与功能差距记录.md)
-- [OPS-02-容器问题-修复历史](history/OPS-02-容器问题-修复历史.md)
-- [PROJ-01-项目现状分析报告](history/PROJ-01-项目现状分析报告.md)
 - [TMP-01-模板设计器进度跟踪](history/TMP-01-模板设计器进度跟踪.md)
 
 ## 5. 开发计划（planning/）

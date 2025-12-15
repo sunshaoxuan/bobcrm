@@ -50,7 +50,7 @@ dotnet test
 
 按类型分类的常用入口：
 - 设计：`docs/design/`（如 `PROD-01`、`ARCH-20`、`ARCH-21`、`UI-01` 等）
-- 指南：`docs/guides/`（如 `FRONT-01` 实体与动态数据操作指南、`TEST-01` 测试指南）
+- 指南：`docs/guides/`（如 `GUIDE-11` 实体定义与动态实体操作指南、`TEST-01` 测试指南）
 - 参考：`docs/reference/API-01-接口文档.md`
 - 历史：`docs/history/`（差距/修复记录）
 - 流程：`docs/process/`（PR 清单、文档规范等）

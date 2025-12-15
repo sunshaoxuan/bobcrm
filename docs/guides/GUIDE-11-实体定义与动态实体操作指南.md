@@ -1,4 +1,4 @@
-# FRONT-01 实体定义与动态实体操作指南
+# GUIDE-11 实体定义与动态实体操作指南
 
 面向产品与开发协作者，介绍如何在 OneCRM 前端界面完成实体定义、发布与动态数据管理。本指南聚焦“如何使用”，而实现细节请参考 `design/ARCH-20-实体定义管理设计.md`。
 
@@ -214,6 +214,6 @@
 - 设计：[`design/ARCH-20-实体定义管理设计.md`](../design/ARCH-20-实体定义管理设计.md)
 - 权限：[`design/ARCH-21-组织与权限体系设计.md`](../design/ARCH-21-组织与权限体系设计.md)
 - API：[`reference/API-01-接口文档.md`](../reference/API-01-接口文档.md)
-- 测试概览：[`guides/TEST-00-测试综述.md`](TEST-00-测试综述.md)
+- 测试概览：[`guides/TEST-10-测试综述.md`](TEST-10-测试综述.md)
 
 如需进一步支持，请联系平台研发团队或在 Issue 系统提交需求。

@@ -561,7 +561,7 @@ Closes #123
 | `PROD` | 产品设计 | `design/` | `PROD-01-客户信息管理系统设计文档.md` |
 | `UI` | UI/UX 设计 | `design/` | `UI-01-UIUE设计说明书.md` |
 | `GUIDE` | 使用指南 | `guides/` | `GUIDE-05-动态枚举系统使用指南.md` |
-| `DEV` | 开发指南 | `guides/` | `DEV-02-Roslyn环境配置.md` |
+| `GUIDE` | 开发指南 | `guides/` | `GUIDE-10-Roslyn环境配置.md` |
 | `TEST` | 测试文档 | `guides/` | `TEST-01-测试指南.md` |
 | `I18N` | 国际化 | `guides/` | `I18N-01-多语机制设计文档.md` |
 | `OPS` | 运维文档 | `guides/` | `OPS-01-容器问题-设计说明.md` |
@@ -667,4 +667,3 @@ docs/
 ---
 
 **严格遵守以上规范，确保代码质量和项目可维护性！**
-

@@ -478,7 +478,7 @@
 - **用户档案**：实现 `/api/users` 查询/创建/更新/角色分配端点、`UserService` 以及 `/users` 页面（列表、详情、角色勾选、密码/状态管理），并补充 `UserManagementTests` 验证 API 行为。
 
 ### Changed
-- **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`。
+- **文档体系**：按照“设计 / 指南 / 参考 / 历史 / 流程 / 示例”重构目录结构，更新根 `README.md` 与 `docs/PROC-00-文档索引.md` 并新增 `docs/guides/GUIDE-11-实体定义与动态实体操作指南.md`。
 - **组织接口提示**：在 UI 与文档中统一组织维度说明，方便在角色框架内复用 `OrganizationId` 字段。
 - **领域化菜单**：新增 `/api/access/functions/me` 以及动态领域导航（领域切换 + 领域内二/三级菜单），菜单与 FunctionNodes 权限实时联动。
 - **权限过滤**：`BAS.AUTH.ROLE.PERM`、`BAS.AUTH.USER.ROLE` 功能节点现同时驱动菜单与 API 过滤，角色/用户相关端点通过 `FunctionPermissionFilter` 自动校验对应函数码，保持“所见即所得”的授权体验。

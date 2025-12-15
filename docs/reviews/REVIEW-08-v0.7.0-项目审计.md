@@ -1,4 +1,4 @@
-# REV-01: v0.7.0 工程完成度与需求偏离审计报告
+# REVIEW-08: v0.7.0 工程完成度与需求偏离审计报告
 
 **日期**: 2025-12-07
 **审计对象**: BobCRM v0.7.0 开发分支
@@ -64,7 +64,7 @@
 
 2.  **收敛设计 token**：统一 PageLoader/ListTemplateHost/Designer 的空态、错误态与主题变量，清理残留内联样式。
 
-3.  **更新文档与记录**：同步 PLAN-06 勾选、REV-01 状态、CHANGELOG 记录。
+3.  **更新文档与记录**：同步 PLAN-06 勾选、REVIEW-08 状态、CHANGELOG 记录。
 
 ## 5. 附录：文件完整性检查快照
 - `src/BobCrm.Api/Services/TemplateService.cs`: 493 lines (OK)
@@ -76,4 +76,3 @@
 - **FormDesigner.razor**: 已完全恢复并增强（PLAN-06）。实现了拖拽布局、容器嵌套（Panel/Section/Grid/Tabs）、多语言支持及统一 JSON 序列化。
 - **运行链路**: 统一了运行时解析（PageLoader/ListTemplateHost）与设计器保存格式，解决了嵌套布局无法渲染的问题。
 - **数据组件**: PropertyEditor 已补齐 DataSetPicker 和 FieldPicker，支持数据绑定配置。
-

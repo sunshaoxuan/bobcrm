@@ -496,6 +496,6 @@ GET /api/entity-definitions/type-info/BobCrm.Base.Custom.Product
 
 ## 下一步
 
-- 了解更多：查看 `docs/DEV-02-Roslyn环境配置.md` 了解Roslyn安装
+- 了解更多：查看 `docs/guides/GUIDE-10-Roslyn环境配置.md` 了解 Roslyn 安装
 - 实体设计：查看 `docs/ARCH-01-实体自定义与发布系统设计文档.md`
 - 前端集成：使用Swagger UI测试所有端点

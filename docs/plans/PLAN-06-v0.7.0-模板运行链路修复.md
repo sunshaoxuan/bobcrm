@@ -4,7 +4,7 @@
 **状态**: 进行中  
 **关联文档**:  
 - `docs/design/PROD-01-客户信息管理系统设计文档.md`（需求基线）  
-- `docs/reviews/REV-01-v0.7.0-项目审计.md`（偏差来源）  
+- `docs/reviews/REVIEW-08-v0.7.0-项目审计.md`（偏差来源）  
 - `docs/process/STD-02-文档编写规范.md`（写作规范）  
 - `docs/process/STD-06-集成测试规范.md`（测试与验证流程）
 
@@ -12,7 +12,7 @@
 
 ## 1. 目标与背景
 - 目标：恢复并闭环“设计器 → 模板存储 → 运行时渲染”链路，使 Detail/Edit/List 三类模板按需求文档可用、可配、可验证。
-- 背景：`PageLoader.razor` 仍使用旧版 `item_*` 结构解析，无法渲染当前模板 JSON；设计器未接入统一宿主/布局模型，数据控件缺少配置能力，导致模板交付阻塞（参见 REV-01 的 Critical Deviation）。
+- 背景：`PageLoader.razor` 仍使用旧版 `item_*` 结构解析，无法渲染当前模板 JSON；设计器未接入统一宿主/布局模型，数据控件缺少配置能力，导致模板交付阻塞（参见 REVIEW-08 的 Critical Deviation）。
 
 ---
 
@@ -42,7 +42,7 @@
 ### 阶段 D：验证与留痕（优先级 P1）
 - 按 `STD-06` 执行：清理 → verify-setup → dev 启动 → E2E（登录 + 模板加载 + 详情编辑）→ 清理。
 - 增补至少一条 Playwright 脚本覆盖“List 模板打开 → 点击行 → 详情页渲染成功 → 保存返回 200”。
-- 在 `CHANGELOG.md` 和 `docs/reviews/REV-01-v0.7.0-项目审计.md` 补充修复记录。
+- 在 `CHANGELOG.md` 和 `docs/reviews/REVIEW-08-v0.7.0-项目审计.md` 补充修复记录。
 
 ---
 
@@ -54,7 +54,7 @@
 - [x] `PropertyEditor`：实现 DataSetPicker/FieldPicker/TextStyle/Background 选择器；为数据控件挂上对应元数据。
 - [x] 主题兜底：增加基础 design token，并替换设计器与运行时的硬编码颜色/阴影；空态/错误态一致。
 - [ ] 测试：执行 `scripts/verify-setup.ps1`，运行 Playwright 登录+模板链路脚本；补充至少 1 条模板链路 API/前端集成测试。
-- [ ] 文档与变更记录：更新 `CHANGELOG.md` 与 REV-01 备注修复项。
+- [ ] 文档与变更记录：更新 `CHANGELOG.md` 与 REVIEW-08 备注修复项。
 
 ---
 

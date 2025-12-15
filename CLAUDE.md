@@ -752,7 +752,7 @@ dotnet ef migrations add <NewName> --project src/BobCrm.Api
 - **API Reference**: `docs/reference/API-01-接口文档.md`
 - **PR Checklist**: `docs/process/PROC-01-PR检查清单.md`
 - **Testing Guide**: `docs/guides/TEST-01-测试指南.md`
-- **Entity Guide**: `docs/guides/FRONT-01-实体定义与动态实体操作指南.md`
+- **Entity Guide**: `docs/guides/GUIDE-11-实体定义与动态实体操作指南.md`
 
 ### Design Documents
 

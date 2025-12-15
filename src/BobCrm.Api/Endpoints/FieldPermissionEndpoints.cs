@@ -190,12 +190,3 @@ public static class FieldPermissionEndpoints
         return app;
     }
 }
-
-// 请求DTO
-public record UpsertFieldPermissionRequest(
-    bool CanRead,
-    bool CanWrite,
-    string? Remarks = null);
-
-public record BulkUpsertFieldPermissionsRequest(
-    List<FieldPermissionDto> Permissions);

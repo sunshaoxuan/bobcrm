@@ -57,7 +57,7 @@
 参考文档：
 - UI 规范：docs/UI-01-UIUE设计说明书.md
 - 阶段计划：docs/UI-02-阶段1-实现计划.md
-- 差距与验证：docs/UI-00-阶段0-差距报告.md、docs/UI-03-阶段2-布局验证记录.md
+- 差距与验证：docs/history/UI-07-阶段0-差距报告.md、docs/design/UI-03-阶段2-布局验证记录.md
 
 ## 六、多语言（I18N）
 - [x] 多语言资源端点 + 版本/ETag 缓存（服务端）
