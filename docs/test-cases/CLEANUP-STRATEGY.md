@@ -36,7 +36,7 @@
 
 | 用例 | 创建的数据 | 清理策略 |
 |------|-----------|----------|
-| TC-ORG-001 | 总公司、技术部 | `DELETE FROM OrganizationNodes WHERE Code IN ('HQ', 'TECH')` |
+| TC-ORG-001 | 总公司、技术部 | `DELETE FROM "OrganizationNodes" WHERE "Code" IN ('HQ', 'TECH')` |
 
 ### 4. 系统配置 (TC-SYS)
 

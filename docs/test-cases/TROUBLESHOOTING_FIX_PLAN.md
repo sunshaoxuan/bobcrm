@@ -1,17 +1,21 @@
 # E2E 测试问题修正计划
 
 **创建日期**: 2025-12-13  
-**状态**: 🚧 进行中  
+**最后更新**: 2025-12-13  
+**状态**: ✅ 已完成  
 **关联文档**: [TROUBLESHOOTING_LOG.md](./TROUBLESHOOTING_LOG.md)
 
 ---
 
 ## 📋 问题概览
 
-| 问题编号 | 模块 | 状态 | 优先级 | 预计工作量 |
-|----------|------|------|--------|-----------|
-| ISSUE-011 | TC-ORG-001 | Pending | P1 | 0.5h |
-| ISSUE-012 | TC-ORG-001 | Pending | P1 | 0.5h |
+| 问题编号 | 模块 | 状态 | 优先级 | 预计工作量 | 实际工作量 |
+|----------|------|------|--------|-----------|-----------|
+| ISSUE-011 | TC-ORG-001 | Fixed | P1 | 0.5h | 0.5h |
+| ISSUE-012 | TC-ORG-001 | Fixed | P1 | 0.5h | 0.5h |
+| ISSUE-013 | TC-ORG-001 | Fixed | P1 | 0.5h | 0.5h |
+| ISSUE-014 | TC-ORG-001 | Fixed | P1 | 0.5h | 0.5h |
+| ISSUE-015 | TC-ORG-001 | Fixed | P1 | 1h | 1h |
 
 ---
 
@@ -38,25 +42,25 @@
 
 ---
 
-### ISSUE-012: 数据库清理失败（表名错误）
+### ISSUE-012: 数据库清理失败（表名需要双引号）
 
 **问题描述**:
-- 测试清理代码使用错误的表名：`Organizations`
-- 实际表名为：`OrganizationNodes`
-- 导致 SQL 执行失败：`relation "organizations" does not exist`
+- PostgreSQL 中 PascalCase 表名需要双引号转义
+- 测试清理代码使用 `OrganizationNodes` 未加引号
+- 导致 SQL 执行失败：`relation "organizations" does not exist` 或语法错误
 
 **根本原因**:
-- 测试代码与数据库模型不一致
-- 文档中的表名引用错误
+- PostgreSQL 对大小写敏感，PascalCase 表名和列名需要双引号
+- 测试代码未考虑 PostgreSQL 的命名规则
 
 **影响范围**:
-- `tests/e2e/cases/03_organization/test_org_001_structure.py` 第12行
-- `docs/test-cases/03-organization/TC-ORG-001-组织结构.md` 第106、108、115行
+- `tests/e2e/cases/03_organization/test_org_001_structure.py` 第14行
+- `docs/test-cases/03-organization/TC-ORG-001-组织结构.md` 清理 SQL
 - `docs/test-cases/CLEANUP-STRATEGY.md` 第39行
 
 **解决方案**:
-1. **立即修正**：将所有 `Organizations` 替换为 `OrganizationNodes`
-2. **验证**：确认数据库表名与代码一致
+1. **立即修正**：使用带双引号的表名和列名：`"OrganizationNodes"`, `"Code"`, `"Name"`, `"ParentId"`
+2. **验证**：确认 SQL 在 PostgreSQL 中正确执行
 
 ---
 
@@ -127,30 +131,47 @@ db_helper.execute_query("DELETE FROM OrganizationNodes WHERE Code IN ('HQ', 'TEC
 
 ---
 
-### 步骤 3: 更新问题记录
+### 步骤 6: 更新问题记录
 
 **文件**: `docs/test-cases/TROUBLESHOOTING_LOG.md`
 
-**更新 ISSUE-011 和 ISSUE-012 的状态为 Fixed**:
-- 添加修正日期
-- 添加修正说明
-- 更新状态列
+**更新所有问题的状态为 Fixed**:
+- ISSUE-011: Fixed (2025-12-13)
+- ISSUE-012: Fixed (2025-12-13) - 添加双引号
+- ISSUE-013: Fixed (2025-12-13) - 使用 .field-control 选择器
+- ISSUE-014: Fixed (2025-12-13) - 使用正则匹配
+- ISSUE-015: Fixed (2025-12-13) - 重写流程
 
 ---
 
 ## ✅ 验收标准
 
 ### ISSUE-011 验收标准
-- [ ] 测试代码不再使用硬编码文本选择器
-- [ ] 使用图标或结构选择器
-- [ ] 测试在不同语言环境下都能正常运行
-- [ ] 按钮点击不再超时
+- [x] 测试代码不再使用硬编码文本选择器
+- [x] 使用图标或结构选择器
+- [x] 测试在不同语言环境下都能正常运行
+- [x] 按钮点击不再超时
 
 ### ISSUE-012 验收标准
-- [ ] 所有 `Organizations` 表名已替换为 `OrganizationNodes`
-- [ ] 测试清理代码执行成功
-- [ ] 文档中的表名引用已修正
-- [ ] 数据库查询验证通过
+- [x] 所有表名和列名已添加双引号（PostgreSQL PascalCase 要求）
+- [x] 测试清理代码执行成功
+- [x] 文档中的 SQL 语句已修正
+- [x] 数据库查询验证通过
+
+### ISSUE-013 验收标准
+- [x] 输入框选择器使用 `.field-control` 类选择器
+- [x] 使用 `nth()` 选择正确的输入框（第一个是 Code，第二个是 Name）
+- [x] 表单填写不再超时
+
+### ISSUE-014 验收标准
+- [x] Save 按钮选择器使用正则匹配 `/保存|Save/`
+- [x] 支持多语言环境（中文、日文、英文）
+- [x] 按钮点击不再超时
+
+### ISSUE-015 验收标准
+- [x] 子组织创建流程与 UI 实现一致
+- [x] 流程包括：选择父节点 → 点击 AddChild → 表格行输入 → 行内 Save
+- [x] 测试能够成功创建子组织
 
 ---
 
@@ -201,5 +222,39 @@ db_helper.execute_query("DELETE FROM OrganizationNodes WHERE Code IN ('HQ', 'TEC
 
 **最后更新**: 2025-12-13  
 **负责人**: 测试团队  
-**状态**: 🚧 待实施
+**状态**: ✅ 已完成
+
+---
+
+## ✅ 修正完成总结
+
+### 已修正的问题
+
+1. **ISSUE-011**: 按钮选择器 ✅
+   - 改用图标选择器 `button:has(.anticon-plus)`
+   - 支持多语言环境
+
+2. **ISSUE-012**: 数据库表名 ✅
+   - 添加双引号：`"OrganizationNodes"`, `"Code"`, `"Name"`, `"ParentId"`
+   - PostgreSQL PascalCase 命名规则
+
+3. **ISSUE-013**: 输入框选择器 ✅
+   - 改用 `.field-control` 类选择器
+   - 使用 `nth()` 选择正确的输入框
+
+4. **ISSUE-014**: Save 按钮选择器 ✅
+   - 使用正则匹配 `/保存|Save/`
+   - 支持多语言
+
+5. **ISSUE-015**: 子组织创建流程 ✅
+   - 重写流程匹配 UI 实现
+   - 包括选择父节点、点击 AddChild、表格行输入、行内 Save
+
+### 修正文件清单
+
+- ✅ `tests/e2e/cases/03_organization/test_org_001_structure.py` - 完全重写测试逻辑
+- ✅ `docs/test-cases/03-organization/TC-ORG-001-组织结构.md` - 修正 SQL 语句
+- ✅ `docs/test-cases/CLEANUP-STRATEGY.md` - 修正表名引用
+- ✅ `docs/test-cases/TROUBLESHOOTING_LOG.md` - 更新问题状态
+- ✅ `docs/test-cases/TROUBLESHOOTING_FIX_PLAN.md` - 更新修正计划状态
 
