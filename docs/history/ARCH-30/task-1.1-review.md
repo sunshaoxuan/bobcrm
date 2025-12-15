@@ -641,7 +641,7 @@ Assert.True(root.TryGetProperty("displayNameTranslations", out var translations)
 2. **开始 Task 1.2** ⏭️
    - 导航菜单 API 改造
    - 修复语言不一致 Bug
-   - 参考: `docs/tasks/arch-30/task-1.2-api-menu-bindings.md`
+   - 参考: `docs/history/ARCH-30/task-1.2-api-menu-bindings.md`
 
 ### 文档待办（低优先级）
 

@@ -554,7 +554,7 @@ if (first.TryGetProperty("Menu", out var menuPascal))
 ### 后续任务
 
 **Task 1.3** - 实体列表API改造
-- 设计文档: `docs/tasks/arch-30/task-1.3-api-entities.md`
+- 设计文档: `docs/history/ARCH-30/task-1.3-api-entities.md`
 - 预计工作量: 0.5小时
 - 主要目标: 响应体积减少 65%
 - 复杂度: 低（最简单的任务）

@@ -51,7 +51,7 @@ Assert.True(reduction >= 0.1,
 
 ### 改进2: 设计文档更新性能目标 ⭐⭐⭐⭐⭐
 
-**位置**: `docs/tasks/arch-30/task-1.1-api-functions-me.md`
+**位置**: `docs/history/ARCH-30/task-1.1-api-functions-me.md`
 
 #### 2.1 核心目标部分（第17行）
 
@@ -111,7 +111,7 @@ Performance impact:
 
 ### 改进3: 工作计划文档完善 ⭐⭐⭐⭐⭐
 
-**位置**: `docs/design/ARCH-30-工作计划.md`
+**位置**: `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md`
 
 #### 3.1 整体进度更新（第14-23行）
 
@@ -186,7 +186,7 @@ Performance impact:
 
 ### 改进4: 任务跟踪状态更新 ⭐⭐⭐⭐⭐
 
-**位置**: `docs/tasks/arch-30/README.md` 第64行
+**位置**: `docs/history/ARCH-30/README.md` 第64行
 
 **更新内容**:
 ```markdown
@@ -455,7 +455,7 @@ Task 1.1 (二次): 4.9/5.0 (保留解决) ⭐⭐  ← 当前
 1. **Task 1.2 正式启动** ⏭️
    - 导航菜单 API 改造
    - 修复语言不一致 Bug
-   - 参考: `docs/tasks/arch-30/task-1.2-api-menu-bindings.md`
+   - 参考: `docs/history/ARCH-30/task-1.2-api-menu-bindings.md`
    - 预计: 0.5-1 小时
 
 2. **文档待办**（低优先级）

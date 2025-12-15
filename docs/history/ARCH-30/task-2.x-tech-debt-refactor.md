@@ -715,7 +715,7 @@ Write-Host "`nTotal violations: $($report.Count) files"
 
 ### 1. 更新技术债文档
 
-**文件**: `docs/tasks/arch-30/TECH-DEBT.md`
+**文件**: `docs/history/ARCH-30/TECH-DEBT.md`
 
 将所有16个文件标记为 ✅ 完成：
 
@@ -728,7 +728,7 @@ Write-Host "`nTotal violations: $($report.Count) files"
 
 ### 2. 创建完成报告
 
-**文件**: `docs/tasks/arch-30/task-2.x-tech-debt-completion.md`
+**文件**: `docs/history/ARCH-30/task-2.x-tech-debt-completion.md`
 
 记录：
 - 拆分统计（16文件 → 97文件）

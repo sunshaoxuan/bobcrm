@@ -103,7 +103,7 @@ Test-Path src/BobCrm.Api/Contracts/DTOs/EnumDefinitionDto.cs
 15. ✅ `tests/BobCrm.Api.Tests/EnumDefinitionEndpointsTests.cs`
 
 **文档（1个）**:
-16. ✅ `docs/tasks/arch-30/task-2.x-tech-debt-refactor.md`
+16. ✅ `docs/history/ARCH-30/task-2.x-tech-debt-refactor.md`
 
 ---
 

@@ -238,7 +238,7 @@ dto.DisplayNameTranslations = null;
 ### 立即可行动 ✅
 
 1. **开始 Task 1.1 实施**
-   - 参考: `docs/tasks/arch-30/task-1.1-api-functions-me.md`
+   - 参考: `docs/history/ARCH-30/task-1.1-api-functions-me.md`
    - 预计: 1-1.5小时
    - 开发者可以立即开始
 

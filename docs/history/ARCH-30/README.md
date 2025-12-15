@@ -5,7 +5,7 @@
 ## 📁 文档结构
 
 ```
-docs/tasks/arch-30/
+docs/history/ARCH-30/
 ├── README.md                           # 本文件
 ├── task-0.1-multilingual-helper.md     # 多语辅助类开发指南
 ├── task-0.2-dto-extensions.md          # DTO扩展方法开发指南

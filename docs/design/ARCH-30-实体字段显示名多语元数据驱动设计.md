@@ -2179,11 +2179,11 @@ git commit -m "feat: optimize /api/entities with lang parameter
  2. 理解查询结果的多语字段处理机制
  3. 编写技术调研文档
  
- **输出**：技术调研报告（`docs/research/ARCH-30-动态实体多语研究报告.md`）
+ **输出**：技术调研报告（`docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md`）
  
  **提交规范**：
  ```bash
- git add docs/research/ARCH-30-动态实体多语研究报告.md
+ git add docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md
  git commit -m "docs(research): add dynamic entity i18n research report
  
  - Analyze codegen/compile/query pipeline
@@ -2416,7 +2416,7 @@ git commit -m "[type]: [message]
 
 ### 10.4 工作计划跟踪（WORK-PLAN.md）
 
-**建议创建独立的工作计划文档**：`docs/design/ARCH-30-工作计划.md`
+**建议创建独立的工作计划文档**：`docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md`
 
 内容包括：
 ```markdown

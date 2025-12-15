@@ -404,7 +404,7 @@ if (lang != null)
 
 ## 📊 进度更新建议
 
-建议更新 `docs/tasks/arch-30/README.md` 的进度表：
+建议更新 `docs/history/ARCH-30/README.md` 的进度表：
 
 ```markdown
 | Task 0.2 | ✅ 合格 | [开发指南](task-0.2-dto-extensions.md) / [一次评审](task-0.2-review.md) / [二次评审](task-0.2-review-round2.md) | AI | 7430ab3 | 2025-12-11 |

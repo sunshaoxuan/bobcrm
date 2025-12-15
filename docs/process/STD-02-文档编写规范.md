@@ -44,6 +44,17 @@
 - `PROC-01-PR检查清单.md`
 - `STD-01-开发质量标准.md`
 
+### 2.4 特殊命名：测试用例库（docs/test-cases）
+
+为避免海量测试用例占用 `TEST-xx` 编号空间，并保持用例按领域组织，`docs/test-cases/` 使用独立命名体系：
+
+- **目录**：按领域划分（如 `01-authentication/`、`02-user-management/`）
+- **文件名**：`TC-{DOMAIN}-{NNN}-{中文名称}.md`
+  - `{DOMAIN}`：领域缩写（如 `AUTH`、`USER`、`ORG`、`SYS`）
+  - `{NNN}`：三位序号（如 `001`、`010`）
+
+示例：`docs/test-cases/03-organization/TC-ORG-001-组织结构.md`
+
 ## 3. 语言规范
 
 - **正文**: 必须使用 **简体中文**。
@@ -68,6 +79,18 @@
 - `docs/process/`: 流程与标准类
 - `docs/design/`: 设计类
 - `docs/guides/`: 指南类
+- `docs/history/`: 历史记录（审计/差距/修复记录、项目阶段复盘等）
+- `docs/reference/`: 参考文档（API 文档、术语表等）
+- `docs/reviews/`: 评审记录（代码评审、版本评审等）
+- `docs/migrations/`: 数据库迁移记录
+- `docs/examples/`: 示例/演示文档
+- `docs/test-cases/`: 测试用例库（见 2.4）
+
+### 5.1 目录约定
+
+- `docs/tasks/`、`docs/research/` 不再作为长期目录使用：
+  - 任务执行记录/阶段复盘建议归档到 `docs/history/`
+  - 调研/研究输出建议归档到 `docs/design/` 或 `docs/history/`
 
 ## 6. 检查清单
 

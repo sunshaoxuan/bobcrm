@@ -232,7 +232,7 @@ foreach ($file in $files) {
 ```
 
 #### 技术债追踪
-当前项目中发现的多类文件违规详见：`docs/tasks/arch-30/TECH-DEBT.md`
+当前项目中发现的多类文件违规详见：`docs/history/ARCH-30/TECH-DEBT.md`
 
 ---
 

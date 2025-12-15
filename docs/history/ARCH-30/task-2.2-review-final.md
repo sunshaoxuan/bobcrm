@@ -566,7 +566,7 @@ public async Task<List<EnumDefinitionDto>> GetAllAsync(
 
 ### 执行计划
 
-**参考文档**: `docs/tasks/arch-30/task-2.x-tech-debt-refactor.md`
+**参考文档**: `docs/history/ARCH-30/task-2.x-tech-debt-refactor.md`
 
 **工作量**: 10-12小时（16个文件，97个类型）
 
@@ -657,7 +657,7 @@ public async Task<List<EnumDefinitionDto>> GetAllAsync(
 ### 立即行动（推荐）✅
 
 1. **标记 Task 2.2 为完成**
-   - 更新 `docs/tasks/arch-30/README.md`
+   - 更新 `docs/history/ARCH-30/README.md`
    - 状态：✅ 合格通过（4.6/5.0）
 
 2. **立即开始技术债清偿**

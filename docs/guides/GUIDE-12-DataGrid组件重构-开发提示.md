@@ -1,4 +1,4 @@
-# DataGrid组件重构 - 开发提示 (Development Prompts)
+# GUIDE-12: DataGrid组件重构 - 开发提示
 
 请按顺序使用以下提示来实现 DataGrid 组件的重构。
 

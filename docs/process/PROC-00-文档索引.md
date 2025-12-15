@@ -1,6 +1,6 @@
 # 文档索引（按类型组织）
 
-- 文件按 **类型/职责** 存放：`design/`（架构与产品设计）、`guides/`（手册/指南）、`reference/`（接口/规范）、`history/`（差距与修复记录）、`process/`（流程）、`examples/`（示例）。
+- 文件按 **类型/职责** 存放：`design/`（架构与产品设计）、`guides/`（手册/指南）、`reference/`（接口/规范）、`history/`（差距与修复记录）、`plans/`（计划）、`process/`（流程）、`examples/`（示例）、`test-cases/`（测试用例库）。
 - 命名仍遵循 `分类-编号-标题.md` 规则，便于快速检索。
 - 若需历史版本，可通过 Git 查看对应文件的变更记录。
 
@@ -56,28 +56,44 @@
 > 一次性的审计、评审、迁移记录和已完成的计划
 
 - [AUDIT-01-文档代码差距审计报告-2025-11](history/AUDIT-01-文档代码差距审计报告-2025-11.md)
+- [AUDIT-02-文档代码合规性问题清单](history/AUDIT-02-文档代码合规性问题清单.md)
 - [AUDIT-03-项目现状分析报告](history/AUDIT-03-项目现状分析报告.md)
-- [REVIEW-01-代码评审与改进清单-2025-11](history/REVIEW-01-代码评审与改进清单-2025-11.md)
-- [REVIEW-02-多语言功能代码评审-2025-11](history/REVIEW-02-多语言功能代码评审-2025-11.md)
+- [AUDIT-04-ARCH-30-动态实体多语研究报告](history/AUDIT-04-ARCH-30-动态实体多语研究报告.md)
+- [ARCH-30-任务执行记录与评审材料](history/ARCH-30/README.md)
 - [MIGRATION-01-系统实体模板化迁移记录](history/MIGRATION-01-系统实体模板化迁移记录.md)
 - [PROC-06-v0.6.0-开发计划](history/PROC-06-v0.6.0-开发计划.md) (已完成)
 - [UI-07-阶段0-差距报告](history/UI-07-阶段0-差距报告.md)
 - [GAP-01-架构与功能差距记录](history/GAP-01-架构与功能差距记录.md)
 - [TMP-01-模板设计器进度跟踪](history/TMP-01-模板设计器进度跟踪.md)
 
-## 5. 开发计划（planning/）
+## 5. 评审记录（reviews/）
+
+> 代码评审、版本评审、验证报告等（命名与编号规则见 `docs/process/STD-02-文档编写规范.md`）。
+
+- 入口：`reviews/README.md`
+- [REVIEW-08-v0.7.0-项目审计](reviews/REVIEW-08-v0.7.0-项目审计.md)
+- [REVIEW-09-代码评审与改进清单-2025-11](reviews/REVIEW-09-代码评审与改进清单-2025-11.md)
+- [REVIEW-10-多语言功能代码评审-2025-11](reviews/REVIEW-10-多语言功能代码评审-2025-11.md)
+
+## 6. 开发计划（plans/）
 > 详细的版本开发计划，包含任务拆解、验收标准和实施细节
 
-- [PLAN-01-v0.7.0-仪表盘与安全](planning/PLAN-01-v0.7.0-仪表盘与安全.md)
+- [PLAN-01-v0.7.0-菜单导航完善](plans/PLAN-01-v0.7.0-菜单导航完善.md)
 
-## 6. 流程与规范（process/）
+## 7. 流程与规范（process/）
 > 可重复使用的流程模板和规范
 
 - 本页：`PROC-00-文档索引.md`
 - [PROC-01-PR检查清单](process/PROC-01-PR检查清单.md)
 - [PROC-02-文档同步规范](process/PROC-02-文档同步规范.md)
 
-## 7. 示例（examples/）
+## 8. 示例（examples/）
 - [EX-01-订单管理示例](examples/EX-01-订单管理示例.md)
+
+## 9. 测试用例库（test-cases/）
+
+> 按领域组织的手工/端到端测试用例库（命名规则见 `docs/process/STD-02-文档编写规范.md` 2.4）。
+
+- 入口：`test-cases/README.md`
 
 > **提示**：如需新增文档，请先确认所属类型，再放入对应目录，并在本索引补充条目。

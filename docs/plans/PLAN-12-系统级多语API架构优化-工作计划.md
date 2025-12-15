@@ -1,10 +1,10 @@
-# ARCH-30 系统级多语API架构优化 - 工作计划
+# PLAN-12: 系统级多语API架构优化 - 工作计划
 
-**文档编号**: ARCH-30-WORK-PLAN
+**文档编号**: PLAN-12
 **版本**: v1.1
 **创建日期**: 2025-12-11
 **最后更新**: 2025-12-13 (项目完成确认)
-**关联设计文档**: [ARCH-30-实体字段显示名多语元数据驱动设计.md](./ARCH-30-实体字段显示名多语元数据驱动设计.md)
+**关联设计文档**: [ARCH-30-实体字段显示名多语元数据驱动设计.md](../design/ARCH-30-实体字段显示名多语元数据驱动设计.md)
 **状态**: ✅ 已完成
 
 ---
@@ -974,7 +974,7 @@ feat(api): add lang parameter support to function management endpoints
 - `src/BobCrm.Api/Services/CSharpCodeGenerator.cs` (研究)
 - `src/BobCrm.Api/Services/ReflectionPersistenceService.cs` (研究)
 - `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs` (研究)
-- `docs/research/ARCH-30-动态实体多语研究报告.md` (新建)
+- `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md` (新建)
 
 ---
 
@@ -1068,7 +1068,7 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 #### 步骤 3.1.7: 编写研究报告
 
-1. 创建 `docs/research/ARCH-30-动态实体多语研究报告.md`
+1. 创建 `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md`
 2. 报告结构（参考模板）：
    - 章节1: 动态实体代码生成机制
      - 代码生成流程
@@ -1130,7 +1130,7 @@ docs(research): add dynamic entity multilingual research report
 - [x] 步骤 3.1.6: 确定解析时机
 - [x] 步骤 3.1.7: 编写研究报告
 
-**输出物**: 研究报告文档 `docs/research/ARCH-30-动态实体多语研究报告.md`
+**输出物**: 研究报告文档 `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md`
 
 **关键发现**:
 - ✅ 动态实体查询链路当前不做DTO转换，直接返回运行时实体对象
@@ -1153,7 +1153,7 @@ docs(research): add dynamic entity multilingual research report
 - 性能优化: 避免对每条记录都查询字段元数据
 
 **负责文件**:
-- `docs/research/ARCH-30-动态实体多语研究报告.md` (参考)
+- `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md` (参考)
 - `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (更新)
 - `src/BobCrm.Api/Services/ReflectionPersistenceService.cs` (设计修改点)
 - `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs` (设计修改点)
@@ -1175,7 +1175,7 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 - 若未来需要"查询结果携带列元数据（字段名/显示名）"，推荐运行时预加载/缓存实体字段元数据 + 批量加载i18n资源，在端点层拼装 `meta.fields`
 
 ### 参考文件
-- 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
+- 研究报告: `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
 - 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
 - 持久化服务: `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
 - 动态实体端点: `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
@@ -1367,7 +1367,7 @@ ARCH-30 系统级多语API架构优化项目，阶段3低频API改造。
 
 ### 参考文件
 - 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md` (Task 3.2输出)
-- 研究报告: `docs/research/ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
+- 研究报告: `docs/history/AUDIT-04-ARCH-30-动态实体多语研究报告.md` (Task 3.1输出)
 - 持久化服务: `src/BobCrm.Api/Services/ReflectionPersistenceService.cs`
 - 动态实体端点: `src/BobCrm.Api/Endpoints/DynamicEntityEndpoints.cs`
 - DTO扩展: `src/BobCrm.Api/Extensions/DtoExtensions.cs` (参考ToFieldDto)
@@ -1566,7 +1566,7 @@ ARCH-30 系统级多语API架构优化项目，阶段4文档同步。
 
 ### 参考文件
 - API文档: `docs/reference/API-01-接口文档.md`
-- 工作计划: `docs/design/ARCH-30-工作计划.md` (查看已完成任务列表)
+- 工作计划: `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md` (查看已完成任务列表)
 - 设计文档: `docs/design/ARCH-30-实体字段显示名多语元数据驱动设计.md`
 
 ### 需要更新的端点列表
@@ -1747,7 +1747,7 @@ ARCH-30 系统级多语API架构优化项目，阶段4文档同步。
 ### 参考文件
 - CHANGELOG: `CHANGELOG.md`
 - API文档: `docs/reference/API-01-接口文档.md` (Task 4.1 输出)
-- 工作计划: `docs/design/ARCH-30-工作计划.md` (查看已完成任务列表)
+- 工作计划: `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md` (查看已完成任务列表)
 
 ### 需要记录的变更
 

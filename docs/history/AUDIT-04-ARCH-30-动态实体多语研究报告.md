@@ -1,4 +1,4 @@
-# ARCH-30 动态实体多语研究报告（Task 3.1）
+# AUDIT-04: ARCH-30 动态实体多语研究报告（Task 3.1）
 
 最后更新：2025-12-12
 
@@ -279,4 +279,3 @@ DB 映射：
 - 缓存失效触发：
   - 实体字段变更（EntityDefinition/FieldMetadata 更新）
   - i18n 资源变更（`ILocalization.GetCacheVersion()` 变化）
-
