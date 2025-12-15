@@ -98,5 +98,20 @@
 ```yaml
 test_type: e2e
 requires_auth: admin
-cleanup: delete_organization("HQ")
+
+cleanup:
+  strategy: database
+  steps:
+    # 按层级逆序删除，先子节点后父节点
+    - sql: DELETE FROM OrganizationNodes WHERE ParentId IS NOT NULL AND Name IN ('技术部', '研发部')
+      description: 删除子组织
+    - sql: DELETE FROM OrganizationNodes WHERE Name = '总公司'
+      description: 删除根组织
+  on_error: ignore
+  
+cleanup_order: both
+
+verify_cleanup:
+  - sql: SELECT COUNT(*) FROM OrganizationNodes WHERE Code IN ('HQ', 'TECH')
+    expected: 0
 ```
