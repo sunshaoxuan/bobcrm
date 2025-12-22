@@ -27,6 +27,8 @@ public class TemplateRuntimeClient
         string entityType,
         TemplateUsageType usageType,
         string? functionOverride = null,
+        int? entityId = null,
+        System.Text.Json.JsonElement? entityData = null,
         CancellationToken cancellationToken = default)
     {
         if (_auth is null)
@@ -42,7 +44,9 @@ public class TemplateRuntimeClient
                 new TemplateRuntimeRequest
                 {
                     UsageType = usageType,
-                    FunctionCodeOverride = functionOverride
+                    FunctionCodeOverride = functionOverride,
+                    EntityId = entityId,
+                    EntityData = entityData
                 },
                 cancellationToken);
 

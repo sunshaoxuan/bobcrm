@@ -29,6 +29,24 @@ public class TemplateStateBinding
     /// 关联的模板 ID
     /// </summary>
     public int TemplateId { get; set; }
+
+    /// <summary>
+    /// 条件匹配字段名（如 "Status"）
+    /// 为空时视为该 ViewState 的通用/默认绑定（向后兼容）
+    /// </summary>
+    [MaxLength(128)]
+    public string? MatchFieldName { get; set; }
+
+    /// <summary>
+    /// 条件匹配字段值（如 "Draft"）
+    /// </summary>
+    [MaxLength(256)]
+    public string? MatchFieldValue { get; set; }
+
+    /// <summary>
+    /// 匹配优先级（值越大越优先）
+    /// </summary>
+    public int Priority { get; set; } = 0;
     
     /// <summary>
     /// 是否为该实体+状态的默认模板

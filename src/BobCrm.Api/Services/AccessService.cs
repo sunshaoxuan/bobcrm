@@ -925,14 +925,16 @@ public class AccessService
         var now = DateTime.UtcNow;
         var normalizedEntity = entityName.Trim().ToLowerInvariant();
 
-        var scopeBindings = await _db.RoleAssignments
-            .Where(a => a.UserId == userId &&
-                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
-                        (!a.ValidTo.HasValue || a.ValidTo >= now) &&
-                        a.Role != null)
-            .SelectMany(a => a.Role!.DataScopes
-                .Where(ds => ds.EntityName == "*" || ds.EntityName.ToLower() == normalizedEntity)
-                .Select(ds => new ScopeBinding(ds, a.OrganizationId)))
+        var scopeBindings = await (
+                from assignment in _db.RoleAssignments
+                where assignment.UserId == userId
+                      && (!assignment.ValidFrom.HasValue || assignment.ValidFrom <= now)
+                      && (!assignment.ValidTo.HasValue || assignment.ValidTo >= now)
+                join dataScope in _db.RoleDataScopes
+                    on assignment.RoleId equals dataScope.RoleId
+                where dataScope.EntityName == "*" || dataScope.EntityName.ToLower() == normalizedEntity
+                select new ScopeBinding(dataScope, assignment.OrganizationId)
+            )
             .ToListAsync(ct);
 
         if (scopeBindings.Any(sb => sb.Scope.ScopeType == RoleDataScopeTypes.All))

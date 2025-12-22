@@ -35,9 +35,10 @@ public class TemplateBindingService
         }
 
         // Fallback: use default TemplateStateBinding when user binding is empty/invalid
+        var fallbackViewState = MapUsageToViewState(usageType);
         var fallbackState = await _db.TemplateStateBindings
             .Include(b => b.Template)
-            .Where(b => b.EntityType == entityType && MapViewStateToUsage(b.ViewState) == usageType && b.IsDefault)
+            .Where(b => b.EntityType == entityType && b.ViewState == fallbackViewState && b.IsDefault)
             .OrderByDescending(b => b.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
@@ -135,11 +136,11 @@ public class TemplateBindingService
         }
     }
 
-    private static FormTemplateUsageType MapViewStateToUsage(string viewState) => viewState switch
+    private static string MapUsageToViewState(FormTemplateUsageType usageType) => usageType switch
     {
-        "List" => FormTemplateUsageType.List,
-        "DetailEdit" => FormTemplateUsageType.Edit,
-        "Create" => FormTemplateUsageType.Combined,
-        _ => FormTemplateUsageType.Detail
+        FormTemplateUsageType.List => "List",
+        FormTemplateUsageType.Edit => "DetailEdit",
+        FormTemplateUsageType.Combined => "Create",
+        _ => "DetailView"
     };
 }

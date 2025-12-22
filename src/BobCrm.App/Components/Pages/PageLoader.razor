@@ -197,8 +197,27 @@ else if (entityData != null)
             string? layoutJson = null;
             fieldLabels = await LoadFieldLabels();
 
-            var runtime = await TemplateRuntime.GetRuntimeAsync(EntityType, TemplateUsageType.Detail);
-            if (runtime != null)
+            // 1. Load entity data
+            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
+            if (!dataResp.IsSuccessStatusCode)
+            {
+                error = string.Format(I18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
+                loading = false;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            entityData = dataDoc;
+
+            // 2. Resolve runtime template with entity data (polymorphic view)
+            var runtime = await TemplateRuntime.GetRuntimeAsync(
+                EntityType,
+                TemplateUsageType.Detail,
+                entityId: Id,
+                entityData: entityData);
+
+            if (runtime != null && !string.IsNullOrWhiteSpace(runtime.Template?.LayoutJson))
             {
                 runtimeContext = runtime;
                 appliedScopes = runtime.AppliedScopes?
@@ -207,14 +226,10 @@ else if (entityData != null)
                     .ToArray() ?? Array.Empty<string>();
                 layoutJson = runtime.Template.LayoutJson;
             }
-            else
-            {
-                error = I18n.T("PL_LOAD_TEMPLATE_FAILED");
-            }
 
             if (string.IsNullOrWhiteSpace(layoutJson))
             {
-                // 1. Entity match: load effective template by EntityType (priority: user default > system default > first created)
+                // Entity match: load effective template by EntityType (priority: user default > system default > first created)
                 var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
 
                 if (templateResp.IsSuccessStatusCode)
@@ -229,12 +244,8 @@ else if (entityData != null)
                         layoutJson = template.LayoutJson;
                     }
                 }
-                else
-                {
-                    error = string.Format(I18n.T("PL_LOAD_TEMPLATE_FAILED"), templateResp.StatusCode);
-                }
 
-                // 2. Legacy fallback：如果仍然没有 layout，则走老的用户布局接口
+                // Legacy fallback：如果仍然没有 layout，则走老的用户布局接口
                 if (string.IsNullOrWhiteSpace(layoutJson))
                 {
                     var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
@@ -243,25 +254,13 @@ else if (entityData != null)
                         var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                         layoutJson = layoutDoc.GetRawText();
                     }
-                    else
-                    {
-                        error = string.Format(I18n.T("PL_LOAD_TEMPLATE_FAILED"), layoutResp.StatusCode);
-                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(layoutJson))
+                {
+                    error = I18n.T("PL_LOAD_TEMPLATE_FAILED");
                 }
             }
-
-            // 2. Load entity data
-            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
-            if (!dataResp.IsSuccessStatusCode)
-            {
-                error = string.Format(I18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
-                loading = false;
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-
-            var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-            entityData = dataDoc;
 
             // 3. Parse layout JSON (keep controls even if data binding fails)
             if (!string.IsNullOrWhiteSpace(layoutJson))

@@ -18,18 +18,21 @@ public class TemplateRuntimeService
     private readonly ILogger<TemplateRuntimeService> _logger;
     private readonly AppDbContext _db;
     private readonly IDefaultTemplateService _defaultTemplateService;
+    private readonly IReflectionPersistenceService _persistenceService;
 
     public TemplateRuntimeService(
         TemplateBindingService bindingService,
         AccessService accessService,
         AppDbContext db,
         IDefaultTemplateService defaultTemplateService,
+        IReflectionPersistenceService persistenceService,
         ILogger<TemplateRuntimeService> logger)
     {
         _bindingService = bindingService;
         _accessService = accessService;
         _db = db;
         _defaultTemplateService = defaultTemplateService;
+        _persistenceService = persistenceService;
         _logger = logger;
     }
 
@@ -41,11 +44,14 @@ public class TemplateRuntimeService
     {
         request ??= new TemplateRuntimeRequest();
         var usage = request.UsageType;
+        var viewState = MapUsageToViewState(usage);
 
         var normalized = entityType?.Trim() ?? string.Empty;
         var altNormalized = normalized.EndsWith("s", StringComparison.OrdinalIgnoreCase)
             ? normalized[..^1]
             : $"{normalized}s";
+
+        var entityData = await ResolveEntityDataAsync(normalized, altNormalized, request, ct);
 
         var binding = await _bindingService.GetBindingAsync(normalized, usage, ct)
                       ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
@@ -65,9 +71,11 @@ public class TemplateRuntimeService
             throw new InvalidOperationException("Binding does not include template data.");
         }
 
+        var bindingToUse = await ApplyPolymorphicViewBindingAsync(binding, normalized, altNormalized, viewState, usage, entityData, ct);
+
         var requiredFunction = request.FunctionCodeOverride
-            ?? binding.RequiredFunctionCode
-            ?? binding.Template.RequiredFunctionCode;
+            ?? bindingToUse.RequiredFunctionCode
+            ?? bindingToUse.Template.RequiredFunctionCode;
 
         await _accessService.EnsureFunctionAccessAsync(userId, requiredFunction, ct);
         var scopeResult = await _accessService.EvaluateDataScopeAsync(userId, entityType, ct);
@@ -77,8 +85,8 @@ public class TemplateRuntimeService
         _logger.LogDebug("Runtime context for {EntityType}/{Usage} built with template {TemplateId}", entityType, usage, binding.TemplateId);
 
         return new TemplateRuntimeResponse(
-            binding.ToDto(),
-            binding.Template.ToDescriptor(),
+            bindingToUse.ToDto(),
+            bindingToUse.Template.ToDescriptor(),
             scopeResult.HasFullAccess,
             appliedScopes);
     }
@@ -125,6 +133,123 @@ public class TemplateRuntimeService
         {
             return false;
         }
+    }
+
+    private static string MapUsageToViewState(FormTemplateUsageType usage)
+        => usage switch
+        {
+            FormTemplateUsageType.List => "List",
+            FormTemplateUsageType.Edit => "DetailEdit",
+            FormTemplateUsageType.Combined => "Create",
+            _ => "DetailView"
+        };
+
+    private async Task<JsonElement?> ResolveEntityDataAsync(
+        string normalized,
+        string altNormalized,
+        TemplateRuntimeRequest request,
+        CancellationToken ct)
+    {
+        if (request.EntityData.HasValue)
+        {
+            return request.EntityData.Value;
+        }
+
+        if (!request.EntityId.HasValue)
+        {
+            return null;
+        }
+
+        try
+        {
+            var entity = await _db.EntityDefinitions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e =>
+                        (e.EntityRoute ?? string.Empty).Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                        (e.EntityName ?? string.Empty).Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                        (e.EntityRoute ?? string.Empty).Equals(altNormalized, StringComparison.OrdinalIgnoreCase) ||
+                        (e.EntityName ?? string.Empty).Equals(altNormalized, StringComparison.OrdinalIgnoreCase),
+                    ct);
+
+            if (string.IsNullOrWhiteSpace(entity?.FullTypeName))
+            {
+                return null;
+            }
+
+            var obj = await _persistenceService.GetByIdAsync(entity.FullTypeName, request.EntityId.Value);
+            if (obj == null)
+            {
+                return null;
+            }
+
+            return JsonSerializer.SerializeToElement(obj, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[TemplateRuntime] ResolveEntityDataAsync failed for {EntityType}#{EntityId}", normalized, request.EntityId);
+            return null;
+        }
+    }
+
+    private async Task<TemplateBinding> ApplyPolymorphicViewBindingAsync(
+        TemplateBinding binding,
+        string normalized,
+        string altNormalized,
+        string viewState,
+        FormTemplateUsageType usage,
+        JsonElement? entityData,
+        CancellationToken ct)
+    {
+        if (!entityData.HasValue)
+        {
+            return binding;
+        }
+
+        var stateBindings = await _db.TemplateStateBindings
+            .AsNoTracking()
+            .Where(b =>
+                (b.EntityType == normalized || b.EntityType == altNormalized) &&
+                b.ViewState == viewState)
+            .ToListAsync(ct);
+
+        if (stateBindings.Count == 0)
+        {
+            return binding;
+        }
+
+        var selectedTemplateId = TemplateStateBindingRuleEngine.SelectTemplateId(stateBindings, entityData);
+        if (!selectedTemplateId.HasValue || selectedTemplateId.Value == binding.TemplateId)
+        {
+            return binding;
+        }
+
+        var template = await _db.FormTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == selectedTemplateId.Value, ct);
+
+        if (!IsTemplateUsable(template))
+        {
+            return binding;
+        }
+
+        _logger.LogDebug(
+            "[TemplateRuntime] Polymorphic binding applied for {EntityType}/{ViewState}: {OldTemplate} -> {NewTemplate}",
+            normalized,
+            viewState,
+            binding.TemplateId,
+            selectedTemplateId.Value);
+
+        return new TemplateBinding
+        {
+            EntityType = binding.EntityType,
+            UsageType = usage,
+            TemplateId = selectedTemplateId.Value,
+            Template = template!,
+            IsSystem = true,
+            RequiredFunctionCode = binding.RequiredFunctionCode ?? template!.RequiredFunctionCode,
+            UpdatedBy = "runtime",
+            UpdatedAt = DateTime.UtcNow
+        };
     }
 
     private async Task<TemplateBinding?> RegenerateAndReloadBindingAsync(

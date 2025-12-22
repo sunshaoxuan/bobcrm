@@ -319,11 +319,15 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
 
         b.Entity<TemplateStateBinding>()
             .HasIndex(tsb => new { tsb.TemplateId, tsb.ViewState })
-            .IsUnique();
+            ;
 
         b.Entity<TemplateStateBinding>()
-            .HasIndex(tsb => new { tsb.EntityType, tsb.ViewState, tsb.IsDefault })
+            .HasIndex(tsb => new { tsb.EntityType, tsb.ViewState })
+            .IsUnique()
             .HasFilter("\"IsDefault\" = TRUE");
+
+        b.Entity<TemplateStateBinding>()
+            .HasIndex(tsb => new { tsb.EntityType, tsb.ViewState });
 
         b.Entity<TemplateStateBinding>()
             .Property(tsb => tsb.EntityType)
@@ -338,6 +342,14 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         b.Entity<TemplateStateBinding>()
             .Property(tsb => tsb.RequiredPermission)
             .HasMaxLength(128);
+
+        b.Entity<TemplateStateBinding>()
+            .Property(tsb => tsb.MatchFieldName)
+            .HasMaxLength(128);
+
+        b.Entity<TemplateStateBinding>()
+            .Property(tsb => tsb.MatchFieldValue)
+            .HasMaxLength(256);
 
         b.Entity<TemplateStateBinding>()
             .HasOne(tsb => tsb.Template)
