@@ -142,6 +142,54 @@ public class OrderAggVO : AggregateVOBase
 }
 ```
 
+### 6. 实体关系建模 (Entity Relationships)
+
+BobCRM 通过元数据定义支持三种标准实体关系模式：
+
+#### 1:1 关系 (One-to-One / Lookup)
+- **实现方式**：在主体实体的 `FieldMetadata` 中添加一个 `Guid` 类型的字段，设置 `IsLookup = true` 且 `IsRequired = true/false`。
+- **配置**：`ReferencedEntityId` 指向目标实体，`ReferenceType = Association`。
+- **物理层**：主体表包含一个 GUID 逻辑外键，关联到目标表的主键。
+- **UI 渲染**：设计器识别为 `LookupEditor`（异步搜索选择器）。
+
+#### 1:N 关系 (One-to-Many / Composition)
+- **实现方式**：采用 **AggVO 模式**。在主实体的 `FieldMetadata` 中添加记录，设置 `IsEntityRef = true`。
+- **配置**：`ReferencedEntityId` 指向子实体，`ReferenceType = Composition`。
+- **物理层**：子实体表包含一个 `ParentId` (GUID) 逻辑外键。
+- **UI 渲染**：设计器识别为 `DetailGrid` (明细表) 或 `TabStrip`。
+
+#### N:N 关系 (Many-to-Many)
+- **实现方式**：通过 **中间关联实体 (Link Entity)** 实现。
+- **模式**：创建一个专用的中间实体（如 `RoleUserLink`），包含两个 `Lookup` 字段（`RoleId` 和 `UserId`）。
+- **优势**：允许在中间表上扩展属性（如：`AssignedAt`, `CreatedBy`）。
+- **UI 渲染**：在主实体页面配置 `Transfer` (穿梭框) 组件，通过 API 自动维护中间表记录。
+
+### 7. 发布与生命周期管理 (Publishing & Lifecycle)
+
+#### 7.1 版本化与恢复 (Versioning & Recovery)
+- **快照机制**：实体在每次手动发布时，系统自动对当前的 `EntityDefinition` 及其 `Fields` 进行快照存档，并存入 `EntityDefinitionHistory`。
+- **差异对比**：用户修改已发布实体后，状态变为 `Modified`。系统支持对比“当前设计版”与“最后发布版”的差异。
+- **一键回滚**：支持将设计元数据恢复到历史任一版本，恢复后物理表在下次发布时同步回滚（通过 DDL 分析）。
+
+#### 7.2 级联发布 (AggVO Cascade Publishing)
+- **引用闭环**：当发布一个包含子实体引用的 AggVO 时，若其子实体处于 `Draft` (从未发布) 或 `Withdrawn` (已撤回) 状态，系统将自动触发级联发布。
+- **模板生成策略**：
+    - **独立发布**：触发默认模板（List, Detail, Edit）生成。
+    - **随 AggVO 发布**：仅发布元数据与物理表，**不生成** 默认模板。子实体的 UI 由 AggVO 详情页中的明细组件接管。
+
+#### 7.3 撤回发布 (Withdrawal)
+- **操作逻辑**：支持逻辑撤回（标记不可见）或物理撤回（DROP TABLE，仅限开发模式）。
+
+### 8. 跨数据库设计元数据 (Abstract Design Metadata)
+
+为了支持未来多数据库环境（如 PostgreSQL, MySQL, SQL Server），元数据存储遵循“设计元 (Design Source)”原则：
+
+- **解耦物理脚本**：系统中存储的是描述性的 **UI 设计元数据**（如：字段类型为 `Text`, 长度为 `50`, 必填），而非特定数据库的 SQL 字符串。
+- **动态转换层**：
+    - `GeneratorInterface` 定义标准的 DDL 任务描述。
+    - 各数据库 Provider (如 `PostgreSQLProvider`) 负责将“设计元”转换为具体的方言脚本。
+- **持久化隔离**：物理 DDL 脚本仅存储在 `DDLScript` 记录中供审计，不作为实体的唯一真理来源。
+
 **版本号管理规则**：
 
 1. **保存顺序** - 从叶子实体开始，平级遍历，上层递归到顶层
@@ -211,104 +259,63 @@ erDiagram
     }
 ```
 
-### 表结构设计
+### 表结构设计 (Logical Schema)
+
+元数据管理表的模型设计基于逻辑关系，物理实现由具体的数据库 Provider 负责映射。
 
 #### 1. EntityDefinitions - 实体定义表
-
-```sql
-CREATE TABLE EntityDefinitions (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    Namespace VARCHAR(500) NOT NULL,              -- 命名空间 BobCrm.Base.Custom
-    EntityName VARCHAR(100) NOT NULL,             -- 实体名 Product
-    DisplayNameKey VARCHAR(100) NOT NULL,         -- 多语键 ENTITY_PRODUCT
-    StructureType VARCHAR(50) NOT NULL,           -- Single|MasterDetail|MasterDetailGrandchild
-    Status VARCHAR(50) NOT NULL DEFAULT 'Draft',  -- Draft|Published|Modified
-    IsLocked BOOLEAN NOT NULL DEFAULT FALSE,      -- 是否被模板引用锁定
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT UQ_EntityDefinitions_Namespace_EntityName UNIQUE (Namespace, EntityName)
-);
-
-CREATE INDEX IX_EntityDefinitions_Status ON EntityDefinitions(Status);
-CREATE INDEX IX_EntityDefinitions_IsLocked ON EntityDefinitions(IsLocked);
-```
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| Id | GUID | 逻辑主键 |
+| Namespace | String | 命名空间，控制业务域隔离 |
+| EntityName | String | 物理表名/代码类名基础 |
+| DisplayNameKey | String | 多语键 |
+| StructureType | Enum | 结构类型 (Single/MasterDetail/...) |
+| Status | Enum | 生命周期状态 (Draft/Published/Modified/Withdrawn) |
+| IsLocked | Boolean | 锁定标记，防止破坏性修改 |
+| CreatedAt | DateTime | 创建时间 |
+| UpdatedAt | DateTime | 最后修改时间 |
 
 #### 2. FieldMetadata - 字段元数据表
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| Id | GUID | 逻辑主键 |
+| EntityDefinitionId | GUID | 所属实体引用 |
+| ParentFieldId | GUID | 明细实体的父级关联字段 (用于 AggVO) |
+| PropertyName | String | C# 属性名 |
+| DataType | LogicalType| 抽象类型 (String/Int32/DateTime/Lookup/...) |
+| Length | Integer | 长度约束 |
+| IsRequired | Boolean | 必填约束 |
+| IsLookup | Boolean | 是否为外部实体引用 |
+| IsEntityRef | Boolean | 是否为聚合子实体组成 |
+| ReferencedEntityId | GUID | 引用的目标实体 ID |
+| TableName | String | 物理表快照 (发布后锁定) |
+| SortOrder | Integer | UI 展示顺序 |
 
-```sql
-CREATE TABLE FieldMetadata (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    EntityDefinitionId UUID NOT NULL,
-    ParentFieldId UUID NULL,                      -- 子实体的父字段引用
-    PropertyName VARCHAR(100) NOT NULL,
-    DisplayNameKey VARCHAR(100) NOT NULL,
-    DataType VARCHAR(50) NOT NULL,                -- String|Int32|DateTime|Decimal|EntityRef
-    Length INT NULL,                              -- 字符串长度
-    IsRequired BOOLEAN NOT NULL DEFAULT FALSE,
-    IsEntityRef BOOLEAN NOT NULL DEFAULT FALSE,   -- 是否引用子实体
-    ReferencedEntityId UUID NULL,                 -- 引用的实体ID
-    TableName VARCHAR(100) NULL,                  -- 物理表名（发布后填充）
-    SortOrder INT NOT NULL DEFAULT 0,
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    UpdatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT FK_FieldMetadata_EntityDefinition
-        FOREIGN KEY (EntityDefinitionId) REFERENCES EntityDefinitions(Id) ON DELETE CASCADE,
-    CONSTRAINT FK_FieldMetadata_ParentField
-        FOREIGN KEY (ParentFieldId) REFERENCES FieldMetadata(Id) ON DELETE CASCADE,
-    CONSTRAINT FK_FieldMetadata_ReferencedEntity
-        FOREIGN KEY (ReferencedEntityId) REFERENCES EntityDefinitions(Id),
-    CONSTRAINT UQ_FieldMetadata_EntityProperty
-        UNIQUE (EntityDefinitionId, PropertyName)
-);
-
-CREATE INDEX IX_FieldMetadata_EntityDefinitionId ON FieldMetadata(EntityDefinitionId);
-CREATE INDEX IX_FieldMetadata_ParentFieldId ON FieldMetadata(ParentFieldId);
-```
-
-#### 3. EntityInterfaces - 实体接口表
-
-```sql
-CREATE TABLE EntityInterfaces (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    EntityDefinitionId UUID NOT NULL,
-    InterfaceType VARCHAR(50) NOT NULL,           -- Base|Archive|Audit|Version|TimeVersion
-    IsEnabled BOOLEAN NOT NULL DEFAULT TRUE,
-    IsLocked BOOLEAN NOT NULL DEFAULT FALSE,      -- 已被引用则不可删除
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT FK_EntityInterfaces_EntityDefinition
-        FOREIGN KEY (EntityDefinitionId) REFERENCES EntityDefinitions(Id) ON DELETE CASCADE,
-    CONSTRAINT UQ_EntityInterfaces_Entity_Type
-        UNIQUE (EntityDefinitionId, InterfaceType)
-);
-```
-
-#### 4. DDLScripts - DDL脚本表
-
-```sql
-CREATE TABLE DDLScripts (
-    Id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    EntityDefinitionId UUID NOT NULL,
-    ScriptType VARCHAR(50) NOT NULL,              -- Create|Alter|Drop
-    SqlScript TEXT NOT NULL,
-    Status VARCHAR(50) NOT NULL DEFAULT 'Pending',-- Pending|Executed|Failed
-    CreatedAt TIMESTAMP NOT NULL DEFAULT NOW(),
-    ExecutedAt TIMESTAMP NULL,
-    ErrorMessage TEXT NULL,
-
-    CONSTRAINT FK_DDLScripts_EntityDefinition
-        FOREIGN KEY (EntityDefinitionId) REFERENCES EntityDefinitions(Id) ON DELETE CASCADE
-);
-
-CREATE INDEX IX_DDLScripts_EntityDefinitionId ON DDLScripts(EntityDefinitionId);
-CREATE INDEX IX_DDLScripts_Status ON DDLScripts(Status);
-```
+#### 3. DDLScripts - DDL 变更审计表
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| Id | GUID | 记录 ID |
+| EntityDefinitionId | GUID | 关联实体 |
+| ScriptType | Enum | 变更类型 (Create/Alter/Drop) |
+| SqlScript | Text | 物理 DDL 脚本 (由生成器产出) |
+| TargetDialect | String | 目标数据库方言 (PostgreSQL/MySQL/...) |
+| Status | Enum | 执行状态 |
+| CreatedAt | DateTime | 生成时间 |
 
 ---
 
 ## 系统架构
+
+### 核心解耦原则
+为了支持多数据库，系统架构在 DDL 生成与执行层面实施严格解耦：
+
+1. **抽象设计元数据 (Abstract Design Source)**：
+   应用层仅操作上述逻辑模型。
+2. **生成器接口 (IGeneratorService)**：
+   定义 `Generate(EntityDefinition)` 接口，不感知具体数据库。
+3. **数据库供应商适配器 (DB Provider Adapters)**：
+   每个 Provider 实现具体的映射逻辑（如：Logical `DateTime` -> PG `TIMESTAMP` 或 SQLServer `DATETIME2`）。
 
 ### 层次结构
 
@@ -370,65 +377,24 @@ CREATE INDEX IX_DDLScripts_Status ON DDLScripts(Status);
 > - `FieldDataTypes`：记录 String、Int32、Decimal、EntityRef 等字段类型的 Code、CLR 类型、分类以及多语言说明。所有字段类型下拉与校验逻辑均读取此表，后续需要新增类型时，只需插入档案即可。
 > - `FieldSources`：记录字段来源（System、Custom、Interface……）的 Code/Name/Description。实体编辑器和同步器都直接引用此档案，允许未来扩展更多来源类型，而无需修改枚举或代码。
 
-### 核心服务
+#### 1. DDLGenerator (抽象生成器)
 
-#### 1. DDLGeneratorService - DDL生成器
+**职责**：基于“设计元 (Design Source)”产出具体的物理变更指令。
 
-**职责**：根据实体定义生成PostgreSQL DDL脚本
+**关键抽象**：
+- `LogicalToPhysicalMap`：不同方言的类型转换映射。
+- `IdentifierQuoting`：处理不同数据库的标识符引用（如 `""` vs `[]` vs ` `` `）。
 
-**方法**：
+**主要接口**：
 ```csharp
-public class DDLGeneratorService
+public interface IDDLGenerator
 {
-    // 生成CREATE TABLE脚本
+    // 根据逻辑定义生成创建脚本
     string GenerateCreateScript(EntityDefinition entity);
-
-    // 生成ALTER TABLE脚本（对比现有结构）
+    
+    // 生成变更脚本（基于物理差异分析）
     List<string> GenerateAlterScripts(EntityDefinition entity, TableSchema currentSchema);
-
-    // 生成DROP TABLE脚本
-    string GenerateDropScript(EntityDefinition entity);
-
-    // 生成索引脚本
-    List<string> GenerateIndexScripts(EntityDefinition entity);
 }
-```
-
-**示例输出**：
-```sql
--- Single Entity
-CREATE TABLE "Products" (
-    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "Code" VARCHAR(50) NOT NULL,
-    "Name" VARCHAR(255) NOT NULL,
-    "Price" DECIMAL(18,2) NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-    "CreatedBy" VARCHAR(100),
-    "UpdatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-    "UpdatedBy" VARCHAR(100),
-    "Version" INT NOT NULL DEFAULT 1
-);
-
-CREATE UNIQUE INDEX "IX_Products_Code" ON "Products"("Code");
-
--- Master-Detail
-CREATE TABLE "Orders" (
-    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "OrderNo" VARCHAR(50) NOT NULL,
-    "OrderDate" TIMESTAMP NOT NULL,
-    "Version" INT NOT NULL DEFAULT 1
-);
-
-CREATE TABLE "OrderItems" (
-    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "OrderId" UUID NOT NULL,
-    "ProductId" UUID NOT NULL,
-    "Quantity" INT NOT NULL,
-    "MasterVersion" INT NOT NULL,  -- 引用主表版本号
-
-    CONSTRAINT "FK_OrderItems_Orders"
-        FOREIGN KEY ("OrderId") REFERENCES "Orders"("Id") ON DELETE CASCADE
-);
 ```
 
 #### 2. CodeGeneratorService - 代码生成器
@@ -851,93 +817,27 @@ public class EntityModificationValidator
 }
 ```
 
-### 2. DDL生成策略
+### 2. DDL 生成与演进策略 (Generation Strategy)
 
-#### PostgreSQL DDL生成器
+系统采用 **逻辑元数据 -> 物理语句** 的两级映射策略：
 
-```csharp
-public class PostgreSQLDDLGenerator : IDDLGenerator
-{
-    public string GenerateCreateTable(EntityDefinition entity)
-    {
-        var sb = new StringBuilder();
-        var tableName = entity.EntityName + "s";  // 简单复数
+#### 2.1 生成器模型
+系统定义 `IDDLGenerator` 接口，负责核心逻辑映射，不绑定具体数据库：
+- **CreateTable**：根据 `EntityDefinition` 的字段集合与关联，生成符合其结构的物理表指令。
+- **AlterTable**：对比当前物理 Schema 与逻辑定义的差异（新增字段、长度扩展、约束变更等），生成增量指令。
 
-        sb.AppendLine($"CREATE TABLE \"{tableName}\" (");
+#### 2.2 核心映射规则 (Abstract Mapping Rules)
+1. **标识符规范**：实体名为基础，采用 Provider 约定的命名规范（如加引号或转义）。
+2. **字段映射**：
+   - 逻辑类型（`String`, `Int`, `Map` 等）映射至 Provider 提供的物理原子类型。
+   - 必填约束映射为 `NOT NULL` 或等效物理约束。
+3. **主键与默认值**：
+   - `Id` 字段自动映射为逻辑 GUID 主键。
+   - 默认值由逻辑定义提供，Provider 负责格式化。
 
-        // 生成字段
-        var fieldSqls = new List<string>();
-        foreach (var field in entity.Fields.OrderBy(f => f.SortOrder))
-        {
-            fieldSqls.Add(GenerateFieldDefinition(field));
-        }
-
-        sb.AppendLine(string.Join(",\n", fieldSqls));
-        sb.AppendLine(");");
-
-        return sb.ToString();
-    }
-
-    private string GenerateFieldDefinition(FieldMetadata field)
-    {
-        var sql = $"\"{field.PropertyName}\" ";
-
-        // 数据类型映射
-        sql += field.DataType switch
-        {
-            "String" => $"VARCHAR({field.Length ?? 255})",
-            "Int32" => "INT",
-            "Int64" => "BIGINT",
-            "Decimal" => "DECIMAL(18,2)",
-            "DateTime" => "TIMESTAMP",
-            "Boolean" => "BOOLEAN",
-            "Guid" => "UUID",
-            _ => "TEXT"
-        };
-
-        // 必填约束
-        if (field.IsRequired)
-            sql += " NOT NULL";
-
-        // 主键
-        if (field.PropertyName == "Id")
-            sql += " PRIMARY KEY DEFAULT gen_random_uuid()";
-
-        return sql;
-    }
-
-    public List<string> GenerateAlterTable(
-        EntityDefinition entity,
-        TableSchema currentSchema)
-    {
-        var scripts = new List<string>();
-        var tableName = entity.EntityName + "s";
-
-        foreach (var field in entity.Fields)
-        {
-            var existingColumn = currentSchema.Columns
-                .FirstOrDefault(c => c.Name == field.PropertyName);
-
-            if (existingColumn == null)
-            {
-                // 新增字段
-                scripts.Add($"ALTER TABLE \"{tableName}\" ADD COLUMN {GenerateFieldDefinition(field)};");
-            }
-            else
-            {
-                // 修改字段（如果长度增大）
-                if (field.DataType == "String" &&
-                    field.Length > existingColumn.MaxLength)
-                {
-                    scripts.Add($"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{field.PropertyName}\" TYPE VARCHAR({field.Length});");
-                }
-            }
-        }
-
-        return scripts;
-    }
-}
-```
+#### 2.3 变更检测逻辑 (Change Detection)
+- **新增项**：当逻辑定义存在而物理 Schema 缺失时，执行 `AddColumn` 任务。
+- **动态演进**：支持 `String` 长度在逻辑层面的安全扩展，随后映射到物理层的类型修改指令。
 
 ### 3. 动态编译与热加载
 
@@ -1326,18 +1226,35 @@ public interface IMasterVersionEntity
 
 ## 附录
 
-### A. 数据类型映射表
+### A. 物理实现参考 (PostgreSQL Provider Reference)
 
-| C# 类型 | PostgreSQL 类型 | 默认长度 |
-|---------|----------------|----------|
-| String | VARCHAR | 255 |
-| Int32 | INT | - |
-| Int64 | BIGINT | - |
-| Decimal | DECIMAL | (18,2) |
-| DateTime | TIMESTAMP | - |
-| Boolean | BOOLEAN | - |
-| Guid | UUID | - |
-| EntityRef<T> | UUID (FK) | - |
+作为系统的首选实现方案，PostgreSQL Provider 的映射规则如下：
+
+#### 1. 数据类型映射 (Mapping Rules)
+
+| 逻辑类型 | PostgreSQL 类型 | 备注 |
+| :--- | :--- | :--- |
+| String | VARCHAR / TEXT | 根据 Length 自动选择 |
+| Int32 | INT | |
+| Int64 | BIGINT | |
+| Decimal | DECIMAL(18,2) | |
+| DateTime | TIMESTAMP | 默认不带时区 |
+| Boolean | BOOLEAN | |
+| GUID / Lookup | UUID | 默认使用 `gen_random_uuid()` |
+| Map / JSON | JSONB | 复杂对象存储 |
+
+#### 2. DDL 语法示例
+
+```sql
+-- 创建表（PostgreSQL 示例）
+CREATE TABLE "Products" (
+    "Id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Code" VARCHAR(50) NOT NULL,
+    "Name" VARCHAR(255) NOT NULL,
+    "Price" DECIMAL(18,2) NOT NULL,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
 
 ### B. 接口模板字段清单
 

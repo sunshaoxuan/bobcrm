@@ -73,7 +73,7 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
 1. **控件矩阵**
    - `OrganizationTreeWidget`：支持多级节点、懒加载、节点操作按钮，提供 `DataSource = OrganizationNodes` 预设。
    - `OrgDetailFormWidget`：封装 Code/Name/Path 等组织字段组合，可绑定实体元数据，内建校验。
-   - `DataGridWidget`（通用列表）：通用分页表格，列描述引用实体字段或数据集字段，支持排序、筛选、批量操作插槽，可绑定任意数据源（实体 API、聚合接口、自定义 SQL/视图）。
+   - `DataGridWidget`（通用列表）：通用分页表格，列描述引用实体字段或数据集字段，支持排序、筛选、批量操作插槽，可绑定任意数据源（实体 API、聚合接口、自定义逻辑数据集/视图）。
    - `RolePermissionTreeWidget`：展示 FunctionNode 树，允许配置模板绑定提示与节点图标。
    - `CustomerMetricBoardWidget`：多指标卡组件，绑定统计 API，保留客户列表页的 KPI 体验。
 
@@ -97,7 +97,7 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
 为了支撑“同一列表控件绑定不同数据集”的需求，模板体系需要统一的数据源描述与权限钩子：
 
 1. **数据源模型**
-   - `DataSet`：描述数据来源（实体、视图、API、SQL），包含分页/排序能力及字段列表。
+   - `DataSet`：描述数据来源（实体、视图、API、外部数据集），包含分页/排序能力及字段列表。
    - `QueryDefinition`：允许在设计器中配置筛选条件，支持参数化（如 `@CurrentUserId`、`@CurrentOrganizationId`）。
    - `PermissionFilter`：引用 FunctionCode 或 DataScope，运行态会自动注入访问范围。
 
@@ -109,11 +109,45 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
 3. **运行态执行**
    - TemplateRuntimeService 接口扩展：在运行上下文中附带 `DataSet` 请求，AccessService 负责注入数据范围条件。
    - DataGridWidget 渲染前向数据源服务请求数据，支持服务端分页/排序。
-   - 条件语句必须通过参数化或表达式树编译，禁止拼接 SQL，保证安全性。
+   - 条件语句必须通过参数化或表达式树编译，禁止拼接底层查询语句，保证安全性。
 
 4. **权限联动**
    - 对接 RoleDataScope：当 DataGridWidget 绑定实体数据时，运行态自动附加角色数据范围。
-   - 后续版本可接入字段级权限（列隐藏/只读），由模板声明 `RequiredFields` 并在运行态校验。
+   - 字段级权限：列隐藏/只读，由模板声明 `RequiredFields` 并在运行态校验。
+
+### 5.4 多态明细模板展示 (Polymorphic Detail Rendering)
+
+为了实现“同一实体的明细页面根据其业务状态显示不同布局”，系统引入多态绑定机制：
+
+1. **绑定规则扩展**
+    - `TemplateStateBinding` 新增 `SelectionCriteria` (JSON)。
+    - **逻辑**：当请求明细模板时，若存在多条 `Detail` 绑定，系统的优先级为：
+        1. **精确匹配条件**：`Data.Status == SelectionCriteria.Value`。
+        2. **权限优先匹配**：用户拥有该模板特定要求的 `RequiredPermission`。
+        3. **默认保底**：`IsDefault = true` 的绑定。
+
+2. **运行时决策 (AccessService / TemplateRuntimeService)**
+    - 当前端 `PageLoader` 请求模板时，会附带实体的当前 `Id`。
+    - 服务端先加载实体的关键字段（如 Status），然后匹配最适合的模板。
+    - **示例**：
+        - `Request: GET /api/templates/runtime/order/123`
+        - `Logic: order.Status is 'Approved' -> Use TemplateId 45 (Read-only)`
+        - `Logic: order.Status is 'Draft' -> Use TemplateId 40 (Editable)`
+
+- **交互感知**
+    - 当模板因状态改变而切换时（例如编辑并保存后状态变为已提交），`PageLoader` 会自动感知并重新拉取新模板，实现界面的平滑转换。
+
+### 5.5 AggVO 级联 CRUD 链路 (AggVO CRUD Pipeline)
+
+为了保持系统架构的一致性，AggVO 的 CRUD 操作被定义为对标准实体单体 CRUD 的 **装饰器与编排器**：
+
+1. **基本原则**：
+   - AggVO 并不直接操作物理数据库，而是通过循环调用其内部各基础实体的 Standard CRUD 接口来完成任务。
+2. **级联效应 (Cascade Effect)**：
+   - 当 AggVO 执行 `SaveAsync` 时，它会按照 **Leaf-to-Root** 顺序，依次调用每个子实体的 `BaseSave()`。
+   - 这种设计确保了单体实体上定义的任何 Hook（如：自动填值、发布检查、审计日志）在 AggVO 模式下依然生效。
+3. **删除逻辑**：
+   - 当根实体执行删除时，级联逻辑会根据设计的 `CascadeDeleteBehavior` (NoAction/Cascade/SetNull) 依次触发表内或表间的删除任务。
 
 ### 5.2 权限联动
 1. **功能权限**：导航 / API 根据 `FunctionCode` 控制可见性与访问。模板在绑定时记录 `RequiredFunctionCode`。  
@@ -129,7 +163,7 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
 
 | 实体 | 变更 |
 | --- | --- |
-| `FormTemplate` | 新增 `UsageType (enum)`、`Tags (json)`、`RequiredFunctionCode`。 |
+| `FormTemplate` | 新增 `UsageType (enum)`、`Tags (Map)`、`RequiredFunctionCode`。 |
 | `TemplateBinding`（新） | `Id`, `EntityType`, `UsageType`, `TemplateId`, `IsSystem`, `UpdatedBy`, `UpdatedAt`。 |
 | `RoleFunctionPermission` | 追加 `TemplateBindingId`（可空），用于精准授权模板入口。 |
 | `FunctionNode` 种子 | 添加 `Org.Management`, `User.Management`, `Role.Management`, `Customer.Management`。 |

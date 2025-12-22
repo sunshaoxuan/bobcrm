@@ -11,10 +11,9 @@
 - 认证从最小 JWT 迁移到 Identity + JWT
   - 支持注册、邮件激活、登录、登出、刷新令牌、会话重连（服务器重启不掉线）。
   - 采用 ASP.NET Identity + JWT（Access/Refresh）；DataProtection Key 持久化；SMTP 可配置。
-- 数据库：以 PostgreSQL 为主，保留 SQLite 最小模式
-  - Provider：`postgres`（JSONB 原生支持）/`sqlite`（本地开发）。
-  - 支持通过配置切换 Provider 与连接串；后续提供管理员页面进行连接管理与校验。
-  - 分层：持久化层（EF Core 多 Provider）/通用业务实体层/商用业务实体层；动态字段 JSONB + 反射式映射。
+- 数据库：基于 **存储 Provider 抽象**
+  - 持久化：支持 **Map/Json 逻辑类型** 原生映射，屏蔽底层数据库实现差异。
+  - 架构：分层设计，持久化层负责 Map/Json 转换与反射映射，领域层仅操作逻辑对象。
 
 ---
 
@@ -221,7 +220,7 @@ class FormTemplate {
      - 内容：Customer/FieldDefinition/FieldValue/UserLayout/CustomerAccess/LocalizationResource 等业务属性与动作；不关心存储细节，仅通过接口完成 CRUD。
 - 设计规则：
   - API 层不引用 EF Core；通过仓储接口访问数据。
-  - 动态字段：在持久化层完成 JSON(B) <-> 领域对象的转换；PostgreSQL 下使用 jsonb 列与路径索引。
+  - 动态字段：在持久化层完成 **Map/Json <-> 领域对象** 的逻辑转换。物理层根据 Provider 策略进行索引优化（如路径索引）。
   - 审计与版本：Domain.Common 提供行为；持久化层通过拦截器/SaveChanges 钩子自动赋值；版本用于乐观并发。
 
 ### 校验分层与状态机
@@ -251,14 +250,14 @@ class FormTemplate {
     - 废弃字段：定义 `Deprecated=true`，前端隐藏编辑入口但保留读取；后续可提供清理任务。
 - 读写一致性：
   - 读：由 FieldDefinition + 最新 FieldValue 合成视图；未知字段保持透传（不丢弃）。
-  - 写：根据 FieldDefinition 执行分层校验（Business→Common→Persistence），通过后才写入 JSONB。
+  - 写：根据 FieldDefinition 执行分层校验（Business→Common→Persistence），通过后才写入逻辑存储。
 - 索引与查询：
-  - JSONB 路径索引用于典型查询（如 email、rds.ip）；提供模板与自动建索引脚本（开发阶段已在启动时 best‑effort 创建）。
+  - 索引与查询：支持针对 Map/Json 内部路径的逻辑索引。Provider 应提供自动化脚本确保索引与字段定义的同步。
 
 ## 开发期数据库初始化
 
 - 不使用复杂迁移，开发阶段采用“可重建”的初始化逻辑：
-  - 启动时自动 Ensure/Migrate + 种子数据 + JSONB 索引（幂等）。
+  - 启动时自动同步元数据、初始数据及逻辑索引。
   - 管理端点（开发期）：
     - GET `/api/admin/db/health`：返回 provider、连接可用性与各表记录数。
     - POST `/api/admin/db/recreate`：删除并重建数据库，重新种子与索引。
@@ -376,20 +375,9 @@ class FormTemplate {
 - RefreshToken 持久化表（支持撤销/轮换）；DataProtection Key 持久化。
 - SMTP 配置：服务器、端口、凭据、发件人；模板化邮件。
 
-## 数据库与持久化
-
-### Provider 与配置
-- 主推：PostgreSQL（JSONB 查询/索引、并发控制）。
-- 最小：SQLite（开发与本地验证）。
-- 切换（API）：`Db:Provider=postgres|sqlite`，`ConnectionStrings:Default=...`。
-- 本地测试建议：使用 `docker-compose.yml` 启动 `postgres:16-alpine`（默认暴露 5432），一次配置多端复用。
-- `AppSettings:Db:ConnectionString`：对应连接串
-- 管理页（后续）：管理员可更新并校验连接；写入安全配置存储。
-
-### 动态字段与查询
-- `FieldValue.Value` 使用 JSON/JSONB 存储；
-- PostgreSQL：JSONB 索引 + 路径查询；
-- 通用实体层提供“属性映射器”以反射生成常用字段映射（可选）。
+### 1. 存储抽象原则
+- **动态字段存储**：`FieldValue.Value` 采用 Map/Json 逻辑类型，物理实现由各数据库 Provider 负责。
+- **查询优化**：支持跨 Provider 的路径查询抽象。
 
 ## ER 模型（Mermaid）
 
@@ -416,7 +404,7 @@ erDiagram
         string Code
         string Name
         int Version
-        json ExtData
+        Map ExtData
     }
 
     CustomerAccess {
@@ -431,8 +419,8 @@ erDiagram
         string Key
         string DisplayName
         string DataType
-        json Tags
-        json Actions
+        Map Tags
+        Map Actions
     }
 
     FieldValue {
@@ -447,7 +435,7 @@ erDiagram
         int Id
         int UserId
         int CustomerId
-        json LayoutJson
+        Map LayoutJson
     }
 ```
 
@@ -857,4 +845,17 @@ public class UserPreferences
   - 依据“特殊字段类型支持”章节完成 API + 前端联动，所有新增端点与动作需在 `docs/PROD-02-客户系统开发任务与接口文档.md` 记录。
 
 > 详细执行清单及责任文件请以 README“TODO（按设计文档拆分的执行计划）”为准，本节用于在设计层面标记阶段性目标。
+
+---
+
+## 附录：物理实现参考 (Implementation Reference)
+
+> [!NOTE]
+> 本节包含特定存储 Provider 的实现细节，不属于核心逻辑设计。
+
+### PostgreSQL 实现说明
+- **存储类型**：逻辑 Map/Json 类型映射为 `jsonb` 二进制格式。
+- **查询优化**：使用 GIN 索引或基于路径的 B-Tree 索引（如 `(ExtData ->> 'email')`）。
+- **初始化**：系统启动时通过 `EnsureCreated` 或 `Migrate` 同步 Schema，并执行 `CREATE INDEX` 脚本补齐动态索引。
+- **开发环境**：推荐使用 `docker-compose.yml` 启动 `postgres:16-alpine` 进行本地验证。
 

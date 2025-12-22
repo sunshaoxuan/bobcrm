@@ -82,7 +82,7 @@
 在当前BobCRM系统中，实体字段的显示名（DisplayName）存在以下问题：
 
 1. **接口字段显示名硬编码**：
-   - 在 `PostgreSQLDDLGenerator.GenerateInterfaceFields()` 方法中（第343-550行），所有接口字段（Base、Archive、Audit、Version、TimeVersion、Organization）的 `DisplayName` 都是硬编码的三语字典
+   - 在 `StorageDDLGenerator.GenerateInterfaceFields()` 方法中（第343-550行），所有接口字段（Base、Archive、Audit、Version、TimeVersion、Organization）的 `DisplayName` 都是硬编码的三语字典
    - 示例：
      ```csharp
      DisplayName = new Dictionary<string, string?>
@@ -316,7 +316,7 @@ var displayName = field.DisplayName;
 │                              │                               │
 │                              ▼                               │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │ PostgreSQLDDLGenerator.GenerateInterfaceFields()    │    │
+│  │ StorageDDLGenerator.GenerateInterfaceFields()    │    │
 │  │  - 生成接口字段时使用 DisplayNameKey                 │    │
 │  │  - 示例: { PropertyName: "Code",                     │    │
 │  │            DisplayNameKey: "LBL_FIELD_CODE",         │    │
@@ -357,7 +357,7 @@ public class FieldMetadata
     public string? DisplayNameKey { get; set; }
 
     /// <summary>
-    /// 显示名（多语言）- PostgreSQL jsonb 类型
+    /// 显示名（多语言）- Map/Json 逻辑类型
     /// 注意：优先使用 DisplayNameKey 引用资源，DisplayName 作为兜底或自定义字段使用
     /// 示例：{"ja": "価格", "zh": "价格", "en": "Price"}
     /// </summary>
@@ -450,9 +450,9 @@ public class EntityFieldDto
 
 ### 3.4 后端实现方案
 
-#### 3.4.1 修改 PostgreSQLDDLGenerator.GenerateInterfaceFields()
+#### 3.4.1 修改 StorageDDLGenerator.GenerateInterfaceFields()
 
-**位置**：`BobCrm.Api/Services/PostgreSQLDDLGenerator.cs`（第343-550行）
+**位置**：`BobCrm.Api/Services/StorageDDLGenerator.cs`（第343-550行）
 
 **修改前**（硬编码显示名）：
 ```csharp
@@ -861,79 +861,25 @@ private async Task LoadData()
 
 ### 3.6 数据库迁移
 
-#### 3.6.1 添加 DisplayNameKey 列
+#### 3.6.1 Map/Json 物理存储层迁移 (Physical Storage Migration) Plan)
 
-创建新的 EF Migration：
+本阶段涉及 `FieldMetadata` 元数据的结构转换与数据迁移。
 
-```bash
-dotnet ef migrations add AddDisplayNameKeyToFieldMetadata --project src/BobCrm.Api
-```
+**1. 结构变更**
+| 变更对象 | 变更类型 | 逻辑描述 |
+| :--- | :--- | :--- |
+| `FieldMetadata` | 新增字段 | `DisplayNameKey` (Logical Type: String, MaxLength: 100) |
+| `FieldMetadata` | 约束变更 | `DisplayName` 在接口字段模式下设为逻辑可空 |
 
-**Migration内容**：
-```csharp
-public partial class AddDisplayNameKeyToFieldMetadata : Migration
-{
-    protected override void Up(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.AddColumn<string>(
-            name: "DisplayNameKey",
-            table: "FieldMetadata",
-            type: "character varying(100)",
-            maxLength: 100,
-            nullable: true);
+**2. 数据迁移逻辑**
+| 迁移步骤 | 目标范围 | 逻辑描述 |
+| :--- | :--- | :--- |
+| **步骤 1: 填充 Key** | `Source == 'Interface'` 的字段 | 根据 `PropertyName` 映射到对应的 `LBL_FIELD_*` 资源键 |
+| **步骤 2: 清理旧值** | `Source == 'Interface'` 的字段 | 成功填充 Key 后，将旧有的物理 `DisplayName` 字典清空 |
+| **步骤 3: 懒加载/回填** | 运行时/管理员动作 | 若需物理显示名，则从资源系统按需回填 |
 
-        // 为现有接口字段设置 DisplayNameKey
-        migrationBuilder.Sql(@"
-            UPDATE ""FieldMetadata""
-            SET ""DisplayNameKey"" =
-                CASE ""PropertyName""
-                    WHEN 'Id' THEN 'LBL_FIELD_ID'
-                    WHEN 'Code' THEN 'LBL_FIELD_CODE'
-                    WHEN 'Name' THEN 'LBL_FIELD_NAME'
-                    WHEN 'CreatedAt' THEN 'LBL_FIELD_CREATED_AT'
-                    WHEN 'CreatedBy' THEN 'LBL_FIELD_CREATED_BY'
-                    WHEN 'UpdatedAt' THEN 'LBL_FIELD_UPDATED_AT'
-                    WHEN 'UpdatedBy' THEN 'LBL_FIELD_UPDATED_BY'
-                    WHEN 'Version' THEN 'LBL_FIELD_VERSION'
-                    WHEN 'ValidFrom' THEN 'LBL_FIELD_VALID_FROM'
-                    WHEN 'ValidTo' THEN 'LBL_FIELD_VALID_TO'
-                    WHEN 'VersionNo' THEN 'LBL_FIELD_VERSION_NO'
-                    WHEN 'OrganizationId' THEN 'LBL_FIELD_ORGANIZATION_ID'
-                    WHEN 'IsDeleted' THEN 'LBL_FIELD_IS_DELETED'
-                    WHEN 'DeletedAt' THEN 'LBL_FIELD_DELETED_AT'
-                    WHEN 'DeletedBy' THEN 'LBL_FIELD_DELETED_BY'
-                    ELSE NULL
-                END
-            WHERE ""Source"" = 'Interface';
-        ");
-
-        // 清空接口字段的 DisplayName（改为使用 DisplayNameKey）
-        migrationBuilder.Sql(@"
-            UPDATE ""FieldMetadata""
-            SET ""DisplayName"" = NULL
-            WHERE ""Source"" = 'Interface' AND ""DisplayNameKey"" IS NOT NULL;
-        ");
-    }
-
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        // 恢复 DisplayName（从资源表查询并构建 JSONB）
-        migrationBuilder.Sql(@"
-            UPDATE ""FieldMetadata"" fm
-            SET ""DisplayName"" = jsonb_build_object(
-                'zh', (SELECT ""Translations""->>'zh' FROM ""I18nResources"" WHERE ""Key"" = fm.""DisplayNameKey""),
-                'ja', (SELECT ""Translations""->>'ja' FROM ""I18nResources"" WHERE ""Key"" = fm.""DisplayNameKey""),
-                'en', (SELECT ""Translations""->>'en' FROM ""I18nResources"" WHERE ""Key"" = fm.""DisplayNameKey"")
-            )
-            WHERE ""Source"" = 'Interface' AND ""DisplayNameKey"" IS NOT NULL;
-        ");
-
-        migrationBuilder.DropColumn(
-            name: "DisplayNameKey",
-            table: "FieldMetadata");
-    }
-}
-```
+**3. 回滚方案 (Rollback logic)**
+- **逻辑描述**：通过 `DisplayNameKey` 重新查询资源系统，构建多语字典回填充 `DisplayName`，随后安全移除 `DisplayNameKey` 字段。
 
 ---
 
@@ -947,7 +893,7 @@ public partial class AddDisplayNameKeyToFieldMetadata : Migration
 - [ ] 验证数据库迁移成功
 
 #### 步骤1.2：修改接口字段生成逻辑
-- [ ] 修改 `PostgreSQLDDLGenerator.GenerateInterfaceFields()`
+- [ ] 修改 `StorageDDLGenerator.GenerateInterfaceFields()`
 - [ ] 为所有接口类型（Base、Archive、Audit、Version、TimeVersion、Organization）的字段添加 `DisplayNameKey`
 - [ ] 移除硬编码的 `DisplayName` 字典
 - [ ] 单元测试验证
@@ -1017,7 +963,7 @@ public partial class AddDisplayNameKeyToFieldMetadata : Migration
 public void GenerateInterfaceFields_Archive_ShouldSetDisplayNameKey()
 {
     // Arrange
-    var generator = new PostgreSQLDDLGenerator();
+    var generator = new StorageDDLGenerator();
     var archiveInterface = new EntityInterface { InterfaceType = EntityInterfaceType.Archive };
 
     // Act
@@ -1368,7 +1314,7 @@ private void HandleLanguageChanged()
 
 **后端文件**：
 - `src/BobCrm.Api/Base/Models/FieldMetadata.cs` - 字段元数据模型
-- `src/BobCrm.Api/Services/PostgreSQLDDLGenerator.cs` - 接口字段生成器
+- `src/BobCrm.Api/Services/StorageDDLGenerator.cs` - 接口字段生成器
 - `src/BobCrm.Api/Endpoints/EntityDefinitionEndpoints.cs` - 实体定义API
 - `src/BobCrm.Api/Contracts/DTOs/EntityFieldDto.cs` - 字段DTO
 - `src/BobCrm.Api/Resources/i18n-resources.json` - 多语资源
@@ -1379,7 +1325,7 @@ private void HandleLanguageChanged()
 - `src/BobCrm.App/Services/I18nService.cs` - 多语服务
 
 **测试文件**：
-- `tests/BobCrm.Api.Tests/Services/PostgreSQLDDLGeneratorTests.cs`
+- `tests/BobCrm.Api.Tests/Services/StorageDDLGeneratorTests.cs`
 - `tests/BobCrm.Api.Tests/Endpoints/EntityDefinitionEndpointsTests.cs`
 - `tests/e2e/field-display-name-i18n.spec.js`
 

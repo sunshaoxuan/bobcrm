@@ -25,102 +25,36 @@
 
 ## 数据模型设计
 
-### 1. EnumDefinition（枚举定义表）
+### 1. EnumDefinitions (枚举定义表)
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| Id | GUID | 逻辑主键 |
+| Code | String | 枚举唯一代码（作为外部引用键） |
+| DisplayName | **Map<String, String>** | 多语言显示名 |
+| Description | **Map<String, String>** | 多语言描述 |
+| IsSystem | Boolean | 锁定标记（系统内置不可删除） |
+| IsEnabled | Boolean | 状态标记 |
+| CreatedAt | DateTime | 创建时间 |
+| UpdatedAt | DateTime | 更新时间 |
 
-```csharp
-public class EnumDefinition
-{
-    /// <summary>枚举ID</summary>
-    public Guid Id { get; set; }
-    
-    /// <summary>枚举代码（唯一，用于引用）</summary>
-    [Required, MaxLength(128)]
-    public string Code { get; set; } = string.Empty;
-    
-    /// <summary>枚举显示名（多语言JSON）</summary>
-    public Dictionary<string, string?> DisplayName { get; set; } = new();
-    
-    /// <summary>枚举描述（多语言JSON）</summary>
-    public Dictionary<string, string?> Description { get; set; } = new();
-    
-    /// <summary>是否系统内置（系统枚举不可删除）</summary>
-    public bool IsSystem { get; set; } = false;
-    
-    /// <summary>是否启用</summary>
-    public bool IsEnabled { get; set; } = true;
-    
-    /// <summary>创建时间</summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
-    /// <summary>更新时间</summary>
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    
-    /// <summary>枚举项集合</summary>
-    public List<EnumOption> Options { get; set; } = new();
-}
-```
+### 2. EnumOptions (枚举选项表)
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| Id | GUID | 逻辑主键 |
+| EnumDefinitionId | GUID | 所属枚举定义 ID |
+| Value | String | 物理存储值 |
+| DisplayName | **Map<String, String>** | 多语言显示名 |
+| Description | **Map<String, String>** | 多语言描述 |
+| SortOrder | Int | 排序权重 |
+| IsEnabled | Boolean | 状态标记 |
+| ColorTag | String | UI 颜色标记 (HEX 或 CSS 类名) |
+| Icon | String | UI 图标标识 |
 
-### 2. EnumOption（枚举选项表）
-
-```csharp
-public class EnumOption
-{
-    /// <summary>选项ID</summary>
-    public Guid Id { get; set; }
-    
-    /// <summary>所属枚举ID</summary>
-    public Guid EnumDefinitionId { get; set; }
-    
-    /// <summary>选项值（存储到字段的实际值）</summary>
-    [Required, MaxLength(64)]
-    public string Value { get; set; } = string.Empty;
-    
-    /// <summary>选项显示名（多语言JSON）</summary>
-    public Dictionary<string, string?> DisplayName { get; set; } = new();
-    
-    /// <summary>选项描述（多语言JSON）</summary>
-    public Dictionary<string, string?> Description { get; set; } = new();
-    
-    /// <summary>显示顺序</summary>
-    public int SortOrder { get; set; }
-    
-    /// <summary>是否启用</summary>
-    public bool IsEnabled { get; set; } = true;
-    
-    /// <summary>颜色标记（可选，用于UI显示）</summary>
-    [MaxLength(16)]
-    public string? ColorTag { get; set; }
-    
-    /// <summary>图标（可选）</summary>
-    [MaxLength(64)]
-    public string? Icon { get; set; }
-    
-    /// <summary>导航（反向引用）</summary>
-    public EnumDefinition EnumDefinition { get; set; } = null!;
-}
-```
-
-### 3. FieldMetadata 扩展
-
-```csharp
-public class FieldMetadata
-{
-    // ... 现有字段 ...
-    
-    /// <summary>
-    /// 引用的枚举定义ID
-    /// 当 DataType = Enum 时必填
-    /// </summary>
-    public Guid? EnumDefinitionId { get; set; }
-    
-    /// <summary>
-    /// 是否允许多选（枚举字段专用）
-    /// true: 存储为JSON数组 ["VAL1", "VAL2"]
-    /// false: 存储为单个值 "VAL1"
-    /// </summary>
-    public bool IsMultiSelect { get; set; } = false;
-}
-```
+### 3. FieldMetadata 逻辑扩展
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| EnumDefinitionId | GUID | 引用的枚举 ID (仅在 DataType 为 Enum 时有效) |
+| IsMultiSelect | Boolean | 枚举字段是否支持多选 |
 
 ### 4. FieldDataType 扩展
 

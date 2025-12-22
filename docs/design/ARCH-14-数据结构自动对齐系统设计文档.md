@@ -28,13 +28,13 @@
 
 1. **代码与数据库结构不一致**
    - 开发阶段修改了数据模型，但数据库未同步更新
-   - 多语资源表从 `EN/JA/ZH` 列结构升级到 `Translations jsonb` 结构
+   - 多语资源表结构升级（从多列结构升级到 **Map/Json 定义** 结构）
    - 导致运行时错误或显示异常（如页面显示资源ID而非翻译文本）
 
 2. **预置数据不同步**
    - 代码中定义的系统设置、字段定义、语言配置等预置数据
    - 数据库中可能缺失或版本过旧
-   - 需要手动执行SQL或重建数据库
+   - 需要手动执行数据库变更指令或重建数据库
 
 3. **动态实体结构变更**
    - 用户修改实体定义（添加/删除字段）
@@ -87,7 +87,7 @@
 |------|------|---------|---------|---------|
 | Layer 1 | EF Core 实体 | `__EFMigrationsHistory` | `MigrateAsync()` | Migration Down |
 | Layer 2 | 预置数据 | 主键/唯一键查询 | Upsert（保留用户修改） | 代码回退 |
-| Layer 3 | 动态实体 | `information_schema` | ADD COLUMN + UPDATE | DDL Rollback |
+| Layer 3 | 动态实体 | 数据库元数据 | 增加逻辑列 + 数据更新 | DDL 回滚 |
 
 ### 3. 数据安全原则
 
@@ -122,11 +122,11 @@
           └────────────────┘ └──────────┘ └─────────────────────┘
                                                      │
                                                      ▼
-                                            ┌─────────────────┐
-                                            │ PostgreSQL      │
-                                            │ - DDLScripts    │
-                                            │ - Dynamic Tables│
-                                            └─────────────────┘
+                                             ┌─────────────────┐
+                                             │ 物理持久化层     │
+                                             │ - DDL 脚本记录   │
+                                             │ - 动态实体表     │
+                                             └─────────────────┘
 ```
 
 ### 核心服务
@@ -175,39 +175,10 @@ await db.Database.MigrateAsync();
 
 **效果**：每次启动自动检测并应用未执行的 Migrations。
 
-#### 迁移示例：多语资源表结构升级
-
-**Migration 文件**：`20251111000000_MigrateLocalizationToJsonb.cs`
-
-**迁移步骤**：
-```csharp
-protected override void Up(MigrationBuilder migrationBuilder)
-{
-    // 1. 添加新列 Translations (jsonb)
-    migrationBuilder.AddColumn<string>(
-        name: "Translations",
-        table: "LocalizationResources",
-        type: "jsonb",
-        nullable: false,
-        defaultValue: "{}");
-
-    // 2. 迁移现有数据（将 EN/JA/ZH 列合并到 Translations）
-    migrationBuilder.Sql(@"
-        UPDATE ""LocalizationResources""
-        SET ""Translations"" = jsonb_build_object(
-            'zh', COALESCE(""ZH"", ''),
-            'ja', COALESCE(""JA"", ''),
-            'en', COALESCE(""EN"", '')
-        )
-        WHERE ""Translations""::text = '{}'::text OR ""Translations"" IS NULL;
-    ");
-
-    // 3. 删除旧列
-    migrationBuilder.DropColumn(name: "EN", table: "LocalizationResources");
-    migrationBuilder.DropColumn(name: "JA", table: "LocalizationResources");
-    migrationBuilder.DropColumn(name: "ZH", table: "LocalizationResources");
-}
-```
+**逻辑变更描述**：
+1. **Schema 演进**：向 `LocalizationResources` 表添加一个逻辑类型为 `Json/Map` 的字段 `Translations`。
+2. **数据迁移 (Data Migration)**：将旧有的 `EN/JA/ZH` 字段内容进行结构化合并，存入新的 `Translations` 字段。
+3. **字段修剪**：移除旧有的 `EN/JA/ZH` 逻辑字段。
 
 **配套代码变更**：
 - EF Core 模型添加值转换器（`LocalizationResource.cs`）
@@ -329,7 +300,7 @@ AlignEntitySchemaAsync(entity)
   │ 检查表是否存在 │
   └─────────────┘
         │
-        ├─No──► CreateTableAsync() ────► 生成 CREATE TABLE SQL ────► 执行
+        ├─No──► CreateTableAsync() ────► 生成逻辑 DDL 变更任务 ────► 解析方言并执行
         │
         ▼
   ┌─────────────────┐
@@ -373,39 +344,29 @@ private async Task AddMissingColumnsAsync(
     string tableName,
     List<FieldMetadata> missingFields)
 {
-    var scripts = new List<(string ScriptType, string SqlScript)>();
+    var tasks = new List<SchemaOperation>();
 
     foreach (var field in missingFields)
     {
-        // 步骤 1: 添加列（先设为可空，避免非空约束导致失败）
-        var dataType = MapDataTypeToSQL(field).Replace(" NOT NULL", "");
-        var alterSql = $"ALTER TABLE \"{tableName}\" ADD COLUMN \"{field.PropertyName}\" {dataType};";
-        scripts.Add((DDLScriptType.Alter, alterSql));
+        // 步骤 1: 生成添加列的任务描述 (Logical Operation)
+        tasks.Add(new AddColumnOperation(field));
 
-        // 步骤 2: ✅ 业务数据对齐 - 填充默认值到现有记录
+        // 步骤 2: 生成默认值填充任务
         var defaultValue = GetDefaultValueForDataType(field);
         if (defaultValue != null)
         {
-            var updateSql = $"UPDATE \"{tableName}\" SET \"{field.PropertyName}\" = {defaultValue} WHERE \"{field.PropertyName}\" IS NULL;";
-            scripts.Add((DDLScriptType.Alter, updateSql));
-
-            _logger.LogInformation("[SchemaAlign] Filling default value for {FieldName}: {DefaultValue}",
-                field.PropertyName, defaultValue);
+            tasks.Add(new FillDefaultValueOperation(field, defaultValue));
         }
 
-        // 步骤 3: 如果字段是必填，添加 NOT NULL 约束
+        // 步骤 3: 如果是必填，生成约束强化任务
         if (field.IsRequired && defaultValue != null)
         {
-            var constraintSql = $"ALTER TABLE \"{tableName}\" ALTER COLUMN \"{field.PropertyName}\" SET NOT NULL;";
-            scripts.Add((DDLScriptType.Alter, constraintSql));
+            tasks.Add(new AddConstraintOperation(field, ConstraintType.NotNull));
         }
     }
 
-    // 批量执行（事务）
-    await _ddlService.ExecuteDDLBatchAsync(entityId, scripts, "System");
-
-    _logger.LogInformation("[SchemaAlign] ✓ Added {Count} columns to {TableName} with data alignment",
-        missingFields.Count, tableName);
+    // 由 DDL 服务根据当前 DB 方言分发执行
+    await _ddlService.DispatchOperationsAsync(entityId, tasks);
 }
 ```
 
@@ -414,32 +375,18 @@ private async Task AddMissingColumnsAsync(
 **文件**：`EntitySchemaAlignmentService.cs:341-369`
 
 ```csharp
-private string? GetDefaultValueForDataType(FieldMetadata field)
+private object? GetDefaultValueForDataType(FieldMetadata field)
 {
-    // 优先使用字段定义中的默认值
-    if (!string.IsNullOrEmpty(field.DefaultValue))
-    {
-        return field.DataType switch
-        {
-            "String" => $"'{field.DefaultValue}'",
-            "Int32" or "Int64" or "Decimal" => field.DefaultValue,
-            "Boolean" => field.DefaultValue.ToLower() == "true" ? "TRUE" : "FALSE",
-            "DateTime" => $"'{field.DefaultValue}'",
-            "Guid" => $"'{field.DefaultValue}'",
-            _ => $"'{field.DefaultValue}'"
-        };
-    }
-
-    // 使用类型的默认值
+    // 逻辑默认值生成
     return field.DataType switch
     {
-        "String" => "''",        // 空字符串
-        "Int32" or "Int64" => "0",
-        "Decimal" => "0.0",
-        "Boolean" => "FALSE",
-        "DateTime" => "NOW()",
-        "Guid" => "gen_random_uuid()",
-        "Json" => "'{}'::jsonb",
+        "String"   => string.Empty,
+        "Int32"    => 0,
+        "Decimal"  => 0.0m,
+        "Boolean"  => false,
+        "DateTime" => DateTime.UtcNow,
+        "Guid"     => Guid.NewGuid(),
+        "Json"     => "{}",
         _ => null
     };
 }
@@ -483,18 +430,10 @@ public async Task<DeleteFieldResult> DeleteFieldAsync(
     await _db.SaveChangesAsync();
     result.LogicalDeleteCompleted = true;
 
-    // 3. 如果是物理删除，删除数据库列
+    // 3. 如果是物理删除，向 DDL 服务发送 Drop 指令
     if (physicalDelete)
     {
-        var dropColumnSql = $"ALTER TABLE \"{tableName}\" DROP COLUMN IF EXISTS \"{columnName}\";";
-        var scriptRecord = await _ddlService.ExecuteDDLAsync(
-            entityId,
-            DDLScriptType.Alter,
-            dropColumnSql,
-            performedBy ?? "System"
-        );
-
-        result.PhysicalDeleteCompleted = (scriptRecord.Status == DDLScriptStatus.Success);
+        await _ddlService.ExecuteDropColumnAsync(entityId, field.PropertyName);
     }
 
     result.Success = true;
@@ -715,15 +654,16 @@ public async Task PublishNewEntityAsync_ShouldFail_WhenTableAlreadyExists()
 | 用户配置（如公司名称） | 只更新空值 | `if (string.IsNullOrEmpty(existing.CompanyName)) ...` |
 | 字典数据（如字段定义） | 只插入缺失项 | `if (existing == null) { ... }` |
 
-### 3. 默认值设计
+### 3. 逻辑默认值规范
 
-**原则**：
-- String → `''` （空字符串，避免 NULL）
-- Int/Decimal → `0` （零值，避免计算异常）
-- Boolean → `FALSE` （明确状态）
-- DateTime → `NOW()` （当前时间）
-- Guid → `gen_random_uuid()` （自动生成）
-- Json → `'{}'::jsonb` （空对象）
+| 逻辑类型 | 抽象默认值 |
+| :--- | :--- |
+| String | `''` (空字符串) |
+| Int/Decimal | `0` |
+| Boolean | `FALSE` |
+| DateTime | `LogicalNow()` |
+| Guid | `NewGuid()` |
+| Json | `{}` (空对象) |
 
 **特殊字段**：
 - 状态字段 → 使用业务初始状态（如 "Draft"）

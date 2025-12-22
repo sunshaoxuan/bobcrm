@@ -15,13 +15,22 @@
 
 ## 核心概念
 
-### 1. 实体结构类型
+### 1. 实体结构类型 (Recursive Nesting)
 
-BobCRM 支持三种实体结构：
+BobCRM 的 AggVO 架构在底层支持 **无限级次嵌套**。通过将子实体本身声明为 AggVO，可以递归构建出主→子→孙→曾孙……的树状关系。
+
+**结构示意**：
+```
+Master (Agg)
+└── Detail 1 (Agg)
+    └── Grandchild A (Agg)
+        └── GreatGrandchild X (Entity)
+└── Detail 2 (Entity)
+```
 
 ```
 Single（单实体）
-└── 独立的实体表，无父子关系
+└── 独立的实体数据集，无父子关系
 
 MasterDetail（主子结构，两层）
 └── Master（主表）
@@ -125,19 +134,17 @@ public class OrderAggVO : AggBaseVO
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### 数据库模型
+### 数据库模型 (Logical Metadata)
 
-#### EntityDefinitions 表扩展字段
-
-```sql
--- 主子表结构配置
-ParentEntityId UUID NULL,              -- 父实体ID
-ParentEntityName VARCHAR(100) NULL,    -- 父实体名称
-ParentForeignKeyField VARCHAR(100) NULL,  -- 外键字段名
-ParentCollectionProperty VARCHAR(100) NULL,  -- 集合属性名
-CascadeDeleteBehavior VARCHAR(20) DEFAULT 'NoAction',
-AutoCascadeSave BOOLEAN DEFAULT TRUE
-```
+#### EntityDefinitions 扩展字段
+| 逻辑字段 | 逻辑类型 | 说明 |
+| :--- | :--- | :--- |
+| ParentEntityId | GUID | 关联的父实体 ID |
+| ParentEntityName | String | 父实体名称快照 |
+| ParentForeignKeyField | String | 在子实体中引用的外键属性名 |
+| ParentCollectionProperty | String | 在父实体映射出的集合属性名 |
+| CascadeDeleteBehavior| Enum | 级联删除行为 (NoAction/Cascade/SetNull) |
+| AutoCascadeSave | Boolean | 是否开启自动冒泡级联保存 |
 
 ## 使用指南
 
@@ -237,7 +244,7 @@ int orderId = await aggVOService.SaveAggVOAsync(orderAgg);
 var orderAgg = new OrderAggVO();
 
 // 加载整个聚合（主 + 子）
-await aggVOService.LoadAggVOAsync(orderAgg, orderId);
+await aggVOService.LoadAggVOAsync(agg, orderId);
 
 // 访问数据
 Console.WriteLine($"订单编号: {orderAgg.HeadVO.Id}");
@@ -353,6 +360,36 @@ var orderAgg = new OrderAggVO
 await aggVOService.SaveAggVOAsync(orderAgg);
 ```
 
+## AggVO 模板渲染规范
+
+聚合实体的展示需要跨多表的 UI 组件协同工作，遵循以下渲染规则：
+
+### 1. 列表模板 (List Template)
+- **宿主组件**：`ListTemplateHost`。
+- **呈现方式**：以“主实体”为行的 `DataGrid`。
+- **级联预览**：支持在 `DataGrid` 的子行 (Row Expansion) 或右侧面板中展示对应的子实体汇总。
+- **搜索增强**：支持通过子实体的字段进行过滤（后端转换为逻辑数据集过滤查询）。
+
+### 2. 明细模板 (Detail Template)
+- **宿主组件**：`PageLoader`。
+- **3级展示深度限制**：尽管底层支持无限嵌套，**自动生成的默认模板** 仅支持展示到“孙”级 (Level 3)。
+- **交互逻辑与呈现方式**：
+    - **第一级：表头 (Header)**：主实体以 Form 形式展示在页面顶部或首个 Tab，包含关键档案和审计字段。
+    - **第二级：子表 (Detail Lists)**：多个子实体以 Tab 页签展现，每个页签内嵌一个 `DetailGrid` 列表。
+    - **第三级：孙表 (Grandchild Popups)**：当子实体的 DataGrid 中某行被点击时，通过“明细属性”链接弹出 Drawer 或 Modal，展示对应的孙实体列表。
+- **超出 3 级的处理**：
+    - **设计器支持**：实体设计器必须允许配置更深层级的关系。
+    - **手动实现**：超过 3 级的 UI 逻辑由开发人员通过自定义 Widget 或手动调整模板 JSON 实现，默认模板生成器不予处理。
+
+- **保存顺序**：前端收集所有数据，构造 `AggVO` JSON 对象一次性提交，后端调用 `AggVOService` 级联保存。
+
+### 3. 多态明细模板 (Polymorphic Detail)
+对于复杂的聚合根，支持根据主实体的业务状态切换明细模板。
+- **配置项**：在 `TemplateBinding` 中指定 `StateField = "Status"`。
+- **行为**：
+    - 当 `Status == "Draft"` 时，使用 **编辑型模板**。
+    - 当 `Status == "Approved"` 时，使用 **只读审批模板**。
+
 ## 数据迁移评估
 
 ### 在发布前评估影响
@@ -385,7 +422,7 @@ Response:
       "mayLoseData": false,
       "requiresConversion": false,
       "description": "Add column 'Status' of type 'String'",
-      "sqlPreview": "ALTER TABLE \"Orders\" ADD COLUMN \"Status\" VARCHAR(50) NOT NULL DEFAULT 'Draft';"
+      "sqlPreview": "[Storage Specific Alter Instruction]"
     }
   ],
   "warnings": [
@@ -428,11 +465,26 @@ public class OrderAggVO : AggBaseVO
 {
     public OrderVO HeadVO { get; set; }
     public List<OrderLineVO> OrderLineVOs { get; set; }  // 复数形式 + VOs
-    public List<OrderCommentVO> CommentVOs { get; set; }
+    public List<OrderCommentVO> CommentVOs { get; set; }  // 复数形式 + VOs
 }
 ```
 
-### 4. 事务管理
+### 4. 级联保存与更新顺序 (Leaf-to-Root Priority)
+
+为了确保引用的完整性和版本号的正确传递，AggVO 的所有持久化操作必须遵循 **由叶子节点向根节点 (Leaf-to-Root)** 向上遍历的原则：
+
+1. **深度优先遍历 (DFS)**：
+   - 递归进入最深层级的子实体。
+   - 优先执行孙实体的 Save/Update。
+2. **冒泡式更新**：
+   - 孙实体保存完成后，携带其最新状态（或 ID/版本号）返回子实体。
+   - 子实体收集所有孙实体的状态后执行自身的 Save/Update。
+   - 最后，子实体状态返回至主实体，主实体完成最终保存并递增版本。
+3. **优势**：
+   - 确保关联完整性在存储层保存时天然满足。
+   - 允许根节点在最后一步捕获整个聚合的最终版本快照。
+
+### 5. 事务管理
 
 AggVOService 自动管理事务：
 
@@ -475,7 +527,7 @@ await aggVOService.SaveAggVOAsync(orderAgg);
 **解决方案**:
 1. 检查子实体的 `ParentForeignKeyField` 配置是否正确
 2. 确认主实体已先保存并获得 ID
-3. 检查子实体表中外键字段是否存在
+3. 确认子实体存储层配置中外键字段是否存在
 
 ### 问题 3: 数据迁移评估显示 Critical 风险
 

@@ -150,16 +150,14 @@ app.MapPut("/api/templates/{id}/apply", async (
 - 筛选器（实体类型、用途、模板类型）
 - 操作按钮：编辑、复制、删除、应用
 
-### 数据库变更
-```sql
--- 添加字段到 PageTemplates
-ALTER TABLE "PageTemplates" ADD COLUMN "IsSystemDefault" boolean DEFAULT false;
-ALTER TABLE "PageTemplates" ADD COLUMN "Version" integer DEFAULT 1;
-ALTER TABLE "PageTemplates" ADD COLUMN "CreatedBy" uuid NULL;
+### 数据库模型变更 (Logical Schema Updates)
 
--- 添加字段到 TemplateBindings（支持用户个人绑定）
-ALTER TABLE "TemplateBindings" ADD COLUMN "UserId" uuid NULL;
-```
+| 目标表 | 变更类型 | 逻辑字段 | 抽象类型 | 说明 |
+| :--- | :--- | :--- | :--- | :--- |
+| **PageTemplates** | 新增 | IsSystemDefault | Boolean | 标识是否为系统内置模板 |
+| **PageTemplates** | 新增 | Version | Integer | 模板版本号 |
+| **PageTemplates** | 新增 | CreatedBy | GUID | 创建人 ID |
+| **TemplateBindings** | 新增 | UserId | GUID | 用户个人绑定引用 |
 
 ---
 

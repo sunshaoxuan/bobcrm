@@ -73,21 +73,17 @@ Content-Type: application/json
 GET /api/entity-definitions/{id}/preview-ddl
 ```
 
-**响应：**
-```sql
--- 创建表：ENTITY_PRODUCT (Product)
-CREATE TABLE IF NOT EXISTS "Products" (
-    "Id" INTEGER NOT NULL,
-    "Code" VARCHAR(64) NOT NULL,
-    "Name" VARCHAR(256) NOT NULL,
-    "Price" NUMERIC(10,2) NOT NULL,
-    "Stock" INTEGER NOT NULL DEFAULT 0,
-    "Description" TEXT NULL,
-    "CreatedAt" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "CreatedBy" VARCHAR(100) NULL,
-    ...
-);
-```
+**响应 (Logical Design Preview)：**
+| 逻辑字段 | 抽象类型 | 约束 | 来源接口 |
+| :--- | :--- | :--- | :--- |
+| Id | Integer | PK | Base |
+| Code | String(64) | Required | Archive |
+| Name | String(256) | Required | Archive |
+| Price | Decimal(10,2)| Required | Custom |
+| Stock | Integer | Required, Default(0)| Custom |
+| Description | Text | Optional | Custom |
+| CreatedAt | DateTime | Default(Now)| Audit |
+| ... | ... | ... | ... |
 
 ### 步骤3：发布实体（生成数据库表）
 
@@ -100,7 +96,7 @@ POST /api/entity-definitions/{id}/publish
 {
   "success": true,
   "scriptId": "guid-of-ddl-script",
-  "ddlScript": "CREATE TABLE IF NOT EXISTS ...",
+  "ddlScript": "[Database Specific DDL Script]",
   "message": "实体发布成功"
 }
 ```
@@ -309,7 +305,7 @@ DELETE /api/dynamic-entities/BobCrm.Base.Custom.Product/1
 |------|------|------|
 | POST | `/api/dynamic-entities/{fullTypeName}/query` | 查询实体列表 |
 | GET | `/api/dynamic-entities/{fullTypeName}/{id}` | 查询单个实体 |
-| POST | `/api/dynamic-entities/raw/{tableName}/query` | 原始SQL查询 |
+| POST | `/api/dynamic-entities/raw/{tableName}/query` | 原始逻辑表查询 |
 | POST | `/api/dynamic-entities/{fullTypeName}` | 创建实体 |
 | PUT | `/api/dynamic-entities/{fullTypeName}/{id}` | 更新实体 |
 | DELETE | `/api/dynamic-entities/{fullTypeName}/{id}` | 删除实体 |
@@ -334,9 +330,9 @@ Content-Type: application/json
 
 将多个实体编译到同一个程序集，减少内存占用。
 
-### 2. 原始SQL查询
+### 2. 原始逻辑表查询 (Raw Table Query)
 
-如果实体未编译加载，可以直接使用表名查询：
+如果实体未编译加载，可以直接使用逻辑表名查询：
 
 ```bash
 POST /api/dynamic-entities/raw/Products/query
@@ -444,9 +440,11 @@ GET /api/entity-definitions/type-info/BobCrm.Base.Custom.Product
 - `ValidTo` (DateTime?) - 生效结束时间
 - `VersionNo` (int) - 版本编号
 
-## 数据类型支持
+## 附录：技术细节参考
 
-| 字段类型 | PostgreSQL类型 | C#类型 | 示例 |
+### A. 逻辑数据类型映射
+
+| 逻辑类型 | 物理参考 (PostgreSQL) | 开发参考 (C#) | 示例 |
 |----------|----------------|---------|------|
 | String | VARCHAR(n) | string | "Hello" |
 | Integer | INTEGER | int | 100 |
@@ -457,6 +455,7 @@ GET /api/entity-definitions/type-info/BobCrm.Base.Custom.Product
 | Date | DATE | DateOnly | "2025-11-07" |
 | Text | TEXT | string | "Long text..." |
 | Guid | UUID | Guid | "guid-string" |
+| Map | JSONB / JSON | Dictionary | {"key": "value"} |
 
 ## 注意事项
 

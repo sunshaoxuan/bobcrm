@@ -109,14 +109,14 @@ EntityMetadata表：
 
 ---
 
-### 场景4：手动禁用实体
+### 场景4：手动变更行为检测 (Action Detection)
 
-```sql
--- 管理员手动禁用customer（如：维护中）
-UPDATE "EntityMetadata" 
-SET "IsEnabled" = false, "UpdatedAt" = NOW()
-WHERE "EntityType" = 'BobCrm.Api.Base.Customer';
+当管理员在外部或通过管理界面执行 **手动禁用 (Manual Disable)** 操作时：
 
+- **操作元数据**：`Target: EntityMetadata(customer)`, `Action: Set IsEnabled = false`
+- **系统行为**：在下次系统启动或刷新时，自动注册机制会检测到代码中该实体仍然存在。
+- **冲突处理策略**：系统遵循“代码源领先”原则，会自动将状态恢复为 `IsEnabled = true`。
+- **持久禁用建议**：如需持久禁用，应直接修改代码中的 `GetMetadata()` 返回值。
 -- 系统启动后
 启动 → AutoRegisterEntityMetadataAsync()
      → 步骤1：扫描到Customer类

@@ -93,7 +93,7 @@ EntityDefinition
 
 ## 6. 后端与 API
 ### 6.1 AppDbContext
-新增 DbSet：`EntityDefinitions`、`SubEntityDefinitions`、`FieldMetadatas`、`EntityInterfaces` 并在 `OnModelCreating` 中配置 jsonb 转换。
+配置实体映射并在 `OnModelCreating` 中配置 Map/Json 逻辑类型的转换。
 
 ### 6.2 核心端点
 | 方法 | 路径 | 说明 |
