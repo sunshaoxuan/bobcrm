@@ -97,6 +97,15 @@ public class EntityPublishingService : IEntityPublishingService
                 return result;
             }
 
+            // 6. ?? Lookup 引用?体（防止物理外??建失?）
+            var lookupValidation = await ValidateLookupReferencesAsync(entity);
+            if (!lookupValidation.IsValid)
+            {
+                result.Success = false;
+                result.ErrorMessage = lookupValidation.ErrorMessage;
+                return result;
+            }
+
             // 6. 生成CREATE TABLE DDL
             var createScript = _ddlGenerator.GenerateCreateTableScript(entity);
             result.DDLScript = createScript;
@@ -186,6 +195,14 @@ public class EntityPublishingService : IEntityPublishingService
         }
 
         // 4. 检查表是否存在
+        var lookupValidation = await ValidateLookupReferencesAsync(entity);
+        if (!lookupValidation.IsValid)
+        {
+            result.Success = false;
+            result.ErrorMessage = lookupValidation.ErrorMessage;
+            return result;
+        }
+
         var tableName = entity.DefaultTableName;
         var tableExists = await _ddlExecutor.TableExistsAsync(tableName);
         if (!tableExists)
@@ -580,6 +597,61 @@ public class EntityPublishingService : IEntityPublishingService
         }
 
         _logger.LogInformation("[Publish] ✓ Enum reference validation passed for {Count} enum fields", enumFields.Count);
+        return result;
+    }
+
+    private async Task<LookupValidationResult> ValidateLookupReferencesAsync(EntityDefinition entity)
+    {
+        var result = new LookupValidationResult { IsValid = true };
+
+        var lookupFields = entity.Fields
+            .Where(f => !f.IsDeleted && !string.IsNullOrWhiteSpace(f.LookupEntityName))
+            .ToList();
+
+        if (lookupFields.Count == 0)
+        {
+            return result;
+        }
+
+        foreach (var field in lookupFields)
+        {
+            if (field.ForeignKeyAction == ForeignKeyAction.SetNull &&
+                field.IsRequiredExplicitlySet &&
+                field.IsRequired)
+            {
+                result.IsValid = false;
+                result.ErrorMessage =
+                    $"Field '{field.PropertyName}' uses ForeignKeyAction=SetNull but is NOT NULL. Please set IsRequired=false or change ForeignKeyAction.";
+                return result;
+            }
+        }
+
+        var requestedEntityNames = lookupFields
+            .Select(f => f.LookupEntityName!.Trim())
+            .Where(name => !string.Equals(name, entity.EntityName, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (requestedEntityNames.Count == 0)
+        {
+            return result;
+        }
+
+        var existingEntityNames = await _db.EntityDefinitions
+            .Where(e => requestedEntityNames.Contains(e.EntityName) && e.Status != EntityStatus.Draft)
+            .Select(e => e.EntityName)
+            .ToListAsync();
+
+        var existingSet = existingEntityNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = requestedEntityNames.Where(name => !existingSet.Contains(name)).ToList();
+        if (missing.Count > 0)
+        {
+            result.IsValid = false;
+            result.ErrorMessage = $"Lookup referenced entities not found or not published: {string.Join(", ", missing)}";
+            return result;
+        }
+
+        _logger.LogInformation("[Publish] ? Lookup reference validation passed for {Count} lookup fields", lookupFields.Count);
         return result;
     }
 

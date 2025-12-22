@@ -445,4 +445,240 @@ public class PostgreSQLDDLGeneratorTests
         ddl.Should().Contain("\"TextField\" TEXT NULL");
         ddl.Should().Contain("\"GuidField\" UUID NULL");
     }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateLookupForeignKey_WithCascadeAction()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Order",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_ORDER" } },
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    IsRequired = true,
+                    SortOrder = 1,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.Cascade
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("CONSTRAINT \"FK_Order_Customer\"");
+        ddl.Should().Contain("REFERENCES \"Customers\" (\"Id\") ON DELETE CASCADE");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateLookupForeignKey_WithSetNullAction()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Order",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_ORDER" } },
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    IsRequired = false,
+                    SortOrder = 1,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.SetNull
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("CONSTRAINT \"FK_Order_Customer\"");
+        ddl.Should().Contain("REFERENCES \"Customers\" (\"Id\") ON DELETE SET NULL");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateLookupForeignKey_WithRestrictAction()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Order",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    SortOrder = 1,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.Restrict
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("CONSTRAINT \"FK_Order_Customer\"");
+        ddl.Should().Contain("REFERENCES \"Customers\" (\"Id\") ON DELETE RESTRICT");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateUniqueLookupConstraints_WhenMultipleFieldsReferenceSameEntity()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Order",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    SortOrder = 1,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.Restrict
+                },
+                new()
+                {
+                    PropertyName = "BillingCustomerId",
+                    DataType = FieldDataType.Integer,
+                    SortOrder = 2,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.Restrict
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("CONSTRAINT \"FK_Order_Customer\"");
+        ddl.Should().Contain("CONSTRAINT \"FK_Order_Customer_2\"");
+    }
+
+    [Fact]
+    public void GenerateDropTableScript_ShouldIncludeCascade()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Product",
+            DisplayName = new Dictionary<string, string?> { { "en", "ENTITY_PRODUCT" } }
+        };
+
+        var ddl = _generator.GenerateDropTableScript(entity);
+
+        ddl.Should().Contain("DROP TABLE IF EXISTS \"Products\" CASCADE;");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateDefaultValue_ForDateAndGuid()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "TestEntity",
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "SomeDate",
+                    DataType = FieldDataType.Date,
+                    DefaultValue = "TODAY",
+                    SortOrder = 1
+                },
+                new()
+                {
+                    PropertyName = "SomeGuid",
+                    DataType = FieldDataType.Guid,
+                    DefaultValue = "NEWID",
+                    SortOrder = 2
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("\"SomeDate\" DATE NULL DEFAULT CURRENT_DATE");
+        ddl.Should().Contain("\"SomeGuid\" UUID NULL DEFAULT gen_random_uuid()");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldGenerateInterfaceColumns_ForBaseAuditAndTimeVersion()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Log",
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>
+            {
+                new() { InterfaceType = EntityInterfaceType.Base, IsEnabled = true },
+                new() { InterfaceType = EntityInterfaceType.Audit, IsEnabled = true },
+                new() { InterfaceType = EntityInterfaceType.TimeVersion, IsEnabled = true }
+            }
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("\"Id\" SERIAL PRIMARY KEY");
+        ddl.Should().Contain("\"IsDeleted\" BOOLEAN NOT NULL DEFAULT FALSE");
+        ddl.Should().Contain("\"CreatedAt\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        ddl.Should().Contain("\"ValidFrom\" TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+
+    [Fact]
+    public void GenerateCreateTableScript_ShouldMapTypes_ForInt64AndDefaultDecimal()
+    {
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "BobCrm.Test",
+            EntityName = "Metrics",
+            Fields = new List<FieldMetadata>
+            {
+                new() { PropertyName = "Total", DataType = FieldDataType.Int64, SortOrder = 1 },
+                new() { PropertyName = "Amount", DataType = FieldDataType.Decimal, SortOrder = 2 }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var ddl = _generator.GenerateCreateTableScript(entity);
+
+        ddl.Should().Contain("\"Total\" BIGINT");
+        ddl.Should().Contain("\"Amount\" NUMERIC(18,2)");
+    }
+
+    [Fact]
+    public void GenerateInterfaceFields_ShouldGenerateFields_ForArchiveInterface()
+    {
+        var iface = new EntityInterface
+        {
+            InterfaceType = EntityInterfaceType.Archive,
+            IsEnabled = true
+        };
+
+        var fields = _generator.GenerateInterfaceFields(iface);
+
+        fields.Should().Contain(f => f.PropertyName == "Code" && f.DataType == FieldDataType.String && f.Length == 64);
+        fields.Should().Contain(f => f.PropertyName == "Name" && f.DataType == FieldDataType.String && f.Length == 256);
+    }
 }

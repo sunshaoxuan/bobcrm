@@ -1,4 +1,5 @@
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Contracts.Requests.Entity;
 
@@ -22,6 +23,9 @@ public record UpdateFieldMetadataDto
     public bool? IsRequired { get; init; }
     public bool? IsEntityRef { get; init; }
     public Guid? ReferencedEntityId { get; init; }
+    public string? LookupEntityName { get; init; }
+    public string? LookupDisplayField { get; init; }
+    public ForeignKeyAction? ForeignKeyAction { get; init; }
     public int? SortOrder { get; init; }
     public string? DefaultValue { get; init; }
     public string? ValidationRules { get; init; }

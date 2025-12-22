@@ -171,6 +171,92 @@ public class EntityPublishingAndDDLTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenLookupEntityNotFound()
+    {
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "Test",
+            EntityName = "Order",
+            EntityRoute = "order",
+            ApiEndpoint = "/api/orders",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    SortOrder = 0,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.Restrict
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Lookup referenced entities");
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldFail_WhenLookupSetNullButNotNull()
+    {
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        await _db.EntityDefinitions.AddAsync(new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "Test",
+            EntityName = "Customer",
+            Status = EntityStatus.Published,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        });
+        await _db.SaveChangesAsync();
+
+        var entity = new EntityDefinition
+        {
+            Id = Guid.NewGuid(),
+            Namespace = "Test",
+            EntityName = "Order",
+            EntityRoute = "order",
+            ApiEndpoint = "/api/orders",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "CustomerId",
+                    DataType = FieldDataType.Integer,
+                    SortOrder = 0,
+                    IsRequired = true,
+                    LookupEntityName = "Customer",
+                    ForeignKeyAction = ForeignKeyAction.SetNull
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        var result = await service.PublishNewEntityAsync(entity.Id);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("ForeignKeyAction=SetNull");
+    }
+
+    [Fact]
     public async Task PublishEntityChangesAsync_ShouldFail_WhenEntityNotFound()
     {
         // Arrange

@@ -100,6 +100,14 @@ public class FieldMetadata
     /// </summary>
     public Guid? ReferencedEntityId { get; set; }
 
+    [MaxLength(100)]
+    public string? LookupEntityName { get; set; }
+
+    [MaxLength(100)]
+    public string? LookupDisplayField { get; set; }
+
+    public ForeignKeyAction ForeignKeyAction { get; set; } = ForeignKeyAction.Restrict;
+
     /// <summary>
     /// 物理表名（发布后填充，发布后不可修改）
     /// </summary>

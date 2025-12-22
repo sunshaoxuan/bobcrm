@@ -498,6 +498,9 @@ public static class EntityDefinitionEndpoints
                         IsRequired = fieldDto.IsRequired,
                         IsEntityRef = fieldDto.IsEntityRef,
                         ReferencedEntityId = fieldDto.ReferencedEntityId,
+                        LookupEntityName = fieldDto.LookupEntityName,
+                        LookupDisplayField = fieldDto.LookupDisplayField,
+                        ForeignKeyAction = fieldDto.ForeignKeyAction,
                         SortOrder = fieldDto.SortOrder,
                         DefaultValue = fieldDto.DefaultValue,
                         ValidationRules = fieldDto.ValidationRules
@@ -757,6 +760,9 @@ public static class EntityDefinitionEndpoints
                             if (fieldDto.IsRequired.HasValue) existingField.IsRequired = fieldDto.IsRequired.Value;
                             if (fieldDto.IsEntityRef.HasValue) existingField.IsEntityRef = fieldDto.IsEntityRef.Value;
                             existingField.ReferencedEntityId = fieldDto.ReferencedEntityId;
+                            if (fieldDto.LookupEntityName != null) existingField.LookupEntityName = fieldDto.LookupEntityName;
+                            if (fieldDto.LookupDisplayField != null) existingField.LookupDisplayField = fieldDto.LookupDisplayField;
+                            if (fieldDto.ForeignKeyAction.HasValue) existingField.ForeignKeyAction = fieldDto.ForeignKeyAction.Value;
                             if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
                             existingField.DefaultValue = fieldDto.DefaultValue;
                             existingField.ValidationRules = fieldDto.ValidationRules;
@@ -780,6 +786,9 @@ public static class EntityDefinitionEndpoints
                             IsRequired = fieldDto.IsRequired ?? false,
                             IsEntityRef = fieldDto.IsEntityRef ?? false,
                             ReferencedEntityId = fieldDto.ReferencedEntityId,
+                            LookupEntityName = fieldDto.LookupEntityName,
+                            LookupDisplayField = fieldDto.LookupDisplayField,
+                            ForeignKeyAction = fieldDto.ForeignKeyAction ?? ForeignKeyAction.Restrict,
                             SortOrder = fieldDto.SortOrder ?? 0,
                             DefaultValue = fieldDto.DefaultValue,
                             ValidationRules = fieldDto.ValidationRules,

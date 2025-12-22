@@ -279,24 +279,51 @@ public class PostgreSQLDDLGenerator
     private string GenerateForeignKeys(EntityDefinition entity, string tableName)
     {
         var sb = new StringBuilder();
-        var refFields = entity.Fields.Where(f =>
-            f.IsEntityRef && (f.ReferencedEntityId.HasValue || !string.IsNullOrEmpty(f.TableName)));
+        var entityRefFields = entity.Fields.Where(f =>
+            !f.IsDeleted &&
+            f.IsEntityRef &&
+            (f.ReferencedEntityId.HasValue || !string.IsNullOrEmpty(f.TableName)));
 
-        if (!refFields.Any())
+        var lookupFields = entity.Fields.Where(f =>
+            !f.IsDeleted &&
+            !string.IsNullOrWhiteSpace(f.LookupEntityName));
+
+        if (!entityRefFields.Any() && !lookupFields.Any())
             return string.Empty;
 
         sb.AppendLine("-- 外键约束");
 
-        foreach (var field in refFields)
+        var usedFkNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in entityRefFields)
         {
             // 注意：这里需要从ReferencedEntityId查询实际的表名
             // 简化实现，假设可以从field.TableName获取
             if (!string.IsNullOrEmpty(field.TableName))
             {
                 var fkName = $"FK_{tableName}_{field.PropertyName}";
+                usedFkNames.Add(fkName);
                 sb.AppendLine($"ALTER TABLE \"{tableName}\" ADD CONSTRAINT \"{fkName}\" " +
                     $"FOREIGN KEY (\"{field.PropertyName}\") REFERENCES \"{field.TableName}\" (\"Id\") ON DELETE RESTRICT;");
             }
+        }
+
+        foreach (var field in lookupFields)
+        {
+            var lookupEntityName = field.LookupEntityName!.Trim();
+            var referencedTableName = lookupEntityName + "s";
+
+            var baseFkName = $"FK_{entity.EntityName}_{lookupEntityName}";
+            var fkName = baseFkName;
+            var suffix = 2;
+            while (!usedFkNames.Add(fkName))
+            {
+                fkName = $"{baseFkName}_{suffix++}";
+            }
+
+            var deleteBehavior = MapForeignKeyActionToSql(field.ForeignKeyAction);
+            sb.AppendLine($"ALTER TABLE \"{tableName}\" ADD CONSTRAINT \"{fkName}\" " +
+                          $"FOREIGN KEY (\"{field.PropertyName}\") REFERENCES \"{referencedTableName}\" (\"Id\") ON DELETE {deleteBehavior};");
         }
 
         return sb.ToString();
@@ -305,6 +332,14 @@ public class PostgreSQLDDLGenerator
     /// <summary>
     /// 生成表和列注释
     /// </summary>
+    private static string MapForeignKeyActionToSql(ForeignKeyAction action)
+        => action switch
+        {
+            ForeignKeyAction.Cascade => "CASCADE",
+            ForeignKeyAction.SetNull => "SET NULL",
+            _ => "RESTRICT"
+        };
+
     private string GenerateComments(EntityDefinition entity, string tableName)
     {
         var sb = new StringBuilder();
