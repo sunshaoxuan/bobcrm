@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Base.Models;
 
@@ -66,18 +67,8 @@ public class OrganizationNode : IBizEntity
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.OrganizationNode",
             EntityRoute = "organization-nodes",
-            DisplayName = new Dictionary<string, string?>
-            {
-                { "ja", "組織ノード" },
-                { "zh", "组织节点" },
-                { "en", "Organization Node" }
-            },
-            Description = new Dictionary<string, string?>
-            {
-                { "ja", "組織のツリー構造を管理します" },
-                { "zh", "管理组织的树形结构" },
-                { "en", "Manage organization tree structure" }
-            },
+            DisplayName = SystemEntityI18n.Dict("ENTITY_ORGANIZATION_NODE"),
+            Description = SystemEntityI18n.Dict("ENTITY_ORGANIZATION_NODE_DESC"),
             ApiEndpoint = "/api/organization-nodes",
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
@@ -95,12 +86,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Id",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ID" },
-                    { "zh", "ID" },
-                    { "en", "ID" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_ID"),
                 DataType = FieldDataType.Guid,
                 IsRequired = true,
                 SortOrder = 1,
@@ -109,12 +95,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Code",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ノードコード" },
-                    { "zh", "节点编码" },
-                    { "en", "Node Code" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_CODE"),
                 DataType = FieldDataType.String,
                 Length = 64,
                 IsRequired = true,
@@ -124,12 +105,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Name",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ノード名" },
-                    { "zh", "节点名称" },
-                    { "en", "Node Name" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_NAME"),
                 DataType = FieldDataType.String,
                 Length = 128,
                 IsRequired = true,
@@ -139,12 +115,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "ParentId",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "親ノードID" },
-                    { "zh", "父节点ID" },
-                    { "en", "Parent Node ID" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_PARENT_ID"),
                 DataType = FieldDataType.Guid,
                 IsRequired = false,
                 SortOrder = 4,
@@ -153,12 +124,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Level",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "レベル" },
-                    { "zh", "层级" },
-                    { "en", "Level" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_LEVEL"),
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 SortOrder = 5,
@@ -167,12 +133,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "PathCode",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "パスコード" },
-                    { "zh", "路径编码" },
-                    { "en", "Path Code" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_PATH_CODE"),
                 DataType = FieldDataType.String,
                 Length = 256,
                 IsRequired = true,
@@ -182,12 +143,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "SortOrder",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "並び順" },
-                    { "zh", "排序" },
-                    { "en", "Sort Order" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_SORT_ORDER"),
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 SortOrder = 7,
@@ -196,12 +152,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "CreatedAt",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "作成日時" },
-                    { "zh", "创建时间" },
-                    { "en", "Created At" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_CREATED_AT"),
                 DataType = FieldDataType.DateTime,
                 IsRequired = true,
                 SortOrder = 8,
@@ -210,12 +161,7 @@ public class OrganizationNode : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "UpdatedAt",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "更新日時" },
-                    { "zh", "更新时间" },
-                    { "en", "Updated At" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_UPDATED_AT"),
                 DataType = FieldDataType.DateTime,
                 IsRequired = true,
                 SortOrder = 9,

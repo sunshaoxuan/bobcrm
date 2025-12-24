@@ -8,6 +8,7 @@
 @inject BobCrm.App.Services.AuthService Auth
 @inject MessageService Message
 @inject IConfiguration Configuration
+@using BobCrm.App.Models.Setup
 
 <h1>@I18n.T("LBL_SETUP")</h1>
 
@@ -80,7 +81,7 @@
     private string placeholderText = "";
 
     private string lang = "ja";
-    private List<LangItem> langs = new();
+    private List<SetupLangItem> langs = new();
     private bool saving;
 
     // Initialize empty to avoid flashing hardcoded defaults before API response
@@ -172,7 +173,7 @@
                         {
                             await JS.InvokeVoidAsync("console.log", $"[Setup] Fetching admin info from (browser): {baseUrl}");
                             var url = (baseUrl ?? string.Empty).TrimEnd('/') + "/api/setup/admin";
-                            var adminInfo = await JS.InvokeAsync<AdminInfo?>("bobcrm.fetchJson", url);
+                            var adminInfo = await JS.InvokeAsync<SetupAdminInfo?>("bobcrm.fetchJson", url);
                             if (adminInfo is null) return false;
                             var u = adminInfo.username;
                             var m = adminInfo.email;
@@ -215,7 +216,7 @@
                             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                             var r = await tmp.GetAsync("/api/i18n/languages", cts.Token);
                             if (!r.IsSuccessStatusCode) return false;
-                            var json = await r.Content.ReadFromJsonAsync<List<LangItem>>();
+                            var json = await r.Content.ReadFromJsonAsync<List<SetupLangItem>>();
                             if (json is null || json.Count == 0) return false;
                             langs = json; apiBase = b; defaultApiBase = b;
                             try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", b, 365); } catch { }
@@ -472,15 +473,6 @@
             resetting = false;
             StateHasChanged();
         }
-    }
-
-    public class LangItem { public string code { get; set; } = string.Empty; public string name { get; set; } = string.Empty; }
-    
-    public class AdminInfo 
-    { 
-        public string username { get; set; } = string.Empty; 
-        public string email { get; set; } = string.Empty; 
-        public bool exists { get; set; } 
     }
 
     private async Task OnLangChanged(ChangeEventArgs e)

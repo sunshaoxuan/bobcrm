@@ -14,7 +14,7 @@ public class Customer : IBizEntity
     [Required, MaxLength(64)] public string Code { get; set; } = string.Empty;
 
     [Required, MaxLength(256)]
-    [Localizable(Required = false, MaxLength = 256, Hint = "客户名称")]
+    [Localizable(Required = false, MaxLength = 256, Hint = "LBL_FIELD_NAME")]
     public string Name { get; set; } = string.Empty;
 
     public int Version { get; set; } = 1;
@@ -33,18 +33,8 @@ public class Customer : IBizEntity
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Base.Customer",
             EntityRoute = "customer",
-            DisplayName = new Dictionary<string, string?>
-            {
-                { "ja", "顧客" },
-                { "zh", "客户" },
-                { "en", "Customer" }
-            },
-            Description = new Dictionary<string, string?>
-            {
-                { "ja", "顧客情報を管理します" },
-                { "zh", "管理客户信息" },
-                { "en", "Manage customer information" }
-            },
+            DisplayName = SystemEntityI18n.Dict("ENTITY_CUSTOMER"),
+            Description = SystemEntityI18n.Dict("ENTITY_CUSTOMER_DESC"),
             ApiEndpoint = "/api/customers",
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
@@ -62,12 +52,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Id",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ID" },
-                    { "zh", "ID" },
-                    { "en", "ID" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_ID"),
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 SortOrder = 1,
@@ -76,12 +61,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Code",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "顧客コード" },
-                    { "zh", "客户代码" },
-                    { "en", "Customer Code" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_CODE"),
                 DataType = FieldDataType.String,
                 Length = 64,
                 IsRequired = true,
@@ -91,12 +71,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Name",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "顧客名" },
-                    { "zh", "客户名称" },
-                    { "en", "Customer Name" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_NAME"),
                 DataType = FieldDataType.String,
                 Length = 256,
                 IsRequired = true,
@@ -106,12 +81,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Version",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "バージョン" },
-                    { "zh", "版本" },
-                    { "en", "Version" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_VERSION"),
                 DataType = FieldDataType.Integer,
                 IsRequired = true,
                 DefaultValue = "1",
@@ -121,12 +91,7 @@ public class Customer : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "ExtData",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "拡張データ" },
-                    { "zh", "扩展数据" },
-                    { "en", "Extended Data" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_EXT_DATA"),
                 DataType = FieldDataType.Text,
                 IsRequired = false,
                 SortOrder = 5,

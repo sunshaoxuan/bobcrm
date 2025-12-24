@@ -1,23 +1,17 @@
 namespace BobCrm.Api.Base.Aggregates;
 
-/// <summary>
-/// 验证错误
-/// </summary>
 public class ValidationError
 {
-    /// <summary>
-    /// 属性路径（如 "Root.EntityName" 或 "SubEntity[Lines].Field[ProductCode].DataType"）
-    /// </summary>
     public string PropertyPath { get; }
+    public string MessageKey { get; }
+    public object[] Args { get; }
 
-    /// <summary>
-    /// 错误消息
-    /// </summary>
-    public string Message { get; }
+    public string Message => MessageKey;
 
-    public ValidationError(string propertyPath, string message)
+    public ValidationError(string propertyPath, string messageKey, params object[] args)
     {
         PropertyPath = propertyPath;
-        Message = message;
+        MessageKey = messageKey;
+        Args = args ?? Array.Empty<object>();
     }
 }

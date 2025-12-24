@@ -9,6 +9,8 @@
 @inject IWebHostEnvironment Env
 @using System.Linq
 @using BobCrm.App.Services
+@using BobCrm.App.Models.Auth
+@using BobCrm.App.Models.Setup
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
            HeroSubtitle='@I18n.T("TXT_AUTH_HERO_SUBTITLE")'
@@ -102,7 +104,7 @@
                     var resp = await http.GetAsync("/api/setup/admin");
                     if (resp.IsSuccessStatusCode)
                     {
-                        var info = await resp.Content.ReadFromJsonAsync<AdminInfo>();
+                        var info = await resp.Content.ReadFromJsonAsync<SetupAdminInfo>();
                         if (info is not null && info.exists == false)
                         { Nav.NavigateTo("/setup"); return; }
                     }
@@ -351,14 +353,4 @@
         }
     }
 
-    public class LoginModel
-    {
-        public string username { get; set; } = string.Empty;
-        public string password { get; set; } = string.Empty;
-    }
-    public record LoginResult(string accessToken, string refreshToken, UserDto user);
-    public record UserDto(string id, string userName, string email, bool emailConfirmed, string role);
-    public class AdminInfo { public bool exists { get; set; } public string? username { get; set; } public string? email { get; set; } }
-
-    
 }

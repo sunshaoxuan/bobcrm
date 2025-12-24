@@ -1,13 +1,19 @@
 namespace BobCrm.Api.Base.Aggregates;
 
-using System;
-
-/// <summary>
-/// 领域异常
-/// </summary>
 public class DomainException : Exception
 {
-    public DomainException(string message) : base(message) { }
+    public string MessageKey { get; }
+    public object[] Args { get; }
 
-    public DomainException(string message, Exception innerException) : base(message, innerException) { }
+    public DomainException(string messageKey, params object[] args) : base(messageKey)
+    {
+        MessageKey = messageKey;
+        Args = args ?? Array.Empty<object>();
+    }
+
+    public DomainException(string messageKey, Exception innerException, params object[] args) : base(messageKey, innerException)
+    {
+        MessageKey = messageKey;
+        Args = args ?? Array.Empty<object>();
+    }
 }

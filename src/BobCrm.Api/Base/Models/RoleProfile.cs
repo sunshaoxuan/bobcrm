@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Base.Models;
 
@@ -48,18 +49,8 @@ public class RoleProfile : IBizEntity
             EntityName = type.Name,
             FullTypeName = type.FullName ?? "BobCrm.Api.Base.Models.RoleProfile",
             EntityRoute = "role",
-            DisplayName = new Dictionary<string, string?>
-            {
-                { "ja", "ロール" },
-                { "zh", "角色" },
-                { "en", "Role" }
-            },
-            Description = new Dictionary<string, string?>
-            {
-                { "ja", "ロールプロファイルを管理します" },
-                { "zh", "管理角色档案" },
-                { "en", "Manage role profiles" }
-            },
+            DisplayName = SystemEntityI18n.Dict("ENTITY_ROLE_PROFILE"),
+            Description = SystemEntityI18n.Dict("ENTITY_ROLE_PROFILE_DESC"),
             ApiEndpoint = "/api/roles",
             StructureType = EntityStructureType.Single,
             Status = EntityStatus.Published,
@@ -77,12 +68,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Id",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ID" },
-                    { "zh", "ID" },
-                    { "en", "ID" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_ID"),
                 DataType = FieldDataType.Guid,
                 IsRequired = true,
                 SortOrder = 1,
@@ -91,12 +77,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "OrganizationId",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "組織ID" },
-                    { "zh", "组织ID" },
-                    { "en", "Organization ID" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_ORGANIZATION_ID"),
                 DataType = FieldDataType.Guid,
                 IsRequired = false,
                 SortOrder = 2,
@@ -105,12 +86,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Code",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ロールコード" },
-                    { "zh", "角色代码" },
-                    { "en", "Role Code" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_CODE"),
                 DataType = FieldDataType.String,
                 Length = 64,
                 IsRequired = true,
@@ -120,12 +96,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Name",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "ロール名" },
-                    { "zh", "角色名称" },
-                    { "en", "Role Name" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_NAME"),
                 DataType = FieldDataType.String,
                 Length = 128,
                 IsRequired = true,
@@ -135,12 +106,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "Description",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "説明" },
-                    { "zh", "描述" },
-                    { "en", "Description" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_DESCRIPTION"),
                 DataType = FieldDataType.String,
                 Length = 256,
                 IsRequired = false,
@@ -150,12 +116,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "IsSystem",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "システムロール" },
-                    { "zh", "系统角色" },
-                    { "en", "Is System Role" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_SYSTEM_ROLE"),
                 DataType = FieldDataType.Boolean,
                 IsRequired = true,
                 SortOrder = 6,
@@ -164,12 +125,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "IsEnabled",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "有効" },
-                    { "zh", "启用" },
-                    { "en", "Is Enabled" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_ENABLED"),
                 DataType = FieldDataType.Boolean,
                 IsRequired = true,
                 SortOrder = 7,
@@ -178,12 +134,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "CreatedAt",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "作成日時" },
-                    { "zh", "创建时间" },
-                    { "en", "Created At" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_CREATED_AT"),
                 DataType = FieldDataType.DateTime,
                 IsRequired = true,
                 SortOrder = 8,
@@ -192,12 +143,7 @@ public class RoleProfile : IBizEntity
             new FieldMetadata
             {
                 PropertyName = "UpdatedAt",
-                DisplayName = new Dictionary<string, string?>
-                {
-                    { "ja", "更新日時" },
-                    { "zh", "更新时间" },
-                    { "en", "Updated At" }
-                },
+                DisplayName = SystemEntityI18n.Dict("LBL_FIELD_UPDATED_AT"),
                 DataType = FieldDataType.DateTime,
                 IsRequired = true,
                 SortOrder = 9,

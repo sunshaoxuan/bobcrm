@@ -11,78 +11,16 @@ public class ToastService
 
     public event Action? OnChange;
 
-    /// <summary>
-    /// 显示成功消息
-    /// </summary>
-    public void Success(string message)
-    {
-        AddMessage(new ToastMessage
-        {
-            Id = Guid.NewGuid(),
-            Message = message,
-            Type = ToastType.Success,
-            CreatedAt = DateTime.Now
-        });
-    }
+    public void Success(string message) => AddMessage(message, ToastType.Success);
+    public void Error(string message) => AddMessage(message, ToastType.Error);
+    public void Warning(string message) => AddMessage(message, ToastType.Warning);
+    public void Info(string message) => AddMessage(message, ToastType.Info);
 
-    /// <summary>
-    /// 显示错误消息
-    /// </summary>
-    public void Error(string message)
-    {
-        AddMessage(new ToastMessage
-        {
-            Id = Guid.NewGuid(),
-            Message = message,
-            Type = ToastType.Error,
-            CreatedAt = DateTime.Now
-        });
-    }
-
-    /// <summary>
-    /// 显示警告消息
-    /// </summary>
-    public void Warning(string message)
-    {
-        AddMessage(new ToastMessage
-        {
-            Id = Guid.NewGuid(),
-            Message = message,
-            Type = ToastType.Warning,
-            CreatedAt = DateTime.Now
-        });
-    }
-
-    /// <summary>
-    /// 显示信息消息
-    /// </summary>
-    public void Info(string message)
-    {
-        AddMessage(new ToastMessage
-        {
-            Id = Guid.NewGuid(),
-            Message = message,
-            Type = ToastType.Info,
-            CreatedAt = DateTime.Now
-        });
-    }
-
-    /// <summary>
-    /// 获取当前可见的消息（最多3个）
-    /// </summary>
     public IReadOnlyList<ToastMessage> GetVisibleMessages()
-    {
-        return _messages.Take(_maxVisibleMessages).ToList();
-    }
+        => _messages.Take(_maxVisibleMessages).ToList();
 
-    /// <summary>
-    /// 获取自动隐藏时长（毫秒）
-    /// </summary>
     public int GetAutoHideDuration() => _autoHideDuration;
 
-    /// <summary>
-    /// 移除消息
-    /// </summary>
     public void RemoveMessage(Guid id)
     {
         var message = _messages.FirstOrDefault(m => m.Id == id);
@@ -93,33 +31,19 @@ public class ToastService
         }
     }
 
-    private void AddMessage(ToastMessage message)
+    private void AddMessage(string message, ToastType type)
     {
-        _messages.Insert(0, message);
+        _messages.Insert(0, new ToastMessage
+        {
+            Id = Guid.NewGuid(),
+            Message = message,
+            Type = type,
+            CreatedAt = DateTime.UtcNow
+        });
+
         NotifyStateChanged();
     }
 
     private void NotifyStateChanged() => OnChange?.Invoke();
 }
 
-/// <summary>
-/// Toast消息
-/// </summary>
-public class ToastMessage
-{
-    public Guid Id { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public ToastType Type { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
-
-/// <summary>
-/// Toast消息类型
-/// </summary>
-public enum ToastType
-{
-    Success,
-    Error,
-    Warning,
-    Info
-}
