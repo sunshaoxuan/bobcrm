@@ -8,6 +8,11 @@
 - [x] TASK-03: `TemplateRuntimeService` 实现优先级规则匹配引擎（支持 `EntityId/EntityData`）。
 - [x] TASK-04: 前端 `PageLoader` 接入动态匹配模板。
 
-## Phase 3: 发布流程闭环
+## Phase 3: 发布流程闭环 (已完成)
 - [x] TASK-05: 增强 `EntityPublishingService` 支持 AggVO 级联发布。
 - [x] TASK-06: 权限拦截器集成与撤回发布功能。
+
+## Phase 4: API 响应契约治理 (待启动)
+- [ ] TASK-07: 统一响应包装模型，移除 redundancy (PLAN-17)。
+- [ ] TASK-08: 消除 `EntityDefinition/User/DynamicEntity` 中的匿名对象。
+- [ ] TASK-09: 补全全量 API 端点的 Swagger 元数据标注。
