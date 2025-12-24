@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using BobCrm.App.Utils;
 
@@ -13,12 +14,14 @@ public class FieldActionService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IJSRuntime _js;
     private readonly AuthService _auth;
+    private readonly ILogger<FieldActionService> _logger;
 
-    public FieldActionService(IHttpClientFactory httpClientFactory, IJSRuntime js, AuthService auth)
+    public FieldActionService(IHttpClientFactory httpClientFactory, IJSRuntime js, AuthService auth, ILogger<FieldActionService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _js = js;
         _auth = auth;
+        _logger = logger;
     }
 
     /// <summary>
@@ -39,7 +42,7 @@ public class FieldActionService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[FieldActionService] 执行动作失败 ({actionType}): {ex.Message}");
+            _logger.LogError(ex, "[FieldActionService] 执行动作失败 ({ActionType})", actionType);
             return false;
         }
     }
@@ -101,7 +104,7 @@ public class FieldActionService
                 // 获取文件内容
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
                 var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') 
-                    ?? $"{FileNameHelper.SanitizeFileName(config.Host)}_{DateTime.Now:yyyyMMddHHmmss}.rdp";
+                    ?? $"{FileNameHelper.SanitizeFileName(config.Host)}_{DateTime.UtcNow:yyyyMMddHHmmss}.rdp";
 
                 // 使用JavaScript触发下载
                 await _js.InvokeVoidAsync("downloadFile", fileName, "application/x-rdp", fileBytes);
@@ -110,13 +113,13 @@ public class FieldActionService
             else
             {
                 var errorText = await response.Content.ReadAsStringAsync();
-                Console.Error.WriteLine($"[FieldActionService] RDP下载失败: {response.StatusCode}, {errorText}");
+                _logger.LogWarning("[FieldActionService] RDP下载失败: {StatusCode}, {ErrorText}", response.StatusCode, errorText);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[FieldActionService] RDP下载异常: {ex.Message}");
+            _logger.LogError(ex, "[FieldActionService] RDP下载异常");
             return false;
         }
     }
@@ -140,7 +143,7 @@ public class FieldActionService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[FieldActionService] 打开链接失败: {ex.Message}");
+            _logger.LogError(ex, "[FieldActionService] 打开链接失败");
             return false;
         }
     }
@@ -160,7 +163,7 @@ public class FieldActionService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[FieldActionService] 复制失败: {ex.Message}");
+            _logger.LogError(ex, "[FieldActionService] 复制失败");
             return false;
         }
     }
@@ -214,31 +217,10 @@ public class FieldActionService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[FieldActionService] 打开邮件失败: {ex.Message}");
+            _logger.LogError(ex, "[FieldActionService] 打开邮件失败");
             return false;
         }
     }
 
-}
-
-/// <summary>
-/// RDP配置
-/// </summary>
-public class RdpConfig
-{
-    public string Host { get; set; } = string.Empty;
-    public int? Port { get; set; } = 3389;
-    public string? Username { get; set; }
-    public string? Password { get; set; }
-    public string? Domain { get; set; }
-    public int? Width { get; set; } = 1920;
-    public int? Height { get; set; } = 1080;
-    public string? Gateway { get; set; }
-    public bool? RedirectDrives { get; set; }
-    public bool? RedirectClipboard { get; set; } = true;
-    public bool? RedirectPrinters { get; set; }
-    public bool? RedirectComPorts { get; set; }
-    public bool? RedirectSmartCards { get; set; }
-    public bool? RedirectAudio { get; set; } = true;
 }
 

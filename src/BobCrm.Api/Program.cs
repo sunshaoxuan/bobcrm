@@ -31,7 +31,7 @@ var filteredArgs = resetDatabaseOnly
 var builder = WebApplication.CreateBuilder(filteredArgs);
 
 // 配置日志到文件 - 存储在项目根目录的logs文件夹
-var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
 var logsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "logs");
 Directory.CreateDirectory(logsDir);
 var logFilePath = Path.Combine(logsDir, $"api_{timestamp}.log");
@@ -237,7 +237,7 @@ var app = builder.Build();
 
 // 配置详细日志
 app.Logger.LogInformation("============================================");
-app.Logger.LogInformation("Application starting at {Time}, log file: {LogFile}", DateTime.Now, logFilePath);
+app.Logger.LogInformation("Application starting at {Time}, log file: {LogFile}", DateTime.UtcNow, logFilePath);
 app.Logger.LogInformation("============================================");
 
 // 全局异常处理（放在最前面）

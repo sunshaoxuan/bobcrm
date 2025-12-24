@@ -51,7 +51,7 @@ public static class FieldActionEndpoints
                 return Results.BadRequest(new ErrorResponse(loc.T("ERR_RDP_HOST_REQUIRED", lang), "ERR_RDP_HOST_REQUIRED"));
 
             var rdpContent = GenerateRdpContent(request);
-            var fileName = $"{FileNameHelper.SanitizeFileName(request.Host)}_{DateTime.Now:yyyyMMddHHmmss}.rdp";
+            var fileName = $"{FileNameHelper.SanitizeFileName(request.Host)}_{DateTime.UtcNow:yyyyMMddHHmmss}.rdp";
             
             // 返回文件
             var bytes = Encoding.UTF8.GetBytes(rdpContent);

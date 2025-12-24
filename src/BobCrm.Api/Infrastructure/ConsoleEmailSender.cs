@@ -1,4 +1,5 @@
 using BobCrm.Api.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Infrastructure;
 
@@ -8,9 +9,16 @@ namespace BobCrm.Api.Infrastructure;
 /// </summary>
 public class ConsoleEmailSender : IEmailSender
 {
+    private readonly ILogger<ConsoleEmailSender> _logger;
+
+    public ConsoleEmailSender(ILogger<ConsoleEmailSender> logger)
+    {
+        _logger = logger;
+    }
+
     public Task SendAsync(string to, string subject, string body)
     {
-        Console.WriteLine($"[EMAIL] To:{to} Subject:{subject} Body:{body}");
+        _logger.LogInformation("[DEV EMAIL] To:{To} Subject:{Subject} Body:{Body}", to, subject, body);
         return Task.CompletedTask;
     }
 }

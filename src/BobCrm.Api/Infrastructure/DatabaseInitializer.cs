@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 
 using Microsoft.EntityFrameworkCore.Storage;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BobCrm.Api.Infrastructure;
@@ -24,11 +25,16 @@ public static class DatabaseInitializer
 
     {
 
-        Console.WriteLine("[DatabaseInitializer] Applying pending migrations using MigrateAsync");
+        var loggerFactory = db.GetService<ILoggerFactory>();
+        var logger = loggerFactory != null
+            ? loggerFactory.CreateLogger(nameof(DatabaseInitializer))
+            : NullLogger.Instance;
+
+        logger.LogInformation("[DatabaseInitializer] Applying pending migrations using MigrateAsync");
 
         await db.Database.MigrateAsync();
 
-        Console.WriteLine("[DatabaseInitializer] Migrations completed successfully");
+        logger.LogInformation("[DatabaseInitializer] Migrations completed successfully");
 
         await EnsureTrigramExtensionAsync(db);
 
@@ -43,12 +49,12 @@ public static class DatabaseInitializer
             // 初始化系统枚举
             var enumSeeder = new BobCrm.Api.Services.EnumSeeder(appDbContext);
             await enumSeeder.EnsureSystemEnumsAsync();
-            Console.WriteLine("[DatabaseInitializer] System enums initialized successfully");
+            logger.LogInformation("[DatabaseInitializer] System enums initialized successfully");
 
             // 初始化系统菜单
             var menuSeeder = new BobCrm.Api.Services.SystemMenuSeeder(appDbContext);
             await menuSeeder.EnsureSystemMenusAsync();
-            Console.WriteLine("[DatabaseInitializer] System menus initialized successfully");
+            logger.LogInformation("[DatabaseInitializer] System menus initialized successfully");
 
             await CleanupSampleEntityDefinitionsAsync(appDbContext);
 
@@ -154,11 +160,11 @@ public static class DatabaseInitializer
 
             {
 
-                CreateFieldSource("System", "系统字段", "由系统实体同步，禁止删除", 10),
+                CreateFieldSource("System", "LBL_FIELD_SOURCE_SYSTEM", "TXT_FIELD_SOURCE_SYSTEM_DESC", 10),
 
-                CreateFieldSource("Custom", "自定义字段", "由用户自行添加，可删除", 20),
+                CreateFieldSource("Custom", "LBL_FIELD_SOURCE_CUSTOM", "TXT_FIELD_SOURCE_CUSTOM_DESC", 20),
 
-                CreateFieldSource("Interface", "接口字段", "由接口模板注入，用于审计、档案等功能", 30)
+                CreateFieldSource("Interface", "LBL_FIELD_SOURCE_INTERFACE", "TXT_FIELD_SOURCE_INTERFACE_DESC", 30)
 
             };
 
