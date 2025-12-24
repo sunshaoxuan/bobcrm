@@ -12,7 +12,16 @@
 - [x] TASK-05: 增强 `EntityPublishingService` 支持 AggVO 级联发布。
 - [x] TASK-06: 权限拦截器集成与撤回发布功能。
 
-## Phase 4: API 响应契约治理 (待启动)
-- [ ] TASK-07: 统一响应包装模型，移除 redundancy (PLAN-17)。
-- [ ] TASK-08: 消除 `EntityDefinition/User/DynamicEntity` 中的匿名对象。
-- [ ] TASK-09: 补全全量 API 端点的 Swagger 元数据标注。
+## Phase 4: API 响应契约治理 (已完成)
+- [x] TASK-07: 统一响应包装模型，移除 redundancy (PLAN-17)。
+- [x] TASK-08: 消除 `EntityDefinition/User/DynamicEntity` 中的匿名对象。
+- [x] TASK-09: 补全全量 API 端点的 Swagger 元数据标注。
+## Phase 5: 系统治理与可观测性 (已完成)
+- [x] TASK-10: 实现基于 ChangeTracker 的全量审计日志体系 (SNAPSHOT/DIFF)。
+- [x] TASK-11: 集成健康检查 (Health Check) 与系统状态诊断 API。
+- [x] TASK-12: 强化异常处理逻辑，实现 TraceId 链路追踪展示。
+
+## Phase 6: 治理闭环与一致性验收 (已完成)
+- [x] TASK-13: 全量端点契约对齐扫描与残留匿名对象清除。
+- [x] TASK-14: Swagger Schema 命名冲突修复与 DTO 定义精化。
+- [x] TASK-15: 测试框架全量适配 SuccessResponse 包装。
