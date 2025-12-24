@@ -3,6 +3,7 @@ using Xunit;
 using BobCrm.Api.Base.Aggregates;
 
 using BobCrm.Api.Base.Models;
+using System.Linq;
 
 namespace BobCrm.Api.Tests;
 
@@ -125,7 +126,7 @@ public class EntityDefinitionAggregateTests
 
             aggregate.AddSubEntity("Lines", displayName));
 
-        Assert.Contains("已存在", exception.Message);
+        Assert.Equal("ERR_SUBENTITY_CODE_EXISTS", exception.MessageKey);
 
     }
 
@@ -149,7 +150,7 @@ public class EntityDefinitionAggregateTests
 
             aggregate.AddSubEntity("lines", displayName));
 
-        Assert.Contains("格式无效", exception1.Message);
+        Assert.Equal("ERR_SUBENTITY_CODE_INVALID", exception1.MessageKey);
 
         // Act & Assert - 包含特殊字符
 
@@ -157,7 +158,7 @@ public class EntityDefinitionAggregateTests
 
             aggregate.AddSubEntity("Lines-1", displayName));
 
-        Assert.Contains("格式无效", exception2.Message);
+        Assert.Equal("ERR_SUBENTITY_CODE_INVALID", exception2.MessageKey);
 
     }
 
@@ -263,7 +264,7 @@ public class EntityDefinitionAggregateTests
 
                 FieldDataType.String));
 
-        Assert.Contains("不存在", exception.Message);
+        Assert.Equal("ERR_SUBENTITY_NOT_FOUND", exception.MessageKey);
 
     }
 
@@ -291,7 +292,7 @@ public class EntityDefinitionAggregateTests
 
             aggregate.AddFieldToSubEntity(subEntity.Id, "ProductCode", fieldDisplayName, FieldDataType.String));
 
-        Assert.Contains("已存在", exception.Message);
+        Assert.Equal("ERR_SUBENTITY_FIELD_EXISTS", exception.MessageKey);
 
     }
 
@@ -389,7 +390,7 @@ public class EntityDefinitionAggregateTests
 
                 false));
 
-        Assert.Contains("已存在", exception.Message);
+        Assert.Equal("ERR_SUBENTITY_FIELD_EXISTS", exception.MessageKey);
 
     }
 
@@ -551,7 +552,9 @@ public class EntityDefinitionAggregateTests
 
         Assert.False(result.IsValid);
 
-        Assert.Contains(result.Errors, e => e.Message.Contains("Field1"));
+        Assert.Contains(result.Errors, e =>
+            e.MessageKey == "ERR_DUPLICATE_FIELDS" &&
+            e.Args.Any(arg => arg?.ToString()?.Contains("Field1") == true));
 
     }
 
@@ -591,7 +594,7 @@ public class EntityDefinitionAggregateTests
 
         Assert.False(result.IsValid);
 
-        Assert.Contains(result.Errors, e => e.Message.Contains("格式无效"));
+        Assert.Contains(result.Errors, e => e.MessageKey == "ERR_SUBENTITY_CODE_INVALID");
 
     }
 
@@ -631,7 +634,9 @@ public class EntityDefinitionAggregateTests
 
         Assert.False(result.IsValid);
 
-        Assert.Contains(result.Errors, e => e.Message.Contains("EntityDefinitionId") && e.Message.Contains("不一致"));
+        Assert.Contains(result.Errors, e =>
+            e.MessageKey == "ERR_SUBENTITY_ENTITYDEF_ID_MISMATCH" ||
+            e.MessageKey == "ERR_FIELD_ENTITYDEF_ID_MISMATCH");
 
     }
 
@@ -679,7 +684,7 @@ public class EntityDefinitionAggregateTests
 
         Assert.False(result.IsValid);
 
-        Assert.Contains(result.Errors, e => e.Message.Contains("数据类型"));
+        Assert.Contains(result.Errors, e => e.MessageKey == "ERR_REQUIRED_FIELD_DATATYPE_REQUIRED");
 
     }
 
@@ -787,7 +792,7 @@ public class EntityDefinitionAggregateTests
 
                 new Dictionary<string, string?> { ["zh"] = "明细" }));
 
-        Assert.Contains("不存在", exception.Message);
+        Assert.Equal("ERR_SUBENTITY_NOT_FOUND", exception.MessageKey);
 
     }
 

@@ -1,16 +1,36 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using AntDesign;
 using BobCrm.App.Components.Pages;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
 using Bunit;
+using Bunit.TestDoubles;
+using Microsoft.JSInterop;
+using System;
+using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BobCrm.App.Tests;
 
 public class TemplateBindingsTests : TestContext
 {
+    public TemplateBindingsTests()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.Setup<string?>("localStorage.getItem", "accessToken").SetResult("token");
+
+        var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost") };
+        var httpFactory = new SimpleHttpClientFactory(httpClient);
+
+        Services.AddSingleton<IHttpClientFactory>(httpFactory);
+        Services.AddScoped(sp => new AuthService(httpFactory, sp.GetRequiredService<IJSRuntime>()));
+        Services.AddScoped(sp => new I18nService(httpFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJSRuntime>()));
+        Services.AddLogging();
+        Services.AddAntDesign();
+    }
+
     [Fact]
     public void SwitchingToUserTemplateSelectsUserBindingAndSaves()
     {
@@ -132,14 +152,32 @@ public class TemplateBindingsTests : TestContext
 
     private sealed class StubTemplateRuntimeClient : TemplateRuntimeClient
     {
-        public List<(string EntityType, TemplateUsageType UsageType)> Requests { get; } = new();
+        public List<(string EntityType, TemplateUsageType UsageType, int? EntityId)> Requests { get; } = new();
 
-        public override Task<TemplateRuntimeResponse?> GetRuntimeAsync(string entityType, TemplateUsageType usageType, string? functionOverride = null, CancellationToken cancellationToken = default)
+        public override Task<TemplateRuntimeResponse?> GetRuntimeAsync(
+            string entityType,
+            TemplateUsageType usageType,
+            string? functionOverride = null,
+            int? entityId = null,
+            System.Text.Json.JsonElement? entityData = null,
+            CancellationToken cancellationToken = default)
         {
-            Requests.Add((entityType, usageType));
+            Requests.Add((entityType, usageType, entityId));
             var binding = new TemplateBindingDto(1, entityType, usageType, 1, true, "SYS.TEMPLATE.ASSIGN", "tester", DateTime.UtcNow);
             var template = new TemplateDescriptorDto(1, "系统详情", entityType, usageType, "{}", Array.Empty<string>(), null);
             return Task.FromResult<TemplateRuntimeResponse?>(new TemplateRuntimeResponse(binding, template, true, new[] { "scope" }));
         }
+    }
+
+    private sealed class SimpleHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpClient _httpClient;
+
+        public SimpleHttpClientFactory(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+        }
+
+        public HttpClient CreateClient(string name) => _httpClient;
     }
 }

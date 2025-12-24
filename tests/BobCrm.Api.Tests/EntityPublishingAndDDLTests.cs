@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Linq;
 using System.Reflection;
@@ -34,6 +35,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly AccessService _accessService;
     private readonly Mock<IDefaultTemplateService> _defaultTemplateService;
     private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly IConfiguration _configuration;
 
     public EntityPublishingAndDDLTests()
     {
@@ -69,6 +71,13 @@ public class EntityPublishingAndDDLTests : IDisposable
                 It.IsAny<CancellationToken>()))
             .Returns<EntityDefinition, string?, bool, CancellationToken>((entity, _, force, ct) =>
                 _templateGenerator.EnsureTemplatesAsync(entity, force, ct));
+
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["EntityPublishing:WithdrawalMode"] = "Logical"
+            })
+            .Build();
 
         _db.RoleProfiles.Add(new RoleProfile
         {
@@ -849,6 +858,41 @@ public class EntityPublishingAndDDLTests : IDisposable
             => Task.FromResult(_tableExists);
     }
 
+    private sealed class MapDDLExecutionService : DDLExecutionService
+    {
+        private readonly Dictionary<string, bool> _tableExistsMap;
+        public List<(Guid EntityDefinitionId, string ScriptType, string SqlScript)> ExecutedScripts { get; } = new();
+
+        public MapDDLExecutionService(
+            AppDbContext db,
+            ILogger<DDLExecutionService> logger,
+            Dictionary<string, bool> tableExistsMap)
+            : base(db, logger)
+        {
+            _tableExistsMap = tableExistsMap;
+        }
+
+        public override Task<bool> TableExistsAsync(string tableName)
+            => Task.FromResult(_tableExistsMap.TryGetValue(tableName, out var exists) && exists);
+
+        public override Task<DDLScript> ExecuteDDLAsync(Guid entityDefinitionId, string scriptType, string sqlScript, string? createdBy = null)
+        {
+            ExecutedScripts.Add((entityDefinitionId, scriptType, sqlScript));
+            var script = new DDLScript
+            {
+                EntityDefinitionId = entityDefinitionId,
+                ScriptType = scriptType,
+                SqlScript = sqlScript,
+                Status = DDLScriptStatus.Success,
+                CreatedBy = createdBy,
+                CreatedAt = DateTime.UtcNow,
+                ExecutedAt = DateTime.UtcNow
+            };
+
+            return Task.FromResult(script);
+        }
+    }
+
     private EntityPublishingService CreatePublishingService(DDLExecutionService ddlExecutor)
         => new(
             _db,
@@ -858,6 +902,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             _bindingService,
             _accessService,
             _defaultTemplateService.Object,
+            _configuration,
             _mockPublishLogger.Object);
 
     private async Task<TemplateBinding> SeedTemplateBindingAsync(EntityDefinition entity)
@@ -1255,36 +1300,294 @@ public class EntityPublishingAndDDLTests : IDisposable
     }
 
     #endregion
-}
 
-/// <summary>
-/// DDL脚本类型常量
-/// </summary>
-public static class DDLScriptType
-{
-    public const string Create = "Create";
-    public const string Alter = "Alter";
-    public const string Drop = "Drop";
-    public const string Rollback = "Rollback";
-}
+    #region Cascade Publishing & Withdrawal Tests
 
-/// <summary>
-/// DDL脚本状态常量
-/// </summary>
-public static class DDLScriptStatus
-{
-    public const string Pending = "Pending";
-    public const string Success = "Success";
-    public const string Failed = "Failed";
-    public const string RolledBack = "RolledBack";
-}
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldCascadePublish_DraftLookupDependency_AndSkipTemplatesForChild()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
 
-/// <summary>
-/// 实体状态常量
-/// </summary>
-public static class EntityStatus
-{
-    public const string Draft = "Draft";
-    public const string Published = "Published";
-    public const string Modified = "Modified";
+        var ensuredEntities = new List<Guid>();
+        _defaultTemplateService
+            .Setup(s => s.EnsureTemplatesAsync(It.IsAny<EntityDefinition>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Callback<EntityDefinition, string?, bool, CancellationToken>((entity, _, _, _) => ensuredEntities.Add(entity.Id))
+            .Returns<EntityDefinition, string?, bool, CancellationToken>((entity, _, force, ct) =>
+                _templateGenerator.EnsureTemplatesAsync(entity, force, ct));
+
+        var service = CreatePublishingService(ddlExecutor);
+
+        var child = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ChildEntity",
+            EntityRoute = "child",
+            ApiEndpoint = "/api/childs",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "Name",
+                    DataType = FieldDataType.String,
+                    IsRequired = true,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var parent = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ParentEntity",
+            EntityRoute = "parent",
+            ApiEndpoint = "/api/parents",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ChildId",
+                    DataType = FieldDataType.Guid,
+                    LookupEntityName = child.EntityName,
+                    IsRequired = false,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddRangeAsync(child, parent);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.PublishNewEntityAsync(parent.Id, "tester");
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+
+        var reloadedChild = await _db.EntityDefinitions.FirstAsync(e => e.Id == child.Id);
+        reloadedChild.Status.Should().Be(BobCrm.Api.Base.Models.EntityStatus.Published);
+        reloadedChild.Source.Should().Be(BobCrm.Api.Base.Models.EntitySource.System);
+
+        ensuredEntities.Should().Contain(parent.Id);
+        ensuredEntities.Should().NotContain(child.Id);
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_ShouldRepublish_WithdrawnLookupDependency_WithoutDDL()
+    {
+        // Arrange
+        var tableExists = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        var child = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "WithdrawnChild",
+            EntityRoute = "withdrawn-child",
+            ApiEndpoint = "/api/withdrawnchilds",
+            Status = EntityStatus.Withdrawn,
+            IsEnabled = false,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var parent = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "WithdrawnParent",
+            EntityRoute = "withdrawn-parent",
+            ApiEndpoint = "/api/withdrawnparents",
+            Status = EntityStatus.Draft,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ChildId",
+                    DataType = FieldDataType.Guid,
+                    LookupEntityName = child.EntityName,
+                    IsRequired = false,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddRangeAsync(child, parent);
+        await _db.SaveChangesAsync();
+
+        tableExists[child.DefaultTableName] = true;  // logical withdraw: table still exists
+        tableExists[parent.DefaultTableName] = false;
+
+        var ddlExecutor = new MapDDLExecutionService(_db, _mockDDLLogger.Object, tableExists);
+
+        var ensuredEntities = new List<Guid>();
+        _defaultTemplateService
+            .Setup(s => s.EnsureTemplatesAsync(It.IsAny<EntityDefinition>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Callback<EntityDefinition, string?, bool, CancellationToken>((entity, _, _, _) => ensuredEntities.Add(entity.Id))
+            .Returns<EntityDefinition, string?, bool, CancellationToken>((entity, _, force, ct) =>
+                _templateGenerator.EnsureTemplatesAsync(entity, force, ct));
+
+        var service = CreatePublishingService(ddlExecutor);
+
+        // Act
+        var result = await service.PublishNewEntityAsync(parent.Id, "tester");
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+
+        var reloadedChild = await _db.EntityDefinitions.FirstAsync(e => e.Id == child.Id);
+        reloadedChild.Status.Should().Be(BobCrm.Api.Base.Models.EntityStatus.Published);
+        reloadedChild.Source.Should().Be(BobCrm.Api.Base.Models.EntitySource.System);
+
+        ddlExecutor.ExecutedScripts.Any(s => s.EntityDefinitionId == child.Id).Should().BeFalse();
+        ddlExecutor.ExecutedScripts.Count(s => s.EntityDefinitionId == parent.Id && s.ScriptType == DDLScriptType.Create).Should().Be(1);
+
+        ensuredEntities.Should().Contain(parent.Id);
+        ensuredEntities.Should().NotContain(child.Id);
+    }
+
+    [Fact]
+    public async Task WithdrawAsync_ShouldFail_WhenReferencedByOtherPublishedEntity()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var referenced = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ReferencedEntity",
+            EntityRoute = "referenced",
+            ApiEndpoint = "/api/referenceds",
+            Status = EntityStatus.Published,
+            IsEnabled = true,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        var referrer = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "ReferrerEntity",
+            EntityRoute = "referrer",
+            ApiEndpoint = "/api/referrers",
+            Status = EntityStatus.Published,
+            IsEnabled = true,
+            Fields = new List<FieldMetadata>
+            {
+                new()
+                {
+                    PropertyName = "ReferencedId",
+                    DataType = FieldDataType.Guid,
+                    LookupEntityName = referenced.EntityName,
+                    IsRequired = false,
+                    Source = "Custom"
+                }
+            },
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddRangeAsync(referenced, referrer);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.WithdrawAsync(referenced.Id, "tester");
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("referenced");
+
+        var reloaded = await _db.EntityDefinitions.FirstAsync(e => e.Id == referenced.Id);
+        reloaded.Status.Should().Be(EntityStatus.Published);
+        reloaded.IsEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WithdrawAsync_ShouldSetStatusWithdrawn_AndDisableEntity_WhenLogicalMode()
+    {
+        // Arrange
+        var ddlExecutor = new NoOpDDLExecutionService(_db, _mockDDLLogger.Object);
+        var service = CreatePublishingService(ddlExecutor);
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "StandaloneEntity",
+            EntityRoute = "standalone",
+            ApiEndpoint = "/api/standalones",
+            Status = EntityStatus.Published,
+            IsEnabled = true,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.WithdrawAsync(entity.Id, "tester");
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        result.Mode.Should().Be("Logical");
+
+        var reloaded = await _db.EntityDefinitions.FirstAsync(e => e.Id == entity.Id);
+        reloaded.Status.Should().Be(BobCrm.Api.Base.Models.EntityStatus.Withdrawn);
+        reloaded.IsEnabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task WithdrawAsync_ShouldExecuteDropDDL_WhenPhysicalMode()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["EntityPublishing:WithdrawalMode"] = "Physical"
+            })
+            .Build();
+
+        var tableExists = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var ddlExecutor = new MapDDLExecutionService(_db, _mockDDLLogger.Object, tableExists);
+
+        var service = new EntityPublishingService(
+            _db,
+            _ddlGenerator,
+            ddlExecutor,
+            _mockLockService.Object,
+            _bindingService,
+            _accessService,
+            _defaultTemplateService.Object,
+            config,
+            _mockPublishLogger.Object);
+
+        var entity = new EntityDefinition
+        {
+            Namespace = "Test",
+            EntityName = "PhysicalWithdrawEntity",
+            EntityRoute = "physical-withdraw",
+            ApiEndpoint = "/api/physicalwithdraws",
+            Status = EntityStatus.Published,
+            IsEnabled = true,
+            Fields = new List<FieldMetadata>(),
+            Interfaces = new List<EntityInterface>()
+        };
+
+        await _db.EntityDefinitions.AddAsync(entity);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await service.WithdrawAsync(entity.Id, "tester");
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        result.Mode.Should().Be("Physical");
+        ddlExecutor.ExecutedScripts.Any(s => s.EntityDefinitionId == entity.Id && s.ScriptType == DDLScriptType.Drop)
+            .Should().BeTrue();
+    }
+
+    #endregion
 }

@@ -9,5 +9,5 @@
 - [x] TASK-04: 前端 `PageLoader` 接入动态匹配模板。
 
 ## Phase 3: 发布流程闭环
-- [ ] TASK-05: 增强 `EntityPublishingService` 支持 AggVO 级联发布。
-- [ ] TASK-06: 权限拦截器集成与撤回发布功能。
+- [x] TASK-05: 增强 `EntityPublishingService` 支持 AggVO 级联发布。
+- [x] TASK-06: 权限拦截器集成与撤回发布功能。
