@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using BobCrm.App.Models;
 using BobCrm.App.Models.Widgets;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -15,6 +18,7 @@ public sealed record RuntimeWidgetRenderRequest
 {
     public required DraggableWidget Widget { get; init; }
     public required RuntimeWidgetRenderMode Mode { get; init; }
+    public required FormRuntimeContext FormContext { get; init; }
     public required ComponentBase EventTarget { get; init; }
     public required string Label { get; init; }
     public Func<string>? ValueGetter { get; init; }
@@ -25,28 +29,47 @@ public sealed record RuntimeWidgetRenderRequest
 }
 
 /// <summary>
-/// 运行时组件渲染器 - 使用OOP多态模式委托给各组件自己的渲染方法
+/// 运行时组件渲染器 - 通过 DynamicComponent 驱动渲染
 /// </summary>
 public sealed class RuntimeWidgetRenderer : IRuntimeWidgetRenderer
 {
     public RenderFragment Render(RuntimeWidgetRenderRequest request) => builder =>
     {
-        // 使用多态：每个Widget自己负责渲染
-        var context = new DraggableWidget.RuntimeRenderContext
-        {
-            Builder = builder,
-            Mode = request.Mode,
-            EventTarget = request.EventTarget,
-            Widget = request.Widget,
-            Label = request.Label,
-            RenderChild = childWidget => Render(request with { Widget = childWidget, Label = childWidget.Label ?? childWidget.Type }),
-            ValueGetter = request.ValueGetter,
-            ValueSetter = request.ValueSetter,
-            GetWidgetTextStyle = request.GetWidgetTextStyle,
-            GetWidgetBackground = request.GetWidgetBackground,
-            Items = request.Items
-        };
+        var componentType = request.Widget.RuntimeComponentType
+            ?? typeof(BobCrm.App.Components.Widgets.DefaultTextComponent);
 
-        request.Widget.RenderRuntime(context);
+        builder.OpenComponent<CascadingValue<FormRuntimeContext>>(0);
+        builder.AddAttribute(1, "Value", request.FormContext);
+        builder.AddAttribute(2, "IsFixed", false);
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(childBuilder =>
+        {
+            childBuilder.OpenComponent<DynamicComponent>(0);
+            childBuilder.AddAttribute(1, "Type", componentType);
+
+            // 仅 DefaultTextComponent 需要旧的 RuntimeRenderContext 参数；其余运行时组件只接收 Widget（Context 走级联）。
+            var parameters = componentType == typeof(BobCrm.App.Components.Widgets.DefaultTextComponent)
+                ? new Dictionary<string, object?>
+                {
+                    ["Widget"] = request.Widget,
+                    ["Mode"] = request.Mode,
+                    ["EventTarget"] = request.EventTarget,
+                    ["Label"] = request.Label,
+                    ["RenderChild"] = (Func<DraggableWidget, RenderFragment>)(childWidget =>
+                        Render(request with { Widget = childWidget, Label = childWidget.Label ?? childWidget.Type })),
+                    ["ValueGetter"] = request.ValueGetter,
+                    ["ValueSetter"] = request.ValueSetter,
+                    ["GetWidgetTextStyle"] = request.GetWidgetTextStyle,
+                    ["GetWidgetBackground"] = request.GetWidgetBackground,
+                    ["Items"] = request.Items
+                }
+                : new Dictionary<string, object?>
+                {
+                    ["Widget"] = request.Widget
+                };
+
+            childBuilder.AddAttribute(2, "Parameters", parameters);
+            childBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
     };
 }

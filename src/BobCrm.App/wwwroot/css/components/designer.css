@@ -138,6 +138,28 @@
   min-height: 100%;
 }
 
+.designer-drop-zone {
+  width: 100%;
+  height: 4px;
+  margin: 2px 0;
+  border-radius: 10px;
+  background: transparent;
+  transition: height 140ms ease, background-color 140ms ease, border-color 140ms ease;
+  will-change: height;
+}
+
+.designer-drop-zone.active {
+  height: 48px;
+  background: rgba(24, 144, 255, 0.12);
+  border: 1px dashed rgba(24, 144, 255, 0.55);
+}
+
+.designer-ghost-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+}
+
 .designer-empty-state {
   width: 100%;
   text-align: center;

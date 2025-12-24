@@ -1,0 +1,154 @@
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using System.Text.Json
+
+@if (Context is null)
+{
+    <span style="color:#999; font-size:12px;">Missing FormRuntimeContext</span>
+}
+else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
+{
+    <div style="padding:6px; background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:600;">@Widget.Label</span>
+            <Tag Color="@TagColor.Blue">Design</Tag>
+        </div>
+        <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; justify-content:space-between; padding:0 8px;">
+            <span style="font-size:12px; color:#999;">
+                @(string.IsNullOrWhiteSpace(Widget.Placeholder) ? "Option" : Widget.Placeholder)
+            </span>
+            <span style="font-size:10px; color:#999;">▼</span>
+        </div>
+    </div>
+}
+else if (Context.RenderMode == FormRuntimeContext.Mode.Edit)
+{
+    <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="runtime-field-label">@Widget.Label</div>
+        <Select TItem="string"
+                TItemValue="string"
+                Style="width:100%;"
+                ShowSearch="@Widget.AllowSearch"
+                Placeholder="@Widget.Placeholder"
+                Value="@currentValue"
+                ValueChanged="@OnValueChanged">
+            <SelectOption Value="@string.Empty">--</SelectOption>
+            @foreach (var item in Widget.Items)
+            {
+                <SelectOption Value="@item.Value">@item.Label</SelectOption>
+            }
+        </Select>
+    </div>
+}
+else
+{
+    var value = GetValue() ?? string.Empty;
+    var display = Widget.Items.FirstOrDefault(i => i.Value == value)?.Label ?? value;
+    <div style="display:flex; flex-direction:column; gap:4px; padding:4px 0;">
+        <div class="runtime-field-label">@Widget.Label</div>
+        <span>@(string.IsNullOrWhiteSpace(display) ? "--" : display)</span>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public SelectWidget Widget { get; set; } = default!;
+    [CascadingParameter] public FormRuntimeContext? Context { get; set; }
+
+    private string currentValue = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        currentValue = GetValue() ?? string.Empty;
+    }
+
+    private Task OnValueChanged(string? value)
+    {
+        currentValue = value ?? string.Empty;
+        SetValue(currentValue);
+        return Task.CompletedTask;
+    }
+
+    private string? GetValue()
+    {
+        if (Context?.Data is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Widget.DefaultValue;
+        }
+
+        if (Context.Data is EditValueManager evm)
+        {
+            return evm.GetValue(Widget.DataField);
+        }
+
+        if (Context.Data is JsonElement json)
+        {
+            return GetValueFromJson(json, Widget.DataField);
+        }
+
+        if (Context.Data is IDictionary<string, object?> dict)
+        {
+            return dict.TryGetValue(Widget.DataField, out var v) ? v?.ToString() : null;
+        }
+
+        var prop = Context.Data.GetType().GetProperty(Widget.DataField);
+        return prop?.GetValue(Context.Data)?.ToString();
+    }
+
+    private void SetValue(string? value)
+    {
+        if (Context?.Data is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        if (Context.Data is EditValueManager evm)
+        {
+            evm.SetValue(Widget.DataField, value);
+            return;
+        }
+
+        if (Context.Data is IDictionary<string, object?> dict)
+        {
+            dict[Widget.DataField] = value;
+            return;
+        }
+
+        var prop = Context.Data.GetType().GetProperty(Widget.DataField);
+        if (prop?.CanWrite == true)
+        {
+            prop.SetValue(Context.Data, value);
+        }
+    }
+
+    private static string? GetValueFromJson(JsonElement json, string key)
+    {
+        if (json.ValueKind == JsonValueKind.Object)
+        {
+            if (json.TryGetProperty("fields", out var fieldsElement) && fieldsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var field in fieldsElement.EnumerateArray())
+                {
+                    if (field.ValueKind != JsonValueKind.Object) continue;
+                    if (field.TryGetProperty("key", out var keyProp) &&
+                        string.Equals(keyProp.GetString(), key, StringComparison.OrdinalIgnoreCase) &&
+                        field.TryGetProperty("value", out var valueProp))
+                    {
+                        return valueProp.GetString() ?? valueProp.ToString();
+                    }
+                }
+            }
+
+            foreach (var prop in json.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.ToString();
+                }
+            }
+        }
+
+        return null;
+    }
+}

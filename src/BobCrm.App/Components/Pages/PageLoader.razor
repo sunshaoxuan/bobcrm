@@ -163,10 +163,12 @@ else if (entityData != null)
 
     private readonly EditValueManager editValueManager = new();
     private readonly TabStateManager tabStateManager = new();
+    private readonly FormRuntimeContext formContext = new();
     private Dictionary<string, string> fieldLabels = new(StringComparer.OrdinalIgnoreCase);
     
     private string editCode = string.Empty;
     private string editName = string.Empty;
+    private object? boundData;
 
     protected override void OnInitialized()
     {
@@ -211,6 +213,8 @@ else if (entityData != null)
 
             var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
             entityData = dataDoc;
+            boundData = entityData;
+            formContext.Data = boundData;
 
             // 2. Resolve runtime template with entity data (polymorphic view)
             var runtime = await TemplateRuntime.GetRuntimeAsync(
@@ -503,13 +507,21 @@ else if (entityData != null)
 
     private RenderFragment RenderRuntimeWidget(DraggableWidget widget, RuntimeWidgetRenderMode mode) => builder =>
     {
+        formContext.RenderMode = mode == RuntimeWidgetRenderMode.Edit
+            ? FormRuntimeContext.Mode.Edit
+            : FormRuntimeContext.Mode.Browse;
+        formContext.Data = mode == RuntimeWidgetRenderMode.Edit
+            ? editValueManager
+            : boundData;
+
         var label = GetWidgetLabel(widget);
         var fieldKey = widget.DataField ?? widget.Id;
-        
+         
         var request = new RuntimeWidgetRenderRequest
         {
             Widget = widget,
             Mode = mode,
+            FormContext = formContext,
             EventTarget = this,
             Label = label,
             ValueGetter = () => mode == RuntimeWidgetRenderMode.Edit ? editValueManager.GetValue(fieldKey) : GetFieldValue(fieldKey),

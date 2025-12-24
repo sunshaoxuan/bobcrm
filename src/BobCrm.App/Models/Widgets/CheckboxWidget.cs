@@ -30,6 +30,7 @@ public class CheckboxWidget : TextWidget
     public string Direction { get; set; } = "horizontal";
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.CheckboxPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.CheckboxWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {

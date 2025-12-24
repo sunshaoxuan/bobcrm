@@ -57,6 +57,51 @@ window.bobcrm = {
       document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value || '') + expires + '; path=/';
     } catch (e) { }
   }
+  , registerDesignerShortcuts: function (dotnetRef) {
+    try {
+      if (this._designerShortcutHandler) {
+        window.removeEventListener('keydown', this._designerShortcutHandler, true);
+      }
+
+      this._designerDotNetRef = dotnetRef;
+      this._designerShortcutHandler = (e) => {
+        try {
+          if (!e || !e.ctrlKey) return;
+
+          const target = e.target;
+          const tag = target && target.tagName ? String(target.tagName).toLowerCase() : '';
+          const isEditable = target && (target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select');
+          if (isEditable) return;
+
+          const key = (e.key || '').toLowerCase();
+          if (key === 'z') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._designerDotNetRef && this._designerDotNetRef.invokeMethodAsync) {
+              this._designerDotNetRef.invokeMethodAsync('OnDesignerShortcut', 'undo');
+            }
+          } else if (key === 'y') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._designerDotNetRef && this._designerDotNetRef.invokeMethodAsync) {
+              this._designerDotNetRef.invokeMethodAsync('OnDesignerShortcut', 'redo');
+            }
+          }
+        } catch (_) { }
+      };
+
+      window.addEventListener('keydown', this._designerShortcutHandler, true);
+    } catch (_) { }
+  }
+  , unregisterDesignerShortcuts: function () {
+    try {
+      if (this._designerShortcutHandler) {
+        window.removeEventListener('keydown', this._designerShortcutHandler, true);
+      }
+    } catch (_) { }
+    this._designerShortcutHandler = null;
+    this._designerDotNetRef = null;
+  }
   , registerCustomerEvents: function(dotnetRef){
     try { this._customerRef = dotnetRef; } catch (e) { }
   }

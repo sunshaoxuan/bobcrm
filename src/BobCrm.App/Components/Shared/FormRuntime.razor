@@ -1,0 +1,20 @@
+@using BobCrm.App.Models
+
+<CascadingValue Value="context">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public FormRuntimeContext.Mode RenderMode { get; set; } = FormRuntimeContext.Mode.Browse;
+    [Parameter] public object? Data { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly FormRuntimeContext context = new();
+
+    protected override void OnParametersSet()
+    {
+        context.RenderMode = RenderMode;
+        context.Data = Data;
+    }
+}
+

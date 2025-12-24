@@ -25,6 +25,7 @@ public class TextboxWidget : TextWidget
     public string? DefaultValue { get; set; }
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.TextboxPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.TextboxWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {

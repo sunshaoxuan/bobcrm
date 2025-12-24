@@ -30,6 +30,7 @@ public class SelectWidget : TextWidget
     public bool AllowSearch { get; set; } = false;
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.SelectPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.SelectWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {

@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AntDesign;
 using BobCrm.App.Services.Widgets;
+using Microsoft.AspNetCore.Components;
 
 namespace BobCrm.App.Models.Widgets;
 
@@ -173,6 +177,76 @@ public class CardWidget : ContainerWidget
     {
         return "card";
     }
+
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        var children = Children?.Where(c => c.Visible).ToList() ?? new List<DraggableWidget>();
+
+        context.Builder.OpenComponent<Card>(0);
+        context.Builder.AddAttribute(1, "Bordered", true);
+
+        var title = !string.IsNullOrWhiteSpace(Title) && ShowTitle ? Title : null;
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            context.Builder.AddAttribute(2, "Title", title);
+        }
+
+        var cardStyle = $"width:100%; background:{ContainerLayout.BackgroundColor}; border-radius:{ContainerLayout.BorderRadius}px;";
+        if (ShowShadow)
+        {
+            cardStyle += " box-shadow:0 2px 8px rgba(0,0,0,0.10);";
+        }
+        context.Builder.AddAttribute(3, "Style", cardStyle);
+
+        context.Builder.AddAttribute(4, "BodyStyle",
+            $"padding:{ContainerLayout.Padding}px; display:block; background:{ContainerLayout.BackgroundColor};");
+
+        context.Builder.AddAttribute(5, "ChildContent", (RenderFragment)(builder =>
+        {
+            if (children.Count == 0)
+            {
+                builder.OpenComponent<Empty>(0);
+                builder.AddAttribute(1, "Description", "空卡片");
+                builder.CloseComponent();
+                return;
+            }
+
+            builder.OpenComponent<Row>(0);
+            builder.AddAttribute(1, "Gutter", new int[] { ContainerLayout.Gap, ContainerLayout.Gap });
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(b =>
+            {
+                foreach (var child in children)
+                {
+                    var span = ResolveSpan(child);
+                    b.OpenComponent<Col>(0);
+                    b.AddAttribute(1, "Span", span);
+                    b.AddAttribute(2, "Style", WidgetStyleHelper.GetRuntimeWidgetStyle(child, context.Mode));
+                    b.AddAttribute(3, "ChildContent", (RenderFragment)(cb => cb.AddContent(0, context.RenderChild(child))));
+                    b.CloseComponent();
+                }
+            }));
+            builder.CloseComponent();
+        }));
+
+        context.Builder.CloseComponent();
+    }
+
+    private static int ResolveSpan(DraggableWidget widget)
+    {
+        if (string.Equals(widget.WidthUnit, "%", StringComparison.OrdinalIgnoreCase))
+        {
+            return ClampSpan((int)Math.Round(widget.Width / 100.0 * 24.0));
+        }
+
+        if (string.Equals(widget.WidthUnit, "px", StringComparison.OrdinalIgnoreCase))
+        {
+            return ClampSpan((int)Math.Round(widget.Width / 50.0));
+        }
+
+        return 24;
+    }
+
+    private static int ClampSpan(int span) => Math.Max(1, Math.Min(24, span));
 
     public override void RenderDesign(DesignRenderContext context)
     {

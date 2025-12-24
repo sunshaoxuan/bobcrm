@@ -213,4 +213,6 @@ public class DataGridWidget : DraggableWidget
         builder.AddAttribute(2, "ContainerStyle", "");
         builder.CloseComponent();
     }
+
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Shared.DataGridRuntime);
 }

@@ -12,6 +12,7 @@
 @using BobCrm.App.Components.Designer
 @using Microsoft.AspNetCore.Components.Web
 @using AppFormTemplate = BobCrm.App.Models.FormTemplate
+@implements IDisposable
 @inject AuthService Auth
 @inject I18nService I18n
 @inject NavigationManager Nav
@@ -25,8 +26,9 @@
 
 <PageTitle>@I18n.T("TPL_PAGE_TITLE") - OneCRM</PageTitle>
 
-<CascadingValue Value="_dragState">
-    <AuthChecker>
+<CascadingValue Value="context">
+    <CascadingValue Value="_dragState">
+        <AuthChecker>
         @if (_loading)
         {
             <div style="padding:48px; text-align:center; color:#999">
@@ -122,6 +124,7 @@
                     <section class="designer-canvas">
                         <div class="designer-canvas-content">
                             <div class="frame-drop-zone"
+                                 data-container-id="root"
                                  style="min-height:640px; padding:16px; display:flex; flex-wrap:wrap; align-items:flex-start; gap:8px;"
                                  @ondrop="@((DragEventArgs e) => OnDrop("root", _widgets.Count, e))"
                                  @ondragover:preventDefault>
@@ -178,7 +181,8 @@
                 </div>
             </div>
         }
-    </AuthChecker>
+        </AuthChecker>
+    </CascadingValue>
 </CascadingValue>
 
 @code {
@@ -193,6 +197,12 @@
     };
 
     private readonly DesignerDragState _dragState = new();
+    private readonly FormRuntimeContext context = new()
+    {
+        RenderMode = FormRuntimeContext.Mode.Design
+    };
+    private DesignerStateStore? _stateStore;
+    private DotNetObjectReference<FormDesigner>? _shortcutDotNetRef;
     private List<DraggableWidget> _widgets = new();
     private List<EntityDefinitionDto> _entities = new();
     private DraggableWidget? _selectedWidget;
@@ -200,6 +210,9 @@
     private string? _draggingFromContainerId;
     private string? _draggingWidgetType;
     private EntityFieldNode? _draggingField;
+    private bool _isDragging;
+    private string? _dragHoverContainerId;
+    private int _dragHoverIndex;
 
     private string? _templateName;
     private string? _templateEntity;
@@ -213,7 +226,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _stateStore ??= new DesignerStateStore(_jsonOptions);
+        _shortcutDotNetRef ??= DotNetObjectReference.Create(this);
         await InitializeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_shortcutDotNetRef != null)
+            {
+                await JS.InvokeVoidAsync("bobcrm.registerDesignerShortcuts", _shortcutDotNetRef);
+            }
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -250,6 +285,7 @@
                 InitNewTemplate();
             }
 
+            _stateStore?.Reset(_widgets);
             _loadedTemplateId = TemplateId;
         }
         catch (Exception ex)
@@ -390,13 +426,31 @@
 
     private RenderFragment RenderDropZone(string containerId, int insertIndex) => builder =>
     {
+        var isActive = _isDragging
+                       && string.Equals(_dragHoverContainerId, containerId, StringComparison.Ordinal)
+                       && _dragHoverIndex == insertIndex;
+
         builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "style", "height:10px; width:100%; border:1px dashed #d9d9d9; border-radius:6px; background:#fafafa;");
-        builder.AddAttribute(2, "ondrop",
+        builder.AddAttribute(1, "class", isActive ? "designer-drop-zone active" : "designer-drop-zone");
+        builder.AddAttribute(2, "ondragenter",
+            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
+        builder.AddAttribute(3, "ondragover",
+            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
+        builder.AddEventPreventDefaultAttribute(4, "ondragover", true);
+
+        builder.AddAttribute(5, "ondrop",
             EventCallback.Factory.Create<DragEventArgs>(this, e => OnDrop(containerId, insertIndex, e)));
-        builder.AddEventPreventDefaultAttribute(3, "ondrop", true);
-        builder.AddEventStopPropagationAttribute(4, "ondrop", true);
-        builder.AddEventPreventDefaultAttribute(5, "ondragover", true);
+        builder.AddEventPreventDefaultAttribute(6, "ondrop", true);
+        builder.AddEventStopPropagationAttribute(7, "ondrop", true);
+
+        if (isActive)
+        {
+            builder.OpenElement(8, "div");
+            builder.AddAttribute(9, "class", "designer-ghost-placeholder");
+            builder.AddContent(10, " ");
+            builder.CloseElement();
+        }
+
         builder.CloseElement();
     };
 
@@ -427,19 +481,30 @@
         builder.CloseElement();
         builder.CloseElement();
 
-        // Content
-        builder.OpenElement(20, "div");
-        builder.AddAttribute(21, "style", "pointer-events:none;");
-        if (widget is ContainerWidget container)
+        // Content + Resize Handle
+        builder.OpenComponent<DraggableWidgetWrapper>(20);
+        builder.AddAttribute(21, "Widget", widget);
+        builder.AddAttribute(22, "EnableResize", isSelected);
+        builder.AddAttribute(23, "ResizeDirection", "both");
+        builder.AddAttribute(24, "ContainerWidthSelector", $"[data-container-id='{parentContainerId}']");
+        builder.AddAttribute(25, "OnWidgetChanged", EventCallback.Factory.Create(this, StateHasChanged));
+        builder.AddAttribute(26, "OnResizeCompleted", EventCallback.Factory.Create(this, SaveSnapshot));
+        builder.AddAttribute(27, "ChildContent", (RenderFragment)(b =>
         {
-            builder.AddContent(22, RenderContainerWidget(container));
-        }
-        else
-        {
-            var fragment = DesignRenderer.Render(widget, GetWidgetTextStyle, GetWidgetBackground, key => I18n.T(key));
-            builder.AddContent(23, fragment);
-        }
-        builder.CloseElement();
+            b.OpenElement(0, "div");
+            b.AddAttribute(1, "style", "pointer-events:none;");
+            if (widget is ContainerWidget container)
+            {
+                b.AddContent(2, RenderContainerWidget(container));
+            }
+            else
+            {
+                var fragment = DesignRenderer.Render(widget, context, GetWidgetTextStyle, GetWidgetBackground, key => I18n.T(key));
+                b.AddContent(3, fragment);
+            }
+            b.CloseElement();
+        }));
+        builder.CloseComponent();
 
         builder.CloseElement();
     };
@@ -517,6 +582,9 @@
         _draggingWidget = null;
         _draggingFromContainerId = null;
         _draggingField = null;
+        _isDragging = true;
+        _dragHoverContainerId = "root";
+        _dragHoverIndex = _widgets.Count;
     }
 
     private Task OnWidgetDragStart(string containerId, DraggableWidget widget)
@@ -525,6 +593,11 @@
         _draggingFromContainerId = containerId;
         _draggingWidgetType = null;
         _draggingField = null;
+        _isDragging = true;
+        _dragHoverContainerId = containerId;
+        var children = GetChildren(containerId);
+        var idx = children.IndexOf(widget);
+        _dragHoverIndex = idx >= 0 ? idx : children.Count;
         return Task.CompletedTask;
     }
 
@@ -535,6 +608,9 @@
         _draggingWidget = null;
         _draggingFromContainerId = null;
         _dragState.CurrentEntityField = field;
+        _isDragging = true;
+        _dragHoverContainerId = "root";
+        _dragHoverIndex = _widgets.Count;
         return Task.CompletedTask;
     }
 
@@ -546,6 +622,12 @@
 
     private async Task OnDrop(string containerId, int insertIndex, DragEventArgs e)
     {
+        if (_isDragging
+            && string.Equals(_dragHoverContainerId, containerId, StringComparison.Ordinal))
+        {
+            insertIndex = _dragHoverIndex;
+        }
+
         var targetChildren = GetChildren(containerId);
         if (_draggingWidget != null)
         {
@@ -570,8 +652,27 @@
             }
         }
 
+        _stateStore?.SaveSnapshot(_widgets);
         ClearDragState();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void SetDragHover(string containerId, int insertIndex)
+    {
+        if (!_isDragging)
+        {
+            return;
+        }
+
+        if (string.Equals(_dragHoverContainerId, containerId, StringComparison.Ordinal) && _dragHoverIndex == insertIndex)
+        {
+            return;
+        }
+
+        _dragHoverContainerId = containerId;
+        _dragHoverIndex = insertIndex;
+
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private DraggableWidget? CreateWidgetFromDragSource()
@@ -689,6 +790,59 @@
 
         RemoveWidget(_selectedWidget);
         _selectedWidget = null;
+        SaveSnapshot();
+    }
+
+    private void SaveSnapshot()
+    {
+        _stateStore?.SaveSnapshot(_widgets);
+    }
+
+    [JSInvokable]
+    public Task OnDesignerShortcut(string action)
+    {
+        if (_stateStore is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (string.Equals(action, "undo", StringComparison.OrdinalIgnoreCase))
+        {
+            var snapshot = _stateStore.Undo(_widgets);
+            if (snapshot != null)
+            {
+                _widgets = snapshot;
+                _selectedWidget = null;
+                return InvokeAsync(StateHasChanged);
+            }
+        }
+        else if (string.Equals(action, "redo", StringComparison.OrdinalIgnoreCase))
+        {
+            var snapshot = _stateStore.Redo(_widgets);
+            if (snapshot != null)
+            {
+                _widgets = snapshot;
+                _selectedWidget = null;
+                return InvokeAsync(StateHasChanged);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            _ = JS.InvokeVoidAsync("bobcrm.unregisterDesignerShortcuts");
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _shortcutDotNetRef?.Dispose();
+        _shortcutDotNetRef = null;
     }
 
     private void RemoveWidget(DraggableWidget target)
@@ -774,6 +928,9 @@
         _draggingWidgetType = null;
         _draggingField = null;
         _dragState.CurrentEntityField = null;
+        _isDragging = false;
+        _dragHoverContainerId = null;
+        _dragHoverIndex = 0;
     }
 
     private void OnPropertiesChanged()

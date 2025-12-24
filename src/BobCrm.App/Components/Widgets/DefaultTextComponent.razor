@@ -1,0 +1,58 @@
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using Microsoft.AspNetCore.Components.Rendering
+
+@Content
+
+@code {
+    [Parameter] public DraggableWidget Widget { get; set; } = default!;
+    [CascadingParameter] public FormRuntimeContext Context { get; set; } = default!;
+
+    // 兼容旧渲染引擎：仅当通过 RuntimeWidgetRenderer 走 DefaultTextComponent 时传入。
+    [Parameter] public RuntimeWidgetRenderMode Mode { get; set; }
+    [Parameter] public ComponentBase? EventTarget { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public Func<DraggableWidget, RenderFragment>? RenderChild { get; set; }
+    [Parameter] public Func<string>? ValueGetter { get; set; }
+    [Parameter] public Func<string?, Task>? ValueSetter { get; set; }
+    [Parameter] public Func<DraggableWidget, string>? GetWidgetTextStyle { get; set; }
+    [Parameter] public Func<DraggableWidget, string>? GetWidgetBackground { get; set; }
+    [Parameter] public IReadOnlyList<BobCrm.App.Models.Widgets.ListItem>? Items { get; set; }
+
+    private RenderFragment Content => builder =>
+    {
+        if (Context.RenderMode == FormRuntimeContext.Mode.Design)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "style", "height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px;");
+            builder.CloseElement();
+            return;
+        }
+
+        if (RenderChild is null || EventTarget is null)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "style", "padding:8px; color:#999; font-size:12px;");
+            builder.AddContent(2, $"Widget runtime bridge missing parameters: {Widget.Type}");
+            builder.CloseElement();
+            return;
+        }
+
+        var runtimeContext = new DraggableWidget.RuntimeRenderContext
+        {
+            Builder = builder,
+            Mode = Mode,
+            EventTarget = EventTarget,
+            Widget = Widget,
+            Label = Label ?? Widget.Label ?? Widget.Type,
+            RenderChild = w => RenderChild(w),
+            ValueGetter = ValueGetter,
+            ValueSetter = ValueSetter,
+            GetWidgetTextStyle = GetWidgetTextStyle,
+            GetWidgetBackground = GetWidgetBackground,
+            Items = Items
+        };
+
+        Widget.RenderRuntime(runtimeContext);
+    };
+}

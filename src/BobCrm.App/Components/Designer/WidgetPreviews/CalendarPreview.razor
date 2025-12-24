@@ -1,10 +1,14 @@
-@* Calendar preview component *@
-@inject BobCrm.App.Services.I18nService I18n
-<div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px; justify-content:space-between">
-    <span style="color:#ccc; font-size:11px">@I18n.T("PREVIEW_DATE_PLACEHOLDER")</span>
-    <Icon Type="@IconType.Outline.Calendar" Style="color:#999" />
-</div>
+@using AntDesign
+@using BobCrm.App.Models.Widgets
+
+@* Calendar preview component (DatePicker visual hint) *@
+<DatePicker Value="@(default(DateTime?))"
+            ValueChanged="(DateTime? _) => { }"
+            Picker="DatePickerType.Date"
+            Disabled="true"
+            Style="width:100%;" />
 
 @code {
-    [Parameter] public object? Widget { get; set; }
+    [Parameter] public CalendarWidget? Widget { get; set; }
+    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
 }

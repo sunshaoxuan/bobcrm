@@ -1,3 +1,4 @@
+using System;
 using AntDesign;
 using BobCrm.App.Services.Widgets;
 
@@ -207,6 +208,8 @@ public class SubFormWidget : ContainerWidget
         builder.AddAttribute(3, "MasterEntityId", context.Widget.ExtendedProperties?.GetValueOrDefault("MasterEntityId")?.ToString());
         builder.CloseComponent();
     }
+
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Shared.SubFormRuntime);
 
     public override void RenderDesign(DesignRenderContext context)
     {

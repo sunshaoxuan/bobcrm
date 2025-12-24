@@ -98,6 +98,7 @@
     private string? _error;
     private TemplateRuntimeResponse? _templateResponse;
     private List<DraggableWidget> _widgets = new();
+    private readonly FormRuntimeContext formContext = new() { RenderMode = FormRuntimeContext.Mode.Browse };
 
     private string TemplateDisplayName
     {
@@ -235,6 +236,7 @@
             {
                 Widget = widget,
                 Mode = RuntimeWidgetRenderMode.Browse, // List 模板默认浏览模式
+                FormContext = formContext,
                 EventTarget = this,
                 Label = widget.Label ?? widget.Type,
                 ValueGetter = null, // List 模板中不需要对字段值取值

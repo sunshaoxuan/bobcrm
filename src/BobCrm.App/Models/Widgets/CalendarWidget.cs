@@ -25,6 +25,7 @@ public class CalendarWidget : TextWidget
     public DateTime? DefaultValue { get; set; }
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.CalendarPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.CalendarWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {

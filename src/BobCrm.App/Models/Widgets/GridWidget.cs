@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AntDesign;
 using BobCrm.App.Services.Widgets;
+using Microsoft.AspNetCore.Components;
 
 namespace BobCrm.App.Models.Widgets;
 
@@ -59,4 +63,65 @@ public class GridWidget : ContainerWidget
     {
         return "grid";
     }
+
+    public override void RenderRuntime(RuntimeRenderContext context)
+    {
+        var children = Children?.Where(c => c.Visible).ToList() ?? new List<DraggableWidget>();
+
+        context.Builder.OpenComponent<Row>(0);
+        context.Builder.AddAttribute(1, "Gutter", new int[] { Gap, Gap });
+
+        var style = $"width:100%; padding:{Padding}px; background:{BackgroundColor};";
+        if (Bordered)
+        {
+            style += " border:1px solid #d9d9d9; border-radius:6px;";
+        }
+        context.Builder.AddAttribute(2, "Style", style);
+
+        context.Builder.AddAttribute(3, "ChildContent", (RenderFragment)(builder =>
+        {
+            if (children.Count == 0)
+            {
+                builder.OpenComponent<Col>(0);
+                builder.AddAttribute(1, "Span", 24);
+                builder.AddAttribute(2, "ChildContent", (RenderFragment)(b =>
+                {
+                    b.OpenComponent<Empty>(0);
+                    b.AddAttribute(1, "Description", "拖入组件到网格");
+                    b.CloseComponent();
+                }));
+                builder.CloseComponent();
+                return;
+            }
+
+            foreach (var child in children)
+            {
+                var span = ResolveSpan(child);
+                builder.OpenComponent<Col>(0);
+                builder.AddAttribute(1, "Span", span);
+                builder.AddAttribute(2, "Style", BobCrm.App.Services.Widgets.WidgetStyleHelper.GetRuntimeWidgetStyle(child, context.Mode));
+                builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, context.RenderChild(child))));
+                builder.CloseComponent();
+            }
+        }));
+
+        context.Builder.CloseComponent();
+    }
+
+    private static int ResolveSpan(DraggableWidget widget)
+    {
+        if (string.Equals(widget.WidthUnit, "%", StringComparison.OrdinalIgnoreCase))
+        {
+            return ClampSpan((int)Math.Round(widget.Width / 100.0 * 24.0));
+        }
+
+        if (string.Equals(widget.WidthUnit, "px", StringComparison.OrdinalIgnoreCase))
+        {
+            return ClampSpan((int)Math.Round(widget.Width / 50.0));
+        }
+
+        return 24;
+    }
+
+    private static int ClampSpan(int span) => Math.Max(1, Math.Min(24, span));
 }

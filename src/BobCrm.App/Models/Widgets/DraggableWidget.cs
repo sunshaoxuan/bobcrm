@@ -185,6 +185,12 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     public virtual Type? PreviewComponentType => null;
 
     /// <summary>
+    /// 获取运行时组件类型
+    /// 子类可重写此属性以指定自己的运行时组件
+    /// </summary>
+    public virtual Type? RuntimeComponentType => null;
+
+    /// <summary>
     /// 获取设计态最小高度（px）
     /// 子类可重写以提供自己的最小高度
     /// </summary>

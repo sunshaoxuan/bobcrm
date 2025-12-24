@@ -1,0 +1,108 @@
+@using BobCrm.App.Models.Widgets
+@using Microsoft.AspNetCore.Components.Web
+@using System
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div data-widget-id="@Widget.Id" style="position:relative; width:100%; height:100%;">
+    @ChildContent
+    @if (EnableResize)
+    {
+        <ResizeHandle OnMouseDown="StartResizeAsync" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DraggableWidget Widget { get; set; } = default!;
+    [Parameter] public bool EnableResize { get; set; } = true;
+    [Parameter] public string ResizeDirection { get; set; } = "both";
+    [Parameter] public string? ContainerWidthSelector { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnWidgetChanged { get; set; }
+    [Parameter] public EventCallback OnResizeCompleted { get; set; }
+
+    private DotNetObjectReference<DraggableWidgetWrapper>? _dotNetRef;
+    private double _containerWidth;
+
+    protected override void OnInitialized()
+    {
+        _dotNetRef = DotNetObjectReference.Create(this);
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+    }
+
+    private async Task StartResizeAsync(MouseEventArgs e)
+    {
+        Widget.OnResizeStart();
+
+        if (Widget.HeightUnit != "px")
+        {
+            Widget.HeightUnit = "px";
+            if (Widget.Height <= 0)
+            {
+                Widget.Height = 64;
+            }
+        }
+
+        _containerWidth = 0;
+        if (!string.IsNullOrWhiteSpace(ContainerWidthSelector))
+        {
+            try
+            {
+                _containerWidth = await JS.InvokeAsync<double>("bobcrm.getElementWidthBySelector", ContainerWidthSelector);
+            }
+            catch
+            {
+                _containerWidth = 0;
+            }
+        }
+
+        await JS.InvokeVoidAsync("bobcrm.dragManager.registerCallback", _dotNetRef);
+        await JS.InvokeVoidAsync("bobcrm.dragManager.startResize", Widget.Id, (int)e.ClientX, (int)e.ClientY, ResizeDirection);
+    }
+
+    [JSInvokable]
+    public async Task OnResizeDrag(string widgetId, string direction, int deltaX, int deltaY, int totalDeltaX, int totalDeltaY)
+    {
+        if (!string.Equals(widgetId, Widget.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Widget.OnResize(direction, deltaX, deltaY, totalDeltaX, totalDeltaY, _containerWidth);
+
+        if (OnWidgetChanged.HasDelegate)
+        {
+            await OnWidgetChanged.InvokeAsync();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnResizeEnd(string widgetId, string direction, int totalDeltaX, int totalDeltaY)
+    {
+        if (!string.Equals(widgetId, Widget.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Widget.OnResizeEnd();
+
+        if (OnResizeCompleted.HasDelegate)
+        {
+            await OnResizeCompleted.InvokeAsync();
+        }
+
+        if (OnWidgetChanged.HasDelegate)
+        {
+            await OnWidgetChanged.InvokeAsync();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

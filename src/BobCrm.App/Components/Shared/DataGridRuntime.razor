@@ -136,6 +136,9 @@
     public DataGridWidget Widget { get; set; } = null!;
 
     [Parameter]
+    public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+
+    [Parameter]
     public string? ContainerStyle { get; set; }
 
     private const int DefaultPageSize = 20;

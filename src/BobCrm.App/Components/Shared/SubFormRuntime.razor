@@ -158,6 +158,9 @@
     public SubFormWidget Widget { get; set; } = null!;
 
     [Parameter]
+    public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+
+    [Parameter]
     public string? ContainerStyle { get; set; }
 
     [Parameter]
