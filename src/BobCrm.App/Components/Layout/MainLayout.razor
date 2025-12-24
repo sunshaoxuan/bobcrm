@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Routing
+@using System.Net
 @using System.Net.Http.Json
 @using System.Collections.Generic
 @using System.Linq
@@ -20,6 +21,7 @@
 <div class="chrome-shell @ThemeState.CurrentTheme compact-menu-layout">
     <div class="chrome-app app-shell layout-root">
         <div class="layout-main">
+            <NavigationLock OnBeforeInternalNavigation="HandleBeforeInternalNavigation" />
             <AppHeader Domains="@_domains"
                       ActiveDomain="@_activeDomain"
                       OnDomainChanged="OnDomainChanged" />
@@ -35,7 +37,7 @@
                             <div class="sticky-actions">
                                 @foreach (var action in Interaction.StickyActions)
                                 {
-                                    <Button Type="@(action.Tone == InteractionState.InteractionActionTone.Primary ? ButtonType.Primary : ButtonType.Default)" OnClick="() => InvokeSticky(action.Callback)">
+                                    <Button Type="@(action.Tone == InteractionActionTone.Primary ? ButtonType.Primary : ButtonType.Default)" OnClick="() => InvokeSticky(action.Callback)">
                                         @action.Label
                                     </Button>
                                 }
@@ -88,6 +90,7 @@
     private FunctionMenuNode? _activeDomain;
     private string? _menuError;
     private string _currentRoute = "/";
+    private bool _permissionRedirectInProgress;
 
     [Parameter] public RenderFragment? Body { get; set; }
     [CascadingParameter] public int I18nRenderVersion { get; set; }
@@ -174,7 +177,7 @@
         try
         {
             var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "navMode");
-            if (!string.IsNullOrWhiteSpace(stored) && Enum.TryParse<LayoutState.NavDisplayMode>(stored, true, out var mode))
+            if (!string.IsNullOrWhiteSpace(stored) && Enum.TryParse<NavDisplayMode>(stored, true, out var mode))
             {
                 Layout.SetNavMode(mode);
             }
@@ -199,6 +202,96 @@
         SyncActiveDomainWithUri();
         SafeRender();
     }
+
+    private async Task HandleBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (_permissionRedirectInProgress)
+        {
+            return;
+        }
+
+        var target = NormalizeRelative(Nav.ToBaseRelativePath(context.TargetLocation));
+        if (!TryResolveTemplateRoute(target, out var entityType, out var usageType, out var entityId))
+        {
+            return;
+        }
+
+        try
+        {
+            var client = await Auth.CreateClientWithAuthAsync();
+            var response = await client.PostAsJsonAsync(
+                $"/api/templates/runtime/{entityType}",
+                new TemplateRuntimeRequest
+                {
+                    UsageType = usageType,
+                    EntityId = entityId
+                },
+                context.CancellationToken);
+
+            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
+            {
+                context.PreventNavigation();
+                _permissionRedirectInProgress = true;
+                Nav.NavigateTo("/403-Forbidden", forceLoad: true);
+            }
+        }
+        catch
+        {
+            // Fail open: if precheck fails, let the page load and backend enforce as needed.
+        }
+        finally
+        {
+            _permissionRedirectInProgress = false;
+        }
+    }
+
+    private static bool TryResolveTemplateRoute(
+        string relativeRoute,
+        out string entityType,
+        out TemplateUsageType usageType,
+        out int? entityId)
+    {
+        entityType = string.Empty;
+        usageType = TemplateUsageType.Detail;
+        entityId = null;
+
+        var route = (relativeRoute ?? string.Empty).Trim('/');
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return false;
+        }
+
+        // Detail page: /{entityType}/{id:int}
+        var parts = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 2 && int.TryParse(parts[1], out var parsedId))
+        {
+            entityType = parts[0];
+            usageType = TemplateUsageType.Detail;
+            entityId = parsedId;
+            return !string.IsNullOrWhiteSpace(entityType);
+        }
+
+        // List pages using ListTemplateHost: /customers | /roles | /users
+        if (parts.Length == 1 && TemplateListRoutes.Contains(parts[0]))
+        {
+            var plural = parts[0];
+            entityType = plural.EndsWith("s", StringComparison.OrdinalIgnoreCase)
+                ? plural[..^1]
+                : plural;
+            usageType = TemplateUsageType.List;
+            entityId = null;
+            return !string.IsNullOrWhiteSpace(entityType);
+        }
+
+        return false;
+    }
+
+    private static readonly HashSet<string> TemplateListRoutes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "customers",
+        "roles",
+        "users"
+    };
 
     private void HandleI18nChanged()
     {

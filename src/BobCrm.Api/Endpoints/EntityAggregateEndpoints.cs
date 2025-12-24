@@ -72,6 +72,14 @@ public static class EntityAggregateEndpoints
                 var dto = MapToAggregateDto(savedAggregate);
                 return Results.Ok(dto);
             }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new
+                {
+                    message = LocalizeDomainException(loc, lang, ex),
+                    code = ex.MessageKey
+                });
+            }
             catch (ValidationException ex)
             {
                 return Results.BadRequest(new
@@ -80,7 +88,7 @@ public static class EntityAggregateEndpoints
                     errors = ex.Errors.Select(e => new
                     {
                         propertyPath = e.PropertyPath,
-                        message = e.Message
+                        message = LocalizeValidationError(loc, lang, e)
                     })
                 });
             }
@@ -122,10 +130,30 @@ public static class EntityAggregateEndpoints
                         errors = validationResult.Errors.Select(e => new
                         {
                             propertyPath = e.PropertyPath,
-                            message = e.Message
+                            message = LocalizeValidationError(loc, lang, e)
                         })
                     });
                 }
+            }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new
+                {
+                    message = LocalizeDomainException(loc, lang, ex),
+                    code = ex.MessageKey
+                });
+            }
+            catch (ValidationException ex)
+            {
+                return Results.Ok(new
+                {
+                    isValid = false,
+                    errors = ex.Errors.Select(e => new
+                    {
+                        propertyPath = e.PropertyPath,
+                        message = LocalizeValidationError(loc, lang, e)
+                    })
+                });
             }
             catch (Exception ex)
             {
@@ -340,5 +368,41 @@ public static class EntityAggregateEndpoints
                 })
             })
         };
+    }
+
+    private static string LocalizeValidationError(ILocalization loc, string lang, ValidationError error)
+    {
+        var template = loc.T(error.MessageKey, lang);
+        if (error.Args.Length == 0)
+        {
+            return template;
+        }
+
+        try
+        {
+            return string.Format(template, error.Args);
+        }
+        catch
+        {
+            return template;
+        }
+    }
+
+    private static string LocalizeDomainException(ILocalization loc, string lang, DomainException exception)
+    {
+        var template = loc.T(exception.MessageKey, lang);
+        if (exception.Args.Length == 0)
+        {
+            return template;
+        }
+
+        try
+        {
+            return string.Format(template, exception.Args);
+        }
+        catch
+        {
+            return template;
+        }
     }
 }

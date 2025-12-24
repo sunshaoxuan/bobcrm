@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("textbox", "LBL_TEXTBOX", "Outline.Edit", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("textbox", "LBL_TEXTBOX", "Outline.Edit", WidgetCategory.Basic)]
 /// <summary>
 /// 文本框控件
 /// </summary>

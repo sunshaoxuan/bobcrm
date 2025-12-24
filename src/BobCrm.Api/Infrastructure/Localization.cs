@@ -1,82 +1,8 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using BobCrm.Api.Base;
 
 namespace BobCrm.Api.Infrastructure;
-
-public static class LangHelper
-{
-    public static string GetLang(HttpContext http) =>
-        GetLang(http, null) ?? "ja";
-
-    public static string? GetLang(HttpContext http, string? langOverride)
-    {
-        var candidate = langOverride;
-
-        if (string.IsNullOrWhiteSpace(candidate))
-        {
-            candidate = http.Request.Query["lang"].FirstOrDefault();
-        }
-
-        if (string.IsNullOrWhiteSpace(candidate))
-        {
-            candidate = http.Request.Headers["X-Lang"].FirstOrDefault();
-        }
-
-        if (string.IsNullOrWhiteSpace(candidate))
-        {
-            candidate = ParseAcceptLanguage(http.Request.Headers["Accept-Language"].FirstOrDefault());
-        }
-
-        return string.IsNullOrWhiteSpace(candidate)
-            ? null
-            : candidate.Trim().ToLowerInvariant();
-    }
-
-    private static string? ParseAcceptLanguage(string? header)
-    {
-        if (string.IsNullOrWhiteSpace(header))
-        {
-            return null;
-        }
-
-        var languages = header.Split(',')
-            .Select(part => part.Split(';')[0].Trim())
-            .Where(part => !string.IsNullOrWhiteSpace(part));
-
-        foreach (var language in languages)
-        {
-            var normalized = language.Split('-')[0].Trim();
-            if (!string.IsNullOrWhiteSpace(normalized))
-            {
-                return normalized.ToLowerInvariant();
-            }
-        }
-
-        return null;
-    }
-}
-
-public interface ILocalization
-{
-    string T(string key, string lang);
-
-    /// <summary>
-    /// 获取指定语言的完整字典
-    /// </summary>
-    Dictionary<string, string> GetDictionary(string lang);
-
-    /// <summary>
-    /// 清除缓存，在多语资源更新后调用
-    /// </summary>
-    void InvalidateCache();
-
-    /// <summary>
-    /// 获取当前缓存版本号（用于 ETag）
-    /// </summary>
-    long GetCacheVersion();
-}
 
 /// <summary>
 /// 基于 IMemoryCache 的多语本地化服务

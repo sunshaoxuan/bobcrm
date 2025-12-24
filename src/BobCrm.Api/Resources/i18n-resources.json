@@ -6503,6 +6503,216 @@
     "zh": "选择日期",
     "en": "Select date",
     "ja": "日付を選択"
+  },
+  "ERR_VALIDATION_FAILED": {
+    "zh": "验证失败",
+    "ja": "検証に失敗しました",
+    "en": "Validation failed"
+  },
+  "ERR_ENTITY_NAME_REQUIRED": {
+    "zh": "实体名称不能为空",
+    "ja": "エンティティ名は必須です",
+    "en": "Entity name is required."
+  },
+  "ERR_DISPLAY_NAME_REQUIRED": {
+    "zh": "显示名称不能为空",
+    "ja": "表示名は必須です",
+    "en": "Display name is required."
+  },
+  "ERR_NAMESPACE_REQUIRED": {
+    "zh": "命名空间不能为空",
+    "ja": "名前空間は必須です",
+    "en": "Namespace is required."
+  },
+  "ERR_SUBENTITY_CODE_EXISTS": {
+    "zh": "子实体编码 '{0}' 已存在",
+    "ja": "子エンティティコード '{0}' は既に存在します",
+    "en": "Sub-entity code '{0}' already exists."
+  },
+  "ERR_SUBENTITY_CODE_INVALID": {
+    "zh": "子实体编码 '{0}' 格式无效。必须以大写字母开头，只能包含字母和数字",
+    "ja": "子エンティティコード '{0}' の形式が無効です。大文字で始まり、英数字のみ使用できます",
+    "en": "Sub-entity code '{0}' is invalid. It must start with an uppercase letter and contain only letters and digits."
+  },
+  "ERR_SUBENTITY_NOT_FOUND": {
+    "zh": "子实体 ID {0} 不存在",
+    "ja": "子エンティティ ID {0} が見つかりません",
+    "en": "Sub-entity ID {0} not found."
+  },
+  "ERR_SUBENTITY_CODE_REQUIRED": {
+    "zh": "子实体编码不能为空",
+    "ja": "子エンティティコードは必須です",
+    "en": "Sub-entity code is required."
+  },
+  "ERR_SUBENTITY_DISPLAY_NAME_REQUIRED": {
+    "zh": "子实体显示名称不能为空",
+    "ja": "子エンティティ表示名は必須です",
+    "en": "Sub-entity display name is required."
+  },
+  "ERR_SUBENTITY_FIELD_EXISTS": {
+    "zh": "子实体 '{0}' 中字段 '{1}' 已存在",
+    "ja": "子エンティティ '{0}' のフィールド '{1}' は既に存在します",
+    "en": "Field '{1}' already exists in sub-entity '{0}'."
+  },
+  "ERR_FIELD_NOT_FOUND": {
+    "zh": "字段 ID {0} 不存在",
+    "ja": "フィールド ID {0} が見つかりません",
+    "en": "Field ID {0} not found."
+  },
+  "ERR_DUPLICATE_FIELDS": {
+    "zh": "字段名重复: {0}",
+    "ja": "フィールド名が重複しています: {0}",
+    "en": "Duplicate field names: {0}"
+  },
+  "ERR_REQUIRED_FIELD_DATATYPE_REQUIRED": {
+    "zh": "必填字段 '{0}' 的数据类型不能为空",
+    "ja": "必須フィールド '{0}' のデータ型は必須です",
+    "en": "Data type is required for required field '{0}'."
+  },
+  "ERR_REQUIRED_FIELD_PROPERTY_REQUIRED": {
+    "zh": "必填字段的属性名不能为空",
+    "ja": "必須フィールドのプロパティ名は必須です",
+    "en": "Property name is required for required fields."
+  },
+  "ERR_FIELD_PROPERTY_REQUIRED": {
+    "zh": "字段属性名不能为空",
+    "ja": "フィールドのプロパティ名は必須です",
+    "en": "Field property name is required."
+  },
+  "ERR_SUBENTITY_ENTITYDEF_ID_MISMATCH": {
+    "zh": "子实体的 EntityDefinitionId 与聚合根不一致",
+    "ja": "子エンティティの EntityDefinitionId が集約ルートと一致しません",
+    "en": "Sub-entity EntityDefinitionId does not match aggregate root."
+  },
+  "ERR_FIELD_ENTITYDEF_ID_MISMATCH": {
+    "zh": "字段的 EntityDefinitionId 与聚合根不一致",
+    "ja": "フィールドの EntityDefinitionId が集約ルートと一致しません",
+    "en": "Field EntityDefinitionId does not match aggregate root."
+  },
+  "ERR_FIELD_SUBENTITY_ID_MISMATCH": {
+    "zh": "字段的 SubEntityDefinitionId 与所属子实体不一致",
+    "ja": "フィールドの SubEntityDefinitionId が所属子エンティティと一致しません",
+    "en": "Field SubEntityDefinitionId does not match owning sub-entity."
+  },
+  "LBL_FIELD_SOURCE_SYSTEM": {
+    "zh": "系统字段",
+    "ja": "システムフィールド",
+    "en": "System Fields"
+  },
+  "TXT_FIELD_SOURCE_SYSTEM_DESC": {
+    "zh": "由系统实体同步，禁止删除",
+    "ja": "システムエンティティから同期され、削除できません",
+    "en": "Synced from system entities; cannot be deleted."
+  },
+  "LBL_FIELD_SOURCE_CUSTOM": {
+    "zh": "自定义字段",
+    "ja": "カスタムフィールド",
+    "en": "Custom Fields"
+  },
+  "TXT_FIELD_SOURCE_CUSTOM_DESC": {
+    "zh": "由用户自行添加，可删除",
+    "ja": "ユーザーが追加し、削除できます",
+    "en": "Added by users; can be deleted."
+  },
+  "LBL_FIELD_SOURCE_INTERFACE": {
+    "zh": "接口字段",
+    "ja": "インターフェースフィールド",
+    "en": "Interface Fields"
+  },
+  "TXT_FIELD_SOURCE_INTERFACE_DESC": {
+    "zh": "由接口模板注入，用于审计、档案等功能",
+    "ja": "インターフェーステンプレートから注入され、監査・アーカイブ等に使用します",
+    "en": "Injected by interface templates for audit, archive, etc."
+  },
+  "LBL_DATA_TYPE_STRING": {
+    "zh": "字符串",
+    "ja": "文字列",
+    "en": "String"
+  },
+  "LBL_DATA_TYPE_INTEGER": {
+    "zh": "整数",
+    "ja": "整数",
+    "en": "Integer"
+  },
+  "LBL_DATA_TYPE_LONG": {
+    "zh": "长整数",
+    "ja": "長整数",
+    "en": "Long"
+  },
+  "LBL_DATA_TYPE_DECIMAL": {
+    "zh": "小数",
+    "ja": "小数",
+    "en": "Decimal"
+  },
+  "LBL_DATA_TYPE_BOOLEAN": {
+    "zh": "布尔",
+    "ja": "真偽値",
+    "en": "Boolean"
+  },
+  "LBL_DATA_TYPE_DATETIME": {
+    "zh": "日期时间",
+    "ja": "日時",
+    "en": "DateTime"
+  },
+  "LBL_DATA_TYPE_DATE": {
+    "zh": "日期",
+    "ja": "日付",
+    "en": "Date"
+  },
+  "LBL_DATA_TYPE_TEXT": {
+    "zh": "长文本",
+    "ja": "長文",
+    "en": "Text"
+  },
+  "LBL_DATA_TYPE_GUID": {
+    "zh": "GUID",
+    "ja": "GUID",
+    "en": "Guid"
+  },
+  "LBL_DATA_TYPE_ENUM": {
+    "zh": "枚举",
+    "ja": "列挙",
+    "en": "Enum"
+  },
+  "LBL_FIELD_EXT_DATA": {
+    "zh": "扩展数据",
+    "ja": "拡張データ",
+    "en": "Extended Data"
+  },
+  "ENTITY_ORGANIZATION_NODE": {
+    "zh": "组织节点",
+    "ja": "組織ノード",
+    "en": "Organization Node"
+  },
+  "ENTITY_ORGANIZATION_NODE_DESC": {
+    "zh": "管理组织的树形结构",
+    "ja": "組織のツリー構造を管理します",
+    "en": "Manage organization tree structure"
+  },
+  "LBL_FIELD_PARENT_ID": {
+    "zh": "父节点ID",
+    "ja": "親ノードID",
+    "en": "Parent Node ID"
+  },
+  "LBL_FIELD_LEVEL": {
+    "zh": "层级",
+    "ja": "レベル",
+    "en": "Level"
+  },
+  "LBL_FIELD_PATH_CODE": {
+    "zh": "路径编码",
+    "ja": "パスコード",
+    "en": "Path Code"
+  },
+  "ENTITY_ROLE_PROFILE": {
+    "zh": "角色档案",
+    "ja": "ロールプロファイル",
+    "en": "Role Profile"
+  },
+  "ENTITY_ROLE_PROFILE_DESC": {
+    "zh": "管理角色档案",
+    "ja": "ロールプロファイルを管理します",
+    "en": "Manage role profiles"
   }
 }
 

@@ -15,8 +15,10 @@
 @using AntDesign
 @using BobCrm.Api.Contracts.DTOs
 @using BobCrm.Api.Contracts.DTOs.Enum
+@using Microsoft.Extensions.Logging
 @inject IMultilingualTextResolver MultilingualResolver
 @inject BobCrm.App.Services.AuthService Auth
+@inject ILogger<EntityDefinitionEdit> Logger
 
 <AuthChecker>
     <PageHeader Title="@(_isNew ? I18n.T("LBL_CREATE_ENTITY_DEF") : I18n.T("LBL_EDIT_ENTITY_DEF"))" OnBack="GoBack">
@@ -227,7 +229,7 @@
                                         <td>
                                             <Input @bind-Value="field.PropertyName"
                                                    Disabled="@isProtected"
-                                                   Placeholder="Code"
+                                                   Placeholder="@I18n.T("LBL_CODE")"
                                                    Class="field-control" />
                                         </td>
                                         <td class="field-display-name">
@@ -243,16 +245,16 @@
                                                     Disabled="@isProtected"
                                                     Style="width: 140px;">
                                                 <SelectOptions>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="String"><ChildContent Context="opt">String</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="Integer"><ChildContent Context="opt">Integer</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="Long"><ChildContent Context="opt">Long</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="Decimal"><ChildContent Context="opt">Decimal</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="Boolean"><ChildContent Context="opt">Boolean</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="DateTime"><ChildContent Context="opt">DateTime</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="Date"><ChildContent Context="opt">Date</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="Text"><ChildContent Context="opt">Text</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="Guid"><ChildContent Context="opt">Guid</ChildContent></SelectOption>
-                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Enum" Label="Enum"><ChildContent Context="opt">Enum</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.String" Label="@I18n.T("LBL_DATA_TYPE_STRING")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_STRING")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Integer" Label="@I18n.T("LBL_DATA_TYPE_INTEGER")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_INTEGER")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Long" Label="@I18n.T("LBL_DATA_TYPE_LONG")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_LONG")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Decimal" Label="@I18n.T("LBL_DATA_TYPE_DECIMAL")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_DECIMAL")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Boolean" Label="@I18n.T("LBL_DATA_TYPE_BOOLEAN")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_BOOLEAN")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.DateTime" Label="@I18n.T("LBL_DATA_TYPE_DATETIME")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_DATETIME")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Date" Label="@I18n.T("LBL_DATA_TYPE_DATE")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_DATE")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Text" Label="@I18n.T("LBL_DATA_TYPE_TEXT")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_TEXT")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Guid" Label="@I18n.T("LBL_DATA_TYPE_GUID")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_GUID")</ChildContent></SelectOption>
+                                                    <SelectOption TItemValue="string" TItem="string" Value="@FieldDataType.Enum" Label="@I18n.T("LBL_DATA_TYPE_ENUM")"><ChildContent Context="opt">@I18n.T("LBL_DATA_TYPE_ENUM")</ChildContent></SelectOption>
                                                 </SelectOptions>
                                             </Select>
                                         </td>
@@ -284,17 +286,17 @@
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Length"
                                                                     Disabled="@isProtected"
-                                                                    Placeholder="-" Style="width: 100px;" />
+                                                                    Style="width: 100px;" />
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Precision"
                                                                     Disabled="@isProtected"
-                                                                    Placeholder="-" Style="width: 100px;" />
+                                                                    Style="width: 100px;" />
                                         </td>
                                         <td>
                                             <AntDesign.InputNumber TValue="int?" @bind-Value="field.Scale"
                                                                     Disabled="@isProtected"
-                                                                    Placeholder="-" Style="width: 100px;" />
+                                                                    Style="width: 100px;" />
                                         </td>
                                         <td class="field-required">
                                             <Switch @bind-Value="field.IsRequired"
@@ -429,7 +431,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[EntityDefinitionEdit] Failed to load languages: {ex.Message}");
+            Logger.LogWarning(ex, "[EntityDefinitionEdit] Failed to load languages");
         }
     }
 
@@ -463,7 +465,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[EntityDefinitionEdit] Failed to load localization resources: {ex.Message}");
+            Logger.LogWarning(ex, "[EntityDefinitionEdit] Failed to load localization resources");
         }
     }
 
@@ -495,7 +497,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[EntityDefinitionEdit] Failed to load enum definitions: {ex.Message}");
+            Logger.LogWarning(ex, "[EntityDefinitionEdit] Failed to load enum definitions");
         }
     }
 

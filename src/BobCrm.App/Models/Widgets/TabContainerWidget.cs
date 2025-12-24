@@ -4,7 +4,7 @@ using AntDesign;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("tabbox", "LBL_TABBOX", "Outline.Appstore", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("tabbox", "LBL_TABBOX", "Outline.Appstore", WidgetCategory.Layout)]
 /// <summary>
 /// Tabs 容器控件
 /// </summary>

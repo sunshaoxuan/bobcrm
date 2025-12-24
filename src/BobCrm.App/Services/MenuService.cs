@@ -127,36 +127,3 @@ public class MenuService
         return await resp.Content.ReadFromJsonAsync<ImportResult>(cancellationToken: ct);
     }
 }
-
-public record MenuImportData
-{
-    public string Version { get; init; } = "1.0";
-    public DateTime ExportDate { get; init; }
-    public List<MenuImportNode> Functions { get; init; } = new();
-}
-
-public record MenuImportNode
-{
-    public string Code { get; init; } = string.Empty;
-    public string? Name { get; init; }
-    public Dictionary<string, string?>? DisplayName { get; init; }
-    public string? Route { get; init; }
-    public string? Icon { get; init; }
-    public bool IsMenu { get; init; } = true;
-    public int SortOrder { get; init; } = 100;
-    public List<MenuImportNode>? Children { get; init; }
-}
-
-public record ImportResult
-{
-    public string Message { get; init; } = string.Empty;
-    public int Imported { get; init; }
-    public int Skipped { get; init; }
-}
-
-public record ImportErrorResponse
-{
-    public string Error { get; init; } = string.Empty;
-    public List<string> Conflicts { get; init; } = new();
-    public string Message { get; init; } = string.Empty;
-}

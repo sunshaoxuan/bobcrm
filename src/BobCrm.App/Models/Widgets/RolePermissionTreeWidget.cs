@@ -6,7 +6,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("permtree", "LBL_PERMTREE", "Outline.SafetyCertificate", WidgetRegistry.WidgetCategory.Data)]
+[WidgetMetadata("permtree", "LBL_PERMTREE", "Outline.SafetyCertificate", WidgetCategory.Data)]
 /// <summary>
 /// 角色权限树控件 - 显示和编辑角色的功能权限树
 /// </summary>

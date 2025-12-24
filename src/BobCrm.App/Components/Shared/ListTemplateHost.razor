@@ -30,9 +30,9 @@
     {
         <div class="list-template-header">
             <div class="list-template-meta">
-                <div class="list-template-usage">@_templateResponse.Template.UsageType</div>
+                <div class="list-template-usage">@(_templateResponse.Template?.UsageType.ToString() ?? string.Empty)</div>
                 <h2 class="list-template-name">@TemplateDisplayName</h2>
-                <div class="runtime-template-meta">@EntityType.ToUpperInvariant() ・ @_templateResponse.Template.Id</div>
+                <div class="runtime-template-meta">@EntityType.ToUpperInvariant() ・ @(_templateResponse.Template?.Id.ToString() ?? "-")</div>
             </div>
             <Button Type="@ButtonType.Default" Size="ButtonSize.Small" OnClick="RefreshAsync">
                 @I18n.T("BTN_RETRY")
@@ -64,8 +64,8 @@
         @* 调试信息 *@
         @if (ShowDebugInfo)
         {
-            <div class="runtime-state" style="font-family:monospace; font-size:12px;">
-                <div><strong>Template:</strong> @_templateResponse.Template.Name (ID: @_templateResponse.Template.Id)</div>
+                 <div class="runtime-state" style="font-family:monospace; font-size:12px;">
+                <div><strong>Template:</strong> @(_templateResponse.Template?.Name ?? "(null)") (ID: @(_templateResponse.Template?.Id.ToString() ?? "-"))</div>
                 <div><strong>Entity Type:</strong> @EntityType</div>
                 <div><strong>Applied Scopes:</strong> @string.Join(", ", _templateResponse.AppliedScopes)</div>
                 <div><strong>Full Access:</strong> @_templateResponse.HasFullAccess</div>

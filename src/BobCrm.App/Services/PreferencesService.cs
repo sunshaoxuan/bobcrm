@@ -149,133 +149,20 @@ public class PreferencesService
         }
     }
 
-    public static LayoutState.NavDisplayMode ToLayoutMode(string? navMode) =>
+    public static NavDisplayMode ToLayoutMode(string? navMode) =>
         navMode?.ToLowerInvariant() switch
         {
-            "icons" => LayoutState.NavDisplayMode.Icons,
-            "labels" => LayoutState.NavDisplayMode.Labels,
-            _ => LayoutState.NavDisplayMode.IconText
+            "icons" => NavDisplayMode.Icons,
+            "labels" => NavDisplayMode.Labels,
+            _ => NavDisplayMode.IconText
         };
 
-    public static string ToApiNavMode(LayoutState.NavDisplayMode mode) =>
+    public static string ToApiNavMode(NavDisplayMode mode) =>
         mode switch
         {
-            LayoutState.NavDisplayMode.Icons => "icons",
-            LayoutState.NavDisplayMode.Labels => "labels",
+            NavDisplayMode.Icons => "icons",
+            NavDisplayMode.Labels => "labels",
             _ => "icon-text"
         };
 
-    #region DTOs
-
-    public class UserSettingsSnapshot
-    {
-        [JsonPropertyName("system")]
-        public SystemSettingsDto System { get; set; } = new();
-
-        [JsonPropertyName("effective")]
-        public UserSettingsDto Effective { get; set; } = new();
-
-        [JsonPropertyName("overrides")]
-        public UserSettingsDto? Overrides { get; set; }
-    }
-
-    public class SystemSettingsDto
-    {
-        [JsonPropertyName("companyName")]
-        public string CompanyName { get; set; } = "OneCRM";
-
-        [JsonPropertyName("defaultTheme")]
-        public string DefaultTheme { get; set; } = "calm-light";
-
-        [JsonPropertyName("defaultPrimaryColor")]
-        public string? DefaultPrimaryColor { get; set; } = "#739FD6";
-
-        [JsonPropertyName("defaultLanguage")]
-        public string DefaultLanguage { get; set; } = "ja";
-
-        [JsonPropertyName("defaultHomeRoute")]
-        public string DefaultHomeRoute { get; set; } = "/";
-
-        [JsonPropertyName("defaultNavDisplayMode")]
-        public string DefaultNavDisplayMode { get; set; } = "icon-text";
-
-        [JsonPropertyName("timeZoneId")]
-        public string TimeZoneId { get; set; } = "Asia/Tokyo";
-
-        [JsonPropertyName("allowSelfRegistration")]
-        public bool AllowSelfRegistration { get; set; }
-    }
-
-    public class UserSettingsDto
-    {
-        [JsonPropertyName("theme")]
-        public string Theme { get; set; } = "calm-light";
-
-        [JsonPropertyName("primaryColor")]
-        public string? PrimaryColor { get; set; }
-
-        [JsonPropertyName("language")]
-        public string Language { get; set; } = "ja";
-
-        [JsonPropertyName("homeRoute")]
-        public string HomeRoute { get; set; } = "/";
-
-        [JsonPropertyName("navDisplayMode")]
-        public string NavDisplayMode { get; set; } = "icon-text";
-    }
-
-    public class UpdateUserSettingsRequest
-    {
-        [JsonPropertyName("theme")]
-        public string? Theme { get; set; }
-
-        [JsonPropertyName("primaryColor")]
-        public string? PrimaryColor { get; set; }
-
-        [JsonPropertyName("language")]
-        public string? Language { get; set; }
-
-        [JsonPropertyName("homeRoute")]
-        public string? HomeRoute { get; set; }
-
-        [JsonPropertyName("navDisplayMode")]
-        public string? NavDisplayMode { get; set; }
-
-        [JsonIgnore]
-        public bool IsEmpty =>
-            Theme is null &&
-            PrimaryColor is null &&
-            Language is null &&
-            HomeRoute is null &&
-            NavDisplayMode is null;
-    }
-
-    public class UpdateSystemSettingsRequest
-    {
-        [JsonPropertyName("companyName")]
-        public string? CompanyName { get; set; }
-
-        [JsonPropertyName("defaultTheme")]
-        public string? DefaultTheme { get; set; }
-
-        [JsonPropertyName("defaultPrimaryColor")]
-        public string? DefaultPrimaryColor { get; set; }
-
-        [JsonPropertyName("defaultLanguage")]
-        public string? DefaultLanguage { get; set; }
-
-        [JsonPropertyName("defaultHomeRoute")]
-        public string? DefaultHomeRoute { get; set; }
-
-        [JsonPropertyName("defaultNavDisplayMode")]
-        public string? DefaultNavDisplayMode { get; set; }
-
-        [JsonPropertyName("timeZoneId")]
-        public string? TimeZoneId { get; set; }
-
-        [JsonPropertyName("allowSelfRegistration")]
-        public bool? AllowSelfRegistration { get; set; }
-    }
-
-    #endregion
 }

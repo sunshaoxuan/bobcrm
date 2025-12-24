@@ -29,10 +29,3 @@ public class EfRepository<T> : IRepository<T> where T : class
     public void Remove(T entity) => _set.Remove(entity);
 }
 
-public class EfUnitOfWork : IUnitOfWork
-{
-    private readonly DbContext _db;
-    public EfUnitOfWork(DbContext db) => _db = db;
-    public Task<int> SaveChangesAsync(CancellationToken ct = default) => _db.SaveChangesAsync(ct);
-}
-

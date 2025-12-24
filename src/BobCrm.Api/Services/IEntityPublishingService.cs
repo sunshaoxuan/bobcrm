@@ -21,4 +21,12 @@ public interface IEntityPublishingService
     /// <param name="publishedBy">发布人</param>
     /// <returns>发布结果</returns>
     Task<PublishResult> PublishEntityChangesAsync(Guid entityDefinitionId, string? publishedBy = null);
+
+    /// <summary>
+    /// 撤回发布（DROP TABLE 或逻辑撤回）
+    /// </summary>
+    /// <param name="entityDefinitionId">实体定义ID</param>
+    /// <param name="withdrawnBy">操作人</param>
+    /// <returns>撤回结果</returns>
+    Task<WithdrawResult> WithdrawAsync(Guid entityDefinitionId, string? withdrawnBy = null);
 }

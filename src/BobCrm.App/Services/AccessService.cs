@@ -22,7 +22,5 @@ public class AccessService
         var resp = await http.PostAsJsonAsync($"/api/customers/{customerId}/access", body, ct);
         return resp.IsSuccessStatusCode;
     }
-
-    public record AccessRow(string userId, bool canEdit);
 }
 

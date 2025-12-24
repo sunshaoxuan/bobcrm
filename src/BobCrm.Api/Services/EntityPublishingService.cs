@@ -4,6 +4,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace BobCrm.Api.Services;
@@ -22,6 +23,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly AccessService _accessService;
     private readonly ILogger<EntityPublishingService> _logger;
     private readonly IDefaultTemplateService _defaultTemplateService;
+    private readonly IConfiguration _configuration;
 
     public EntityPublishingService(
         AppDbContext db,
@@ -31,6 +33,7 @@ public class EntityPublishingService : IEntityPublishingService
         TemplateBindingService templateBindingService,
         AccessService accessService,
         IDefaultTemplateService defaultTemplateService,
+        IConfiguration configuration,
         ILogger<EntityPublishingService> logger)
     {
         _db = db;
@@ -40,6 +43,7 @@ public class EntityPublishingService : IEntityPublishingService
         _templateBindingService = templateBindingService;
         _accessService = accessService;
         _defaultTemplateService = defaultTemplateService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -47,6 +51,15 @@ public class EntityPublishingService : IEntityPublishingService
     /// 发布新实体（CREATE TABLE）
     /// </summary>
     public async Task<PublishResult> PublishNewEntityAsync(Guid entityDefinitionId, string? publishedBy = null)
+        => await PublishNewEntityInternalAsync(
+            entityDefinitionId,
+            publishedBy,
+            PublishContext.CreateRoot());
+
+    private async Task<PublishResult> PublishNewEntityInternalAsync(
+        Guid entityDefinitionId,
+        string? publishedBy,
+        PublishContext context)
     {
         var result = new PublishResult { EntityDefinitionId = entityDefinitionId };
 
@@ -72,6 +85,22 @@ public class EntityPublishingService : IEntityPublishingService
             {
                 result.Success = false;
                 result.ErrorMessage = $"Entity status is {entity.Status}, expected Draft";
+                return result;
+            }
+
+            if (!context.Visited.Add(entity.Id))
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Cyclic publish dependency detected for entity {entity.EntityName}";
+                return result;
+            }
+
+            // 2.5 AggVO 级联发布：确保 Lookup 依赖实体已发布
+            var cascade = await EnsureLookupDependenciesPublishedAsync(entity, publishedBy, context);
+            if (!cascade.Success)
+            {
+                result.Success = false;
+                result.ErrorMessage = cascade.ErrorMessage;
                 return result;
             }
 
@@ -129,17 +158,32 @@ public class EntityPublishingService : IEntityPublishingService
                 return result;
             }
 
+            await using var transaction = _db.Database.IsRelational()
+                ? await _db.Database.BeginTransactionAsync()
+                : null;
+
             // 7. 更新实体状态为Published
             entity.Status = EntityStatus.Published;
             entity.UpdatedAt = DateTime.UtcNow;
             entity.UpdatedBy = publishedBy;
+            if (context.IsCascadeChild)
+            {
+                entity.Source = EntitySource.System;
+            }
             await _db.SaveChangesAsync();
 
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
 
-            await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
+            if (!context.IsCascadeChild)
+            {
+                await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
+            }
 
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
             result.Success = true;
             _logger.LogInformation("[Publish] ✓ Entity {EntityName} published successfully, locked, and default template ensured", entity.EntityName);
         }
@@ -157,6 +201,96 @@ public class EntityPublishingService : IEntityPublishingService
     /// 发布实体修改（ALTER TABLE）
     /// </summary>
     public async Task<PublishResult> PublishEntityChangesAsync(Guid entityDefinitionId, string? publishedBy = null)
+        => await PublishEntityChangesInternalAsync(
+            entityDefinitionId,
+            publishedBy,
+            PublishContext.CreateRoot());
+
+    public async Task<WithdrawResult> WithdrawAsync(Guid entityDefinitionId, string? withdrawnBy = null)
+    {
+        var result = new WithdrawResult { EntityDefinitionId = entityDefinitionId };
+
+        try
+        {
+            var entity = await _db.EntityDefinitions
+                .Include(e => e.Fields)
+                .Include(e => e.Interfaces)
+                .FirstOrDefaultAsync(e => e.Id == entityDefinitionId);
+
+            if (entity == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Entity definition {entityDefinitionId} not found";
+                return result;
+            }
+
+            if (entity.Status == EntityStatus.Draft)
+            {
+                result.Success = false;
+                result.ErrorMessage = "Draft entities cannot be withdrawn. Delete it instead.";
+                return result;
+            }
+
+            var referenced = await IsReferencedByPublishedEntitiesAsync(entity);
+            if (referenced)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Entity '{entity.EntityName}' is referenced by other published entities. Withdrawal is not allowed.";
+                return result;
+            }
+
+            var mode = ResolveWithdrawalMode();
+            result.Mode = mode;
+
+            if (string.Equals(mode, WithdrawalModes.Physical, StringComparison.OrdinalIgnoreCase))
+            {
+                var dropSql = _ddlGenerator.GenerateDropTableScript(entity);
+                result.DDLScript = dropSql;
+
+                var scriptRecord = await _ddlExecutor.ExecuteDDLAsync(
+                    entityDefinitionId,
+                    DDLScriptType.Drop,
+                    dropSql,
+                    withdrawnBy);
+
+                result.ScriptId = scriptRecord.Id;
+                if (scriptRecord.Status != DDLScriptStatus.Success)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = scriptRecord.ErrorMessage;
+                    return result;
+                }
+            }
+
+            await using var transaction = _db.Database.IsRelational()
+                ? await _db.Database.BeginTransactionAsync()
+                : null;
+            entity.Status = EntityStatus.Withdrawn;
+            entity.IsEnabled = false;
+            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedBy = withdrawnBy;
+            await _db.SaveChangesAsync();
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            _logger.LogError(ex, "[Withdraw] ✗ Failed to withdraw entity: {Error}", ex.Message);
+        }
+
+        return result;
+    }
+
+    private async Task<PublishResult> PublishEntityChangesInternalAsync(
+        Guid entityDefinitionId,
+        string? publishedBy,
+        PublishContext context)
     {
         var result = new PublishResult { EntityDefinitionId = entityDefinitionId };
 
@@ -182,6 +316,22 @@ public class EntityPublishingService : IEntityPublishingService
         {
             result.Success = false;
             result.ErrorMessage = $"Entity status is {entity.Status}, expected Modified";
+            return result;
+        }
+
+        if (!context.Visited.Add(entity.Id))
+        {
+            result.Success = false;
+            result.ErrorMessage = $"Cyclic publish dependency detected for entity {entity.EntityName}";
+            return result;
+        }
+
+        // 2.5 AggVO 级联发布：确保 Lookup 依赖实体已发布
+        var cascade = await EnsureLookupDependenciesPublishedAsync(entity, publishedBy, context);
+        if (!cascade.Success)
+        {
+            result.Success = false;
+            result.ErrorMessage = cascade.ErrorMessage;
             return result;
         }
 
@@ -257,14 +407,29 @@ public class EntityPublishingService : IEntityPublishingService
                 return result;
             }
 
+            await using var transaction = _db.Database.IsRelational()
+                ? await _db.Database.BeginTransactionAsync()
+                : null;
+
             // 8. 更新实体状态为Published
             entity.Status = EntityStatus.Published;
             entity.UpdatedAt = DateTime.UtcNow;
             entity.UpdatedBy = publishedBy;
+            if (context.IsCascadeChild)
+            {
+                entity.Source = EntitySource.System;
+            }
             await _db.SaveChangesAsync();
 
-            await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
+            if (!context.IsCascadeChild)
+            {
+                await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
+            }
 
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
             result.Success = true;
             _logger.LogInformation("[Publish] ✓ Entity {EntityName} changes published successfully and default template updated", entity.EntityName);
         }
@@ -278,10 +443,154 @@ public class EntityPublishingService : IEntityPublishingService
         return result;
     }
 
+    private async Task<(bool Success, string? ErrorMessage)> EnsureLookupDependenciesPublishedAsync(
+        EntityDefinition entity,
+        string? publishedBy,
+        PublishContext context)
+    {
+        var dependencyNames = entity.Fields
+            .Where(f => !f.IsDeleted && !string.IsNullOrWhiteSpace(f.LookupEntityName))
+            .Select(f => f.LookupEntityName!.Trim())
+            .Where(name => !string.Equals(name, entity.EntityName, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (dependencyNames.Count == 0)
+        {
+            return (true, null);
+        }
+
+        var dependencyLower = dependencyNames
+            .Select(n => n.ToLowerInvariant())
+            .ToList();
+
+        var candidates = await _db.EntityDefinitions
+            .Include(e => e.Fields)
+            .Include(e => e.Interfaces)
+            .Where(e => dependencyLower.Contains(e.EntityName.ToLower()))
+            .ToListAsync();
+
+        foreach (var dependencyName in dependencyNames)
+        {
+            var dependency = candidates.FirstOrDefault(e =>
+                string.Equals(e.EntityName, dependencyName, StringComparison.OrdinalIgnoreCase));
+
+            if (dependency == null)
+            {
+                return (false, $"Lookup referenced entities not found or not published: {dependencyName}");
+            }
+
+            if (dependency.Status is not (EntityStatus.Draft or EntityStatus.Withdrawn))
+            {
+                continue;
+            }
+
+            var childContext = context.AsCascadeChild();
+            PublishResult publishResult;
+
+            if (dependency.Status == EntityStatus.Withdrawn)
+            {
+                publishResult = await RepublishWithdrawnEntityAsync(dependency, publishedBy, childContext);
+            }
+            else
+            {
+                publishResult = await PublishNewEntityInternalAsync(dependency.Id, publishedBy, childContext);
+            }
+
+            if (!publishResult.Success)
+            {
+                return (false, $"Cascade publish failed for entity {dependency.EntityName}: {publishResult.ErrorMessage}");
+            }
+        }
+
+        return (true, null);
+    }
+
+    private async Task<PublishResult> RepublishWithdrawnEntityAsync(
+        EntityDefinition entity,
+        string? publishedBy,
+        PublishContext context)
+    {
+        var tableExists = await _ddlExecutor.TableExistsAsync(entity.DefaultTableName);
+        if (!tableExists)
+        {
+            entity.Status = EntityStatus.Draft;
+            await _db.SaveChangesAsync();
+            return await PublishNewEntityInternalAsync(entity.Id, publishedBy, context);
+        }
+
+        var result = new PublishResult { EntityDefinitionId = entity.Id };
+        try
+        {
+            await using var transaction = _db.Database.IsRelational()
+                ? await _db.Database.BeginTransactionAsync()
+                : null;
+            entity.Status = EntityStatus.Published;
+            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedBy = publishedBy;
+            if (context.IsCascadeChild)
+            {
+                entity.Source = EntitySource.System;
+            }
+            await _db.SaveChangesAsync();
+
+            await _lockService.LockEntityAsync(entity.Id, "Entity republished from Withdrawn");
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+        }
+
+        return result;
+    }
+
+    private async Task<bool> IsReferencedByPublishedEntitiesAsync(EntityDefinition entity)
+    {
+        var targetName = entity.EntityName?.Trim();
+        if (string.IsNullOrWhiteSpace(targetName))
+        {
+            return false;
+        }
+
+        var targetLower = targetName.ToLowerInvariant();
+
+        return await _db.FieldMetadatas
+            .Where(f => !f.IsDeleted && f.LookupEntityName != null && f.LookupEntityName.ToLower() == targetLower)
+            .Join(
+                _db.EntityDefinitions.Where(ed => ed.Id != entity.Id && ed.Status == EntityStatus.Published),
+                field => field.EntityDefinitionId,
+                definition => definition.Id,
+                (_, definition) => definition.Id)
+            .AnyAsync();
+    }
+
+    private string ResolveWithdrawalMode()
+    {
+        var configured = _configuration["EntityPublishing:WithdrawalMode"]?.Trim();
+        if (string.Equals(configured, WithdrawalModes.Physical, StringComparison.OrdinalIgnoreCase))
+        {
+            return WithdrawalModes.Physical;
+        }
+
+        return WithdrawalModes.Logical;
+    }
+
+    private static class WithdrawalModes
+    {
+        public const string Logical = "Logical";
+        public const string Physical = "Physical";
+    }
+
     /// <summary>
     /// 应用接口字段到实体
     /// </summary>
-    private async Task ApplyInterfaceFieldsAsync(EntityDefinition entity)
+    private Task ApplyInterfaceFieldsAsync(EntityDefinition entity)
     {
         var existingFieldNames = entity.Fields.Select(f => f.PropertyName).ToHashSet();
 
@@ -301,7 +610,7 @@ public class EntityPublishingService : IEntityPublishingService
             }
         }
 
-        await _db.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -638,7 +947,7 @@ public class EntityPublishingService : IEntityPublishingService
         }
 
         var existingEntityNames = await _db.EntityDefinitions
-            .Where(e => requestedEntityNames.Contains(e.EntityName) && e.Status != EntityStatus.Draft)
+            .Where(e => requestedEntityNames.Contains(e.EntityName) && e.Status == EntityStatus.Published)
             .Select(e => e.EntityName)
             .ToListAsync();
 
@@ -653,6 +962,13 @@ public class EntityPublishingService : IEntityPublishingService
 
         _logger.LogInformation("[Publish] ? Lookup reference validation passed for {Count} lookup fields", lookupFields.Count);
         return result;
+    }
+
+    private sealed record PublishContext(HashSet<Guid> Visited, bool IsCascadeChild)
+    {
+        public static PublishContext CreateRoot() => new(new HashSet<Guid>(), false);
+
+        public PublishContext AsCascadeChild() => this with { IsCascadeChild = true };
     }
 
     private static FormTemplateUsageType MapViewStateToUsage(string viewState) =>

@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("checkbox", "LBL_CHECKBOX", "Outline.CheckSquare", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("checkbox", "LBL_CHECKBOX", "Outline.CheckSquare", WidgetCategory.Basic)]
 /// <summary>
 /// 复选框控件（支持单个复选框或复选框组）
 /// </summary>

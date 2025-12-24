@@ -44,7 +44,7 @@
         }
     }
 
-    private async Task ApplySnapshotAsync(PreferencesService.UserSettingsSnapshot snapshot)
+    private async Task ApplySnapshotAsync(UserSettingsSnapshot snapshot)
     {
         var lang = string.IsNullOrWhiteSpace(snapshot.Effective.Language)
             ? "ja"

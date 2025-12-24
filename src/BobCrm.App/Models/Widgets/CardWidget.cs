@@ -3,7 +3,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("card", "LBL_CARD", "Outline.Container", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("card", "LBL_CARD", "Outline.Container", WidgetCategory.Layout)]
 /// <summary>
 /// Card 卡片控件 - 用于分组展示表单字段
 /// 支持标题、折叠、边框等配置

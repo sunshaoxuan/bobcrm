@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("select", "LBL_SELECT", "Outline.Select", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("select", "LBL_SELECT", "Outline.Select", WidgetCategory.Basic)]
 /// <summary>
 /// 单选下拉控件
 /// </summary>

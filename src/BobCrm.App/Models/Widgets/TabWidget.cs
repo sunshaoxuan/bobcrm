@@ -3,7 +3,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("tab", "LBL_TAB", "Outline.Tag", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("tab", "LBL_TAB", "Outline.Tag", WidgetCategory.Layout)]
 /// <summary>
 /// Tabs 容器中的单个 Tab 面板
 /// </summary>

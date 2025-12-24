@@ -3,7 +3,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("grid", "LBL_GRID", "Outline.BorderOuter", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("grid", "LBL_GRID", "Outline.BorderOuter", WidgetCategory.Layout)]
 /// <summary>
 /// Grid 容器控件（结构化布局）
 /// </summary>

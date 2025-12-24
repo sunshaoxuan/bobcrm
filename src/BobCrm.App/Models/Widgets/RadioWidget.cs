@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("radio", "LBL_RADIO", "Outline.DotChart", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("radio", "LBL_RADIO", "Outline.DotChart", WidgetCategory.Basic)]
 /// <summary>
 /// 单选按钮组控件
 /// </summary>

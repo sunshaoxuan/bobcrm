@@ -3,7 +3,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("frame", "LBL_FRAME", "Outline.BorderOuter", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("frame", "LBL_FRAME", "Outline.BorderOuter", WidgetCategory.Layout)]
 /// <summary>
 /// 框架控件（容器）
 /// 可以包含其他子控件

@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("listbox", "LBL_LISTBOX", "Outline.UnorderedList", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("listbox", "LBL_LISTBOX", "Outline.UnorderedList", WidgetCategory.Basic)]
 /// <summary>
 /// 列表框控件
 /// 下拉选择框

@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("calendar", "LBL_CALENDAR", "Outline.Calendar", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("calendar", "LBL_CALENDAR", "Outline.Calendar", WidgetCategory.Basic)]
 /// <summary>
 /// 日历控件
 /// 用于日期选择

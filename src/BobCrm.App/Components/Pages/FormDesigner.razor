@@ -355,7 +355,7 @@
 
     private string SerializeWidgets() => JsonSerializer.Serialize(_widgets, _jsonOptions);
 
-    private RenderFragment RenderPalette(string titleKey, IReadOnlyList<WidgetRegistry.WidgetDefinition> definitions) => builder =>
+    private RenderFragment RenderPalette(string titleKey, IReadOnlyList<WidgetDefinition> definitions) => builder =>
     {
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "designer-section");

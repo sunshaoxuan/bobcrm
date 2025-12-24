@@ -3,6 +3,7 @@ using System.Data.Common;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BobCrm.Api.Services;
 
@@ -215,6 +216,13 @@ public class DDLExecutionService
         var connection = _db.Database.GetDbConnection();
         await using var command = connection.CreateCommand();
         command.CommandText = sqlScript;
+
+        var activeTransaction = _db.Database.CurrentTransaction?.GetDbTransaction();
+        if (activeTransaction != null)
+        {
+            command.Transaction = activeTransaction;
+        }
+
         if (connection.State != ConnectionState.Open)
         {
             await connection.OpenAsync();

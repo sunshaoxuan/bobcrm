@@ -2,6 +2,7 @@ using AntDesign;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
 
@@ -12,6 +13,7 @@ public partial class MultilingualInput : IAsyncDisposable
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private I18nService I18n { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ILogger<MultilingualInput> Logger { get; set; } = default!;
 
     [Parameter] public MultilingualTextDto? Value { get; set; }
     [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
@@ -63,7 +65,7 @@ public partial class MultilingualInput : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MultilingualInput] Failed to load languages: {ex.Message}");
+            Logger.LogWarning(ex, "[MultilingualInput] Failed to load languages");
             _languages = new List<LanguageInfo>
             {
                 new() { Code = "ja", Name = "日本語" },

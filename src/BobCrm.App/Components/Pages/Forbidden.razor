@@ -1,0 +1,14 @@
+@page "/403-Forbidden"
+@rendermode RenderMode.InteractiveServer
+
+@inject NavigationManager Nav
+
+<div class="runtime-state error" style="max-width:680px; margin:64px auto; padding:24px;">
+    <h2 style="margin:0 0 12px 0;">403 - Forbidden</h2>
+    <p style="margin:0 0 16px 0;">You don’t have permission to access this page.</p>
+    <Button Type="@ButtonType.Primary" OnClick="GoHome">Back to Home</Button>
+</div>
+
+@code {
+    private void GoHome() => Nav.NavigateTo("/", forceLoad: true);
+}

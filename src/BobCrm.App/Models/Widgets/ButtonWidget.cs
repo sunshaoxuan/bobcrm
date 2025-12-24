@@ -7,7 +7,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("button", "LBL_BUTTON", "Outline.Inbox", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("button", "LBL_BUTTON", "Outline.Inbox", WidgetCategory.Basic)]
 /// <summary>
 /// 按钮控件
 /// </summary>

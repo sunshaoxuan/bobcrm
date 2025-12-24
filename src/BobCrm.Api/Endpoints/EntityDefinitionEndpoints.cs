@@ -1078,6 +1078,41 @@ public static class EntityDefinitionEndpoints
         .Produces<SuccessResponse<PublishResultDto>>()
         .Produces<ErrorResponse>(400);
 
+        // 撤回发布（DROP TABLE 或逻辑撤回）
+        group.MapPost("/{id:guid}/withdraw", async (
+            Guid id,
+            Services.IEntityPublishingService publishService,
+            HttpContext http,
+            ILocalization loc,
+            ILogger<Program> logger) =>
+        {
+            var lang = LangHelper.GetLang(http);
+            var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            logger.LogInformation("[Withdraw] Withdrawing entity: {Id}", id);
+
+            var result = await publishService.WithdrawAsync(id, uid);
+            if (!result.Success)
+            {
+                logger.LogError("[Withdraw] Failed: {Error}", result.ErrorMessage);
+                return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? "Withdraw failed", "WITHDRAW_FAILED"));
+            }
+
+            return Results.Ok(new SuccessResponse<WithdrawResultDto>(new WithdrawResultDto
+            {
+                Success = true,
+                ScriptId = result.ScriptId,
+                DdlScript = result.DDLScript,
+                Mode = result.Mode,
+                Message = loc.T("MSG_ENTITY_WITHDRAW_SUCCESS", lang)
+            }));
+        })
+        .WithName("WithdrawEntity")
+        .WithSummary("撤回发布")
+        .WithDescription("撤回已发布实体：逻辑撤回或物理删除表（受配置控制）")
+        .Produces<SuccessResponse<WithdrawResultDto>>()
+        .Produces<ErrorResponse>(400);
+
         // 预览DDL脚本（不执行）
         group.MapGet("/{id:guid}/preview-ddl", async (
             Guid id,

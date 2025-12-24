@@ -14,20 +14,6 @@ namespace BobCrm.App.Services.Widgets;
 /// </summary>
 public static class WidgetRegistry
 {
-    public enum WidgetCategory
-    {
-        Basic,
-        Layout,
-        Data
-    }
-
-    public record WidgetDefinition(
-        string Type,
-        string LabelKey,
-        string Icon,
-        WidgetCategory Category,
-        Func<DraggableWidget> Factory);
-
     private static readonly Dictionary<string, WidgetDefinition> _definitions;
 
     public static IReadOnlyList<WidgetDefinition> BasicWidgets { get; }

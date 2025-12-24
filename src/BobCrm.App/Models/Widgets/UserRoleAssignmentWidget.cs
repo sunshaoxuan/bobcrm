@@ -6,7 +6,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("userrole", "LBL_USERROLE", "Outline.UserSwitch", WidgetRegistry.WidgetCategory.Data)]
+[WidgetMetadata("userrole", "LBL_USERROLE", "Outline.UserSwitch", WidgetCategory.Data)]
 /// <summary>
 /// 用户角色分配控件 - 显示和编辑用户的角色分配
 /// </summary>

@@ -7,6 +7,7 @@
 @using BobCrm.App.Services.Widgets
 @using BobCrm.App.Services.Widgets.Rendering
 @using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.Extensions.Logging
 @using System.Linq
 
 @inject BobCrm.App.Services.AuthService Auth
@@ -17,6 +18,7 @@
 @inject BobCrm.App.Services.TemplateRuntimeClient TemplateRuntime
 @inject BobCrm.App.Services.FieldService FieldService
 @inject IRuntimeWidgetRenderer RuntimeRenderer
+@inject ILogger<PageLoader> Logger
 
 <AuthChecker>
 @if (loading)
@@ -763,7 +765,7 @@ else if (entityData != null)
             try
             {
                 var debugJson = System.Text.Json.JsonSerializer.Serialize(payload);
-                Console.WriteLine($"[PageLoader] Save payload: {debugJson}");
+                Logger.LogDebug("[PageLoader] Save payload: {Payload}", debugJson);
             }
             catch { }
 

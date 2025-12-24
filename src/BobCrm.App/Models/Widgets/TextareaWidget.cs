@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("textarea", "LBL_TEXTAREA", "Outline.FileText", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("textarea", "LBL_TEXTAREA", "Outline.FileText", WidgetCategory.Basic)]
 /// <summary>
 /// 多行文本输入控件
 /// </summary>

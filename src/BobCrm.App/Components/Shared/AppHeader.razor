@@ -150,8 +150,8 @@
         await ThemeState.SetThemeAsync(theme);
         StateHasChanged();
     }
-    private string NavModeButtonClass(LayoutState.NavDisplayMode mode) => Layout.NavMode == mode ? "active" : string.Empty;
-    private async Task ChangeNavMode(LayoutState.NavDisplayMode mode)
+    private string NavModeButtonClass(NavDisplayMode mode) => Layout.NavMode == mode ? "active" : string.Empty;
+    private async Task ChangeNavMode(NavDisplayMode mode)
     {
         if (Layout.NavMode == mode)
         {
@@ -161,7 +161,7 @@
         Layout.SetNavMode(mode);
         var apiValue = PreferencesService.ToApiNavMode(mode);
         try { await JS.InvokeVoidAsync("localStorage.setItem", "navMode", apiValue); } catch { }
-        _ = PrefsService.SaveUserSettingsAsync(new PreferencesService.UpdateUserSettingsRequest
+        _ = PrefsService.SaveUserSettingsAsync(new UpdateUserSettingsRequest
         {
             NavDisplayMode = apiValue
         });
@@ -172,8 +172,8 @@
         Interaction.ShowStickyBar(I18n.T("DEMO_STICKY_TEXT"),
             new[]
             {
-                new InteractionState.StickyAction(I18n.T("BTN_RESET"), InteractionState.InteractionActionTone.Default, async () => { await Task.Delay(0); }),
-                new InteractionState.StickyAction(I18n.T("BTN_SAVE_VIEW"), InteractionState.InteractionActionTone.Primary, async () => { await Task.Delay(0); })
+                new StickyAction(I18n.T("BTN_RESET"), InteractionActionTone.Default, async () => { await Task.Delay(0); }),
+                new StickyAction(I18n.T("BTN_SAVE_VIEW"), InteractionActionTone.Primary, async () => { await Task.Delay(0); })
             });
     }
 

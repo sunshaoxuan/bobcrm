@@ -366,9 +366,9 @@
 
     private readonly NavModeOption[] NavModeOptions =
     [
-        new(LayoutState.NavDisplayMode.Icons, "LBL_NAV_MODE_ICONS"),
-        new(LayoutState.NavDisplayMode.Labels, "LBL_NAV_MODE_TEXT"),
-        new(LayoutState.NavDisplayMode.IconText, "LBL_NAV_MODE_BOTH")
+        new(NavDisplayMode.Icons, "LBL_NAV_MODE_ICONS"),
+        new(NavDisplayMode.Labels, "LBL_NAV_MODE_TEXT"),
+        new(NavDisplayMode.IconText, "LBL_NAV_MODE_BOTH")
     ];
 
     private SystemSettingsModel systemForm = new();
@@ -427,7 +427,7 @@
 
         try
         {
-            var update = new PreferencesService.UpdateUserSettingsRequest
+            var update = new UpdateUserSettingsRequest
             {
                 Theme = userForm.Theme,
                 PrimaryColor = userForm.PrimaryColor,
@@ -479,7 +479,7 @@
 
         try
         {
-            var update = new PreferencesService.UpdateSystemSettingsRequest
+            var update = new UpdateSystemSettingsRequest
             {
                 CompanyName = systemForm.CompanyName,
                 DefaultTheme = systemForm.DefaultTheme,
@@ -516,7 +516,7 @@
         }
     }
 
-    private void ApplyUserSnapshot(PreferencesService.UserSettingsSnapshot snapshot)
+    private void ApplyUserSnapshot(UserSettingsSnapshot snapshot)
     {
         var source = snapshot.Overrides ?? snapshot.Effective;
         userForm = new UserSettingsModel
@@ -529,7 +529,7 @@
         };
     }
 
-    private static SystemSettingsModel MapSystem(PreferencesService.SystemSettingsDto dto) =>
+    private static SystemSettingsModel MapSystem(SystemSettingsDto dto) =>
         new()
         {
             CompanyName = dto.CompanyName,
@@ -545,7 +545,7 @@
     private record ThemeOption(string Value, string LabelKey);
     private record LanguageOption(string Code, string LabelKey);
     private record HomeRouteOption(string Value, string LabelKey);
-    private record NavModeOption(LayoutState.NavDisplayMode Mode, string LabelKey);
+    private record NavModeOption(NavDisplayMode Mode, string LabelKey);
 
     private class SystemSettingsModel
     {
@@ -554,7 +554,7 @@
         public string? DefaultPrimaryColor { get; set; } = "#739FD6";
         public string DefaultLanguage { get; set; } = "ja";
         public string DefaultHomeRoute { get; set; } = "/";
-        public LayoutState.NavDisplayMode DefaultNavMode { get; set; } = LayoutState.NavDisplayMode.IconText;
+        public NavDisplayMode DefaultNavMode { get; set; } = NavDisplayMode.IconText;
         public string TimeZoneId { get; set; } = "Asia/Tokyo";
         public bool AllowSelfRegistration { get; set; }
     }
@@ -565,7 +565,7 @@
         public string? PrimaryColor { get; set; } = "#739FD6";
         public string Language { get; set; } = "ja";
         public string HomeRoute { get; set; } = "/";
-        public LayoutState.NavDisplayMode NavMode { get; set; } = LayoutState.NavDisplayMode.IconText;
+        public NavDisplayMode NavMode { get; set; } = NavDisplayMode.IconText;
     }
 
     public void Dispose()

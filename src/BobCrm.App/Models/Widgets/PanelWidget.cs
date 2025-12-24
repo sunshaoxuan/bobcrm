@@ -3,7 +3,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("panel", "LBL_PANEL", "Outline.Appstore", WidgetRegistry.WidgetCategory.Layout)]
+[WidgetMetadata("panel", "LBL_PANEL", "Outline.Appstore", WidgetCategory.Layout)]
 /// <summary>
 /// Panel 容器控件
 /// </summary>

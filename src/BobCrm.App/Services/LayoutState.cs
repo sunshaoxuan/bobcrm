@@ -103,12 +103,5 @@ public class LayoutState
         Notify();
     }
 
-    public enum NavDisplayMode
-    {
-        Icons,
-        Labels,
-        IconText
-    }
-
     private void Notify() => OnChanged?.Invoke();
 }

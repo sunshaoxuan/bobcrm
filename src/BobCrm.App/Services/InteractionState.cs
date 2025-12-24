@@ -7,13 +7,7 @@ namespace BobCrm.App.Services;
 
 public class InteractionState
 {
-    public record ToastMessage(Guid Id, string Title, string? Body, ToastTone Tone, DateTime CreatedAt);
-    public enum ToastTone { Info, Success, Warning, Danger }
-
-    public record StickyAction(string Label, InteractionActionTone Tone, Func<Task>? Callback);
-    public enum InteractionActionTone { Primary, Default, Ghost }
-
-    private readonly List<ToastMessage> _toasts = new();
+    private readonly List<InteractionToastMessage> _toasts = new();
     private readonly List<StickyAction> _stickyActions = new();
 
     public bool IsBulkBarVisible { get; private set; }
@@ -26,7 +20,7 @@ public class InteractionState
     public bool IsStickyBarVisible { get; private set; }
     public string StickyBarMessage { get; private set; } = string.Empty;
 
-    public IReadOnlyList<ToastMessage> Toasts => _toasts;
+    public IReadOnlyList<InteractionToastMessage> Toasts => _toasts;
     public IReadOnlyList<StickyAction> StickyActions => _stickyActions;
 
     public event Action? OnChanged;
@@ -68,9 +62,9 @@ public class InteractionState
         Notify();
     }
 
-    public Guid PushToast(string title, string? body = null, ToastTone tone = ToastTone.Info, int maxCount = 3)
+    public Guid PushToast(string title, string? body = null, InteractionToastTone tone = InteractionToastTone.Info, int maxCount = 3)
     {
-        var toast = new ToastMessage(Guid.NewGuid(), title, body, tone, DateTime.UtcNow);
+        var toast = new InteractionToastMessage(Guid.NewGuid(), title, body, tone, DateTime.UtcNow);
         _toasts.Insert(0, toast);
         while (_toasts.Count > maxCount)
         {

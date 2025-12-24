@@ -239,69 +239,71 @@ public class CSharpCodeGenerator
     /// </summary>
     public virtual string GenerateInterfaces()
     {
-        return @"using System;
-
-namespace BobCrm.Api.Base
-{
-    /// <summary>
-    /// 基础实体接口 - 所有实体都应实现此接口
-    /// 包含逻辑删除支持（系统级安全机制）
-    /// </summary>
-    public interface IEntity
-    {
-        int Id { get; set; }
-        bool IsDeleted { get; set; }
-        DateTime? DeletedAt { get; set; }
-        string? DeletedBy { get; set; }
-    }
-
-    /// <summary>
-    /// 档案实体接口 - 包含Code和Name
-    /// </summary>
-    public interface IArchive
-    {
-        string Code { get; set; }
-        string Name { get; set; }
-    }
-
-    /// <summary>
-    /// 可审计接口 - 包含创建和修改信息
-    /// </summary>
-    public interface IAuditable
-    {
-        DateTime CreatedAt { get; set; }
-        string? CreatedBy { get; set; }
-        DateTime UpdatedAt { get; set; }
-        string? UpdatedBy { get; set; }
-        int Version { get; set; }
-    }
-
-    /// <summary>
-    /// 版本管理接口
-    /// </summary>
-    public interface IVersioned
-    {
-        int Version { get; set; }
-    }
-
-    /// <summary>
-    /// 时间版本接口 - 支持时间范围的版本管理
-    /// </summary>
-    public interface ITimeVersioned
-    {
-        DateTime ValidFrom { get; set; }
-        DateTime? ValidTo { get; set; }
-        int VersionNo { get; set; }
-    }
-
-    /// <summary>
-    /// 组织维度接口 - 记录所属组织及其树路径
-    /// </summary>
-    public interface IOrganizational
-    {
-        Guid OrganizationId { get; set; }
-    }
-}";
+        var sb = new StringBuilder();
+        sb.AppendLine("using System;");
+        sb.AppendLine();
+        sb.AppendLine("namespace BobCrm.Api.Base");
+        sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 基础实体接口 - 所有实体都应实现此接口");
+        sb.AppendLine("    /// 包含逻辑删除支持（系统级安全机制）");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface IEntity");
+        sb.AppendLine("    {");
+        sb.AppendLine("        int Id { get; set; }");
+        sb.AppendLine("        bool IsDeleted { get; set; }");
+        sb.AppendLine("        DateTime? DeletedAt { get; set; }");
+        sb.AppendLine("        string? DeletedBy { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 档案实体接口 - 包含Code和Name");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface IArchive");
+        sb.AppendLine("    {");
+        sb.AppendLine("        string Code { get; set; }");
+        sb.AppendLine("        string Name { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 可审计接口 - 包含创建和修改信息");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface IAuditable");
+        sb.AppendLine("    {");
+        sb.AppendLine("        DateTime CreatedAt { get; set; }");
+        sb.AppendLine("        string? CreatedBy { get; set; }");
+        sb.AppendLine("        DateTime UpdatedAt { get; set; }");
+        sb.AppendLine("        string? UpdatedBy { get; set; }");
+        sb.AppendLine("        int Version { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 版本管理接口");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface IVersioned");
+        sb.AppendLine("    {");
+        sb.AppendLine("        int Version { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 时间版本接口 - 支持时间范围的版本管理");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface ITimeVersioned");
+        sb.AppendLine("    {");
+        sb.AppendLine("        DateTime ValidFrom { get; set; }");
+        sb.AppendLine("        DateTime? ValidTo { get; set; }");
+        sb.AppendLine("        int VersionNo { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    /// <summary>");
+        sb.AppendLine("    /// 组织维度接口 - 记录所属组织及其树路径");
+        sb.AppendLine("    /// </summary>");
+        sb.AppendLine("    public interface IOrganizational");
+        sb.AppendLine("    {");
+        sb.AppendLine("        Guid OrganizationId { get; set; }");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+        return sb.ToString();
     }
 
     /// <summary>

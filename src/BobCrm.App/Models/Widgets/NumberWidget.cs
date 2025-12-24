@@ -5,7 +5,7 @@ using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
 
-[WidgetMetadata("number", "LBL_NUMBER", "Outline.FieldNumber", WidgetRegistry.WidgetCategory.Basic)]
+[WidgetMetadata("number", "LBL_NUMBER", "Outline.FieldNumber", WidgetCategory.Basic)]
 /// <summary>
 /// 数字输入控件
 /// </summary>
