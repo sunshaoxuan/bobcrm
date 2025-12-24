@@ -17,12 +17,16 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         client.UseBearer(access);
 
         // choose a customer
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
         // initial effective layout (likely empty)
-        var eff = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{id}");
+        var effResp = await client.GetAsync($"/api/layout/{id}");
+        effResp.EnsureSuccessStatusCode();
+        var eff = await effResp.ReadDataAsJsonAsync();
         Assert.True(eff.ValueKind == JsonValueKind.Object);
 
         // save user layout
@@ -30,7 +34,9 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         saveUser.EnsureSuccessStatusCode();
 
         // get user scope
-        var userLayout = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{id}?scope=user");
+        var userLayoutResp = await client.GetAsync($"/api/layout/{id}?scope=user");
+        userLayoutResp.EnsureSuccessStatusCode();
+        var userLayout = await userLayoutResp.ReadDataAsJsonAsync();
         Assert.Equal("flow", userLayout.GetProperty("mode").GetString());
 
         // save default layout (admin only)
@@ -40,7 +46,9 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         // delete user layout -> effective should fallback to default (non-empty)
         var delUser = await client.DeleteAsync($"/api/layout/{id}");
         delUser.EnsureSuccessStatusCode();
-        var eff2 = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{id}");
+        var eff2Resp = await client.GetAsync($"/api/layout/{id}");
+        eff2Resp.EnsureSuccessStatusCode();
+        var eff2 = await eff2Resp.ReadDataAsJsonAsync();
         Assert.True(eff2.TryGetProperty("items", out _));
 
         // delete default layout as admin
@@ -55,7 +63,9 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
@@ -96,7 +106,9 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
 
         // 发送空的JSON（deprecated endpoint会验证）
@@ -116,7 +128,9 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var (userId, _, access) = await client.CreateAndLoginUserAsync(_factory.Services);
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
 
         // 生成但不保存
@@ -124,13 +138,13 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
             new { tags = new[] { "常用" }, mode = "flow", save = false });
         genResp.EnsureSuccessStatusCode();
 
-        var generated = await genResp.Content.ReadFromJsonAsync<JsonElement>();
+        var generated = await genResp.ReadDataAsJsonAsync();
         Assert.True(generated.TryGetProperty("mode", out _));
         Assert.True(generated.TryGetProperty("items", out _));
 
         // 验证没有保存到数据库
         var getResp = await client.GetAsync($"/api/layout/{id}?scope=user");
-        var layout = await getResp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await getResp.ReadDataAsJsonAsync();
         
         // 应该没有用户布局（返回空或默认布局）
         // 不应该包含刚才生成的内容
@@ -151,7 +165,7 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var effResp = await client.GetAsync("/api/layout?scope=effective");
         effResp.EnsureSuccessStatusCode();
 
-        var effective = await effResp.Content.ReadFromJsonAsync<JsonElement>();
+        var effective = await effResp.ReadDataAsJsonAsync();
         Assert.NotEqual(JsonValueKind.Null, effective.ValueKind);
     }
 
@@ -177,12 +191,12 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
 
         // 验证用户布局和默认布局不同
         var userResp = await userClient.GetAsync("/api/layout/customer?scope=user");
-        var userData = await userResp.Content.ReadFromJsonAsync<JsonElement>();
+        var userData = await userResp.ReadDataAsJsonAsync();
         Assert.Equal("flow", userData.GetProperty("mode").GetString());
 
         // Admin获取默认布局
         var adminDefaultResp = await client.GetAsync("/api/layout/customer?scope=default");
-        var defaultData = await adminDefaultResp.Content.ReadFromJsonAsync<JsonElement>();
+        var defaultData = await adminDefaultResp.ReadDataAsJsonAsync();
         Assert.Equal("free", defaultData.GetProperty("mode").GetString());
     }
 
@@ -194,14 +208,16 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
 
         var genResp = await client.PostAsJsonAsync($"/api/layout/{id}/generate", 
             new { tags = new[] { "常用" }, mode = "flow", save = false });
         genResp.EnsureSuccessStatusCode();
 
-        var layout = await genResp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await genResp.ReadDataAsJsonAsync();
         Assert.Equal("flow", layout.GetProperty("mode").GetString());
         
         var items = layout.GetProperty("items");
@@ -221,14 +237,16 @@ public class LayoutTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
 
         var genResp = await client.PostAsJsonAsync($"/api/layout/{id}/generate", 
             new { tags = new[] { "常用" }, mode = "free", save = false });
         genResp.EnsureSuccessStatusCode();
 
-        var layout = await genResp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await genResp.ReadDataAsJsonAsync();
         Assert.Equal("free", layout.GetProperty("mode").GetString());
         
         var items = layout.GetProperty("items");

@@ -11,7 +11,8 @@ public static class TestHelpers
     public static async Task<JsonElement> ReadAsJsonAsync(this HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync();
-        return JsonDocument.Parse(content).RootElement;
+        using var doc = JsonDocument.Parse(content);
+        return doc.RootElement.Clone();
     }
 
     public static JsonElement UnwrapData(this JsonElement root)
@@ -22,6 +23,15 @@ public static class TestHelpers
             if (root.TryGetProperty("Data", out var dataPascal)) return dataPascal;
         }
         return root;
+    }
+
+    public static async Task<JsonElement> ReadDataAsJsonAsync(this HttpResponseMessage response)
+        => (await response.ReadAsJsonAsync()).UnwrapData();
+
+    public static async Task<T?> ReadDataAsync<T>(this HttpResponseMessage response, JsonSerializerOptions? options = null)
+    {
+        var data = await response.ReadDataAsJsonAsync();
+        return JsonSerializer.Deserialize<T>(data.GetRawText(), options ?? new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
     public static async Task<(string accessToken, string refreshToken)> LoginAsAdminAsync(this HttpClient client)

@@ -98,9 +98,9 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
         var items = bindingDoc.EnumerateArray().ToList();
         Assert.NotEmpty(items);
         var workflowEntry = items.First(entry =>
-            entry.GetProperty("Binding").GetProperty("entityType").GetString() == entity.EntityRoute);
+            entry.GetProperty("binding").GetProperty("entityType").GetString() == entity.EntityRoute);
 
-        var menuInfo = workflowEntry.GetProperty("Menu");
+        var menuInfo = workflowEntry.GetProperty("menu");
         Assert.Equal($"CRM.CORE.{entity.EntityRoute.ToUpperInvariant()}", menuInfo.GetProperty("code").GetString());
         // Request with lang=ja to get Japanese display name (ARCH-30 dual-mode API)
         Assert.Equal(entity.DisplayName!["ja"], menuInfo.GetProperty("name").GetString());
@@ -109,10 +109,10 @@ public class MenuTemplateWorkflowTests : IClassFixture<MenuWorkflowAppFactory>
             : entity.ApiEndpoint.TrimStart('/');
         Assert.Equal(expectedRoute, menuInfo.GetProperty("route").GetString());
 
-        var bindingInfo = workflowEntry.GetProperty("Binding");
+        var bindingInfo = workflowEntry.GetProperty("binding");
         Assert.Equal((int)FormTemplateUsageType.Detail, GetUsageValue(bindingInfo.GetProperty("usageType")));
 
-        var templateList = workflowEntry.GetProperty("Templates");
+        var templateList = workflowEntry.GetProperty("templates");
         Assert.True(templateList.GetArrayLength() > 0);
         Assert.Contains(templateList.EnumerateArray(), t => t.GetProperty("isSystemDefault").GetBoolean());
     }

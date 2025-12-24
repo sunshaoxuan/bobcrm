@@ -70,11 +70,9 @@ public class QueriesUnitTests
         repo.Data.Add(new FieldDefinition{ Key="link", DisplayName="LBL_LINK", DataType="link", Tags = null, Actions = null });
         var q = new FieldQueries(repo, new FakeLoc(), HttpWithUser("u1"));
         var defs = q.GetDefinitions();
-        var json = JsonSerializer.Serialize(defs);
-        var arr = JsonDocument.Parse(json).RootElement;
-        Assert.True(arr.GetArrayLength() == 2);
-        Assert.True(arr[0].GetProperty("tags").GetArrayLength() == 1);
-        Assert.True(arr[1].GetProperty("tags").GetArrayLength() == 0);
+        Assert.Equal(2, defs.Count);
+        Assert.Single(defs[0].Tags);
+        Assert.Empty(defs[1].Tags);
     }
 
     [Fact]

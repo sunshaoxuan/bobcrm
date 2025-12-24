@@ -60,7 +60,7 @@ public class EntityDomainEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/entity-domains");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var domains = await response.Content.ReadFromJsonAsync<List<EntityDomainDto>>();
+        var domains = await response.ReadDataAsync<List<EntityDomainDto>>();
         Assert.NotNull(domains);
         Assert.NotEmpty(domains);
 
@@ -81,7 +81,7 @@ public class EntityDomainEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/entity-domains");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var domains = await response.Content.ReadFromJsonAsync<List<EntityDomainDto>>();
+        var domains = await response.ReadDataAsync<List<EntityDomainDto>>();
         Assert.NotNull(domains);
         Assert.NotEmpty(domains);
 
@@ -99,7 +99,7 @@ public class EntityDomainEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/entity-domains?lang=zh");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var domains = await response.Content.ReadFromJsonAsync<List<EntityDomainDto>>();
+        var domains = await response.ReadDataAsync<List<EntityDomainDto>>();
         Assert.NotNull(domains);
         Assert.NotEmpty(domains);
 
@@ -117,7 +117,7 @@ public class EntityDomainEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync($"/api/entity-domains/{domainId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var domain = await response.Content.ReadFromJsonAsync<EntityDomainDto>();
+        var domain = await response.ReadDataAsync<EntityDomainDto>();
         Assert.NotNull(domain);
         Assert.Equal(domainId, domain!.Id);
         Assert.Null(domain.Name);
@@ -134,11 +134,10 @@ public class EntityDomainEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync($"/api/entity-domains/{domainId}?lang=zh");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var domain = await response.Content.ReadFromJsonAsync<EntityDomainDto>();
+        var domain = await response.ReadDataAsync<EntityDomainDto>();
         Assert.NotNull(domain);
         Assert.Equal(domainId, domain!.Id);
         Assert.Equal("测试领域", domain.Name);
         Assert.Null(domain.NameTranslations);
     }
 }
-

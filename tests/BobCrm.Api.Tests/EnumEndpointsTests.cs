@@ -45,7 +45,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        var enums = await response.ReadDataAsync<List<EnumDefinitionDto>>();
         Assert.NotNull(enums);
         Assert.NotEmpty(enums);
     }
@@ -62,9 +62,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(enumId, result.Id);
+        Assert.Equal(enumId, result!.Id);
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(code, result.Code);
+        Assert.Equal(code, result!.Code);
     }
 
     [Fact]
@@ -121,9 +121,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(uniqueCode, result.Code);
+        Assert.Equal(uniqueCode, result!.Code);
         Assert.Equal(2, result.Options.Count);
     }
 
@@ -165,9 +165,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.NotNull(result.DisplayNameTranslations);
+        Assert.NotNull(result!.DisplayNameTranslations);
         Assert.Equal("更新后名称", result.DisplayNameTranslations!["zh"]);
         Assert.False(result.IsEnabled);
     }
@@ -201,7 +201,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.DeleteAsync($"/api/enums/{enumId}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
+        var options = await response.ReadDataAsync<List<EnumOptionDto>>();
         Assert.NotNull(options);
         Assert.NotEmpty(options);
     }
@@ -247,7 +247,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        var enums = await response.ReadDataAsync<List<EnumDefinitionDto>>();
         Assert.NotNull(enums);
         Assert.NotEmpty(enums);
 
@@ -273,7 +273,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        var enums = await response.ReadDataAsync<List<EnumDefinitionDto>>();
         Assert.NotNull(enums);
         Assert.NotEmpty(enums);
 
@@ -303,7 +303,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var enums = await response.Content.ReadFromJsonAsync<List<EnumDefinitionDto>>();
+        var enums = await response.ReadDataAsync<List<EnumDefinitionDto>>();
         Assert.NotNull(enums);
         Assert.NotEmpty(enums);
 
@@ -324,9 +324,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(enumId, result.Id);
+        Assert.Equal(enumId, result!.Id);
         Assert.Null(result.DisplayName);
         Assert.NotNull(result.DisplayNameTranslations);
         Assert.All(result.Options, opt =>
@@ -348,9 +348,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(enumId, result.Id);
+        Assert.Equal(enumId, result!.Id);
         Assert.Equal("带选项", result.DisplayName);
         Assert.Null(result.DisplayNameTranslations);
         Assert.All(result.Options, opt =>
@@ -373,9 +373,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(code, result.Code);
+        Assert.Equal(code, result!.Code);
         Assert.Null(result.DisplayName);
         Assert.NotNull(result.DisplayNameTranslations);
         Assert.Equal("测试枚举", result.DisplayNameTranslations!["zh"]);
@@ -394,9 +394,9 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        var result = await response.ReadDataAsync<EnumDefinitionDto>();
         Assert.NotNull(result);
-        Assert.Equal(code, result.Code);
+        Assert.Equal(code, result!.Code);
         Assert.NotNull(result.DisplayName);
         Assert.Null(result.DisplayNameTranslations);
     }
@@ -413,7 +413,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
+        var options = await response.ReadDataAsync<List<EnumOptionDto>>();
         Assert.NotNull(options);
         Assert.NotEmpty(options);
         Assert.All(options!, opt =>
@@ -435,7 +435,7 @@ public class EnumEndpointsTests : IClassFixture<TestWebAppFactory>
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var options = await response.Content.ReadFromJsonAsync<List<EnumOptionDto>>();
+        var options = await response.ReadDataAsync<List<EnumOptionDto>>();
         Assert.NotNull(options);
         Assert.NotEmpty(options);
         Assert.All(options!, opt =>

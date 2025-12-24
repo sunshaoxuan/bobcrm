@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +7,7 @@ using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs.Template;
 using BobCrm.Api.Contracts.Requests.Template;
+using BobCrm.Api.Contracts.Responses.Template;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Infrastructure.Ef;
@@ -55,11 +55,10 @@ public class TemplateServiceTests
         await _dbContext.SaveChangesAsync();
 
         var result = await _service.GetTemplatesAsync(userId, entityType: "customer", usageType: "Detail");
-        var templates = ((IEnumerable)result).Cast<object>().ToList();
 
-        templates.Should().HaveCount(1);
-        var name = templates[0].GetType().GetProperty("Name")?.GetValue(templates[0]) as string;
-        name.Should().Be("System Default");
+        result.Should().BeOfType<TemplateQueryResponseDto>();
+        result.Items.Should().HaveCount(1);
+        result.Items[0].Name.Should().Be("System Default");
     }
 
     [Fact]

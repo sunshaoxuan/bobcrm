@@ -15,7 +15,9 @@ public class FieldsAndI18nTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var defs = await client.GetFromJsonAsync<JsonElement>("/api/fields");
+        var defsResp = await client.GetAsync("/api/fields");
+        defsResp.EnsureSuccessStatusCode();
+        var defs = await defsResp.ReadDataAsJsonAsync();
         Assert.True(defs.GetArrayLength() >= 3);
         // verify actions exist for email/link/file/rds
         bool HasAction(string key, string action)
@@ -35,7 +37,9 @@ public class FieldsAndI18nTests : IClassFixture<TestWebAppFactory>
         Assert.True(HasAction("file", "copy"));
         Assert.True(HasAction("rds", "downloadRdp"));
 
-        var tags = await client.GetFromJsonAsync<JsonElement>("/api/fields/tags");
+        var tagsResp = await client.GetAsync("/api/fields/tags");
+        tagsResp.EnsureSuccessStatusCode();
+        var tags = await tagsResp.ReadDataAsJsonAsync();
         Assert.True(tags.GetArrayLength() > 0);
         Assert.True(tags[0].TryGetProperty("tag", out _));
     }
@@ -47,16 +51,24 @@ public class FieldsAndI18nTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var all = await client.GetFromJsonAsync<JsonElement>("/api/i18n/resources");
+        var allResp = await client.GetAsync("/api/i18n/resources");
+        allResp.EnsureSuccessStatusCode();
+        var all = await allResp.ReadDataAsJsonAsync();
         Assert.True(all.GetArrayLength() > 0);
 
-        var zh = await client.GetFromJsonAsync<JsonElement>("/api/i18n/zh");
+        var zhResp = await client.GetAsync("/api/i18n/zh");
+        zhResp.EnsureSuccessStatusCode();
+        var zh = await zhResp.ReadDataAsJsonAsync();
         Assert.True(zh.EnumerateObject().Any());
 
-        var en = await client.GetFromJsonAsync<JsonElement>("/api/i18n/en");
+        var enResp = await client.GetAsync("/api/i18n/en");
+        enResp.EnsureSuccessStatusCode();
+        var en = await enResp.ReadDataAsJsonAsync();
         Assert.True(en.EnumerateObject().Any());
 
-        var ja = await client.GetFromJsonAsync<JsonElement>("/api/i18n/ja");
+        var jaResp = await client.GetAsync("/api/i18n/ja");
+        jaResp.EnsureSuccessStatusCode();
+        var ja = await jaResp.ReadDataAsJsonAsync();
         Assert.True(ja.EnumerateObject().Any());
         // check a known key exists and is mapped
         Assert.True(ja.TryGetProperty("LBL_CUSTOMER", out var val) && !string.IsNullOrWhiteSpace(val.GetString()));

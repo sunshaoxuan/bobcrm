@@ -126,7 +126,9 @@ public class AdminAndAccessTests : IClassFixture<TestWebAppFactory>
         var adminClient = _factory.CreateClient();
         var (adminAccess, _) = await adminClient.LoginAsAdminAsync();
         adminClient.UseBearer(adminAccess);
-        var customers = await adminClient.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await adminClient.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         Assert.True(customers.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var customerId = customers[0].GetProperty("id").GetInt32();
         var res403getAuth = await userClient.GetAsync($"/api/customers/{customerId}/access");

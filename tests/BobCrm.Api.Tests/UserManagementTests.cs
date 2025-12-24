@@ -19,9 +19,9 @@ public class UserManagementTests : IClassFixture<TestWebAppFactory>
         var (token, _) = await client.LoginAsAdminAsync();
         client.UseBearer(token);
 
-        var users = await client.GetFromJsonAsync<List<UserSummaryResponse>>("/api/users");
-        Assert.NotNull(users);
-        Assert.Contains(users!, u => u.UserName == "admin");
+        var envelope = await client.GetFromJsonAsync<SuccessEnvelope<List<UserSummaryResponse>>>("/api/users");
+        Assert.NotNull(envelope);
+        Assert.Contains(envelope!.Data, u => u.UserName == "admin");
     }
 
     [Fact]
@@ -60,13 +60,13 @@ public class UserManagementTests : IClassFixture<TestWebAppFactory>
 
         var resp = await client.PostAsJsonAsync("/api/users", payload);
         resp.EnsureSuccessStatusCode();
-        var detail = await resp.Content.ReadFromJsonAsync<UserDetailResponse>();
-        Assert.NotNull(detail);
-        Assert.Contains(detail!.Roles, r => r.RoleId == roleId);
+        var detailEnvelope = await resp.Content.ReadFromJsonAsync<SuccessEnvelope<UserDetailResponse>>();
+        Assert.NotNull(detailEnvelope);
+        Assert.Contains(detailEnvelope!.Data.Roles, r => r.RoleId == roleId);
 
         using var scope2 = _factory.Services.CreateScope();
         var dbContext = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
-        var assignments = await dbContext.RoleAssignments.Where(a => a.UserId == detail.Id).ToListAsync();
+        var assignments = await dbContext.RoleAssignments.Where(a => a.UserId == detailEnvelope.Data.Id).ToListAsync();
         Assert.Single(assignments);
         Assert.Equal(roleId, assignments[0].RoleId);
     }
@@ -87,8 +87,8 @@ public class UserManagementTests : IClassFixture<TestWebAppFactory>
             emailConfirmed = true
         });
         createResp.EnsureSuccessStatusCode();
-        var detail = await createResp.Content.ReadFromJsonAsync<UserDetailResponse>();
-        Assert.NotNull(detail);
+        var detailEnvelope = await createResp.Content.ReadFromJsonAsync<SuccessEnvelope<UserDetailResponse>>();
+        Assert.NotNull(detailEnvelope);
 
         Guid roleA;
         Guid roleB;
@@ -103,7 +103,7 @@ public class UserManagementTests : IClassFixture<TestWebAppFactory>
             roleB = rb.Id;
         }
 
-        var updateResp = await client.PutAsJsonAsync($"/api/users/{detail!.Id}/roles", new
+        var updateResp = await client.PutAsJsonAsync($"/api/users/{detailEnvelope!.Data.Id}/roles", new
         {
             roles = new[]
             {
@@ -115,11 +115,13 @@ public class UserManagementTests : IClassFixture<TestWebAppFactory>
 
         using var scopeCheck = _factory.Services.CreateScope();
         var dbCheck = scopeCheck.ServiceProvider.GetRequiredService<AppDbContext>();
-        var assignments = await dbCheck.RoleAssignments.Where(a => a.UserId == detail.Id).ToListAsync();
+        var assignments = await dbCheck.RoleAssignments.Where(a => a.UserId == detailEnvelope.Data.Id).ToListAsync();
         Assert.Equal(2, assignments.Count);
         Assert.Contains(assignments, a => a.RoleId == roleA);
         Assert.Contains(assignments, a => a.RoleId == roleB);
     }
+
+    private record SuccessEnvelope<T>(bool Success, T Data);
 
     private record UserSummaryResponse(string Id, string UserName);
     private record UserDetailResponse

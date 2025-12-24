@@ -18,13 +18,13 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
 
         var listRes = await client.GetAsync("/api/customers");
         listRes.EnsureSuccessStatusCode();
-        var list = JsonDocument.Parse(await listRes.Content.ReadAsStringAsync()).RootElement;
+        var list = await listRes.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() >= 2);
 
         var firstId = list[0].GetProperty("id").GetInt32();
         var detailRes = await client.GetAsync($"/api/customers/{firstId}");
         detailRes.EnsureSuccessStatusCode();
-        var detail = JsonDocument.Parse(await detailRes.Content.ReadAsStringAsync()).RootElement;
+        var detail = await detailRes.ReadDataAsJsonAsync();
         Assert.Equal(firstId, detail.GetProperty("id").GetInt32());
         Assert.True(detail.GetProperty("fields").GetArrayLength() > 0);
     }
@@ -37,10 +37,14 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         client.UseBearer(access);
 
         // get a customer
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
-        var detail = await client.GetFromJsonAsync<JsonElement>($"/api/customers/{id}");
+        var detailResp = await client.GetAsync($"/api/customers/{id}");
+        detailResp.EnsureSuccessStatusCode();
+        var detail = await detailResp.ReadDataAsJsonAsync();
         var version = detail.GetProperty("version").GetInt32();
 
         // missing fields -> validation error 400
@@ -58,7 +62,7 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         // success
         var ok = await client.PutAsJsonAsync($"/api/customers/{id}", new { fields = new[] { new { key = "email", value = "a@b.com" } }, expectedVersion = version });
         ok.EnsureSuccessStatusCode();
-        var payload = await ok.Content.ReadFromJsonAsync<JsonElement>();
+        var payload = await ok.ReadDataAsJsonAsync();
         Assert.True(payload.GetProperty("newVersion").GetInt32() == version + 1);
     }
 
@@ -98,7 +102,7 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         var createResp = await client.PostAsJsonAsync("/api/customers", newCustomer);
         createResp.EnsureSuccessStatusCode();
 
-        var result = await createResp.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await createResp.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("id", out var id));
         Assert.True(id.GetInt32() > 0);
         Assert.True(result.TryGetProperty("code", out var code));
@@ -160,9 +164,13 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         adminClient.UseBearer(adminAccess);
 
         // 获取一个客户
-        var list = await adminClient.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await adminClient.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
-        var detail = await adminClient.GetFromJsonAsync<JsonElement>($"/api/customers/{id}");
+        var detailResp = await adminClient.GetAsync($"/api/customers/{id}");
+        detailResp.EnsureSuccessStatusCode();
+        var detail = await detailResp.ReadDataAsJsonAsync();
         var version = detail.GetProperty("version").GetInt32();
 
         // 创建一个新用户（没有访问权限）
@@ -225,18 +233,20 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         var createResp = await userClient.PostAsJsonAsync("/api/customers", newCustomer);
         createResp.EnsureSuccessStatusCode();
 
-        var result = await createResp.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await createResp.ReadDataAsJsonAsync();
         var newId = result.GetProperty("id").GetInt32();
 
         // 验证创建者可以查看这个客户
         var getResp = await userClient.GetAsync("/api/customers");
-        var customerList = await getResp.Content.ReadFromJsonAsync<JsonElement>();
+        var customerList = await getResp.ReadDataAsJsonAsync();
         
         var hasNewCustomer = customerList.EnumerateArray().Any(c => c.GetProperty("id").GetInt32() == newId);
         Assert.True(hasNewCustomer, "创建者应该能在列表中看到自己创建的客户");
 
         // 验证创建者可以编辑这个客户
-        var detail = await userClient.GetFromJsonAsync<JsonElement>($"/api/customers/{newId}");
+        var detailResp = await userClient.GetAsync($"/api/customers/{newId}");
+        detailResp.EnsureSuccessStatusCode();
+        var detail = await detailResp.ReadDataAsJsonAsync();
         var version = detail.GetProperty("version").GetInt32();
         
         var updateResp = await userClient.PutAsJsonAsync($"/api/customers/{newId}",
@@ -253,9 +263,13 @@ public class CustomersTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await client.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         var id = list[0].GetProperty("id").GetInt32();
-        var detail = await client.GetFromJsonAsync<JsonElement>($"/api/customers/{id}");
+        var detailResp = await client.GetAsync($"/api/customers/{id}");
+        detailResp.EnsureSuccessStatusCode();
+        var detail = await detailResp.ReadDataAsJsonAsync();
         var version = detail.GetProperty("version").GetInt32();
 
         // 发送不符合验证规则的email

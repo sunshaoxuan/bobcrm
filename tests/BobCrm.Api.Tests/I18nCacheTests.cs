@@ -46,12 +46,16 @@ public class I18nCacheTests : IClassFixture<TestWebAppFactory>
         var client = _factory.CreateClient();
 
         // 多次请求版本端点，应该返回相同的版本号
-        var v1 = await client.GetFromJsonAsync<JsonElement>("/api/i18n/version");
+        var v1Resp = await client.GetAsync("/api/i18n/version");
+        v1Resp.EnsureSuccessStatusCode();
+        var v1 = await v1Resp.ReadDataAsJsonAsync();
         var version1 = v1.GetProperty("version").GetInt64();
 
         await Task.Delay(100); // 短暂延迟
 
-        var v2 = await client.GetFromJsonAsync<JsonElement>("/api/i18n/version");
+        var v2Resp = await client.GetAsync("/api/i18n/version");
+        v2Resp.EnsureSuccessStatusCode();
+        var v2 = await v2Resp.ReadDataAsJsonAsync();
         var version2 = v2.GetProperty("version").GetInt64();
 
         Assert.Equal(version1, version2);
@@ -119,8 +123,7 @@ public class I18nCacheTests : IClassFixture<TestWebAppFactory>
         Assert.False(string.IsNullOrEmpty(etag));
 
         // 验证返回的是数组
-        var content = await response.Content.ReadAsStringAsync();
-        var resources = JsonDocument.Parse(content).RootElement;
+        var resources = await response.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Array, resources.ValueKind);
     }
 }

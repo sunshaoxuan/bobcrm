@@ -17,8 +17,7 @@ public class AccessFunctionsApiTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions/me");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Array, root.ValueKind);
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
 
@@ -36,8 +35,7 @@ public class AccessFunctionsApiTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions/me?lang=ja");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
 
         Assert.True(node.TryGetProperty("displayName", out var displayName));
@@ -60,8 +58,7 @@ public class AccessFunctionsApiTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions/me");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
 
         Assert.True(node.TryGetProperty("displayName", out var displayName));
@@ -135,9 +132,5 @@ public class AccessFunctionsApiTests : IClassFixture<TestWebAppFactory>
         return false;
     }
 
-    private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
-    {
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonDocument.Parse(content);
-    }
+    
 }

@@ -33,7 +33,7 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         var health = await client.GetAsync("/api/admin/db/health");
         Assert.Equal(HttpStatusCode.OK, health.StatusCode);
 
-        var json = await health.Content.ReadFromJsonAsync<JsonElement>();
+        var json = await health.ReadDataAsJsonAsync();
         Assert.True(json.TryGetProperty("counts", out _));
     }
 
@@ -48,7 +48,7 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         var users = await client.GetAsync("/api/debug/users");
         Assert.Equal(HttpStatusCode.OK, users.StatusCode);
 
-        var json = await users.Content.ReadFromJsonAsync<JsonElement>();
+        var json = await users.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Array, json.ValueKind);
         Assert.True(json.GetArrayLength() > 0, "应该至少有 admin 用户");
     }
@@ -160,7 +160,7 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         var reset = await client.PostAsync("/api/admin/templates/reset-all", null);
         reset.EnsureSuccessStatusCode();
 
-        var payload = await reset.Content.ReadFromJsonAsync<JsonElement>();
+        var payload = await reset.ReadDataAsJsonAsync();
         Assert.True(payload.TryGetProperty("entities", out var entities));
         Assert.True(payload.TryGetProperty("created", out _));
 
@@ -194,7 +194,7 @@ public class AdminEnvironmentTests : IClassFixture<TestWebAppFactory>
         var adminInfo = await client.GetAsync("/api/setup/admin");
         Assert.Equal(HttpStatusCode.OK, adminInfo.StatusCode);
 
-        var json = await adminInfo.Content.ReadFromJsonAsync<JsonElement>();
+        var json = await adminInfo.ReadDataAsJsonAsync();
         Assert.True(json.TryGetProperty("username", out _));
     }
 

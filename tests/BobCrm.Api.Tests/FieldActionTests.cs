@@ -165,7 +165,7 @@ public class FieldActionTests : IClassFixture<TestWebAppFactory>
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await response.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("exists", out var exists));
         Assert.True(exists.GetBoolean());
         Assert.True(result.TryGetProperty("type", out var type));
@@ -188,7 +188,7 @@ public class FieldActionTests : IClassFixture<TestWebAppFactory>
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await response.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("exists", out var exists));
         Assert.False(exists.GetBoolean());
     }
@@ -209,7 +209,7 @@ public class FieldActionTests : IClassFixture<TestWebAppFactory>
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await response.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("type", out var type));
         Assert.Equal("url", type.GetString());
     }
@@ -230,7 +230,7 @@ public class FieldActionTests : IClassFixture<TestWebAppFactory>
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await response.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("link", out var link));
         var linkStr = link.GetString();
         Assert.NotNull(linkStr);
@@ -259,7 +259,7 @@ public class FieldActionTests : IClassFixture<TestWebAppFactory>
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var result = await response.ReadDataAsJsonAsync();
         Assert.True(result.TryGetProperty("link", out var link));
         var linkStr = link.GetString();
         Assert.NotNull(linkStr);

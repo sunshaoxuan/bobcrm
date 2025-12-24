@@ -29,7 +29,9 @@ public class AccessIntegrationTests : IClassFixture<TestWebAppFactory>
         userClient.UseBearer(userAccess);
 
         // 使用 admin 客户端获取客户列表（普通用户没有权限会看到空列表）
-        var list = await admin.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await admin.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
 
@@ -60,7 +62,9 @@ public class AccessIntegrationTests : IClassFixture<TestWebAppFactory>
         userClient.UseBearer(userAccess);
         
         // 使用 admin 客户端获取客户列表
-        var list = await admin.GetFromJsonAsync<JsonElement>("/api/customers");
+        var listResp = await admin.GetAsync("/api/customers");
+        listResp.EnsureSuccessStatusCode();
+        var list = await listResp.ReadDataAsJsonAsync();
         Assert.True(list.GetArrayLength() > 0, "客户列表应该包含至少一个客户");
         var id = list[0].GetProperty("id").GetInt32();
         var res = await userClient.PostAsJsonAsync($"/api/layout/{id}?scope=default", new { mode = "flow", items = new { email = new { order = 0, w = 6 } } });

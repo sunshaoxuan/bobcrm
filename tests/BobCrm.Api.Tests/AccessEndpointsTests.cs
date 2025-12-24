@@ -34,8 +34,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Array, root.ValueKind);
 
         AssertTreeLanguageMode(root, expectedSingleLanguage: false);
@@ -52,8 +51,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions?lang=ja");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
 
         AssertTreeLanguageMode(root, expectedSingleLanguage: true);
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
@@ -71,8 +69,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions/manage");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
 
         AssertTreeLanguageMode(root, expectedSingleLanguage: false);
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
@@ -88,8 +85,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions/manage?lang=en");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
 
         AssertTreeLanguageMode(root, expectedSingleLanguage: true);
         Assert.True(TryFindNodeByCode(root, "SYS.SET.MENU", out var node));
@@ -124,8 +120,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.PostAsJsonAsync("/api/access/functions?lang=zh", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
 
         Assert.True(root.TryGetProperty("id", out _));
         Assert.True(root.TryGetProperty("displayName", out var displayName));
@@ -156,7 +151,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
 
         var createResponse = await client.PostAsJsonAsync("/api/access/functions", create);
         createResponse.EnsureSuccessStatusCode();
-        var created = await createResponse.Content.ReadFromJsonAsync<FunctionNodeDto>();
+        var created = await createResponse.ReadDataAsync<FunctionNodeDto>();
         Assert.NotNull(created);
 
         var update = new UpdateFunctionRequest
@@ -172,8 +167,7 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.PutAsJsonAsync($"/api/access/functions/{created!.Id}?lang=ja", update);
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        var root = json.RootElement;
+        var root = await response.ReadDataAsJsonAsync();
 
         Assert.True(root.TryGetProperty("displayName", out var displayName));
         Assert.Equal("更新後", displayName.GetString());
@@ -188,8 +182,8 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         var response = await client.GetAsync("/api/access/functions?lang=ja");
         response.EnsureSuccessStatusCode();
 
-        using var json = await ReadJsonAsync(response);
-        AssertTreeLanguageMode(json.RootElement, expectedSingleLanguage: true);
+        var root = await response.ReadDataAsJsonAsync();
+        AssertTreeLanguageMode(root, expectedSingleLanguage: true);
     }
 
     private static void AssertTreeLanguageMode(JsonElement root, bool expectedSingleLanguage)
@@ -265,9 +259,5 @@ public class AccessEndpointsTests : IClassFixture<TestWebAppFactory>
         return false;
     }
 
-    private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
-    {
-        var content = await response.Content.ReadAsStringAsync();
-        return JsonDocument.Parse(content);
-    }
+
 }

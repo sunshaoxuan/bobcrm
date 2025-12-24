@@ -31,7 +31,8 @@ public class DynamicEntityEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var root = await response.ReadAsJsonAsync();
-        Assert.True(root.TryGetProperty("meta", out var meta));
+        var payload = root.GetProperty("data");
+        Assert.True(payload.TryGetProperty("meta", out var meta));
         Assert.True(meta.TryGetProperty("fields", out var fields));
         Assert.Equal(JsonValueKind.Array, fields.ValueKind);
 
@@ -61,7 +62,7 @@ public class DynamicEntityEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var root = await response.ReadAsJsonAsync();
-        var fields = root.GetProperty("meta").GetProperty("fields");
+        var fields = root.GetProperty("data").GetProperty("meta").GetProperty("fields");
 
         var codeField = FindField(fields, "Code");
         Assert.Equal("LBL_FIELD_CODE", codeField.GetProperty("displayNameKey").GetString());
@@ -85,8 +86,9 @@ public class DynamicEntityEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var root = await response.ReadAsJsonAsync();
-        Assert.False(root.TryGetProperty("meta", out _));
-        Assert.Equal(1, root.GetProperty("id").GetInt32());
+        var payload = root.GetProperty("data");
+        Assert.False(payload.TryGetProperty("meta", out _));
+        Assert.Equal(1, payload.GetProperty("data").GetProperty("id").GetInt32());
     }
 
     [Fact]
@@ -102,8 +104,9 @@ public class DynamicEntityEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var root = await response.ReadAsJsonAsync();
-        Assert.True(root.TryGetProperty("meta", out var meta));
-        Assert.True(root.TryGetProperty("data", out var data));
+        var payload = root.GetProperty("data");
+        Assert.True(payload.TryGetProperty("meta", out var meta));
+        var data = payload.GetProperty("data");
         Assert.Equal(1, data.GetProperty("id").GetInt32());
 
         var fields = meta.GetProperty("fields");
@@ -125,7 +128,7 @@ public class DynamicEntityEndpointsTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var root = await response.ReadAsJsonAsync();
-        var fields = root.GetProperty("meta").GetProperty("fields");
+        var fields = root.GetProperty("data").GetProperty("meta").GetProperty("fields");
 
         var codeField = FindField(fields, "Code");
         Assert.Equal("编码", codeField.GetProperty("displayName").GetString());

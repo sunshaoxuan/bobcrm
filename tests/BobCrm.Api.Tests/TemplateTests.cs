@@ -23,7 +23,7 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         var resp = await client.GetAsync("/api/layout/customer?scope=default");
         resp.EnsureSuccessStatusCode();
 
-        var layout = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await resp.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Object, layout.ValueKind);
         
         // 验证有 mode 和 items
@@ -58,7 +58,7 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         var getResp = await client.GetAsync("/api/layout/customer?scope=user");
         getResp.EnsureSuccessStatusCode();
 
-        var layout = await getResp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await getResp.ReadDataAsJsonAsync();
         Assert.True(layout.TryGetProperty("items", out var items));
         Assert.True(items.TryGetProperty("email", out _));
         Assert.Equal(12, items.GetProperty("email").GetProperty("w").GetInt32());
@@ -89,7 +89,7 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         var getResp = await client.GetAsync("/api/layout/customer?scope=default");
         getResp.EnsureSuccessStatusCode();
 
-        var layout = await getResp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await getResp.ReadDataAsJsonAsync();
         var items = layout.GetProperty("items");
         Assert.True(items.TryGetProperty("email", out _));
         Assert.True(items.TryGetProperty("description", out _));
@@ -128,10 +128,13 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
             mode = "flow",
             items = new { email = new { order = 0, w = 12 } }
         };
-        await client.PostAsJsonAsync("/api/layout/customer", personalTemplate);
+        var saveResp = await client.PostAsJsonAsync("/api/layout/customer", personalTemplate);
+        saveResp.EnsureSuccessStatusCode();
 
         // 验证用户模板存在
-        var userLayout = await client.GetFromJsonAsync<JsonElement>("/api/layout/customer?scope=user");
+        var userLayoutResp = await client.GetAsync("/api/layout/customer?scope=user");
+        userLayoutResp.EnsureSuccessStatusCode();
+        var userLayout = await userLayoutResp.ReadDataAsJsonAsync();
         Assert.True(userLayout.TryGetProperty("items", out _));
 
         // 删除用户模板（重置）
@@ -139,7 +142,9 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         deleteResp.EnsureSuccessStatusCode();
 
         // 获取 effective 模板，应该回退到默认
-        var effectiveLayout = await client.GetFromJsonAsync<JsonElement>("/api/layout/customer?scope=effective");
+        var effectiveLayoutResp = await client.GetAsync("/api/layout/customer?scope=effective");
+        effectiveLayoutResp.EnsureSuccessStatusCode();
+        var effectiveLayout = await effectiveLayoutResp.ReadDataAsJsonAsync();
         Assert.Equal(JsonValueKind.Object, effectiveLayout.ValueKind);
         
         // 应该包含默认模板的字段
@@ -158,7 +163,9 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         client.UseBearer(access);
 
         // 获取初始 effective（应该是默认模板）
-        var defaultEffective = await client.GetFromJsonAsync<JsonElement>("/api/layout/customer?scope=effective");
+        var defaultEffectiveResp = await client.GetAsync("/api/layout/customer?scope=effective");
+        defaultEffectiveResp.EnsureSuccessStatusCode();
+        var defaultEffective = await defaultEffectiveResp.ReadDataAsJsonAsync();
         
         // 保存用户个人模板
         var personalTemplate = new
@@ -166,10 +173,13 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
             mode = "flow",
             items = new { email = new { order = 0, w = 12 } }
         };
-        await client.PostAsJsonAsync("/api/layout/customer", personalTemplate);
+        var saveResp = await client.PostAsJsonAsync("/api/layout/customer", personalTemplate);
+        saveResp.EnsureSuccessStatusCode();
 
         // 获取 effective，应该返回用户模板
-        var userEffective = await client.GetFromJsonAsync<JsonElement>("/api/layout/customer?scope=effective");
+        var userEffectiveResp = await client.GetAsync("/api/layout/customer?scope=effective");
+        userEffectiveResp.EnsureSuccessStatusCode();
+        var userEffective = await userEffectiveResp.ReadDataAsJsonAsync();
         var items = userEffective.GetProperty("items");
         Assert.True(items.TryGetProperty("email", out var email));
         Assert.Equal(12, email.GetProperty("w").GetInt32());
@@ -186,7 +196,7 @@ public class TemplateTests : IClassFixture<TestWebAppFactory>
         var resp = await client.GetAsync("/api/layout/customer?scope=default");
         resp.EnsureSuccessStatusCode();
 
-        var layout = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var layout = await resp.ReadDataAsJsonAsync();
         Assert.NotEqual(JsonValueKind.Null, layout.ValueKind);
         Assert.NotEqual(JsonValueKind.Undefined, layout.ValueKind);
     }

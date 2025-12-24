@@ -20,7 +20,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         client.UseBearer(access);
 
         // 获取一个客户 ID
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         Assert.True(customers.GetArrayLength() > 0);
         var customerId = customers[0].GetProperty("id").GetInt32();
 
@@ -46,7 +48,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         saveResponse.EnsureSuccessStatusCode();
 
         // 重新读取布局
-        var loadedLayout = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=user");
+        var loadedLayoutResp = await client.GetAsync($"/api/layout/{customerId}?scope=user");
+        loadedLayoutResp.EnsureSuccessStatusCode();
+        var loadedLayout = await loadedLayoutResp.ReadDataAsJsonAsync();
         
         // 验证布局包含 items.email
         Assert.True(loadedLayout.TryGetProperty("items", out var items));
@@ -66,7 +70,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         var customerId = customers[0].GetProperty("id").GetInt32();
 
         // 保存布局：宽度和高度都使用像素
@@ -91,7 +97,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         saveResponse.EnsureSuccessStatusCode();
 
         // 重新读取
-        var loadedLayout = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=user");
+        var loadedLayoutResp = await client.GetAsync($"/api/layout/{customerId}?scope=user");
+        loadedLayoutResp.EnsureSuccessStatusCode();
+        var loadedLayout = await loadedLayoutResp.ReadDataAsJsonAsync();
         var linkWidget = loadedLayout.GetProperty("items").GetProperty("link");
 
         Assert.Equal(200, linkWidget.GetProperty("w").GetInt32());
@@ -107,7 +115,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         var customerId = customers[0].GetProperty("id").GetInt32();
 
         // 保存布局：不同控件使用不同单位
@@ -121,10 +131,13 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
             }
         };
 
-        await client.PostAsJsonAsync($"/api/layout/{customerId}", mixedLayout);
+        var saveResp = await client.PostAsJsonAsync($"/api/layout/{customerId}", mixedLayout);
+        saveResp.EnsureSuccessStatusCode();
 
         // 验证读取
-        var loaded = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=user");
+        var loadedResp = await client.GetAsync($"/api/layout/{customerId}?scope=user");
+        loadedResp.EnsureSuccessStatusCode();
+        var loaded = await loadedResp.ReadDataAsJsonAsync();
         var items = loaded.GetProperty("items");
 
         var email = items.GetProperty("email");
@@ -143,7 +156,9 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         var customerId = customers[0].GetProperty("id").GetInt32();
 
         // Flow 模式：使用 order 和 w
@@ -157,9 +172,12 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
             }
         };
 
-        await client.PostAsJsonAsync($"/api/layout/{customerId}", flowLayout);
+        var saveResp = await client.PostAsJsonAsync($"/api/layout/{customerId}", flowLayout);
+        saveResp.EnsureSuccessStatusCode();
 
-        var loaded = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=user");
+        var loadedResp = await client.GetAsync($"/api/layout/{customerId}?scope=user");
+        loadedResp.EnsureSuccessStatusCode();
+        var loaded = await loadedResp.ReadDataAsJsonAsync();
         Assert.Equal("flow", loaded.GetProperty("mode").GetString());
 
         var items = loaded.GetProperty("items");
@@ -174,19 +192,24 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         var customerId = customers[0].GetProperty("id").GetInt32();
 
         // 保存用户布局
         var layout = new { mode = "flow", items = new { email = new { order = 0, w = 6 } } };
-        await client.PostAsJsonAsync($"/api/layout/{customerId}", layout);
+        var saveResp = await client.PostAsJsonAsync($"/api/layout/{customerId}", layout);
+        saveResp.EnsureSuccessStatusCode();
 
         // 删除用户布局
         var deleteResponse = await client.DeleteAsync($"/api/layout/{customerId}");
         deleteResponse.EnsureSuccessStatusCode();
 
         // 获取 effective 布局（应该回退到默认或为空）
-        var effective = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}");
+        var effectiveResp = await client.GetAsync($"/api/layout/{customerId}");
+        effectiveResp.EnsureSuccessStatusCode();
+        var effective = await effectiveResp.ReadDataAsJsonAsync();
         
         // 如果有默认布局则返回默认，否则返回空对象或基础结构
         Assert.Equal(JsonValueKind.Object, effective.ValueKind);
@@ -199,23 +222,31 @@ public class LayoutDimensionTests : IClassFixture<TestWebAppFactory>
         var (access, _) = await client.LoginAsAdminAsync();
         client.UseBearer(access);
 
-        var customers = await client.GetFromJsonAsync<JsonElement>("/api/customers");
+        var customersResp = await client.GetAsync("/api/customers");
+        customersResp.EnsureSuccessStatusCode();
+        var customers = await customersResp.ReadDataAsJsonAsync();
         var customerId = customers[0].GetProperty("id").GetInt32();
 
         // 保存用户布局
         var userLayout = new { mode = "flow", items = new { email = new { order = 0, w = 6 } } };
-        await client.PostAsJsonAsync($"/api/layout/{customerId}", userLayout);
+        var userSaveResp = await client.PostAsJsonAsync($"/api/layout/{customerId}", userLayout);
+        userSaveResp.EnsureSuccessStatusCode();
 
         // 保存默认布局（admin 权限）
         var defaultLayout = new { mode = "free", items = new { email = new { x = 0, y = 0, w = 100, wUnit = "px", h = 50, hUnit = "px" } } };
-        await client.PostAsJsonAsync($"/api/layout/{customerId}?scope=default", defaultLayout);
+        var defaultSaveResp = await client.PostAsJsonAsync($"/api/layout/{customerId}?scope=default", defaultLayout);
+        defaultSaveResp.EnsureSuccessStatusCode();
 
         // 读取用户布局
-        var loadedUser = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=user");
+        var loadedUserResp = await client.GetAsync($"/api/layout/{customerId}?scope=user");
+        loadedUserResp.EnsureSuccessStatusCode();
+        var loadedUser = await loadedUserResp.ReadDataAsJsonAsync();
         Assert.Equal("flow", loadedUser.GetProperty("mode").GetString());
 
         // 读取默认布局
-        var loadedDefault = await client.GetFromJsonAsync<JsonElement>($"/api/layout/{customerId}?scope=default");
+        var loadedDefaultResp = await client.GetAsync($"/api/layout/{customerId}?scope=default");
+        loadedDefaultResp.EnsureSuccessStatusCode();
+        var loadedDefault = await loadedDefaultResp.ReadDataAsJsonAsync();
         Assert.Equal("free", loadedDefault.GetProperty("mode").GetString());
         Assert.Equal("px", loadedDefault.GetProperty("items").GetProperty("email").GetProperty("wUnit").GetString());
     }
