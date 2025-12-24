@@ -1,12 +1,39 @@
 namespace BobCrm.Api.Contracts.Responses.Entity;
 
-// Assuming EntityTypeInfo is already defined in BobCrm.Api.Core.DomainCommon or similar, 
-// but if it's a DTO we should define it here. 
-// Based on the code, dynamicEntityService.GetEntityTypeInfo returns an object that is serialized.
-// I'll assume for now we can just use object or define a proper DTO if I knew the structure.
-// Looking at the code: dynamicEntityService.GetEntityTypeInfo(fullTypeName)
-// I'll skip creating a specific DTO for this one if it returns a domain object, 
-// but for strict governance I should wrap it.
-// Let's assume it returns a complex object and just use object for now in the endpoint, 
-// or if I can find the definition of EntityTypeInfo.
-// I'll check the file content again.
+/// <summary>
+/// 实体类型信息 DTO。
+/// 用于描述已加载动态实体的类型元数据（属性、接口等）。
+/// </summary>
+public class EntityTypeInfoDto
+{
+    /// <summary>
+    /// 完整类型名称（包含命名空间）。
+    /// </summary>
+    public string FullName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 类型名称（不包含命名空间）。
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 命名空间。
+    /// </summary>
+    public string Namespace { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 是否已加载到运行时。
+    /// </summary>
+    public bool IsLoaded { get; set; }
+
+    /// <summary>
+    /// 公共属性列表。
+    /// </summary>
+    public List<PropertyTypeInfoDto> Properties { get; set; } = new();
+
+    /// <summary>
+    /// 实现的接口名称列表。
+    /// </summary>
+    public List<string> Interfaces { get; set; } = new();
+}
+
