@@ -1,5 +1,6 @@
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Base;
+using System.Text.Json;
 
 namespace BobCrm.Api.Application.Queries;
 
@@ -11,10 +12,10 @@ public class LayoutQueries : ILayoutQueries
 
     // ===== 旧版方法（向后兼容，基于CustomerId） =====
 
-    public object GetUserLayout(string userId, int customerId)
+    public JsonElement GetUserLayout(string userId, int customerId)
         => ReadJson(_repo.Query(UserLayoutScope.ForUser(userId, customerId)).FirstOrDefault()?.LayoutJson);
 
-    public object GetLayout(string userId, int customerId, string scope)
+    public JsonElement GetLayout(string userId, int customerId, string scope)
     {
         scope = (scope ?? "effective").ToLowerInvariant();
         return scope switch
@@ -25,7 +26,7 @@ public class LayoutQueries : ILayoutQueries
         };
     }
 
-    public object GetEffectiveLayout(string userId, int customerId)
+    public JsonElement GetEffectiveLayout(string userId, int customerId)
     {
         var user = _repo.Query(UserLayoutScope.ForUser(userId, customerId)).FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(user?.LayoutJson)) return ReadJson(user!.LayoutJson);
@@ -38,7 +39,7 @@ public class LayoutQueries : ILayoutQueries
     /// <summary>
     /// 根据实体类型获取布局（支持user/default/effective三种scope）
     /// </summary>
-    public object GetLayoutByEntityType(string userId, string entityType, string scope)
+    public JsonElement GetLayoutByEntityType(string userId, string entityType, string scope)
     {
         scope = (scope ?? "effective").ToLowerInvariant();
         return scope switch
@@ -52,7 +53,7 @@ public class LayoutQueries : ILayoutQueries
     /// <summary>
     /// 获取用户级布局（根据EntityType）
     /// </summary>
-    private object GetUserLayoutByEntityType(string userId, string entityType)
+    private JsonElement GetUserLayoutByEntityType(string userId, string entityType)
     {
         var layout = _repo.Query(x => x.UserId == userId && x.EntityType == entityType).FirstOrDefault();
         return ReadJson(layout?.LayoutJson);
@@ -61,7 +62,7 @@ public class LayoutQueries : ILayoutQueries
     /// <summary>
     /// 获取默认布局（根据EntityType）
     /// </summary>
-    private object GetDefaultLayoutByEntityType(string entityType)
+    private JsonElement GetDefaultLayoutByEntityType(string entityType)
     {
         var layout = _repo.Query(x => x.UserId == DefaultUserId && x.EntityType == entityType).FirstOrDefault();
         return ReadJson(layout?.LayoutJson);
@@ -70,7 +71,7 @@ public class LayoutQueries : ILayoutQueries
     /// <summary>
     /// 获取有效布局（用户级 > 默认级，根据EntityType）
     /// </summary>
-    public object GetEffectiveLayoutByEntityType(string userId, string entityType)
+    public JsonElement GetEffectiveLayoutByEntityType(string userId, string entityType)
     {
         // 1. 优先查找用户级布局
         var userLayout = _repo.Query(x => x.UserId == userId && x.EntityType == entityType).FirstOrDefault();
@@ -86,9 +87,10 @@ public class LayoutQueries : ILayoutQueries
 
     // ===== 辅助方法 =====
 
-    private static object ReadJson(string? layout)
+    private static JsonElement ReadJson(string? layout)
     {
-        var json = string.IsNullOrWhiteSpace(layout) ? new { } : System.Text.Json.JsonSerializer.Deserialize<object>(layout!);
-        return json ?? new { };
+        var json = string.IsNullOrWhiteSpace(layout) ? "{}" : layout!;
+        using var doc = JsonDocument.Parse(json);
+        return doc.RootElement.Clone();
     }
 }

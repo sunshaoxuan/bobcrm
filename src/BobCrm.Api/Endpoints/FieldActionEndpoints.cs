@@ -4,6 +4,7 @@ using System.Text.Json;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.FieldActions;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Utils;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +28,16 @@ public static class FieldActionEndpoints
         // File path validation
         group.MapPost("/file/validate", (FileValidationRequest request, ILocalization loc, HttpContext http) => ValidateFilePath(request, loc, http))
             .WithName("ValidateFilePath")
-            .WithSummary("Validate whether a file path exists");
+            .WithSummary("Validate whether a file path exists")
+            .Produces<SuccessResponse<FilePathValidationResponseDto>>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // Mailto link generation
         group.MapPost("/mailto/generate", (MailtoRequest request, ILocalization loc, HttpContext http) => GenerateMailtoLink(request, loc, http))
             .WithName("GenerateMailtoLink")
-            .WithSummary("Generate mailto link");
+            .WithSummary("Generate mailto link")
+            .Produces<SuccessResponse<MailtoLinkResponseDto>>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
     }
 
     /// <summary>
@@ -202,7 +207,12 @@ public static class FieldActionEndpoints
 
             // 安全检查：只允许验证本地文件路径
             if (request.Path.StartsWith("http://") || request.Path.StartsWith("https://"))
-                return Results.Ok(new { exists = true, type = "url", message = loc.T("MSG_PATH_IS_URL", lang) });
+                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+                {
+                    Exists = true,
+                    Type = "url",
+                    Message = loc.T("MSG_PATH_IS_URL", lang)
+                }));
 
             // 检查路径格式
             if (!Uri.TryCreate(request.Path, UriKind.Absolute, out var uri) && 
@@ -216,22 +226,31 @@ public static class FieldActionEndpoints
             if (exists)
             {
                 var fileInfo = new FileInfo(request.Path);
-                return Results.Ok(new 
-                { 
-                    exists = true, 
-                    type = "file",
-                    size = fileInfo.Length,
-                    extension = fileInfo.Extension,
-                    lastModified = fileInfo.LastWriteTime
-                });
+                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+                {
+                    Exists = true,
+                    Type = "file",
+                    Size = fileInfo.Length,
+                    Extension = fileInfo.Extension,
+                    LastModified = fileInfo.LastWriteTime
+                }));
             }
             else if (isDirectory)
             {
-                return Results.Ok(new { exists = true, type = "directory" });
+                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+                {
+                    Exists = true,
+                    Type = "directory"
+                }));
             }
             else
             {
-                return Results.Ok(new { exists = false, type = "notfound", message = loc.T("ERR_PATH_NOT_FOUND", lang) });
+                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+                {
+                    Exists = false,
+                    Type = "notfound",
+                    Message = loc.T("ERR_PATH_NOT_FOUND", lang)
+                }));
             }
         }
         catch (Exception ex)
@@ -272,7 +291,7 @@ public static class FieldActionEndpoints
             if (queryParts.Count > 0)
                 mailto += "?" + string.Join("&", queryParts);
 
-            return Results.Ok(new { link = mailto });
+            return Results.Ok(new SuccessResponse<MailtoLinkResponseDto>(new MailtoLinkResponseDto { Link = mailto }));
         }
         catch (Exception ex)
         {

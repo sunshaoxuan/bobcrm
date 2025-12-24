@@ -9,6 +9,7 @@ using BobCrm.Api.Contracts.Requests.Entity;
 using BobCrm.Api.Contracts.Responses.Entity;
 using BobCrm.Api.Extensions;
 using BobCrm.Api.Utils;
+using Microsoft.AspNetCore.Http;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -175,24 +176,31 @@ public static class EntityDefinitionEndpoints
             var isValid = entity != null;
             var entityPayload = entity == null
                 ? null
-                : new
+                : new Dictionary<string, object?>
                 {
-                    entity.Id,
-                    entity.EntityName,
-                    entity.EntityRoute,
-                    entity.FullTypeName,
-                    entity.Source,
-                    entity.Status,
-                    entity.ApiEndpoint,
-                    entity.DisplayName
+                    ["id"] = entity.Id,
+                    ["entityName"] = entity.EntityName,
+                    ["entityRoute"] = entity.EntityRoute,
+                    ["fullTypeName"] = entity.FullTypeName,
+                    ["source"] = entity.Source,
+                    ["status"] = entity.Status,
+                    ["apiEndpoint"] = entity.ApiEndpoint,
+                    ["displayName"] = entity.DisplayName
                 };
 
-            return Results.Ok(new SuccessResponse<object>(new { isValid, entityRoute, entity = entityPayload }));
+            var response = new EntityRouteValidationResponse
+            {
+                IsValid = isValid,
+                EntityRoute = entityRoute,
+                Entity = entityPayload
+            };
+
+            return Results.Ok(new SuccessResponse<EntityRouteValidationResponse>(response));
         })
         .WithName("ValidateEntityRoute")
         .WithSummary("验证实体路由")
         .WithDescription("检查指定的实体路由是否存在且可用")
-        .Produces<SuccessResponse<object>>()
+        .Produces<SuccessResponse<EntityRouteValidationResponse>>(StatusCodes.Status200OK)
         .AllowAnonymous();
 
         // ==================== 实体定义管理端点（需要认证）====================
@@ -402,11 +410,11 @@ public static class EntityDefinitionEndpoints
                 .Where(t => t.EntityType == definition.FullName)
                 .CountAsync();
 
-            return Results.Ok(new SuccessResponse<EntityReferenceCheckDto>(new EntityReferenceCheckDto
+            return Results.Ok(new SuccessResponse<EntityReferenceCheckResponse>(new EntityReferenceCheckResponse
             {
                 IsReferenced = templateCount > 0,
                 ReferenceCount = templateCount,
-                ReferencedBy = new ReferenceDetailsDto
+                Details = new ReferenceDetailsDto
                 {
                     FormTemplates = templateCount
                 }
@@ -415,8 +423,8 @@ public static class EntityDefinitionEndpoints
         .WithName("CheckEntityReferenced")
         .WithSummary("检查实体是否被引用")
         .WithDescription("检查实体定义是否被模板或其他地方引用")
-        .Produces<SuccessResponse<EntityReferenceCheckDto>>()
-        .Produces<ErrorResponse>(404);
+        .Produces<SuccessResponse<EntityReferenceCheckResponse>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // ==================== 创建 ====================
 
@@ -1386,13 +1394,32 @@ public static class EntityDefinitionEndpoints
             if (typeInfo == null)
                 return Results.NotFound(new ErrorResponse(loc.T("ERR_TYPE_NOT_LOADED", lang), "TYPE_NOT_LOADED"));
 
-            return Results.Ok(new SuccessResponse<object>(typeInfo));
+            var dto = new EntityTypeInfoDto
+            {
+                FullName = typeInfo.FullName,
+                Name = typeInfo.Name,
+                Namespace = typeInfo.Namespace,
+                IsLoaded = typeInfo.IsLoaded,
+                Properties = typeInfo.Properties
+                    .Select(p => new PropertyTypeInfoDto
+                    {
+                        Name = p.Name,
+                        TypeName = p.TypeName,
+                        IsNullable = p.IsNullable,
+                        CanRead = p.CanRead,
+                        CanWrite = p.CanWrite
+                    })
+                    .ToList(),
+                Interfaces = typeInfo.Interfaces
+            };
+
+            return Results.Ok(new SuccessResponse<EntityTypeInfoDto>(dto));
         })
         .WithName("GetEntityTypeInfo")
         .WithSummary("获取实体类型信息")
         .WithDescription("获取已加载实体的类型元数据信息")
-        .Produces<SuccessResponse<object>>()
-        .Produces<ErrorResponse>(404);
+        .Produces<SuccessResponse<EntityTypeInfoDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 卸载实体
         group.MapDelete("/loaded-entities/{fullTypeName}", (

@@ -2,6 +2,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs.DataSet;
 using BobCrm.Api.Contracts.DTOs.Template;
 using BobCrm.Api.Contracts.Requests.Template;
+using BobCrm.Api.Contracts.Responses.Template;
 
 namespace BobCrm.Api.Abstractions;
 
@@ -13,7 +14,7 @@ public interface ITemplateService
     /// <summary>
     /// 获取用户的模板列表
     /// </summary>
-    Task<object> GetTemplatesAsync(
+    Task<TemplateQueryResponseDto> GetTemplatesAsync(
         string userId,
         string? entityType = null,
         string? usageType = null,

@@ -28,11 +28,11 @@ public static class EnumDefinitionEndpoints
         {
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var enums = await service.GetAllAsync(includeDisabled, targetLang);
-            return Results.Ok(enums);
+            return Results.Ok(new SuccessResponse<List<EnumDefinitionDto>>(enums));
         })
         .WithName("GetAllEnums")
         .WithSummary("获取所有枚举定义")
-        .Produces<List<EnumDefinitionDto>>(200);
+        .Produces<SuccessResponse<List<EnumDefinitionDto>>>(StatusCodes.Status200OK);
 
         // GET /api/enums/{id} - 根据ID获取枚举定义
         group.MapGet("/{id:guid}", async (
@@ -47,12 +47,12 @@ public static class EnumDefinitionEndpoints
             var enumDef = await service.GetByIdAsync(id, targetLang);
             return enumDef == null
                 ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", uiLang), "ENUM_NOT_FOUND"))
-                : Results.Ok(enumDef);
+                : Results.Ok(new SuccessResponse<EnumDefinitionDto>(enumDef));
         })
         .WithName("GetEnumById")
         .WithSummary("根据ID获取枚举定义")
-        .Produces<EnumDefinitionDto>(200)
-        .Produces(404);
+        .Produces<SuccessResponse<EnumDefinitionDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // GET /api/enums/by-code/{code} - 根据Code获取枚举定义
         group.MapGet("/by-code/{code}", async (
@@ -67,12 +67,12 @@ public static class EnumDefinitionEndpoints
             var enumDef = await service.GetByCodeAsync(code, targetLang);
             return enumDef == null
                 ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", uiLang), "ENUM_NOT_FOUND"))
-                : Results.Ok(enumDef);
+                : Results.Ok(new SuccessResponse<EnumDefinitionDto>(enumDef));
         })
         .WithName("GetEnumByCode")
         .WithSummary("根据Code获取枚举定义")
-        .Produces<EnumDefinitionDto>(200)
-        .Produces(404);
+        .Produces<SuccessResponse<EnumDefinitionDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // GET /api/enums/{id}/options - 获取枚举的所有选项
         group.MapGet("/{id:guid}/options", async (
@@ -85,11 +85,11 @@ public static class EnumDefinitionEndpoints
         {
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var options = await service.GetOptionsAsync(id, includeDisabled, targetLang);
-            return Results.Ok(options);
+            return Results.Ok(new SuccessResponse<List<EnumOptionDto>>(options));
         })
         .WithName("GetEnumOptions")
         .WithSummary("获取枚举的所有选项")
-        .Produces<List<EnumOptionDto>>(200);
+        .Produces<SuccessResponse<List<EnumOptionDto>>>(StatusCodes.Status200OK);
 
         // POST /api/enums - 创建枚举定义
         group.MapPost("/", async (
@@ -102,7 +102,7 @@ public static class EnumDefinitionEndpoints
             try
             {
                 var created = await service.CreateAsync(request);
-                return Results.Created($"/api/enums/{created.Id}", created);
+                return Results.Created($"/api/enums/{created.Id}", new SuccessResponse<EnumDefinitionDto>(created));
             }
             catch (InvalidOperationException ex)
             {
@@ -113,8 +113,8 @@ public static class EnumDefinitionEndpoints
         })
         .WithName("CreateEnum")
         .WithSummary("创建枚举定义")
-        .Produces<EnumDefinitionDto>(201)
-        .Produces(400);
+        .Produces<SuccessResponse<EnumDefinitionDto>>(StatusCodes.Status201Created)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // PUT /api/enums/{id} - 更新枚举定义
         group.MapPut("/{id:guid}", async (
@@ -130,7 +130,7 @@ public static class EnumDefinitionEndpoints
                 var updated = await service.UpdateAsync(id, request);
                 return updated == null
                     ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
-                    : Results.Ok(updated);
+                    : Results.Ok(new SuccessResponse<EnumDefinitionDto>(updated));
             }
             catch (InvalidOperationException ex)
             {
@@ -141,9 +141,9 @@ public static class EnumDefinitionEndpoints
         })
         .WithName("UpdateEnum")
         .WithSummary("更新枚举定义")
-        .Produces<EnumDefinitionDto>(200)
-        .Produces(404)
-        .Produces(400);
+        .Produces<SuccessResponse<EnumDefinitionDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // DELETE /api/enums/{id} - 删除枚举定义
         group.MapDelete("/{id:guid}", async (
@@ -157,7 +157,7 @@ public static class EnumDefinitionEndpoints
             {
                 var deleted = await service.DeleteAsync(id);
                 return deleted
-                    ? Results.NoContent()
+                    ? Results.Ok(ApiResponseExtensions.SuccessResponse())
                     : Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"));
             }
             catch (InvalidOperationException ex)
@@ -169,9 +169,9 @@ public static class EnumDefinitionEndpoints
         })
         .WithName("DeleteEnum")
         .WithSummary("删除枚举定义")
-        .Produces(204)
-        .Produces(404)
-        .Produces(400);
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // PUT /api/enums/{id}/options - 批量更新枚举选项
         group.MapPut("/{id:guid}/options", async (
@@ -185,7 +185,7 @@ public static class EnumDefinitionEndpoints
             try
             {
                 var options = await service.UpdateOptionsAsync(id, request);
-                return Results.Ok(options);
+                return Results.Ok(new SuccessResponse<List<EnumOptionDto>>(options));
             }
             catch (InvalidOperationException ex)
             {
@@ -196,7 +196,7 @@ public static class EnumDefinitionEndpoints
         })
         .WithName("UpdateEnumOptions")
         .WithSummary("批量更新枚举选项")
-        .Produces<List<EnumOptionDto>>(200)
-        .Produces(400);
+        .Produces<SuccessResponse<List<EnumOptionDto>>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
     }
 }

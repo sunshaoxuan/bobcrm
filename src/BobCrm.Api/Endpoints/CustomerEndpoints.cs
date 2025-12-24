@@ -8,6 +8,7 @@ using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Responses.Customer;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Endpoints;
@@ -26,11 +27,12 @@ public static class CustomerEndpoints
 
         // 获取客户列表
         group.MapGet("", (ICustomerQueries q) =>
-            Results.Json(q.GetList())
+            Results.Ok(new SuccessResponse<List<CustomerListItemDto>>(q.GetList()))
         )
         .WithName("GetCustomers")
         .WithSummary("获取客户列表")
-        .WithDescription("获取当前用户可访问的所有客户列表");
+        .WithDescription("获取当前用户可访问的所有客户列表")
+        .Produces<SuccessResponse<List<CustomerListItemDto>>>(StatusCodes.Status200OK);
 
         // 获取客户详情
         group.MapGet("/{id:int}", (int id, ICustomerQueries q, ILocalization loc, HttpContext http) =>
@@ -41,11 +43,13 @@ public static class CustomerEndpoints
             {
                 return Results.NotFound(new ErrorResponse(loc.T("ERR_CUSTOMER_NOT_FOUND", lang), "CUSTOMER_NOT_FOUND"));
             }
-            return Results.Json(detail);
+            return Results.Ok(new SuccessResponse<CustomerDetailDto>(detail));
         })
         .WithName("GetCustomerDetail")
         .WithSummary("获取客户详情")
-        .WithDescription("获取指定客户的详细信息，包括字段值");
+        .WithDescription("获取指定客户的详细信息，包括字段值")
+        .Produces<SuccessResponse<CustomerDetailDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 创建新客户
         group.MapPost("", async (
@@ -108,11 +112,14 @@ public static class CustomerEndpoints
             }
 
             logger.LogInformation("[Customer] Customer created successfully: id={Id}, code={Code}", customer.Id, customer.Code);
-            return Results.Json(new { id = customer.Id, code = customer.Code, name = customer.Name });
+            var payload = new CustomerCreateResultDto { Id = customer.Id, Code = customer.Code, Name = customer.Name };
+            return Results.Ok(new SuccessResponse<CustomerCreateResultDto>(payload));
         })
         .WithName("CreateCustomer")
         .WithSummary("创建客户")
-        .WithDescription("创建新客户并自动授予创建者编辑权限");
+        .WithDescription("创建新客户并自动授予创建者编辑权限")
+        .Produces<SuccessResponse<CustomerCreateResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // 更新客户
         group.MapPut("/{id:int}", async (
@@ -214,11 +221,15 @@ public static class CustomerEndpoints
             await uow.SaveChangesAsync();
 
             logger.LogInformation("[Customer] Customer updated successfully: id={Id}, newVersion={Version}", id, c.Version);
-            return Results.Json(new { status = "success", newVersion = c.Version });
+            var payload = new CustomerUpdateResultDto { Status = "success", NewVersion = c.Version };
+            return Results.Ok(new SuccessResponse<CustomerUpdateResultDto>(payload));
         })
         .WithName("UpdateCustomer")
         .WithSummary("更新客户")
-        .WithDescription("更新客户信息和自定义字段值，支持乐观并发控制");
+        .WithDescription("更新客户信息和自定义字段值，支持乐观并发控制")
+        .Produces<SuccessResponse<CustomerUpdateResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 客户访问权限管理（仅管理员）
         group.MapGet("/{id:int}/access", async (
@@ -234,20 +245,22 @@ public static class CustomerEndpoints
                 !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("[Customer] Access denied: user {Name} tried to view access list for customer {Id}", name, id);
-                return Results.StatusCode(403);
+                return Results.Forbid();
             }
 
             var list = await db.CustomerAccesses.AsNoTracking()
                 .Where(a => a.CustomerId == id)
-                .Select(a => new { a.UserId, a.CanEdit })
+                .Select(a => new CustomerAccessDto { UserId = a.UserId, CanEdit = a.CanEdit })
                 .ToListAsync();
                 
             logger.LogInformation("[Customer] Retrieved access list for customer {Id}: {Count} entries", id, list.Count);
-            return Results.Json(list);
+            return Results.Ok(new SuccessResponse<List<CustomerAccessDto>>(list));
         })
         .WithName("GetCustomerAccess")
         .WithSummary("获取客户访问权限")
-        .WithDescription("管理员查看指定客户的访问权限列表");
+        .WithDescription("管理员查看指定客户的访问权限列表")
+        .Produces<SuccessResponse<List<CustomerAccessDto>>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status403Forbidden);
 
         group.MapPost("/{id:int}/access", async (
             int id,
@@ -266,7 +279,7 @@ public static class CustomerEndpoints
                 !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogWarning("[Customer] Access denied: user {Name} tried to modify access for customer {Id}", name, id);
-                return Results.StatusCode(403);
+                return Results.Forbid();
             }
 
             var entity = await db.CustomerAccesses.FirstOrDefaultAsync(a => a.CustomerId == id && a.UserId == body.UserId);
@@ -288,7 +301,9 @@ public static class CustomerEndpoints
         })
         .WithName("UpsertCustomerAccess")
         .WithSummary("设置客户访问权限")
-        .WithDescription("管理员设置或更新用户对指定客户的访问权限");
+        .WithDescription("管理员设置或更新用户对指定客户的访问权限")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status403Forbidden);
 
         return app;
     }

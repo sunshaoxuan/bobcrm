@@ -19,8 +19,9 @@ public static class OrganizationEndpoints
             CancellationToken ct) =>
         {
             var data = await service.GetTreeAsync(ct);
-            return Results.Ok(data);
-        });
+            return Results.Ok(new SuccessResponse<List<OrganizationNodeDto>>(data));
+        })
+        .Produces<SuccessResponse<List<OrganizationNodeDto>>>(StatusCodes.Status200OK);
 
         group.MapPost("/", async (
             [FromBody] CreateOrganizationRequest request,
@@ -53,7 +54,7 @@ public static class OrganizationEndpoints
             return await ExecuteAsync(loc, http, async () =>
             {
                 await service.DeleteAsync(id, ct);
-                return Results.Ok();
+                return Results.Ok(ApiResponseExtensions.SuccessResponse());
             });
         });
 
@@ -69,7 +70,7 @@ public static class OrganizationEndpoints
         try
         {
             var result = await action();
-            return Results.Ok(result);
+            return Results.Ok(new SuccessResponse<T>(result));
         }
         catch (InvalidOperationException ex)
         {

@@ -1,5 +1,5 @@
 using System.Net;
-using System.Text.Json;
+using BobCrm.Api.Contracts;
 
 namespace BobCrm.Api.Middleware;
 
@@ -48,26 +48,17 @@ public class GlobalExceptionMiddleware
             statusCode,
             context.Request.Path);
 
-        var response = new
+        var response = new ErrorResponse(
+            _environment.IsDevelopment() ? exception.ToString() : GetErrorMessage(exception),
+            errorCode)
         {
-            Success = false,
-            ErrorCode = errorCode,
-            ErrorMessage = GetErrorMessage(exception),
-            Details = _environment.IsDevelopment() ? exception.ToString() : null,
             TraceId = context.TraceIdentifier,
             Timestamp = DateTime.UtcNow
         };
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
-
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = _environment.IsDevelopment()
-        };
-
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
+        await context.Response.WriteAsJsonAsync(response);
     }
 
     /// <summary>

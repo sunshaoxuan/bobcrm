@@ -10,6 +10,7 @@ using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.DTOs.Template;
 using BobCrm.Api.Contracts.Requests.Template;
+using BobCrm.Api.Contracts.Responses.Template;
 using BobCrm.Api.Extensions;
 using BobCrm.Api.Services;
 using BobCrm.Api.Utils;
@@ -40,11 +41,12 @@ public static class TemplateEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var result = await templateService.GetTemplatesAsync(uid, entityType, usageType, templateType, groupBy);
-            return Results.Json(result);
+            return Results.Ok(new SuccessResponse<TemplateQueryResponseDto>(result));
         })
         .WithName("GetTemplates")
         .WithSummary("获取用户的表单模板列表")
-        .WithDescription("支持按实体类型过滤，支持按实体或用户分组");
+        .WithDescription("支持按实体类型过滤，支持按实体或用户分组")
+        .Produces<SuccessResponse<TemplateQueryResponseDto>>(StatusCodes.Status200OK);
 
         // 获取单个模板详情
         group.MapGet("/{id:int}", async (
@@ -63,11 +65,13 @@ public static class TemplateEndpoints
                 return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
 
-            return Results.Json(template);
+            return Results.Ok(new SuccessResponse<FormTemplate>(template));
         })
         .WithName("GetTemplate")
         .WithSummary("获取模板详情")
-        .WithDescription("根据模板ID获取完整的模板信息");
+        .WithDescription("根据模板ID获取完整的模板信息")
+        .Produces<SuccessResponse<FormTemplate>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 创建新模板
         group.MapPost("", async (
@@ -77,11 +81,12 @@ public static class TemplateEndpoints
         {
             var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var template = await templateService.CreateTemplateAsync(uid, req);
-            return Results.Created($"/api/templates/{template.Id}", template);
+            return Results.Created($"/api/templates/{template.Id}", new SuccessResponse<FormTemplate>(template));
         })
         .WithName("CreateTemplate")
         .WithSummary("创建新模板")
-        .WithDescription("创建一个新的表单模板");
+        .WithDescription("创建一个新的表单模板")
+        .Produces<SuccessResponse<FormTemplate>>(StatusCodes.Status201Created);
 
         // 更新模板
         group.MapPut("/{id:int}", async (
@@ -97,7 +102,7 @@ public static class TemplateEndpoints
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
                 var template = await templateService.UpdateTemplateAsync(id, uid, req);
-                return Results.Ok(template);
+                return Results.Ok(new SuccessResponse<FormTemplate>(template));
             }
             catch (KeyNotFoundException)
             {
@@ -112,7 +117,10 @@ public static class TemplateEndpoints
         })
         .WithName("UpdateTemplate")
         .WithSummary("更新模板")
-        .WithDescription("更新模板信息（EntityType一旦设置后不允许修改）");
+        .WithDescription("更新模板信息（EntityType一旦设置后不允许修改）")
+        .Produces<SuccessResponse<FormTemplate>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 删除模板
         group.MapDelete("/{id:int}", async (
@@ -142,7 +150,10 @@ public static class TemplateEndpoints
         })
         .WithName("DeleteTemplate")
         .WithSummary("删除模板")
-        .WithDescription("删除模板（系统默认、用户默认和正在使用的模板不允许删除）");
+        .WithDescription("删除模板（系统默认、用户默认和正在使用的模板不允许删除）")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 复制模板
         group.MapPost("/{id:int}/copy", async (
@@ -158,7 +169,7 @@ public static class TemplateEndpoints
             {
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
                 var newTemplate = await templateService.CopyTemplateAsync(id, uid, req);
-                return Results.Created($"/api/templates/{newTemplate.Id}", newTemplate);
+                return Results.Created($"/api/templates/{newTemplate.Id}", new SuccessResponse<FormTemplate>(newTemplate));
             }
             catch (KeyNotFoundException)
             {
@@ -167,7 +178,9 @@ public static class TemplateEndpoints
         })
         .WithName("CopyTemplate")
         .WithSummary("复制模板")
-        .WithDescription("从现有模板创建副本（可以从系统模板或用户模板复制）");
+        .WithDescription("从现有模板创建副本（可以从系统模板或用户模板复制）")
+        .Produces<SuccessResponse<FormTemplate>>(StatusCodes.Status201Created)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 应用模板（设置为用户默认模板）
         group.MapPut("/{id:int}/apply", async (
@@ -183,19 +196,21 @@ public static class TemplateEndpoints
                 var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
                 var template = await templateService.ApplyTemplateAsync(id, uid);
 
-                return Results.Ok(new
+                var payload = new ApplyTemplateResultDto
                 {
-                    message = loc.T("MSG_TEMPLATE_APPLIED_DEFAULT", lang),
-                    template = new
+                    Message = loc.T("MSG_TEMPLATE_APPLIED_DEFAULT", lang),
+                    Template = new AppliedTemplateDto
                     {
-                        template.Id,
-                        template.Name,
-                        template.EntityType,
-                        usageType = "Unknown", // FormTemplate 不再包含 UsageType，需通过 TemplateStateBinding 查询
-                        template.IsUserDefault,
-                        template.IsSystemDefault
+                        Id = template.Id,
+                        Name = template.Name,
+                        EntityType = template.EntityType,
+                        UsageType = "Unknown",
+                        IsUserDefault = template.IsUserDefault,
+                        IsSystemDefault = template.IsSystemDefault
                     }
-                });
+                };
+
+                return Results.Ok(new SuccessResponse<ApplyTemplateResultDto>(payload));
             }
             catch (KeyNotFoundException)
             {
@@ -210,7 +225,10 @@ public static class TemplateEndpoints
         })
         .WithName("ApplyTemplate")
         .WithSummary("应用模板")
-        .WithDescription("将模板设置为用户默认模板（如果是系统模板，会先创建副本）");
+        .WithDescription("将模板设置为用户默认模板（如果是系统模板，会先创建副本）")
+        .Produces<SuccessResponse<ApplyTemplateResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 获取有效模板（用于PageLoader）
         group.MapGet("/effective/{entityType}", async (
@@ -229,11 +247,13 @@ public static class TemplateEndpoints
                 return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
             }
 
-            return Results.Json(template);
+            return Results.Ok(new SuccessResponse<FormTemplate>(template));
         })
         .WithName("GetEffectiveTemplate")
         .WithSummary("获取有效模板")
-        .WithDescription("按优先级获取模板：用户默认 > 系统默认 > 第一个创建的模板");
+        .WithDescription("按优先级获取模板：用户默认 > 系统默认 > 第一个创建的模板")
+        .Produces<SuccessResponse<FormTemplate>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/menu-bindings", async (
             string? lang,
@@ -266,7 +286,7 @@ public static class TemplateEndpoints
 
             if (accessibleFunctionIds.Count == 0)
             {
-                return Results.Ok(Array.Empty<object>());
+                return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(new List<MenuTemplateIntersectionDto>()));
             }
 
             var menuNodes = await db.FunctionNodes
@@ -283,7 +303,7 @@ public static class TemplateEndpoints
 
             if (filteredNodes.Count == 0)
             {
-                return Results.Ok(Array.Empty<object>());
+                return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(new List<MenuTemplateIntersectionDto>()));
             }
 
             var entityTypes = filteredNodes
@@ -304,10 +324,7 @@ public static class TemplateEndpoints
                         var displayNameSingle = summary.DisplayName
                             ?? summary.DisplayNameTranslations?.Resolve(targetLang ?? string.Empty)
                             ?? ed.EntityName;
-                        return new EntityMenuMetadata(
-                            displayNameSingle,
-                            summary.DisplayNameTranslations,
-                            ResolveRoute(ed));
+                        return (DisplayName: displayNameSingle, DisplayNameTranslations: summary.DisplayNameTranslations, Route: ResolveRoute(ed));
                     },
                     StringComparer.OrdinalIgnoreCase,
                     ct);
@@ -323,7 +340,7 @@ public static class TemplateEndpoints
                 .GroupBy(t => t.EntityType!, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
-            var result = new List<object>(filteredNodes.Count);
+            var result = new List<MenuTemplateIntersectionDto>(filteredNodes.Count);
             foreach (var node in filteredNodes)
             {
                 var binding = node.TemplateStateBinding!;
@@ -347,71 +364,67 @@ public static class TemplateEndpoints
                     .OrderByDescending(t => t.IsUserDefault)
                     .ThenByDescending(t => t.IsSystemDefault)
                     .ThenBy(t => t.Name)
-                    .Select(t => new
+                    .Select(t => new TemplateSummaryDto
                     {
-                        t.Id,
-                        t.Name,
-                        t.EntityType,
-                        t.IsUserDefault,
-                        t.IsSystemDefault,
-                        t.Description,
-                        t.CreatedAt,
-                        t.UpdatedAt,
-                        t.IsInUse
+                        Id = t.Id,
+                        Name = t.Name,
+                        EntityType = t.EntityType,
+                        UsageType = t.UsageType,
+                        IsUserDefault = t.IsUserDefault,
+                        IsSystemDefault = t.IsSystemDefault,
+                        Description = t.Description,
+                        CreatedAt = t.CreatedAt,
+                        UpdatedAt = t.UpdatedAt,
+                        IsInUse = t.IsInUse
                     })
                     .ToList();
 
                 entityMetadata.TryGetValue(binding.EntityType, out var metadata);
-                var displayName = metadata?.DisplayName ?? node.Name;
-                var resolvedRoute = metadata?.Route ?? node.Route;
-                var displayNameTranslations = metadata?.DisplayNameTranslations ??
+                var displayName = metadata.DisplayName ?? node.Name;
+                var resolvedRoute = metadata.Route ?? node.Route;
+                var displayNameTranslations = metadata.DisplayNameTranslations ??
                     (node.DisplayName == null ? null : new MultilingualText(node.DisplayName));
                 var resolvedMenuName = !string.IsNullOrWhiteSpace(targetLang)
                     ? (displayNameTranslations?.Resolve(targetLang) ?? displayName ?? node.Name)
                     : null;
 
-                var menuPayload = new
+                var entry = new MenuTemplateIntersectionDto
                 {
-                    node.Id,
-                    Code = NormalizeMenuCode(node.Code),
-                    Name = resolvedMenuName ?? displayName,
-                    node.DisplayNameKey,
-                    DisplayName = string.IsNullOrWhiteSpace(targetLang)
-                        ? null
-                        : resolvedMenuName ?? displayName,
-                    DisplayNameTranslations = string.IsNullOrWhiteSpace(targetLang)
-                        ? displayNameTranslations
-                        : null,
-                    Route = resolvedRoute,
-                    node.Icon,
-                    node.SortOrder
-                };
-
-                var entry = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["Menu"] = menuPayload,
-                    ["Binding"] = new
+                    Menu = new MenuNodeSummaryDto
                     {
-                        binding.Id,
-                        binding.EntityType,
-                        viewState = binding.ViewState,
-                        usageType,
-                        binding.TemplateId,
-                        isDefault = binding.IsDefault,
-                        requiredPermission = binding.RequiredPermission
+                        Id = node.Id,
+                        Code = NormalizeMenuCode(node.Code),
+                        Name = resolvedMenuName ?? displayName,
+                        DisplayNameKey = node.DisplayNameKey,
+                        DisplayName = string.IsNullOrWhiteSpace(targetLang) ? null : (resolvedMenuName ?? displayName),
+                        DisplayNameTranslations = string.IsNullOrWhiteSpace(targetLang) ? displayNameTranslations : null,
+                        Route = resolvedRoute,
+                        Icon = node.Icon,
+                        SortOrder = node.SortOrder
                     },
-                    ["Templates"] = templates
+                    Binding = new TemplateStateBindingSummaryDto
+                    {
+                        Id = binding.Id,
+                        EntityType = binding.EntityType,
+                        ViewState = binding.ViewState,
+                        UsageType = usageType,
+                        TemplateId = binding.TemplateId,
+                        IsDefault = binding.IsDefault,
+                        RequiredPermission = binding.RequiredPermission
+                    },
+                    Templates = templates
                 };
 
                 result.Add(entry);
             }
 
             logger.LogDebug("[Templates] Calculated {Count} menu/template intersections for user {UserId}.", result.Count, uid);
-            return Results.Ok(result);
+            return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(result));
         })
         .WithName("GetMenuTemplateIntersections")
         .WithSummary("获取菜单与模板交集")
-        .WithDescription("返回当前用户可访问的菜单节点及其模板绑定和可选模板列表。");
+        .WithDescription("返回当前用户可访问的菜单节点及其模板绑定和可选模板列表。")
+        .Produces<SuccessResponse<List<MenuTemplateIntersectionDto>>>(StatusCodes.Status200OK);
 
         group.MapGet("/bindings/{entityType}", async (
             string entityType,
@@ -426,11 +439,13 @@ public static class TemplateEndpoints
             var binding = await bindingService.GetBindingAsync(entityType, resolvedUsage, ct);
             return binding is null
                 ? Results.NotFound(new ErrorResponse(loc.T("ERR_TEMPLATE_BINDING_NOT_FOUND", lang), "TEMPLATE_BINDING_NOT_FOUND"))
-                : Results.Ok(binding.ToDto());
+                : Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
         })
         .WithName("GetTemplateBinding")
         .WithSummary("获取实体模板绑定")
-        .WithDescription("按照实体与用途获取模板绑定记录。");
+        .WithDescription("按照实体与用途获取模板绑定记录。")
+        .Produces<SuccessResponse<TemplateBindingDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPut("/bindings", async (
             UpsertTemplateBindingRequest request,
@@ -456,11 +471,12 @@ public static class TemplateEndpoints
                 request.RequiredFunctionCode,
                 ct);
 
-            return Results.Ok(binding.ToDto());
+            return Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
         })
         .WithName("UpsertTemplateBinding")
         .WithSummary("更新模板绑定")
-        .WithDescription("创建或更新实体与模板之间的绑定关系。");
+        .WithDescription("创建或更新实体与模板之间的绑定关系。")
+        .Produces<SuccessResponse<TemplateBindingDto>>(StatusCodes.Status200OK);
 
         group.MapPost("/runtime/{entityType}", async (
             string entityType,
@@ -478,11 +494,11 @@ public static class TemplateEndpoints
                 return Results.Unauthorized();
             }
 
-            request ??= new TemplateRuntimeRequest();
+                request ??= new TemplateRuntimeRequest();
             try
             {
                 var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
-                return Results.Ok(context);
+                return Results.Ok(new SuccessResponse<TemplateRuntimeResponse>(context));
             }
             catch (KeyNotFoundException)
             {
@@ -497,7 +513,10 @@ public static class TemplateEndpoints
         })
         .WithName("BuildTemplateRuntime")
         .WithSummary("获取模板运行时上下文")
-        .WithDescription("结合权限与数据范围返回模板所需的运行时信息。");
+        .WithDescription("结合权限与数据范围返回模板所需的运行时信息。")
+        .Produces<SuccessResponse<TemplateRuntimeResponse>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -534,5 +553,5 @@ public static class TemplateEndpoints
         return route;
     }
 
-    private sealed record EntityMenuMetadata(string DisplayName, MultilingualText? DisplayNameTranslations, string? Route);
+
 }

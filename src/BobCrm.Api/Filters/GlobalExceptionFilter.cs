@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Net;
+using BobCrm.Api.Contracts;
 
 namespace BobCrm.Api.Filters;
 
@@ -34,13 +35,12 @@ public class GlobalExceptionFilter : IExceptionFilter
             exception.GetType().Name,
             statusCode);
 
-        var response = new
+        var response = new ErrorResponse(
+            _environment.IsDevelopment() ? exception.ToString() : GetErrorMessage(exception),
+            errorCode)
         {
-            Success = false,
-            ErrorCode = errorCode,
-            ErrorMessage = GetErrorMessage(exception),
-            Details = _environment.IsDevelopment() ? exception.ToString() : null,
-            TraceId = context.HttpContext.TraceIdentifier
+            TraceId = context.HttpContext.TraceIdentifier,
+            Timestamp = DateTime.UtcNow
         };
 
         context.Result = new ObjectResult(response)

@@ -3,8 +3,10 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Services;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.EntityAggregate;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -37,11 +39,13 @@ public static class EntityAggregateEndpoints
 
             // 转换为DTO
             var dto = MapToAggregateDto(aggregate);
-            return Results.Ok(dto);
+            return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
         })
         .WithName("GetEntityAggregate")
         .WithSummary("Get entity aggregate")
-        .WithDescription("Get entity definition and all sub entities");
+        .WithDescription("Get entity definition and all sub entities")
+        .Produces<SuccessResponse<EntityAggregateDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // Save aggregate (create or update)
         group.MapPost("", async (
@@ -70,39 +74,35 @@ public static class EntityAggregateEndpoints
 
                 // 5. 返回结果
                 var dto = MapToAggregateDto(savedAggregate);
-                return Results.Ok(dto);
+                return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
             }
             catch (DomainException ex)
             {
-                return Results.BadRequest(new
-                {
-                    message = LocalizeDomainException(loc, lang, ex),
-                    code = ex.MessageKey
-                });
+                return Results.BadRequest(new ErrorResponse(LocalizeDomainException(loc, lang, ex), ex.MessageKey));
             }
             catch (ValidationException ex)
             {
-                return Results.BadRequest(new
-                {
-                    message = loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang),
-                    errors = ex.Errors.Select(e => new
-                    {
-                        propertyPath = e.PropertyPath,
-                        message = LocalizeValidationError(loc, lang, e)
-                    })
-                });
+                var details = ex.Errors
+                    .GroupBy(e => e.PropertyPath)
+                    .ToDictionary(g => g.Key, g => g.Select(e => LocalizeValidationError(loc, lang, e)).ToArray());
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang), details, "VALIDATION_ERROR"));
             }
             catch (Exception ex)
             {
-                return Results.Problem(
-                    title: loc.T("ERR_AGGREGATE_SAVE_FAILED", lang),
-                    detail: ex.Message,
-                    statusCode: 500);
+                var resp = new ErrorResponse(loc.T("ERR_AGGREGATE_SAVE_FAILED", lang), "INTERNAL_ERROR")
+                {
+                    TraceId = http.TraceIdentifier,
+                    Timestamp = DateTime.UtcNow
+                };
+                return Results.Json(resp, statusCode: StatusCodes.Status500InternalServerError);
             }
         })
         .WithName("SaveEntityAggregate")
         .WithSummary("Save entity aggregate")
-        .WithDescription("Save entity definition and sub entities, generate code and metadata");
+        .WithDescription("Save entity definition and sub entities, generate code and metadata")
+        .Produces<SuccessResponse<EntityAggregateDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError);
 
         // Validate aggregate (no save)
         group.MapPost("/validate", async (
@@ -120,52 +120,57 @@ public static class EntityAggregateEndpoints
 
                 if (validationResult.IsValid)
                 {
-                    return Results.Ok(new { isValid = true, message = loc.T("MSG_AGGREGATE_VALID", lang) });
+                    return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
+                    {
+                        IsValid = true,
+                        Message = loc.T("MSG_AGGREGATE_VALID", lang)
+                    }));
                 }
                 else
                 {
-                    return Results.Ok(new
+                    return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
                     {
-                        isValid = false,
-                        errors = validationResult.Errors.Select(e => new
+                        IsValid = false,
+                        Errors = validationResult.Errors.Select(e => new EntityAggregateValidationErrorDto
                         {
-                            propertyPath = e.PropertyPath,
-                            message = LocalizeValidationError(loc, lang, e)
-                        })
-                    });
+                            PropertyPath = e.PropertyPath,
+                            Message = LocalizeValidationError(loc, lang, e)
+                        }).ToList()
+                    }));
                 }
             }
             catch (DomainException ex)
             {
-                return Results.BadRequest(new
-                {
-                    message = LocalizeDomainException(loc, lang, ex),
-                    code = ex.MessageKey
-                });
+                return Results.BadRequest(new ErrorResponse(LocalizeDomainException(loc, lang, ex), ex.MessageKey));
             }
             catch (ValidationException ex)
             {
-                return Results.Ok(new
+                return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
                 {
-                    isValid = false,
-                    errors = ex.Errors.Select(e => new
+                    IsValid = false,
+                    Errors = ex.Errors.Select(e => new EntityAggregateValidationErrorDto
                     {
-                        propertyPath = e.PropertyPath,
-                        message = LocalizeValidationError(loc, lang, e)
-                    })
-                });
+                        PropertyPath = e.PropertyPath,
+                        Message = LocalizeValidationError(loc, lang, e)
+                    }).ToList()
+                }));
             }
             catch (Exception ex)
             {
-                return Results.Problem(
-                    title: loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang),
-                    detail: ex.Message,
-                    statusCode: 500);
+                var resp = new ErrorResponse(loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang), "INTERNAL_ERROR")
+                {
+                    TraceId = http.TraceIdentifier,
+                    Timestamp = DateTime.UtcNow
+                };
+                return Results.Json(resp, statusCode: StatusCodes.Status500InternalServerError);
             }
         })
         .WithName("ValidateEntityAggregate")
         .WithSummary("Validate entity aggregate")
-        .WithDescription("Validate entity definition and sub entities without saving");
+        .WithDescription("Validate entity definition and sub entities without saving")
+        .Produces<SuccessResponse<EntityAggregateValidationResponseDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError);
 
         // Delete sub entity
         group.MapDelete("/sub-entities/{id:guid}", async (
@@ -174,11 +179,12 @@ public static class EntityAggregateEndpoints
             CancellationToken cancellationToken) =>
         {
             await service.DeleteSubEntityAsync(id, cancellationToken);
-            return Results.NoContent();
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         })
         .WithName("DeleteSubEntity")
         .WithSummary("Delete sub entity")
-        .WithDescription("Delete the specified sub entity and its fields");
+        .WithDescription("Delete the specified sub entity and its fields")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK);
 
         // Generate metadata preview
         group.MapGet("/{id:guid}/metadata-preview", async (
@@ -190,15 +196,18 @@ public static class EntityAggregateEndpoints
             var aggregate = await service.LoadAggregateAsync(id, cancellationToken);
             if (aggregate == null)
             {
-                return Results.NotFound();
+                return Results.NotFound(new ErrorResponse("Not found", "ENTITY_NOT_FOUND"));
             }
 
             var metadataJson = publisher.GenerateMetadataJson(aggregate);
-            return Results.Content(metadataJson, "application/json");
+            using var doc = JsonDocument.Parse(metadataJson);
+            return Results.Ok(new SuccessResponse<JsonElement>(doc.RootElement.Clone()));
         })
         .WithName("PreviewAggregateMetadata")
         .WithSummary("Preview aggregate metadata")
-        .WithDescription("Generate and preview aggregate JSON metadata");
+        .WithDescription("Generate and preview aggregate JSON metadata")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // Generate code preview
         group.MapGet("/{id:guid}/code-preview", async (
@@ -210,7 +219,7 @@ public static class EntityAggregateEndpoints
             var aggregate = await service.LoadAggregateAsync(id, cancellationToken);
             if (aggregate == null)
             {
-                return Results.NotFound();
+                return Results.NotFound(new ErrorResponse("Not found", "ENTITY_NOT_FOUND"));
             }
 
             var codePreview = new Dictionary<string, string>();
@@ -226,11 +235,13 @@ public static class EntityAggregateEndpoints
             var aggVoCode = codeGenerator.GenerateAggregateVoClass(aggregate.Root, aggregate.SubEntities.ToList());
             codePreview[$"{aggregate.Root.EntityName}AggVo.cs"] = aggVoCode;
 
-            return Results.Ok(codePreview);
+            return Results.Ok(new SuccessResponse<Dictionary<string, string>>(codePreview));
         })
         .WithName("PreviewGeneratedCode")
         .WithSummary("Preview generated code")
-        .WithDescription("Preview generated C# code for sub entities");
+        .WithDescription("Preview generated C# code for sub entities")
+        .Produces<SuccessResponse<Dictionary<string, string>>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -325,48 +336,48 @@ public static class EntityAggregateEndpoints
         return aggregate;
     }
 
-    private static object MapToAggregateDto(EntityDefinitionAggregate aggregate)
+    private static EntityAggregateDto MapToAggregateDto(EntityDefinitionAggregate aggregate)
     {
-        return new
+        return new EntityAggregateDto
         {
-            master = new
+            Master = new EntityAggregateMasterDto
             {
-                id = aggregate.Root.Id,
-                @namespace = aggregate.Root.Namespace,
-                entityName = aggregate.Root.EntityName,
-                displayName = aggregate.Root.DisplayName,
-                description = aggregate.Root.Description,
-                status = aggregate.Root.Status,
-                createdAt = aggregate.Root.CreatedAt,
-                updatedAt = aggregate.Root.UpdatedAt
+                Id = aggregate.Root.Id,
+                Namespace = aggregate.Root.Namespace,
+                EntityName = aggregate.Root.EntityName,
+                DisplayName = aggregate.Root.DisplayName,
+                Description = aggregate.Root.Description,
+                Status = aggregate.Root.Status,
+                CreatedAt = aggregate.Root.CreatedAt,
+                UpdatedAt = aggregate.Root.UpdatedAt
             },
-            subEntities = aggregate.SubEntities.Select(s => new
+            SubEntities = aggregate.SubEntities.Select(s => new EntityAggregateSubEntityDto
             {
-                id = s.Id,
-                code = s.Code,
-                displayName = s.DisplayName,
-                description = s.Description,
-                sortOrder = s.SortOrder,
-                defaultSortField = s.DefaultSortField,
-                isDescending = s.IsDescending,
-                foreignKeyField = s.ForeignKeyField,
-                collectionPropertyName = s.CollectionPropertyName,
-                cascadeDeleteBehavior = s.CascadeDeleteBehavior,
-                fields = s.Fields.Select(f => new
+                Id = s.Id,
+                Code = s.Code,
+                DisplayName = s.DisplayName,
+                Description = s.Description,
+                SortOrder = s.SortOrder,
+                DefaultSortField = s.DefaultSortField,
+                IsDescending = s.IsDescending,
+                ForeignKeyField = s.ForeignKeyField,
+                CollectionPropertyName = s.CollectionPropertyName,
+                CascadeDeleteBehavior = s.CascadeDeleteBehavior,
+                Fields = s.Fields.Select(f => new EntityAggregateFieldDto
                 {
-                    id = f.Id,
-                    propertyName = f.PropertyName,
-                    displayName = f.DisplayName,
-                    dataType = f.DataType,
-                    length = f.Length,
-                    precision = f.Precision,
-                    scale = f.Scale,
-                    isRequired = f.IsRequired,
-                    defaultValue = f.DefaultValue,
-                    validationRules = f.ValidationRules,
-                    sortOrder = f.SortOrder
-                })
-            })
+                    Id = f.Id,
+                    PropertyName = f.PropertyName,
+                    DisplayName = f.DisplayName,
+                    DataType = f.DataType,
+                    Length = f.Length,
+                    Precision = f.Precision,
+                    Scale = f.Scale,
+                    IsRequired = f.IsRequired,
+                    DefaultValue = f.DefaultValue,
+                    ValidationRules = f.ValidationRules,
+                    SortOrder = f.SortOrder
+                }).ToList()
+            }).ToList()
         };
     }
 

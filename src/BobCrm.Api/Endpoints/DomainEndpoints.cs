@@ -41,11 +41,12 @@ public static class DomainEndpoints
                 })
                 .ToListAsync();
 
-            return Results.Ok(domains);
+            return Results.Ok(new SuccessResponse<List<EntityDomainDto>>(domains));
         })
         .WithName("GetEntityDomains")
         .WithSummary("Get entity domain list")
-        .WithDescription("Return available entity domains with multilingual names.");
+        .WithDescription("Return available entity domains with multilingual names.")
+        .Produces<SuccessResponse<List<EntityDomainDto>>>(StatusCodes.Status200OK);
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -67,7 +68,7 @@ public static class DomainEndpoints
                 return Results.NotFound(new ErrorResponse(loc.T("ERR_ENTITY_NOT_FOUND", uiLang), "ENTITY_DOMAIN_NOT_FOUND"));
             }
 
-            return Results.Ok(new EntityDomainDto
+            return Results.Ok(new SuccessResponse<EntityDomainDto>(new EntityDomainDto
             {
                 Id = domain.Id,
                 Code = domain.Code,
@@ -75,12 +76,12 @@ public static class DomainEndpoints
                 NameTranslations = targetLang == null ? new MultilingualText(domain.Name) : null,
                 SortOrder = domain.SortOrder,
                 IsSystem = domain.IsSystem
-            });
+            }));
         })
         .WithName("GetEntityDomainById")
         .WithSummary("Get entity domain by id")
-        .Produces<EntityDomainDto>(200)
-        .Produces<ErrorResponse>(404);
+        .Produces<SuccessResponse<EntityDomainDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         return app;
     }

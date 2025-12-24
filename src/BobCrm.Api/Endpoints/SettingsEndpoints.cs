@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services.Settings;
 
@@ -18,7 +19,7 @@ public static class SettingsEndpoints
         systemGroup.MapGet("/", async (SettingsService svc) =>
         {
             var system = await svc.GetSystemSettingsAsync();
-            return Results.Ok(new SystemSettingsDto(
+            return Results.Ok(new SuccessResponse<SystemSettingsDto>(new SystemSettingsDto(
                 system.CompanyName,
                 system.DefaultTheme,
                 system.DefaultPrimaryColor,
@@ -26,15 +27,16 @@ public static class SettingsEndpoints
                 system.DefaultHomeRoute,
                 system.DefaultNavMode,
                 system.TimeZoneId,
-                system.AllowSelfRegistration));
+                system.AllowSelfRegistration)));
         })
         .WithName("GetSystemSettings")
-        .WithSummary("Get system settings");
+        .WithSummary("Get system settings")
+        .Produces<SuccessResponse<SystemSettingsDto>>(StatusCodes.Status200OK);
 
         systemGroup.MapPut("/", async (UpdateSystemSettingsRequest request, SettingsService svc) =>
         {
             var updated = await svc.UpdateSystemSettingsAsync(request);
-            return Results.Ok(new SystemSettingsDto(
+            return Results.Ok(new SuccessResponse<SystemSettingsDto>(new SystemSettingsDto(
                 updated.CompanyName,
                 updated.DefaultTheme,
                 updated.DefaultPrimaryColor,
@@ -42,10 +44,11 @@ public static class SettingsEndpoints
                 updated.DefaultHomeRoute,
                 updated.DefaultNavMode,
                 updated.TimeZoneId,
-                updated.AllowSelfRegistration));
+                updated.AllowSelfRegistration)));
         })
         .WithName("UpdateSystemSettings")
-        .WithSummary("Update system settings");
+        .WithSummary("Update system settings")
+        .Produces<SuccessResponse<SystemSettingsDto>>(StatusCodes.Status200OK);
 
         var userGroup = settingsGroup.MapGroup("/user")
             .RequireAuthorization();
@@ -59,10 +62,11 @@ public static class SettingsEndpoints
             }
 
             var snapshot = await svc.GetUserSettingsAsync(uid);
-            return Results.Ok(snapshot);
+            return Results.Ok(new SuccessResponse<UserSettingsSnapshotDto>(snapshot));
         })
         .WithName("GetUserSettings")
-        .WithSummary("Get user settings with defaults");
+        .WithSummary("Get user settings with defaults")
+        .Produces<SuccessResponse<UserSettingsSnapshotDto>>(StatusCodes.Status200OK);
 
         userGroup.MapPut("/", async (UpdateUserSettingsRequest request, ClaimsPrincipal user, SettingsService svc) =>
         {
@@ -73,10 +77,11 @@ public static class SettingsEndpoints
             }
 
             var snapshot = await svc.UpdateUserSettingsAsync(uid, request);
-            return Results.Ok(snapshot);
+            return Results.Ok(new SuccessResponse<UserSettingsSnapshotDto>(snapshot));
         })
         .WithName("UpdateUserSettings")
-        .WithSummary("Update user-specific settings");
+        .WithSummary("Update user-specific settings")
+        .Produces<SuccessResponse<UserSettingsSnapshotDto>>(StatusCodes.Status200OK);
 
         return app;
     }

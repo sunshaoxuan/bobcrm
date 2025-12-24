@@ -4,6 +4,7 @@ using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.Responses.DynamicEntity;
 using BobCrm.Api.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BobCrm.Api.Endpoints;
@@ -55,7 +56,7 @@ public static class DynamicEntityEndpoints
 
                 var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
 
-                return Results.Ok(new DynamicEntityQueryResultDto
+                var dto = new DynamicEntityQueryResultDto
                 {
                     Meta = new DynamicEntityMetaDto
                     {
@@ -67,7 +68,9 @@ public static class DynamicEntityEndpoints
                         ? (request.Skip.Value / request.Take.Value) + 1
                         : 1,
                     PageSize = request.Take ?? 100
-                });
+                };
+
+                return Results.Ok(new SuccessResponse<DynamicEntityQueryResultDto>(dto));
             }
             catch (Exception ex)
             {
@@ -79,7 +82,9 @@ public static class DynamicEntityEndpoints
         })
         .WithName("QueryDynamicEntities")
         .WithSummary("查询动态实体列表")
-        .WithDescription("支持过滤、排序、分页");
+        .WithDescription("支持过滤、排序、分页")
+        .Produces<SuccessResponse<DynamicEntityQueryResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // 根据ID查询单个实体
         group.MapGet("/{fullTypeName}/{id:int}", async (
@@ -107,17 +112,15 @@ public static class DynamicEntityEndpoints
                         string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", uiLang), id),
                         "DYNAMIC_ENTITY_NOT_FOUND"));
 
-                if (includeMeta == true)
+                var result = new DynamicEntityGetResultDto
                 {
-                    var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
-                    return Results.Ok(new
-                    {
-                        meta = new DynamicEntityMetaDto { Fields = fields },
-                        data = entity
-                    });
-                }
+                    Meta = includeMeta == true
+                        ? new DynamicEntityMetaDto { Fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct) }
+                        : null,
+                    Data = entity
+                };
 
-                return Results.Ok(entity);
+                return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
             }
             catch (Exception ex)
             {
@@ -129,7 +132,10 @@ public static class DynamicEntityEndpoints
         })
         .WithName("GetDynamicEntityById")
         .WithSummary("根据ID查询动态实体")
-        .WithDescription("返回单个实体对象；可选 includeMeta=true 返回 { meta, data }");
+        .WithDescription("返回单个实体对象；可选 includeMeta=true 返回元数据")
+        .Produces<SuccessResponse<DynamicEntityGetResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // 原始SQL查询（表名）
         group.MapPost("/raw/{tableName}/query", async (
@@ -156,11 +162,13 @@ public static class DynamicEntityEndpoints
 
                 var results = await persistenceService.QueryRawAsync(tableName, options);
 
-                return Results.Ok(new
+                var dto = new DynamicEntityRawQueryResultDto
                 {
-                    data = results,
-                    count = results.Count
-                });
+                    Data = results,
+                    Count = results.Count
+                };
+
+                return Results.Ok(new SuccessResponse<DynamicEntityRawQueryResultDto>(dto));
             }
             catch (Exception ex)
             {
@@ -172,7 +180,9 @@ public static class DynamicEntityEndpoints
         })
         .WithName("RawQueryDynamicEntities")
         .WithSummary("原始SQL查询")
-        .WithDescription("直接使用表名查询（不需要加载实体类型）");
+        .WithDescription("直接使用表名查询（不需要加载实体类型）")
+        .Produces<SuccessResponse<DynamicEntityRawQueryResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // ==================== 创建 ====================
 
@@ -206,7 +216,8 @@ public static class DynamicEntityEndpoints
 
                 logger.LogInformation("[DynamicEntity] Created {EntityType} successfully", fullTypeName);
 
-                return Results.Created($"/api/dynamic-entities/{fullTypeName}/{GetEntityId(entity)}", entity);
+                var result = new DynamicEntityGetResultDto { Data = entity };
+                return Results.Created($"/api/dynamic-entities/{fullTypeName}/{GetEntityId(entity)}", new SuccessResponse<DynamicEntityGetResultDto>(result));
             }
             catch (Exception ex)
             {
@@ -218,7 +229,9 @@ public static class DynamicEntityEndpoints
         })
         .WithName("CreateDynamicEntity")
         .WithSummary("创建动态实体")
-        .WithDescription("创建新的实体记录");
+        .WithDescription("创建新的实体记录")
+        .Produces<SuccessResponse<DynamicEntityGetResultDto>>(StatusCodes.Status201Created)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // ==================== 更新 ====================
 
@@ -258,7 +271,8 @@ public static class DynamicEntityEndpoints
 
                 logger.LogInformation("[DynamicEntity] Updated {EntityType} successfully", fullTypeName);
 
-                return Results.Ok(entity);
+                var result = new DynamicEntityGetResultDto { Data = entity };
+                return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
             }
             catch (Exception ex)
             {
@@ -270,7 +284,10 @@ public static class DynamicEntityEndpoints
         })
         .WithName("UpdateDynamicEntity")
         .WithSummary("更新动态实体")
-        .WithDescription("更新现有实体记录");
+        .WithDescription("更新现有实体记录")
+        .Produces<SuccessResponse<DynamicEntityGetResultDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // ==================== 删除 ====================
 
@@ -297,7 +314,7 @@ public static class DynamicEntityEndpoints
 
                 logger.LogInformation("[DynamicEntity] Deleted {EntityType} successfully", fullTypeName);
 
-                return Results.NoContent();
+                return Results.Ok(new SuccessResponse());
             }
             catch (Exception ex)
             {
@@ -309,7 +326,10 @@ public static class DynamicEntityEndpoints
         })
         .WithName("DeleteDynamicEntity")
         .WithSummary("删除动态实体")
-        .WithDescription("删除实体记录");
+        .WithDescription("删除实体记录")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         // ==================== 统计 ====================
 
@@ -329,7 +349,8 @@ public static class DynamicEntityEndpoints
 
                 var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
 
-                return Results.Ok(new { count });
+                var dto = new EntityCountResponse { Count = count };
+                return Results.Ok(new SuccessResponse<EntityCountResponse>(dto));
             }
             catch (Exception ex)
             {
@@ -341,7 +362,9 @@ public static class DynamicEntityEndpoints
         })
         .WithName("CountDynamicEntities")
         .WithSummary("统计动态实体数量")
-        .WithDescription("统计符合条件的记录数");
+        .WithDescription("统计符合条件的记录数")
+        .Produces<SuccessResponse<EntityCountResponse>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         return app;
     }

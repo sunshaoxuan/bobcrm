@@ -7,6 +7,7 @@ using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.DTOs.Access;
 using BobCrm.Api.Contracts.Requests.Access;
+using BobCrm.Api.Contracts.Responses.Access;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Middleware;
 using BobCrm.Api.Services;
@@ -35,7 +36,7 @@ public static class AccessEndpoints
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
-            return Results.Ok(tree);
+            return Results.Ok(new SuccessResponse<List<FunctionNodeDto>>(tree));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/functions/manage", async (
@@ -52,7 +53,7 @@ public static class AccessEndpoints
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
-            return Results.Ok(tree);
+            return Results.Ok(new SuccessResponse<List<FunctionNodeDto>>(tree));
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/functions/me", async (
@@ -70,7 +71,7 @@ public static class AccessEndpoints
 
             var targetLang = LangHelper.GetLang(http, lang);
             var tree = await accessService.GetMyFunctionsAsync(userId, targetLang, ct);
-            return Results.Ok(tree);
+            return Results.Ok(new SuccessResponse<List<FunctionNodeDto>>(tree));
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
@@ -98,7 +99,7 @@ public static class AccessEndpoints
                     node.TemplateId,
                     TemplateName = node.Template?.Name
                 }, ct);
-                return Results.Ok(await ToDtoAsync(node, treeBuilder, targetLang, ct));
+                return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
             }
             catch (InvalidOperationException ex)
             {
@@ -133,7 +134,7 @@ public static class AccessEndpoints
                     node.TemplateId,
                     TemplateName = node.Template?.Name
                 }, ct);
-                return Results.Ok(await ToDtoAsync(node, treeBuilder, targetLang, ct));
+                return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
             }
             catch (InvalidOperationException ex)
             {
@@ -153,7 +154,7 @@ public static class AccessEndpoints
             {
                 await service.DeleteFunctionAsync(id, ct);
                 await auditTrail.RecordAsync("MENU", "DELETE", $"Deleted function {id}", id.ToString(), null, ct);
-                return Results.NoContent();
+                return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_FUNCTION_DELETED", lang)));
             }
             catch (InvalidOperationException ex)
             {
@@ -193,14 +194,14 @@ public static class AccessEndpoints
             var rootNodes = nodes.Where(n => !n.ParentId.HasValue).ToList();
             var lookup = nodes.ToDictionary(n => n.Id);
 
-            var exportData = new
+            var exportData = new FunctionExportResponseDto
             {
-                version = "1.0",
-                exportDate = DateTime.UtcNow,
-                functions = rootNodes.Select(node => BuildExportNode(node, lookup)).ToList()
+                Version = "1.0",
+                ExportDate = DateTime.UtcNow,
+                Functions = rootNodes.Select(node => BuildExportNode(node, lookup)).ToList()
             };
 
-            return Results.Ok(exportData);
+            return Results.Ok(new SuccessResponse<FunctionExportResponseDto>(exportData));
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapPost("/functions/import", async (
@@ -255,12 +256,14 @@ public static class AccessEndpoints
                     strategy = request.MergeStrategy
                 }, ct);
 
-                return Results.Ok(new SuccessResponse<object>(new
+                var payload = new FunctionImportResultDto
                 {
-                    message = string.Format(loc.T("MSG_FUNCTION_IMPORT_SUCCESS", lang), importedCount, skippedCount),
-                    imported = importedCount,
-                    skipped = skippedCount
-                }));
+                    Message = string.Format(loc.T("MSG_FUNCTION_IMPORT_SUCCESS", lang), importedCount, skippedCount),
+                    Imported = importedCount,
+                    Skipped = skippedCount
+                };
+
+                return Results.Ok(new SuccessResponse<FunctionImportResultDto>(payload));
             }
             catch (Exception ex)
             {
@@ -276,13 +279,13 @@ public static class AccessEndpoints
                 .Include(r => r.DataScopes)
                 .OrderBy(r => r.Code)
                 .ToListAsync(ct);
-            return Results.Ok(roles.Select(ToRoleDto).ToList());
+            return Results.Ok(new SuccessResponse<List<RoleProfileDto>>(roles.Select(ToRoleDto).ToList()));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPost("/roles", async ([FromBody] CreateRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var role = await service.CreateRoleAsync(request, ct);
-            return Results.Ok(ToRoleDto(role));
+            return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapGet("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
@@ -298,7 +301,7 @@ public static class AccessEndpoints
             if (role == null)
                 return Results.NotFound(new ErrorResponse(loc.T("ERR_ROLE_NOT_FOUND", lang), "ROLE_NOT_FOUND"));
 
-            return Results.Ok(ToRoleDto(role));
+            return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
@@ -321,7 +324,7 @@ public static class AccessEndpoints
             await db.SaveChangesAsync(ct);
             await db.Entry(role).Collection(r => r.Functions).LoadAsync(ct);
             await db.Entry(role).Collection(r => r.DataScopes).LoadAsync(ct);
-            return Results.Ok(ToRoleDto(role));
+            return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
@@ -344,7 +347,7 @@ public static class AccessEndpoints
 
             db.RoleProfiles.Remove(role);
             await db.SaveChangesAsync(ct);
-            return Results.NoContent();
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
         group.MapPut("/roles/{roleId:guid}/permissions", async (Guid roleId, [FromBody] UpdatePermissionsRequest request, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
@@ -412,7 +415,7 @@ public static class AccessEndpoints
         group.MapPost("/assignments", async ([FromBody] AssignRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
         {
             var assignment = await service.AssignRoleAsync(request, ct);
-            return Results.Ok(assignment);
+            return Results.Ok(new SuccessResponse<RoleAssignment>(assignment));
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         group.MapGet("/assignments/user/{userId}", async (string userId, [FromServices] AppDbContext db, CancellationToken ct) =>
@@ -421,19 +424,19 @@ public static class AccessEndpoints
                 .AsNoTracking()
                 .Include(a => a.Role)
                 .Where(a => a.UserId == userId)
-                .Select(a => new
+                .Select(a => new RoleAssignmentDto
                 {
-                    a.Id,
-                    a.RoleId,
+                    Id = a.Id,
+                    RoleId = a.RoleId,
                     RoleCode = a.Role!.Code,
                     RoleName = a.Role!.Name,
-                    a.OrganizationId,
-                    a.ValidFrom,
-                    a.ValidTo
+                    OrganizationId = a.OrganizationId,
+                    ValidFrom = a.ValidFrom,
+                    ValidTo = a.ValidTo
                 })
                 .ToListAsync(ct);
 
-            return Results.Ok(assignments);
+            return Results.Ok(new SuccessResponse<List<RoleAssignmentDto>>(assignments));
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         group.MapDelete("/assignments/{assignmentId:guid}", async (Guid assignmentId, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
@@ -445,7 +448,7 @@ public static class AccessEndpoints
 
             db.RoleAssignments.Remove(assignment);
             await db.SaveChangesAsync(ct);
-            return Results.NoContent();
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
@@ -494,7 +497,7 @@ public static class AccessEndpoints
         return tree[0];
     }
 
-    private static object BuildExportNode(FunctionNode node, Dictionary<Guid, FunctionNode> lookup)
+    private static FunctionExportNodeDto BuildExportNode(FunctionNode node, Dictionary<Guid, FunctionNode> lookup)
     {
         var children = lookup.Values
             .Where(n => n.ParentId == node.Id)
@@ -502,16 +505,16 @@ public static class AccessEndpoints
             .Select(child => BuildExportNode(child, lookup))
             .ToList();
 
-        return new
+        return new FunctionExportNodeDto
         {
-            code = node.Code,
-            name = node.Name,
-            displayName = node.DisplayName,
-            route = node.Route,
-            icon = node.Icon,
-            isMenu = node.IsMenu,
-            sortOrder = node.SortOrder,
-            children = children.Count > 0 ? children : null
+            Code = node.Code,
+            Name = node.Name,
+            DisplayName = node.DisplayName,
+            Route = node.Route,
+            Icon = node.Icon,
+            IsMenu = node.IsMenu,
+            SortOrder = node.SortOrder,
+            Children = children.Count > 0 ? children : null
         };
     }
 

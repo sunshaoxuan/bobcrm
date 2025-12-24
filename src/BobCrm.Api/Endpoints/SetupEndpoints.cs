@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Responses.Setup;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 
@@ -32,7 +33,7 @@ public static class SetupEndpoints
             if (adminRole == null)
             {
                 logger.LogInformation("[Setup] Admin role does not exist");
-                return Results.Ok(new { username = "", email = "", exists = false });
+                return Results.Ok(new SuccessResponse<AdminInfoDto>(new AdminInfoDto { Exists = false }));
             }
 
             // 查找管理员角色中的任何用户
@@ -42,20 +43,21 @@ public static class SetupEndpoints
             if (admin == null)
             {
                 logger.LogInformation("[Setup] No admin user found");
-                return Results.Ok(new { username = "", email = "", exists = false });
+                return Results.Ok(new SuccessResponse<AdminInfoDto>(new AdminInfoDto { Exists = false }));
             }
 
             logger.LogInformation("[Setup] Admin user exists: {Username}", admin.UserName);
-            return Results.Ok(new
+            return Results.Ok(new SuccessResponse<AdminInfoDto>(new AdminInfoDto
             {
-                username = admin.UserName ?? "",
-                email = admin.Email ?? "",
-                exists = true
-            });
+                Username = admin.UserName ?? string.Empty,
+                Email = admin.Email ?? string.Empty,
+                Exists = true
+            }));
         })
         .WithName("GetAdminInfo")
         .WithSummary("获取管理员信息")
         .WithDescription("检查系统是否已初始化管理员账户")
+        .Produces<SuccessResponse<AdminInfoDto>>(StatusCodes.Status200OK)
         .AllowAnonymous();
 
         // 首次运行管理员设置
@@ -110,7 +112,7 @@ public static class SetupEndpoints
                     if (!canOverride)
                     {
                         logger.LogWarning("[Setup] Override denied: existing admin not default and default password invalid");
-                        return Results.StatusCode(403); // 无法更新 - 管理员已配置
+                        return Results.Json(new ErrorResponse(loc.T("MSG_SETTINGS_ADMIN_ONLY", lang), "FORBIDDEN"), statusCode: StatusCodes.Status403Forbidden);
                     }
                     adminUser = existingAdmin;
                     logger.LogInformation("[Setup] Found customized admin with default password, will update");
@@ -189,6 +191,9 @@ public static class SetupEndpoints
         .WithName("SetupAdmin")
         .WithSummary("配置管理员账户")
         .WithDescription("创建或更新系统管理员账户")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden)
         .AllowAnonymous();
 
         return app;

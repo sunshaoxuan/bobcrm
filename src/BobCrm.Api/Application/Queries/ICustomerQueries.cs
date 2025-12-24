@@ -1,7 +1,9 @@
+using BobCrm.Api.Contracts.Responses.Customer;
+
 namespace BobCrm.Api.Application.Queries;
 
 public interface ICustomerQueries
 {
-    List<object> GetList();
-    object? GetDetail(int id);
+    List<CustomerListItemDto> GetList();
+    CustomerDetailDto? GetDetail(int id);
 }

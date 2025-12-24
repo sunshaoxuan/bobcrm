@@ -4,8 +4,12 @@ using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Application.Queries;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Requests.Layout;
+using BobCrm.Api.Contracts.Responses.Layout;
 using BobCrm.Api.Base.Models;
+using System.Text.Json;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -30,11 +34,12 @@ public static class LayoutEndpoints
         fieldsGroup.MapGet("", (IFieldQueries q, ILogger<Program> logger) =>
         {
             logger.LogDebug("[Fields] Retrieving field definitions");
-            return Results.Json(q.GetDefinitions());
+            return Results.Ok(new SuccessResponse<List<FieldDefinitionResponseDto>>(q.GetDefinitions()));
         })
         .WithName("GetFieldDefinitions")
         .WithSummary("获取字段定义列表")
-        .WithDescription("获取所有自定义字段的定义信息");
+        .WithDescription("获取所有自定义字段的定义信息")
+        .Produces<SuccessResponse<List<FieldDefinitionResponseDto>>>(StatusCodes.Status200OK);
 
         // 获取标签概览（用于快速布局）
         fieldsGroup.MapGet("/tags", (IRepository<FieldDefinition> repoDef, ILogger<Program> logger) =>
@@ -60,14 +65,15 @@ public static class LayoutEndpoints
                     logger.LogWarning(ex, "[Fields] Failed to parse tags for field definition");
                 }
             }
-            var list = dict.OrderBy(kv => kv.Key).Select(kv => new { tag = kv.Key, count = kv.Value }).ToList();
+            var list = dict.OrderBy(kv => kv.Key).Select(kv => new FieldTagSummaryDto { Tag = kv.Key, Count = kv.Value }).ToList();
             
             logger.LogDebug("[Fields] Retrieved {Count} unique tags", list.Count);
-            return Results.Json(list);
+            return Results.Ok(new SuccessResponse<List<FieldTagSummaryDto>>(list));
         })
         .WithName("GetFieldTags")
         .WithSummary("获取字段标签统计")
-        .WithDescription("获取所有字段定义中使用的标签及其计数");
+        .WithDescription("获取所有字段定义中使用的标签及其计数")
+        .Produces<SuccessResponse<List<FieldTagSummaryDto>>>(StatusCodes.Status200OK);
 
         // 获取客户布局（已废弃，请使用 GET /api/layout）
         layoutGroup.MapGet("/{customerId:int}", (
@@ -87,11 +93,12 @@ public static class LayoutEndpoints
             logger.LogDebug("[Layout] Retrieving layout for customer {CustomerId}, user {UserId}, scope {Scope}", 
                 customerId, uid, scope);
             // 忽略 customerId，统一查询 CustomerId=0
-            return Results.Json(q.GetLayout(uid, 0, scope));
+            return Results.Ok(new SuccessResponse<JsonElement>(q.GetLayout(uid, 0, scope)));
         })
         .WithName("GetCustomerLayout_Deprecated")
         .WithSummary("[已废弃] 获取客户布局")
-        .WithDescription("[已废弃] 请使用 GET /api/layout 替代");
+        .WithDescription("[已废弃] 请使用 GET /api/layout 替代")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK);
 
         // 保存客户布局（已废弃，请使用 POST /api/layout）
         layoutGroup.MapPost("/{customerId:int}", async (
@@ -121,7 +128,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save default layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -184,7 +191,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to delete default layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -222,11 +229,12 @@ public static class LayoutEndpoints
             
             logger.LogDebug("[Layout] Retrieving user-level layout, user {UserId}, scope {Scope}", uid, scope);
             // 使用 customerId = 0 作为用户级别布局的占位符
-            return Results.Json(q.GetLayout(uid, 0, scope));
+            return Results.Ok(new SuccessResponse<JsonElement>(q.GetLayout(uid, 0, scope)));
         })
         .WithName("GetLayout")
         .WithSummary("获取布局")
-        .WithDescription("获取用户级别的布局模板，不绑定特定客户");
+        .WithDescription("获取用户级别的布局模板，不绑定特定客户")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK);
 
         // 获取用户级别布局（兼容别名，指向主端点）
         layoutGroup.MapGet("/customer", (
@@ -242,11 +250,12 @@ public static class LayoutEndpoints
             scope ??= "effective";
             
             logger.LogDebug("[Layout] Retrieving user-level layout via /customer alias, user {UserId}, scope {Scope}", uid, scope);
-            return Results.Json(q.GetLayout(uid, 0, scope));
+            return Results.Ok(new SuccessResponse<JsonElement>(q.GetLayout(uid, 0, scope)));
         })
         .WithName("GetLayout_CustomerAlias")
         .WithSummary("获取布局（兼容别名）")
-        .WithDescription("获取用户级别的布局模板（兼容旧路径 /api/layout/customer）");
+        .WithDescription("获取用户级别的布局模板（兼容旧路径 /api/layout/customer）")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK);
 
         // 保存用户级别布局（主端点）
         layoutGroup.MapPost("", async (
@@ -273,7 +282,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save default user-level layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -337,7 +346,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save default user-level layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -401,7 +410,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to delete default user-level layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -448,7 +457,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to delete default user-level layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -486,11 +495,12 @@ public static class LayoutEndpoints
             logger.LogDebug("[Layout] Retrieving layout for entity {EntityType}, user {UserId}, scope {Scope}",
                 entityType, uid, scope);
 
-            return Results.Json(q.GetLayoutByEntityType(uid, entityType, scope));
+            return Results.Ok(new SuccessResponse<JsonElement>(q.GetLayoutByEntityType(uid, entityType, scope)));
         })
         .WithName("GetLayoutByEntityType")
         .WithSummary("获取实体布局（根据实体类型）")
-        .WithDescription("根据实体类型（如customer、product、order）获取布局模板");
+        .WithDescription("根据实体类型（如customer、product、order）获取布局模板")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK);
 
         // 保存实体布局（根据EntityType）
         layoutGroup.MapPost("/entity/{entityType}", async (
@@ -519,7 +529,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save default layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -586,7 +596,7 @@ public static class LayoutEndpoints
                     !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to delete default layout", uid);
-                    return Results.StatusCode(403);
+                    return Results.Forbid();
                 }
             }
 
@@ -684,7 +694,7 @@ public static class LayoutEndpoints
                         !string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
                     {
                         logger.LogWarning("[Layout] Access denied: non-admin user {UserId} attempted to save generated layout as default", uid);
-                        return Results.StatusCode(403);
+                        return Results.Forbid();
                     }
                 }
 
@@ -710,15 +720,17 @@ public static class LayoutEndpoints
                 logger.LogInformation("[Layout] Generated layout (not saved)");
             }
 
-            return Results.Json(jsonObj);
+            var jsonText = System.Text.Json.JsonSerializer.Serialize(jsonObj);
+            using var doc = JsonDocument.Parse(jsonText);
+            return Results.Ok(new SuccessResponse<JsonElement>(doc.RootElement.Clone()));
         })
         .WithName("GenerateLayout")
         .WithSummary("从标签生成布局")
-        .WithDescription("根据指定的标签自动生成布局配置，可选择是否保存");
+        .WithDescription("根据指定的标签自动生成布局配置，可选择是否保存")
+        .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status403Forbidden);
 
         return app;
     }
 }
-
-public record GenerateLayoutRequest(string[] Tags, string? Mode, bool? Save, string? Scope);
 

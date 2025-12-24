@@ -5,6 +5,7 @@ using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Responses.Admin;
 using BobCrm.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,25 +40,26 @@ public static class AdminEndpoints
             
             var provider = db.Database.ProviderName ?? "unknown";
             var canConnect = await db.Database.CanConnectAsync();
-            var info = new
+            var info = new DbHealthCheckDto
             {
-                provider,
-                canConnect,
-                counts = new
+                Provider = provider,
+                CanConnect = canConnect,
+                Counts = new DbHealthCheckCountsDto
                 {
-                    customers = await db.Customers.CountAsync(),
-                    fieldDefinitions = await db.FieldDefinitions.CountAsync(),
-                    fieldValues = await db.FieldValues.CountAsync(),
-                    userLayouts = await db.UserLayouts.CountAsync()
+                    Customers = await db.Customers.CountAsync(),
+                    FieldDefinitions = await db.FieldDefinitions.CountAsync(),
+                    FieldValues = await db.FieldValues.CountAsync(),
+                    UserLayouts = await db.UserLayouts.CountAsync()
                 }
             };
             
             logger.LogInformation("[Admin] Health check result: provider={Provider}, canConnect={CanConnect}", provider, canConnect);
-            return Results.Json(info);
+            return Results.Ok(new SuccessResponse<DbHealthCheckDto>(info));
         })
         .WithName("DbHealthCheck")
         .WithSummary("数据库健康检查")
-        .WithDescription("检查数据库连接状态和记录数量（仅开发环境）");
+        .WithDescription("检查数据库连接状态和记录数量（仅开发环境）")
+        .Produces<SuccessResponse<DbHealthCheckDto>>(StatusCodes.Status200OK);
 
         // 重建数据库
         group.MapPost("/db/recreate", async (
@@ -84,19 +86,27 @@ public static class AdminEndpoints
         {
             logger.LogInformation("[Debug] User list requested");
             
-            var userList = new List<object>();
+            var userList = new List<DebugUserDto>();
             foreach (var u in um.Users)
             {
                 var hasPassword = await um.HasPasswordAsync(u);
-                userList.Add(new { id = u.Id, username = u.UserName, email = u.Email, emailConfirmed = u.EmailConfirmed, hasPassword });
+                userList.Add(new DebugUserDto
+                {
+                    Id = u.Id,
+                    Username = u.UserName,
+                    Email = u.Email,
+                    EmailConfirmed = u.EmailConfirmed,
+                    HasPassword = hasPassword
+                });
             }
             
             logger.LogInformation("[Debug] Retrieved {Count} users", userList.Count);
-            return Results.Ok(userList);
+            return Results.Ok(new SuccessResponse<List<DebugUserDto>>(userList));
         })
         .WithName("DebugListUsers")
         .WithSummary("列出所有用户")
-        .WithDescription("调试用：列出系统中的所有用户（仅开发环境）");
+        .WithDescription("调试用：列出系统中的所有用户（仅开发环境）")
+        .Produces<SuccessResponse<List<DebugUserDto>>>(StatusCodes.Status200OK);
 
         // 调试：重置初始化
         debugGroup.MapPost("/reset-setup", async (
@@ -213,11 +223,19 @@ public static class AdminEndpoints
             }
 
             logger.LogInformation("[Admin] Regenerated default templates for {Count} entities, changes={Updated}", entities.Count, updated);
-            return Results.Ok(new SuccessResponse<object>(new { entities = entities.Count, updated, message = loc.T("MSG_REGENERATE_DEFAULT_TEMPLATES", lang) }));
+            var payload = new RegenerateDefaultTemplatesResultDto
+            {
+                Entities = entities.Count,
+                Updated = updated,
+                Message = loc.T("MSG_REGENERATE_DEFAULT_TEMPLATES", lang)
+            };
+
+            return Results.Ok(new SuccessResponse<RegenerateDefaultTemplatesResultDto>(payload));
         })
         .WithName("RegenerateDefaultTemplates")
         .WithSummary("重新生成默认模板")
-        .WithDescription("为所有实体重新生成系统默认模板，并更新绑定（仅开发环境）");
+        .WithDescription("为所有实体重新生成系统默认模板，并更新绑定（仅开发环境）")
+        .Produces<SuccessResponse<RegenerateDefaultTemplatesResultDto>>(StatusCodes.Status200OK);
 
         // 针对指定实体重新生成默认模板
         group.MapPost("/templates/{entityRoute}/regenerate", async (
@@ -262,16 +280,19 @@ public static class AdminEndpoints
             logger.LogInformation("[Admin] Regenerated templates for {Entity} created={Created} updated={Updated}",
                 normalized, result.Created.Count, result.Updated.Count);
 
-            return Results.Ok(new SuccessResponse<object>(new
+            var payload = new RegenerateDefaultTemplatesForEntityResultDto
             {
-                entity = normalized,
-                created = result.Created.Count,
-                updated = result.Updated.Count
-            }));
+                Entity = normalized,
+                Created = result.Created.Count,
+                Updated = result.Updated.Count
+            };
+
+            return Results.Ok(new SuccessResponse<RegenerateDefaultTemplatesForEntityResultDto>(payload));
         })
         .WithName("RegenerateDefaultTemplatesForEntity")
         .WithSummary("为指定实体重新生成默认模板")
-        .WithDescription("仅开发环境，管理员可对单个实体重新生成系统默认模板并更新绑定。");
+        .WithDescription("仅开发环境，管理员可对单个实体重新生成系统默认模板并更新绑定。")
+        .Produces<SuccessResponse<RegenerateDefaultTemplatesForEntityResultDto>>(StatusCodes.Status200OK);
 
         // 硬重置指定实体的所有系统模板和绑定（用户模板保留，仅能手工管理）
         // 执行步骤：
@@ -387,7 +408,9 @@ public static class AdminEndpoints
                 // Fetch current templates to aid debugging (ids + updatedAt)
                 var current = await db.FormTemplates
                     .Where(t => t.EntityType == entityType)
-                    .Select(t => new { t.Id, t.Name, t.UsageType, t.IsSystemDefault, t.IsUserDefault, t.UserId, t.UpdatedAt })
+                    .OrderByDescending(t => t.IsUserDefault)
+                    .ThenByDescending(t => t.IsSystemDefault)
+                    .ThenByDescending(t => t.UpdatedAt)
                     .ToListAsync();
                 if (current.Count == 0)
                 {
@@ -401,15 +424,17 @@ public static class AdminEndpoints
                             $"{c.Id}:{c.UsageType}:{(c.IsSystemDefault ? "sys" : c.IsUserDefault ? "user" : c.UserId)}:{c.Name}@{c.UpdatedAt:O}")));
                 }
 
-                return Results.Ok(new
+                var payload = new ResetTemplatesForEntityResultDto
                 {
-                    entity = normalizedEntityType,
-                    deleted = allTemplates.Count,
-                    deletedBindings = stateBindings.Count + legacyBindings.Count,
-                    createdSystemTemplates = result.Created.Count,
-                    createdTemplates = result.Templates.Keys.ToList(),
-                    currentTemplates = current
-                });
+                    Entity = normalizedEntityType,
+                    Deleted = allTemplates.Count,
+                    DeletedBindings = stateBindings.Count + legacyBindings.Count,
+                    CreatedSystemTemplates = result.Created.Count,
+                    CreatedTemplates = result.Templates.Keys.Select(k => k.ToString()).ToList(),
+                    CurrentTemplates = current
+                };
+
+                return Results.Ok(new SuccessResponse<ResetTemplatesForEntityResultDto>(payload));
             }
             catch (Exception ex)
             {
@@ -419,7 +444,8 @@ public static class AdminEndpoints
         })
         .WithName("ResetTemplatesForEntity")
         .WithSummary(Doc("ADMIN_TEMPLATE_RESET_SUMMARY"))
-        .WithDescription(Doc("ADMIN_TEMPLATE_RESET_DESCRIPTION"));
+        .WithDescription(Doc("ADMIN_TEMPLATE_RESET_DESCRIPTION"))
+        .Produces<SuccessResponse<ResetTemplatesForEntityResultDto>>(StatusCodes.Status200OK);
 
         // 全量重置所有实体的模板（开发/测试专用）：删除所有模板与绑定，重新生成系统默认模板
         group.MapPost("/templates/reset-all", async (
@@ -464,19 +490,22 @@ public static class AdminEndpoints
             logger.LogInformation("[TemplateResetAll] Regeneration done. Entities={Count}, Created={Created}, Updated={Updated}",
                 regeneratedEntities.Count, created, updated);
 
-            return Results.Ok(new
+            var payload = new ResetAllTemplatesResultDto
             {
-                entities = regeneratedEntities,
-                deletedTemplates = allTemplates.Count,
-                deletedStateBindings = stateBindings.Count,
-                deletedLegacyBindings = legacyBindings.Count,
-                created,
-                updated
-            });
+                Entities = regeneratedEntities,
+                DeletedTemplates = allTemplates.Count,
+                DeletedStateBindings = stateBindings.Count,
+                DeletedLegacyBindings = legacyBindings.Count,
+                Created = created,
+                Updated = updated
+            };
+
+            return Results.Ok(new SuccessResponse<ResetAllTemplatesResultDto>(payload));
         })
         .WithName("ResetAllTemplates")
         .WithSummary("Reset all templates (dev only)")
-        .WithDescription("Delete all templates/bindings and regenerate system defaults for every entity.");
+        .WithDescription("Delete all templates/bindings and regenerate system defaults for every entity.")
+        .Produces<SuccessResponse<ResetAllTemplatesResultDto>>(StatusCodes.Status200OK);
 
         return app;
     }

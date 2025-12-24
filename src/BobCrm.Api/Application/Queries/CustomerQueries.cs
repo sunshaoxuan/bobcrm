@@ -3,6 +3,7 @@ using BobCrm.Api.Base;
 using System.Security.Claims;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using BobCrm.Api.Contracts.Responses.Customer;
 
 namespace BobCrm.Api.Application.Queries;
 
@@ -21,7 +22,7 @@ public class CustomerQueries : ICustomerQueries
         _repoCustomer = repoCustomer; _repoLocalization = repoLocalization; _repoDef = repoDef; _repoVal = repoVal; _repoAccess = repoAccess; _http = http; _loc = loc;
     }
 
-    public List<object> GetList()
+    public List<CustomerListItemDto> GetList()
     {
         var uid = _http.HttpContext?.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) ?? string.Empty;
         var accessIds = _repoAccess.Query(a => a.UserId == uid).Select(a => a.CustomerId).ToList();
@@ -47,18 +48,17 @@ public class CustomerQueries : ICustomerQueries
             // Table doesn't exist yet, use default names
         }
         
-        return customers.Select(c => new 
-        { 
-            id = c.Id, 
-            code = c.Code, 
-            // Use localized name if available, otherwise fall back to default name
-            name = localizedNames.ContainsKey(c.Id) && !string.IsNullOrEmpty(localizedNames[c.Id])
-                ? localizedNames[c.Id]
-                : c.Name 
-        }).Cast<object>().ToList();
+        return customers.Select(c => new CustomerListItemDto
+        {
+            Id = c.Id,
+            Code = c.Code,
+            Name = localizedNames.ContainsKey(c.Id) && !string.IsNullOrEmpty(localizedNames[c.Id])
+                ? localizedNames[c.Id]!
+                : c.Name
+        }).ToList();
     }
 
-    public object? GetDetail(int id)
+    public CustomerDetailDto? GetDetail(int id)
     {
         var uid = _http.HttpContext?.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) ?? string.Empty;
         var hasSpecificAccess = _repoAccess.Query(a => a.CustomerId == id).Any();
@@ -89,18 +89,28 @@ public class CustomerQueries : ICustomerQueries
             // Table doesn't exist yet, use default name
         }
         
-        var fields = defs.Select(d => new
+        var fields = defs.Select(d =>
         {
-            key = d.Key,
-            label = _loc.T(d.DisplayName, lang),
-            type = d.DataType,
-            value =
-                values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value is string s && s.StartsWith("\"")
-                    ? s.Trim('"')
-                    : values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value ?? d.DefaultValue,
-            required = d.Required,
-            validation = d.Validation
-        }).ToArray();
-        return new { id = c.Id, code = c.Code, name = displayName, version = c.Version, fields };
+            var raw = values.FirstOrDefault(v => v.FieldDefinitionId == d.Id)?.Value ?? d.DefaultValue;
+            var value = raw is string s && s.StartsWith("\"", StringComparison.Ordinal) ? s.Trim('"') : raw;
+            return new CustomerDetailFieldDto
+            {
+                Key = d.Key,
+                Label = _loc.T(d.DisplayName, lang),
+                Type = d.DataType,
+                Value = value,
+                Required = d.Required,
+                Validation = d.Validation
+            };
+        }).ToList();
+
+        return new CustomerDetailDto
+        {
+            Id = c.Id,
+            Code = c.Code,
+            Name = displayName ?? c.Name,
+            Version = c.Version,
+            Fields = fields
+        };
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.I18n;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -22,11 +24,12 @@ public static class I18nEndpoints
         group.MapGet("/version", (ILocalization loc) =>
         {
             var version = loc.GetCacheVersion();
-            return Results.Json(new { version });
+            return Results.Ok(new SuccessResponse<I18nVersionDto>(new I18nVersionDto { Version = version }));
         })
         .WithName("GetI18nVersion")
         .WithSummary(Doc("DOC_I18N_VERSION_SUMMARY"))
-        .WithDescription(Doc("DOC_I18N_VERSION_DESCRIPTION"));
+        .WithDescription(Doc("DOC_I18N_VERSION_DESCRIPTION"))
+        .Produces<SuccessResponse<I18nVersionDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/resources", (
             AppDbContext db,
@@ -49,12 +52,14 @@ public static class I18nEndpoints
             http.Response.Headers["Cache-Control"] = "public, max-age=1800";
 
             logger.LogDebug("[I18n] Returning {Count} resources with ETag {ETag}", list.Count, etag);
-            return Results.Json(list);
+            return Results.Ok(new SuccessResponse<List<LocalizationResource>>(list));
         })
         .RequireAuthorization()
         .WithName("GetI18nResources")
         .WithSummary(Doc("DOC_I18N_RESOURCES_SUMMARY"))
-        .WithDescription(Doc("DOC_I18N_RESOURCES_DESCRIPTION"));
+        .WithDescription(Doc("DOC_I18N_RESOURCES_DESCRIPTION"))
+        .Produces<SuccessResponse<List<LocalizationResource>>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status304NotModified);
 
         group.MapGet("/{lang?}", async (
             string? lang,
@@ -81,17 +86,19 @@ public static class I18nEndpoints
 
             logger.LogDebug("[I18n] Returning {Count} entries for language {Lang} with ETag {ETag}",
                 dict.Count, resolvedLang, etag);
-            return Results.Json(dict);
+            return Results.Ok(new SuccessResponse<Dictionary<string, string>>(dict));
         })
         .WithName("GetLanguageDictionary")
         .WithSummary(Doc("DOC_I18N_LANGUAGE_SUMMARY"))
-        .WithDescription(Doc("DOC_I18N_LANGUAGE_DESCRIPTION"));
+        .WithDescription(Doc("DOC_I18N_LANGUAGE_DESCRIPTION"))
+        .Produces<SuccessResponse<Dictionary<string, string>>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status304NotModified);
 
         group.MapGet("/languages", async (AppDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
             var list = await db.LocalizationLanguages.AsNoTracking()
                 .OrderBy(l => l.Code)
-                .Select(l => new { code = l.Code, name = l.NativeName })
+                .Select(l => new LanguageDto { Code = l.Code, Name = l.NativeName })
                 .ToListAsync(ct);
 
             if (list.Count == 0)
@@ -103,11 +110,12 @@ public static class I18nEndpoints
                 logger.LogDebug("[I18n] Returning {Count} available languages", list.Count);
             }
 
-            return Results.Json(list);
+            return Results.Ok(new SuccessResponse<List<LanguageDto>>(list));
         })
         .WithName("GetLanguages")
         .WithSummary(Doc("DOC_I18N_LANGUAGES_SUMMARY"))
-        .WithDescription(Doc("DOC_I18N_LANGUAGES_DESCRIPTION"));
+        .WithDescription(Doc("DOC_I18N_LANGUAGES_DESCRIPTION"))
+        .Produces<SuccessResponse<List<LanguageDto>>>(StatusCodes.Status200OK);
 
         return app;
     }

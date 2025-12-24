@@ -2,6 +2,7 @@ using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts.DTOs.Template;
 using BobCrm.Api.Contracts.Requests.Template;
+using BobCrm.Api.Contracts.Responses.Template;
 using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Core.Persistence;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ public class TemplateService : ITemplateService
         _logger = logger;
     }
 
-    public async Task<object> GetTemplatesAsync(
+    public async Task<TemplateQueryResponseDto> GetTemplatesAsync(
         string userId,
         string? entityType = null,
         string? usageType = null,
@@ -75,72 +76,51 @@ public class TemplateService : ITemplateService
             .ThenByDescending(t => t.UpdatedAt)
             .ToList());
 
+        var mapped = templates.Select(t => new TemplateSummaryDto
+        {
+            Id = t.Id,
+            Name = t.Name,
+            EntityType = t.EntityType,
+            UsageType = t.UsageType,
+            IsUserDefault = t.IsUserDefault,
+            IsSystemDefault = t.IsSystemDefault,
+            Description = t.Description,
+            CreatedAt = t.CreatedAt,
+            UpdatedAt = t.UpdatedAt,
+            IsInUse = t.IsInUse
+        }).ToList();
+
         // 按分组方式组织数据
         if (groupBy == "entity")
         {
-            var grouped = templates.GroupBy(t => t.EntityType ?? "未分类")
-                .Select(g => new
-                {
-                    EntityType = g.Key,
-                    Templates = g.Select(t => new
-                    {
-                        t.Id,
-                        t.Name,
-                        t.EntityType,
-                        usageType = t.UsageType,
-                        t.IsUserDefault,
-                        t.IsSystemDefault,
-                        t.Description,
-                        t.CreatedAt,
-                        t.UpdatedAt,
-                        t.IsInUse
-                    })
-                });
-            return grouped;
+            return new TemplateQueryResponseDto
+            {
+                GroupBy = "entity",
+                GroupsByEntity = mapped
+                    .GroupBy(t => t.EntityType ?? "未分类", StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new TemplateGroupByEntityDto { EntityType = g.Key, Templates = g.ToList() })
+                    .OrderBy(g => g.EntityType)
+                    .ToList()
+            };
         }
         else if (groupBy == "user")
         {
             // 按用户分组（未来扩展，管理员可以看到所有用户的模板）
-            var grouped = new[]
+            return new TemplateQueryResponseDto
             {
-                new
+                GroupBy = "user",
+                GroupsByUser = new List<TemplateGroupByUserDto>
                 {
-                    UserId = userId,
-                    Templates = templates.Select(t => new
-                    {
-                        t.Id,
-                        t.Name,
-                        t.EntityType,
-                        usageType = t.UsageType,
-                        t.IsUserDefault,
-                        t.IsSystemDefault,
-                        t.Description,
-                        t.CreatedAt,
-                        t.UpdatedAt,
-                        t.IsInUse
-                    })
+                    new() { UserId = userId, Templates = mapped }
                 }
             };
-            return grouped;
         }
-        else
+
+        return new TemplateQueryResponseDto
         {
-            // 平铺列表
-            var result = templates.Select(t => new
-            {
-                t.Id,
-                t.Name,
-                t.EntityType,
-                usageType = t.UsageType,
-                t.IsUserDefault,
-                t.IsSystemDefault,
-                t.Description,
-                t.CreatedAt,
-                t.UpdatedAt,
-                t.IsInUse
-            });
-            return result;
-        }
+            GroupBy = "none",
+            Items = mapped
+        };
     }
 
     public async Task<FormTemplate?> GetTemplateByIdAsync(int templateId, string userId)

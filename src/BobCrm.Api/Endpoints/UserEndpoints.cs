@@ -2,9 +2,11 @@ using System.Security.Claims;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs.User;
 using BobCrm.Api.Contracts.Requests.User;
+using BobCrm.Api.Contracts.Responses.User;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Middleware;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +37,13 @@ public static class UserEndpoints
                 .GroupBy(a => a.UserId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            var list = users.Select(u => ToSummary(u, lookup.TryGetValue(u.Id, out var roles) ? roles : new List<RoleAssignment>()));
-            return Results.Ok(list);
-        });
+            var list = users
+                .Select(u => ToSummary(u, lookup.TryGetValue(u.Id, out var roles) ? roles : new List<RoleAssignment>()))
+                .ToList();
+
+            return Results.Ok(new SuccessResponse<List<UserSummaryDto>>(list));
+        })
+        .Produces<SuccessResponse<List<UserSummaryDto>>>(StatusCodes.Status200OK);
 
         group.MapGet("/{id}", async (
             string id,
@@ -58,8 +64,10 @@ public static class UserEndpoints
                 .ToListAsync(ct);
 
             var detail = ToDetail(user, roles);
-            return Results.Ok(detail);
-        });
+            return Results.Ok(new SuccessResponse<UserDetailDto>(detail));
+        })
+        .Produces<SuccessResponse<UserDetailDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPost("", async (
             CreateUserRequest request,
@@ -108,8 +116,10 @@ public static class UserEndpoints
             logger.LogInformation("[Users] Created user {UserName}", userName);
 
             var detail = await db.RoleAssignments.Where(a => a.UserId == user.Id).Include(a => a.Role).ToListAsync(ct);
-            return Results.Ok(ToDetail(user, detail));
-        });
+            return Results.Ok(new SuccessResponse<UserDetailDto>(ToDetail(user, detail)));
+        })
+        .Produces<SuccessResponse<UserDetailDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         group.MapPut("/{id}", async (
             string id,
@@ -178,8 +188,11 @@ public static class UserEndpoints
             }
 
             var roles = await db.RoleAssignments.AsNoTracking().Include(a => a.Role).Where(a => a.UserId == id).ToListAsync(ct);
-            return Results.Ok(ToDetail(user, roles));
-        });
+            return Results.Ok(new SuccessResponse<UserDetailDto>(ToDetail(user, roles)));
+        })
+        .Produces<SuccessResponse<UserDetailDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPut("/{id}/roles", async (
             string id,
@@ -196,8 +209,26 @@ public static class UserEndpoints
 
             await UpdateAssignmentsAsync(id, request.Roles, db, ct);
             var roles = await db.RoleAssignments.AsNoTracking().Include(a => a.Role).Where(a => a.UserId == id).ToListAsync(ct);
-            return Results.Ok(new { success = true, roles = roles.Select(r => new { r.RoleId, r.OrganizationId }) });
-        }).RequireFunction("BAS.AUTH.USER.ROLE");
+
+            var response = new UserRolesUpdateResponse
+            {
+                Success = true,
+                Roles = roles
+                    .Select(r => new UserRoleAssignmentDto
+                    {
+                        RoleId = r.RoleId,
+                        RoleCode = r.Role?.Code ?? string.Empty,
+                        RoleName = r.Role?.Name ?? string.Empty,
+                        OrganizationId = r.OrganizationId
+                    })
+                    .ToList()
+            };
+
+            return Results.Ok(new SuccessResponse<UserRolesUpdateResponse>(response));
+        })
+        .Produces<SuccessResponse<UserRolesUpdateResponse>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+        .RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
     }

@@ -1,6 +1,7 @@
 using BobCrm.Api.Services.Storage;
 using BobCrm.Api.Base;
 using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Responses.File;
 using BobCrm.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 
@@ -27,9 +28,12 @@ public static class FileEndpoints
             }
             var prefix = form["prefix"].FirstOrDefault();
             var key = await storage.UploadAsync(file, prefix, ctx.RequestAborted);
-            return Results.Ok(new { key, url = $"/api/files/{Uri.EscapeDataString(key)}" });
+            var payload = new FileUploadDto { Key = key, Url = $"/api/files/{Uri.EscapeDataString(key)}" };
+            return Results.Ok(new SuccessResponse<FileUploadDto>(payload));
         })
-        .DisableAntiforgery();
+        .DisableAntiforgery()
+        .Produces<SuccessResponse<FileUploadDto>>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{*key}", async (string key, IFileStorageService storage) =>
         {
@@ -40,7 +44,7 @@ public static class FileEndpoints
         group.MapDelete("/{*key}", [Authorize] async (string key, IFileStorageService storage) =>
         {
             await storage.DeleteAsync(key);
-            return Results.NoContent();
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         });
     }
 }
