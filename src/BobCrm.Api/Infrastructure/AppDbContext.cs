@@ -2,9 +2,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Base.Models.Metadata;
+using BobCrm.Api.Abstractions;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -19,7 +21,28 @@ namespace BobCrm.Api.Infrastructure;
 /// </summary>
 public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyContext
 {
+    private static readonly JsonSerializerOptions AuditJsonSerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private static readonly string[] SensitivePropertyNameFragments =
+    [
+        "password",
+        "pwd",
+        "hash",
+        "salt",
+        "secret",
+        "token",
+        "apikey",
+        "api_key",
+        "refresh",
+        "privatekey",
+        "private_key"
+    ];
+
     private readonly IHttpContextAccessor? _http;
+    private readonly IAuditService? _auditService;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -28,6 +51,12 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor accessor) : base(options)
     {
         _http = accessor;
+    }
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor accessor, IAuditService auditService) : base(options)
+    {
+        _http = accessor;
+        _auditService = auditService;
     }
 
     // 业务实体
@@ -66,7 +95,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<FieldDataTypeEntry> FieldDataTypes => Set<FieldDataTypeEntry>();
     public DbSet<FieldSourceEntry> FieldSources => Set<FieldSourceEntry>();
     public DbSet<EntityDomain> EntityDomains => Set<EntityDomain>();
-    public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     // 动态枚举系统
     public DbSet<EnumDefinition> EnumDefinitions => Set<EnumDefinition>();
@@ -497,6 +526,13 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     {
         try
         {
+            var auditLogs = CaptureAuditLogsIfEnabled();
+
+            if (auditLogs is { Count: > 0 } && _auditService != null)
+            {
+                await _auditService.AttachAsync(this, auditLogs.Select(x => x.Log).ToList(), cancellationToken);
+            }
+
             return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
         catch (DbUpdateConcurrencyException) when (Database.ProviderName?.Contains("InMemory", StringComparison.OrdinalIgnoreCase) == true)
@@ -519,4 +555,201 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     private AppDbContext db => this;
+
+    private List<(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry Entry, AuditLog Log)>? CaptureAuditLogsIfEnabled()
+    {
+        if (_auditService == null)
+        {
+            return null;
+        }
+
+        if (ChangeTracker.AutoDetectChangesEnabled)
+        {
+            ChangeTracker.DetectChanges();
+        }
+
+        var http = _http?.HttpContext;
+        var user = http?.User;
+        var actorId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var actorName = user?.Identity?.Name ?? user?.FindFirstValue("name") ?? actorId;
+        var ipAddress = http?.Connection?.RemoteIpAddress?.ToString();
+
+        var pending = new List<(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry Entry, AuditLog Log)>();
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.Entity is AuditLog)
+            {
+                continue;
+            }
+
+            if (entry.Metadata.IsOwned())
+            {
+                continue;
+            }
+
+            if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            {
+                continue;
+            }
+
+            var operationType = ResolveOperationType(entry);
+            var module = entry.Metadata.ClrType.Name;
+            var target = TryGetPrimaryKeyString(entry);
+
+            var before = entry.State == EntityState.Added ? null : CreateSnapshot(entry, useOriginalValues: true);
+            var after = entry.State == EntityState.Deleted ? null : CreateSnapshot(entry, useOriginalValues: false);
+            var changes = CreatePropertyChanges(entry);
+
+            var log = new AuditLog
+            {
+                Module = module,
+                OperationType = operationType,
+                ActorId = actorId,
+                ActorName = actorName,
+                IpAddress = ipAddress,
+                Target = target,
+                BeforeJson = before == null ? null : JsonSerializer.Serialize(before, AuditJsonSerializerOptions),
+                AfterJson = after == null ? null : JsonSerializer.Serialize(after, AuditJsonSerializerOptions),
+                ChangesJson = changes == null ? null : JsonSerializer.Serialize(changes, AuditJsonSerializerOptions),
+                OccurredAt = DateTime.UtcNow
+            };
+
+            pending.Add((entry, log));
+        }
+
+        return pending.Count == 0 ? null : pending;
+    }
+
+    private static string ResolveOperationType(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        if (entry.State == EntityState.Added)
+        {
+            return "C";
+        }
+
+        if (entry.State == EntityState.Deleted)
+        {
+            return "D";
+        }
+
+        if (entry.Entity is EntityDefinition &&
+            entry.Properties.FirstOrDefault(p => p.Metadata.Name == nameof(EntityDefinition.Status)) is { IsModified: true } statusProp &&
+            statusProp.CurrentValue is string newStatus &&
+            statusProp.OriginalValue is string oldStatus &&
+            !string.Equals(oldStatus, EntityStatus.Published, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(newStatus, EntityStatus.Published, StringComparison.OrdinalIgnoreCase))
+        {
+            return "P";
+        }
+
+        return "U";
+    }
+
+    private static string? TryGetPrimaryKeyString(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        var keyProps = entry.Properties.Where(p => p.Metadata.IsPrimaryKey()).ToList();
+        if (keyProps.Count == 0)
+        {
+            return null;
+        }
+
+        if (keyProps.Count == 1)
+        {
+            return keyProps[0].CurrentValue?.ToString() ?? keyProps[0].OriginalValue?.ToString();
+        }
+
+        return string.Join("|", keyProps.Select(p =>
+        {
+            var val = p.CurrentValue ?? p.OriginalValue;
+            return $"{p.Metadata.Name}:{val}";
+        }));
+    }
+
+    private static SortedDictionary<string, object?> CreateSnapshot(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry, bool useOriginalValues)
+    {
+        var snapshot = new SortedDictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var prop in entry.Properties)
+        {
+            if (prop.Metadata.IsShadowProperty())
+            {
+                continue;
+            }
+
+            var propName = prop.Metadata.Name;
+            if (IsSensitivePropertyName(propName))
+            {
+                continue;
+            }
+
+            snapshot[propName] = useOriginalValues ? prop.OriginalValue : prop.CurrentValue;
+        }
+
+        return snapshot;
+    }
+
+    private static List<Dictionary<string, object?>>? CreatePropertyChanges(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
+    {
+        if (entry.State == EntityState.Unchanged || entry.State == EntityState.Detached)
+        {
+            return null;
+        }
+
+        var changes = new List<Dictionary<string, object?>>();
+
+        foreach (var prop in entry.Properties.OrderBy(p => p.Metadata.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (prop.Metadata.IsShadowProperty())
+            {
+                continue;
+            }
+
+            var propName = prop.Metadata.Name;
+            if (IsSensitivePropertyName(propName))
+            {
+                continue;
+            }
+
+            var before = prop.OriginalValue;
+            var after = prop.CurrentValue;
+
+            if (entry.State == EntityState.Modified && !prop.IsModified)
+            {
+                continue;
+            }
+
+            if (entry.State == EntityState.Added)
+            {
+                before = null;
+            }
+
+            if (entry.State == EntityState.Deleted)
+            {
+                after = null;
+            }
+
+            changes.Add(new Dictionary<string, object?>
+            {
+                ["property"] = propName,
+                ["before"] = before,
+                ["after"] = after
+            });
+        }
+
+        return changes.Count == 0 ? null : changes;
+    }
+
+    private static bool IsSensitivePropertyName(string propertyName)
+    {
+        foreach (var fragment in SensitivePropertyNameFragments)
+        {
+            if (propertyName.Contains(fragment, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

@@ -20,8 +20,13 @@ using BobCrm.Api.Endpoints;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services;
 using BobCrm.Api.Services.Settings;
+using BobCrm.Api.Services.HealthChecks;
 using BobCrm.Api.Middleware;
 using Serilog;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 
 var resetDatabaseOnly = args.Any(a => string.Equals(a, "--reset-db", StringComparison.OrdinalIgnoreCase));
 var filteredArgs = resetDatabaseOnly
@@ -29,6 +34,7 @@ var filteredArgs = resetDatabaseOnly
     : args;
 
 var builder = WebApplication.CreateBuilder(filteredArgs);
+builder.Services.AddSingleton(new SystemRuntimeInfo(DateTime.UtcNow));
 
 // 配置日志到文件 - 存储在项目根目录的logs文件夹
 var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
@@ -103,6 +109,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    // Avoid schemaId collisions when different types share the same class name
+    // (e.g., Endpoints DTOs vs Contracts DTOs).
+    options.CustomSchemaIds(type => (type.FullName ?? type.Name).Replace("+", "."));
+
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "BobCRM API",
@@ -157,6 +167,37 @@ builder.Services.AddSwaggerGen(options =>
 // Memory cache for cross-request caching (localization, etc.)
 builder.Services.AddMemoryCache();
 
+// Response Compression (Brotli/Gzip) for large JSON payloads
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/json",
+        "application/problem+json"
+    });
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+// Health Checks (/health readiness, /health/live liveness)
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddCheck<DbConnectionHealthCheck>("db", tags: new[] { "ready" })
+    .AddCheck<DiskSpaceHealthCheck>("disk", tags: new[] { "ready" })
+    .AddCheck<SmtpConnectivityHealthCheck>("smtp", tags: new[] { "ready" })
+    .AddCheck<S3ConnectivityHealthCheck>("s3", tags: new[] { "ready" });
+
 builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
@@ -197,6 +238,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 builder.Services.AddScoped<MultilingualFieldService>();
 builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<FunctionTreeBuilder>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AuditTrailService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
@@ -242,6 +284,7 @@ app.Logger.LogInformation("============================================");
 
 // 全局异常处理（放在最前面）
 app.UseGlobalExceptionHandler();
+app.UseResponseCompression();
 
 if (app.Environment.IsDevelopment())
 {
@@ -382,12 +425,16 @@ app.MapEntityDefinitionEndpoints();
 app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
 app.MapFieldActionEndpoints();
+app.MapSystemEndpoints();
 app.MapOrganizationEndpoints();
 app.MapAccessEndpoints();
 app.MapFieldPermissionEndpoints();
 app.MapFileEndpoints();
 app.MapDataSetEndpoints();
 app.MapEnumDefinitionEndpoints();
+
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true }).AllowAnonymous();
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") }).AllowAnonymous();
 
 app.MapControllers();
 

@@ -29,17 +29,19 @@ public class AuditTrailService
         var user = _httpContextAccessor.HttpContext?.User;
         var actorId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
         var actorName = user?.Identity?.Name ?? user?.FindFirstValue("name") ?? actorId;
+        var ipAddress = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
 
-        var entry = new AuditLogEntry
+        var entry = new AuditLog
         {
-            Category = category,
-            Action = action,
+            Module = category,
+            OperationType = action,
             Description = description,
             ActorId = actorId,
             ActorName = actorName,
+            IpAddress = ipAddress,
             Target = target,
-            Payload = payload == null ? null : JsonSerializer.Serialize(payload, PayloadSerializer),
-            CreatedAt = DateTime.UtcNow
+            ContextJson = payload == null ? null : JsonSerializer.Serialize(payload, PayloadSerializer),
+            OccurredAt = DateTime.UtcNow
         };
 
         _db.AuditLogs.Add(entry);
