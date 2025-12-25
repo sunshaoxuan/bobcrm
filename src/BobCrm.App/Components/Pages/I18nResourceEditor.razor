@@ -1,0 +1,289 @@
+@page "/settings/i18n"
+@rendermode RenderMode.InteractiveServer
+@using System.Net
+@using AntDesign
+@using AntDesign.TableModels
+@using BobCrm.Api.Contracts.Requests.I18n
+@using BobCrm.Api.Contracts.Responses.System
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.ToastService Toast
+@inject ModalService Modal
+@inject NavigationManager Nav
+
+<PageTitle>@I18n.T("TITLE_I18N_EDITOR")</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("TITLE_I18N_EDITOR")"
+                OnBack="GoBack">
+        <PageHeaderExtra>
+            <Button Icon="@IconType.Outline.Reload" OnClick="ReloadCacheAsync" Loading="@_reloading">
+                @I18n.T("BTN_RELOAD_CACHE")
+            </Button>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <div style="padding: 24px;">
+        <Alert Type="@AlertType.Warning" ShowIcon="true" Message="@I18n.T("I18N_EDITOR_WARNING")" Style="margin-bottom: 16px;" />
+
+        <Card>
+            <Space Wrap>
+                <SpaceItem>
+                    <Input Style="min-width: 320px"
+                           AllowClear
+                           PrefixIcon="@IconType.Outline.Search"
+                           Placeholder="@I18n.T("I18N_FILTER_KEY")"
+                           @bind-Value="_keyQuery" />
+                </SpaceItem>
+                <SpaceItem>
+                    <Select TItemValue="string" TItem="string" @bind-Value="_culture" Style="min-width: 160px" AllowClear Placeholder="@I18n.T("I18N_FILTER_CULTURE")">
+                        @foreach (var lang in _languages)
+                        {
+                            <SelectOption Value="@lang">@lang</SelectOption>
+                        }
+                    </Select>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Search" OnClick="SearchAsync" Loading="@_loading">
+                        @I18n.T("BTN_SEARCH")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </Card>
+
+        <div style="margin-top: 16px;">
+            <Card>
+                <Table TItem="I18nResourceEntryDto"
+                       DataSource="@_items"
+                       Loading="@_loading"
+                       Total="@_totalCount"
+                       PageSize="@_pageSize"
+                       Current="@_page"
+                       OnChange="HandleTableChange"
+                       Bordered
+                       Size="@TableSize.Small">
+                    <Column Title="@I18n.T("I18N_COL_KEY")" TData="string" Width="340px">
+                        <Tooltip Title="@context.Key">
+                            <Text Ellipsis>@context.Key</Text>
+                        </Tooltip>
+                        @if (context.IsProtectedKey)
+                        {
+                            <Tag Color="@PresetColor.Orange.ToString()" Style="margin-left:8px;">@I18n.T("I18N_TAG_PROTECTED")</Tag>
+                        }
+                    </Column>
+                    <PropertyColumn Property="x => x.Culture" Title="@I18n.T("I18N_COL_CULTURE")" Width="120px" />
+                    <Column Title="@I18n.T("I18N_COL_VALUE")" TData="string">
+                        @if (IsEditing(context))
+                        {
+                            <Input @bind-Value="_editingValue" />
+                        }
+                        else
+                        {
+                            <Tooltip Title="@context.Value">
+                                <Text Ellipsis>@context.Value</Text>
+                            </Tooltip>
+                        }
+                    </Column>
+                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")" Width="220px" Fixed="ColumnFixPlacement.Right">
+                        <Space Size="@("small")">
+                            @if (IsEditing(context))
+                            {
+                                <SpaceItem>
+                                    <Button Size="@ButtonSize.Small"
+                                            Type="@ButtonType.Primary"
+                                            Icon="@IconType.Outline.Save"
+                                            Loading="@_saving"
+                                            OnClick="() => SaveAsync(context)">
+                                        @I18n.T("BTN_SAVE")
+                                    </Button>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Button Size="@ButtonSize.Small" OnClick="CancelEdit">@I18n.T("BTN_CANCEL")</Button>
+                                </SpaceItem>
+                            }
+                            else
+                            {
+                                <SpaceItem>
+                                    <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.Edit" OnClick="() => StartEdit(context)">
+                                        @I18n.T("BTN_EDIT")
+                                    </Button>
+                                </SpaceItem>
+                            }
+                        </Space>
+                    </ActionColumn>
+                </Table>
+            </Card>
+        </div>
+    </div>
+</AuthChecker>
+
+@code {
+    private readonly List<string> _languages = new() { "ja", "en", "zh" };
+
+    private bool _loading;
+    private bool _saving;
+    private bool _reloading;
+    private int _page = 1;
+    private int _pageSize = 20;
+    private int _totalCount;
+    private List<I18nResourceEntryDto> _items = new();
+
+    private string? _keyQuery;
+    private string? _culture;
+
+    private string? _editingKey;
+    private string? _editingCulture;
+    private string _editingValue = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SearchAsync();
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/settings");
+    }
+
+    private async Task SearchAsync()
+    {
+        _page = Math.Max(1, _page);
+        _pageSize = Math.Clamp(_pageSize, 1, 200);
+
+        CancelEdit();
+
+        try
+        {
+            _loading = true;
+            var resp = await I18n.SearchI18nResourcesAsync(_page, _pageSize, _keyQuery, _culture);
+            _items = resp?.Data?.ToList() ?? new List<I18nResourceEntryDto>();
+            _totalCount = resp == null ? 0 : (int)Math.Min(resp.TotalCount, int.MaxValue);
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("MSG_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task HandleTableChange(QueryModel<I18nResourceEntryDto> query)
+    {
+        _page = query.PageIndex;
+        _pageSize = query.PageSize;
+        await SearchAsync();
+    }
+
+    private void StartEdit(I18nResourceEntryDto row)
+    {
+        _editingKey = row.Key;
+        _editingCulture = row.Culture;
+        _editingValue = row.Value ?? string.Empty;
+    }
+
+    private void CancelEdit()
+    {
+        _editingKey = null;
+        _editingCulture = null;
+        _editingValue = string.Empty;
+    }
+
+    private bool IsEditing(I18nResourceEntryDto row)
+    {
+        return string.Equals(_editingKey, row.Key, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_editingCulture, row.Culture, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task SaveAsync(I18nResourceEntryDto row)
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        var request = new SaveI18nResourceRequest
+        {
+            Key = row.Key,
+            Culture = row.Culture,
+            Value = _editingValue ?? string.Empty,
+            Force = false
+        };
+
+        try
+        {
+            _saving = true;
+            var (ok, code, message) = await I18n.SaveI18nResourceAsync(request);
+            if (ok)
+            {
+                Toast.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                CancelEdit();
+                await SearchAsync();
+                return;
+            }
+
+            if (string.Equals(code, "I18N_KEY_PROTECTED", StringComparison.OrdinalIgnoreCase))
+            {
+                var confirm = await Modal.ConfirmAsync(new ConfirmOptions
+                {
+                    Title = I18n.T("I18N_CONFIRM_PROTECTED_TITLE"),
+                    Content = I18n.T("I18N_CONFIRM_PROTECTED_DESC"),
+                    OkText = I18n.T("BTN_OK"),
+                    CancelText = I18n.T("BTN_CANCEL")
+                });
+
+                if (confirm)
+                {
+                    request.Force = true;
+                    var forced = await I18n.SaveI18nResourceAsync(request);
+                    if (forced.Success)
+                    {
+                        Toast.Success(I18n.T("MSG_SAVE_SUCCESS"));
+                        CancelEdit();
+                        await SearchAsync();
+                        return;
+                    }
+
+                    Toast.Error(forced.ErrorMessage ?? I18n.T("MSG_SAVE_FAILED"));
+                    return;
+                }
+            }
+
+            Toast.Error(message ?? I18n.T("MSG_SAVE_FAILED"));
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("MSG_SAVE_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task ReloadCacheAsync()
+    {
+        if (_reloading)
+        {
+            return;
+        }
+
+        try
+        {
+            _reloading = true;
+            await I18n.ReloadI18nCacheAsync();
+            await I18n.LoadAsync(I18n.CurrentLang, force: true);
+            Toast.Success(I18n.T("MSG_RELOADED"));
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("MSG_RELOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _reloading = false;
+        }
+    }
+}
