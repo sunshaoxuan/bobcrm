@@ -1,0 +1,398 @@
+@page "/system/audit-logs"
+@rendermode RenderMode.InteractiveServer
+@using System.Text.Json
+@using AntDesign
+@using AntDesign.TableModels
+@using BobCrm.Api.Contracts.Responses.System
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject BobCrm.App.Services.AuditLogService AuditLogs
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.ToastService Toast
+
+<PageTitle>@I18n.T("MENU_AUDIT_LOGS")</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_AUDIT_LOGS")" />
+
+    <div style="padding: 24px;">
+        <Card>
+            <Space Wrap>
+                <SpaceItem>
+                    <Select TItemValue="string" TItem="string"
+                            @bind-Value="_module"
+                            Style="min-width: 220px"
+                            AllowClear
+                            ShowSearch
+                            Placeholder="@I18n.T("AUDIT_FILTER_ENTITY_TYPE")">
+                        @foreach (var m in _modules)
+                        {
+                            <SelectOption Value="@m">@m</SelectOption>
+                        }
+                    </Select>
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Input Style="min-width: 240px"
+                           AllowClear
+                           PrefixIcon="@IconType.Outline.User"
+                           Placeholder="@I18n.T("AUDIT_FILTER_USER")"
+                           @bind-Value="_actor" />
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Select TItemValue="string" TItem="string"
+                            @bind-Value="_operationType"
+                            Style="min-width: 180px"
+                            AllowClear
+                            Placeholder="@I18n.T("AUDIT_FILTER_ACTION")">
+                        <SelectOption Value="@("C")">@I18n.T("AUDIT_ACTION_CREATE")</SelectOption>
+                        <SelectOption Value="@("U")">@I18n.T("AUDIT_ACTION_UPDATE")</SelectOption>
+                        <SelectOption Value="@("D")">@I18n.T("AUDIT_ACTION_DELETE")</SelectOption>
+                    </Select>
+                </SpaceItem>
+
+                <SpaceItem>
+                    <DatePicker Value="@_fromUtc"
+                                ValueChanged="(DateTime? v) => _fromUtc = v"
+                                ShowTime="true"
+                                Placeholder="@I18n.T("AUDIT_FILTER_FROM")" />
+                </SpaceItem>
+
+                <SpaceItem>
+                    <DatePicker Value="@_toUtc"
+                                ValueChanged="(DateTime? v) => _toUtc = v"
+                                ShowTime="true"
+                                Placeholder="@I18n.T("AUDIT_FILTER_TO")" />
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary"
+                            Icon="@IconType.Outline.Search"
+                            Loading="@_loading"
+                            OnClick="SearchAsync">
+                        @I18n.T("BTN_SEARCH")
+                    </Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button OnClick="ResetAndSearchAsync" Disabled="@_loading">
+                        @I18n.T("BTN_RESET")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </Card>
+
+        <div style="margin-top: 16px;">
+            <Card>
+                <Table TItem="AuditLogDto"
+                       DataSource="@_items"
+                       Loading="@_loading"
+                       Total="@_totalCount"
+                       PageSize="@_pageSize"
+                       Current="@_page"
+                       OnChange="HandleTableChange"
+                       Bordered
+                       Size="@TableSize.Small">
+                    <PropertyColumn Property="x => x.OccurredAt" Title="@I18n.T("AUDIT_COL_TIME")" Format="yyyy-MM-dd HH:mm:ss" Width="180px" />
+                    <PropertyColumn Property="x => x.Module" Title="@I18n.T("AUDIT_COL_ENTITY")" Width="180px" />
+                    <Column Title="@I18n.T("AUDIT_COL_ACTION")" Width="110px" TData="string">
+                        <Tag Color="@GetOperationColor(context.OperationType)">
+                            @GetOperationText(context.OperationType)
+                        </Tag>
+                    </Column>
+                    <Column Title="@I18n.T("AUDIT_COL_USER")" Width="200px" TData="string">
+                        <Text Ellipsis Title="@(context.ActorName ?? context.ActorId)">
+                            @(context.ActorName ?? context.ActorId ?? "-")
+                        </Text>
+                    </Column>
+                    <PropertyColumn Property="x => x.Target" Title="@I18n.T("AUDIT_COL_TARGET")" Width="220px">
+                        <Text Ellipsis Title="@context.Target">@context.Target</Text>
+                    </PropertyColumn>
+                    <PropertyColumn Property="x => x.IpAddress" Title="@I18n.T("AUDIT_COL_IP")" Width="160px" />
+                    <PropertyColumn Property="x => x.Description" Title="@I18n.T("AUDIT_COL_DESC")">
+                        <Text Ellipsis Title="@context.Description">@context.Description</Text>
+                    </PropertyColumn>
+                    <ActionColumn Title="@I18n.T("LBL_ACTIONS")" Width="120px" Fixed="ColumnFixPlacement.Right">
+                        <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.Eye" OnClick="() => OpenDetail(context)">
+                            @I18n.T("BTN_VIEW")
+                        </Button>
+                    </ActionColumn>
+                </Table>
+            </Card>
+        </div>
+    </div>
+
+    <Drawer Title="@I18n.T("AUDIT_DETAIL_TITLE")"
+            Visible="@_detailVisible"
+            Width="980"
+            OnClose="CloseDetail">
+        @if (_selected != null)
+        {
+            <Descriptions Bordered Column="2" Size="@DescriptionsSize.Small">
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_TIME")">@_selected.OccurredAt.ToString("yyyy-MM-dd HH:mm:ss")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_ACTION")">
+                    <Tag Color="@GetOperationColor(_selected.OperationType)">@GetOperationText(_selected.OperationType)</Tag>
+                </DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_ENTITY")">@_selected.Module</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_USER")">@(_selected.ActorName ?? _selected.ActorId ?? "-")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_TARGET")">@(_selected.Target ?? "-")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_IP")">@(_selected.IpAddress ?? "-")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("AUDIT_COL_DESC")" Span="2">@(_selected.Description ?? "-")</DescriptionsItem>
+            </Descriptions>
+
+            <div style="margin-top: 12px;">
+                <Tabs>
+                    <TabPane Key="changes" Tab="@I18n.T("AUDIT_TAB_CHANGES")">
+                        @if (_changeRows.Count == 0)
+                        {
+                            <Empty Description="@I18n.T("AUDIT_NO_CHANGES")" />
+                        }
+                        else
+                        {
+                            <Table TItem="JsonElement" DataSource="@_changeRows" Size="@TableSize.Small" Bordered PageSize="999">
+                                <Column Title="@I18n.T("AUDIT_CHANGE_PROPERTY")" Width="220px" TData="string">
+                                    @context.TryGetProperty("property", out var p) ? (p.GetString() ?? "-") : "-"
+                                </Column>
+                                <Column Title="@I18n.T("AUDIT_CHANGE_BEFORE")" TData="string">
+                                    @RenderJsonCell(context, "before")
+                                </Column>
+                                <Column Title="@I18n.T("AUDIT_CHANGE_AFTER")" TData="string">
+                                    @RenderJsonCell(context, "after")
+                                </Column>
+                            </Table>
+                        }
+                    </TabPane>
+                    <TabPane Key="before" Tab="@I18n.T("AUDIT_TAB_BEFORE")">
+                        <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; max-height: 520px;">@_beforePretty</pre>
+                    </TabPane>
+                    <TabPane Key="after" Tab="@I18n.T("AUDIT_TAB_AFTER")">
+                        <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; max-height: 520px;">@_afterPretty</pre>
+                    </TabPane>
+                    <TabPane Key="diff" Tab="@I18n.T("AUDIT_TAB_DIFF")">
+                        <pre style="background: #0b1020; color: #e6edf3; padding: 12px; border-radius: 4px; overflow-x: auto; max-height: 520px; white-space: pre-wrap;">@_unifiedDiff</pre>
+                    </TabPane>
+                </Tabs>
+            </div>
+        }
+    </Drawer>
+</AuthChecker>
+
+@code {
+    private const int DefaultPageSize = 20;
+
+    private bool _loading;
+    private int _page = 1;
+    private int _pageSize = DefaultPageSize;
+    private int _totalCount;
+    private List<AuditLogDto> _items = new();
+
+    private List<string> _modules = new();
+    private string? _module;
+    private string? _actor;
+    private string? _operationType;
+    private DateTime? _fromUtc;
+    private DateTime? _toUtc;
+
+    private bool _detailVisible;
+    private AuditLogDto? _selected;
+    private List<JsonElement> _changeRows = new();
+    private string _beforePretty = string.Empty;
+    private string _afterPretty = string.Empty;
+    private string _unifiedDiff = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadModulesAsync();
+        await SearchAsync();
+    }
+
+    private async Task LoadModulesAsync()
+    {
+        try
+        {
+            _modules = await AuditLogs.GetModulesAsync();
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("AUDIT_LOAD_MODULES_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        _page = Math.Max(_page, 1);
+        _pageSize = Math.Clamp(_pageSize, 1, 200);
+
+        try
+        {
+            _loading = true;
+            var resp = await AuditLogs.SearchAsync(_page, _pageSize, _module, _operationType, _actor, _fromUtc, _toUtc);
+            _items = resp?.Data?.ToList() ?? new List<AuditLogDto>();
+            _totalCount = resp == null ? 0 : (int)Math.Min(resp.TotalCount, int.MaxValue);
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("AUDIT_SEARCH_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ResetAndSearchAsync()
+    {
+        _module = null;
+        _actor = null;
+        _operationType = null;
+        _fromUtc = null;
+        _toUtc = null;
+        _page = 1;
+        _pageSize = DefaultPageSize;
+        await SearchAsync();
+    }
+
+    private async Task HandleTableChange(QueryModel<AuditLogDto> query)
+    {
+        _page = query.PageIndex;
+        _pageSize = query.PageSize;
+        await SearchAsync();
+    }
+
+    private void OpenDetail(AuditLogDto log)
+    {
+        _selected = log;
+        _beforePretty = PrettyJson(log.BeforeJson);
+        _afterPretty = PrettyJson(log.AfterJson);
+        _changeRows = ParseChanges(log.ChangesJson);
+        _unifiedDiff = BuildUnifiedDiff(_changeRows);
+        _detailVisible = true;
+    }
+
+    private void CloseDetail()
+    {
+        _detailVisible = false;
+        _selected = null;
+        _changeRows = new List<JsonElement>();
+        _beforePretty = string.Empty;
+        _afterPretty = string.Empty;
+        _unifiedDiff = string.Empty;
+    }
+
+    private static string PrettyJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return json;
+        }
+    }
+
+    private static List<JsonElement> ParseChanges(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<JsonElement>();
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return new List<JsonElement>();
+            }
+
+            return doc.RootElement.EnumerateArray().Select(x => x.Clone()).ToList();
+        }
+        catch
+        {
+            return new List<JsonElement>();
+        }
+    }
+
+    private string BuildUnifiedDiff(IReadOnlyList<JsonElement> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return I18n.T("AUDIT_NO_CHANGES");
+        }
+
+        var lines = new List<string>
+        {
+            "--- before",
+            "+++ after"
+        };
+
+        foreach (var row in rows)
+        {
+            var prop = row.TryGetProperty("property", out var p) ? (p.GetString() ?? "-") : "-";
+            var before = ReadJsonValue(row, "before");
+            var after = ReadJsonValue(row, "after");
+            lines.Add($"- {prop}: {before}");
+            lines.Add($"+ {prop}: {after}");
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private static string ReadJsonValue(JsonElement row, string name)
+    {
+        if (!row.TryGetProperty(name, out var v))
+        {
+            return "-";
+        }
+
+        return v.ValueKind switch
+        {
+            JsonValueKind.Null => "null",
+            JsonValueKind.String => v.GetString() ?? "",
+            JsonValueKind.Number => v.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => v.GetRawText()
+        };
+    }
+
+    private static RenderFragment RenderJsonCell(JsonElement row, string prop) => builder =>
+    {
+        var text = ReadJsonValue(row, prop);
+        builder.OpenComponent<Text>(0);
+        builder.AddAttribute(1, "Ellipsis", true);
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)(b => b.AddContent(3, text)));
+        builder.CloseComponent();
+    };
+
+    private string GetOperationText(string? op)
+    {
+        return op switch
+        {
+            "C" => I18n.T("AUDIT_ACTION_CREATE"),
+            "U" => I18n.T("AUDIT_ACTION_UPDATE"),
+            "D" => I18n.T("AUDIT_ACTION_DELETE"),
+            "P" => I18n.T("AUDIT_ACTION_PUBLISH"),
+            _ => op ?? "-"
+        };
+    }
+
+    private static string GetOperationColor(string? op)
+    {
+        return op switch
+        {
+            "C" => PresetColor.Green.ToString(),
+            "U" => PresetColor.Blue.ToString(),
+            "D" => PresetColor.Red.ToString(),
+            "P" => PresetColor.Purple.ToString(),
+            _ => PresetColor.GeekBlue.ToString()
+        };
+    }
+}

@@ -1,0 +1,338 @@
+@page "/system/jobs"
+@rendermode RenderMode.InteractiveServer
+@implements IDisposable
+@using AntDesign
+@using AntDesign.TableModels
+@using BobCrm.Api.Contracts.Responses.System
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject BobCrm.App.Services.BackgroundJobService Jobs
+@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.ToastService Toast
+
+<PageTitle>@I18n.T("MENU_SYS_JOBS")</PageTitle>
+
+<AuthChecker>
+    <PageHeader Title="@I18n.T("MENU_SYS_JOBS")">
+        <PageHeaderExtra>
+            <Space>
+                <SpaceItem>
+                    <Switch Checked="@_autoRefresh" OnChange="ToggleAutoRefresh" />
+                    <Text Style="margin-left: 8px;">@I18n.T("JOB_AUTO_REFRESH")</Text>
+                </SpaceItem>
+                <SpaceItem>
+                    <Select TItemValue="int" TItem="string" @bind-Value="_refreshSeconds" Style="width: 140px">
+                        <SelectOption Value="3">3s</SelectOption>
+                        <SelectOption Value="5">5s</SelectOption>
+                        <SelectOption Value="10">10s</SelectOption>
+                        <SelectOption Value="15">15s</SelectOption>
+                        <SelectOption Value="30">30s</SelectOption>
+                    </Select>
+                </SpaceItem>
+                <SpaceItem>
+                    <Button Icon="@IconType.Outline.Reload" Loading="@_loading" OnClick="LoadAsync">
+                        @I18n.T("BTN_REFRESH")
+                    </Button>
+                </SpaceItem>
+            </Space>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <div style="padding: 24px;">
+        <Card>
+            <Table TItem="BackgroundJobDto"
+                   DataSource="@_items"
+                   Loading="@_loading"
+                   Total="@_totalCount"
+                   PageSize="@_pageSize"
+                   Current="@_page"
+                   OnChange="HandleTableChange"
+                   Bordered
+                   Size="@TableSize.Small">
+                <PropertyColumn Property="x => x.StartedAtUtc" Title="@I18n.T("JOB_COL_STARTED")" Format="yyyy-MM-dd HH:mm:ss" Width="180px" />
+                <PropertyColumn Property="x => x.Name" Title="@I18n.T("JOB_COL_NAME")" />
+                <PropertyColumn Property="x => x.Category" Title="@I18n.T("JOB_COL_CATEGORY")" Width="160px" />
+                <Column Title="@I18n.T("JOB_COL_STATUS")" Width="150px" TData="string">
+                    <Badge Status="@GetBadgeStatus(context.Status)" Text="@GetStatusText(context.Status)" />
+                </Column>
+                <Column Title="@I18n.T("JOB_COL_PROGRESS")" Width="220px" TData="string">
+                    <Progress Percent="@context.ProgressPercent"
+                              Status="@GetProgressStatus(context.Status)"
+                              Size="@ProgressSize.Small" />
+                </Column>
+                <Column Title="@I18n.T("JOB_COL_ACTOR")" Width="200px" TData="string">
+                    <Text Ellipsis Title="@(context.ActorName ?? context.ActorId)">
+                        @(context.ActorName ?? context.ActorId ?? "-")
+                    </Text>
+                </Column>
+                <PropertyColumn Property="x => x.UpdatedAtUtc" Title="@I18n.T("JOB_COL_UPDATED")" Format="yyyy-MM-dd HH:mm:ss" Width="180px" />
+                <ActionColumn Title="@I18n.T("LBL_ACTIONS")" Width="220px" Fixed="ColumnFixPlacement.Right">
+                    <Space Size="@("small")">
+                        <SpaceItem>
+                            <Button Size="@ButtonSize.Small" Icon="@IconType.Outline.FileText" OnClick="() => OpenLogs(context)">
+                                @I18n.T("BTN_VIEW")
+                            </Button>
+                        </SpaceItem>
+                        <SpaceItem>
+                            @if (CanCancel(context))
+                            {
+                                <Popconfirm Title="@I18n.T("JOB_CONFIRM_CANCEL")"
+                                            OnConfirm="() => CancelAsync(context)"
+                                            OkText="@I18n.T("BTN_OK")"
+                                            CancelText="@I18n.T("BTN_CANCEL")">
+                                    <Button Size="@ButtonSize.Small" Danger Icon="@IconType.Outline.Stop">
+                                        @I18n.T("JOB_BTN_CANCEL")
+                                    </Button>
+                                </Popconfirm>
+                            }
+                            else
+                            {
+                                <Button Size="@ButtonSize.Small" Disabled Danger Icon="@IconType.Outline.Stop">
+                                    @I18n.T("JOB_BTN_CANCEL")
+                                </Button>
+                            }
+                        </SpaceItem>
+                    </Space>
+                </ActionColumn>
+            </Table>
+        </Card>
+    </div>
+
+    <Drawer Title="@_drawerTitle"
+            Visible="@_drawerVisible"
+            Width="980"
+            OnClose="CloseDrawer">
+        @if (_selected != null)
+        {
+            <Descriptions Bordered Column="2" Size="@DescriptionsSize.Small">
+                <DescriptionsItem Title="@I18n.T("JOB_COL_NAME")" Span="2">@_selected.Name</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_CATEGORY")">@_selected.Category</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_STATUS")">
+                    <Badge Status="@GetBadgeStatus(_selected.Status)" Text="@GetStatusText(_selected.Status)" />
+                </DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_STARTED")">@_selected.StartedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_UPDATED")">@_selected.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_ACTOR")">@(_selected.ActorName ?? _selected.ActorId ?? "-")</DescriptionsItem>
+                <DescriptionsItem Title="@I18n.T("JOB_COL_PROGRESS")">
+                    <Progress Percent="@_selected.ProgressPercent" Status="@GetProgressStatus(_selected.Status)" Size="@ProgressSize.Small" />
+                </DescriptionsItem>
+                @if (!string.IsNullOrWhiteSpace(_selected.ErrorMessage))
+                {
+                    <DescriptionsItem Title="@I18n.T("JOB_ERROR")" Span="2">
+                        <Alert Type="@AlertType.Error" Message="@_selected.ErrorMessage" ShowIcon="true" />
+                    </DescriptionsItem>
+                }
+            </Descriptions>
+
+            <div style="margin-top: 12px;">
+                <Table TItem="BackgroundJobLogDto"
+                       DataSource="@_logs"
+                       Size="@TableSize.Small"
+                       Bordered
+                       PageSize="999">
+                    <PropertyColumn Property="x => x.TimestampUtc" Title="@I18n.T("JOB_LOG_TIME")" Format="yyyy-MM-dd HH:mm:ss" Width="180px" />
+                    <PropertyColumn Property="x => x.Level" Title="@I18n.T("JOB_LOG_LEVEL")" Width="110px" />
+                    <Column Title="@I18n.T("JOB_LOG_MESSAGE")" TData="string">
+                        <Text Ellipsis Title="@context.Message">@context.Message</Text>
+                    </Column>
+                </Table>
+            </div>
+        }
+    </Drawer>
+</AuthChecker>
+
+@code {
+    private bool _loading;
+    private int _page = 1;
+    private int _pageSize = 20;
+    private int _totalCount;
+    private List<BackgroundJobDto> _items = new();
+
+    private bool _autoRefresh = true;
+    private int _refreshSeconds = 5;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _pollCts;
+
+    private bool _drawerVisible;
+    private string _drawerTitle = "";
+    private BackgroundJobDto? _selected;
+    private List<BackgroundJobLogDto> _logs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        StartPolling();
+    }
+
+    public void Dispose()
+    {
+        StopPolling();
+    }
+
+    private async Task LoadAsync()
+    {
+        _page = Math.Max(1, _page);
+        _pageSize = Math.Clamp(_pageSize, 1, 200);
+
+        try
+        {
+            _loading = true;
+            var resp = await Jobs.GetRecentAsync(_page, _pageSize);
+            _items = resp?.Data?.ToList() ?? new List<BackgroundJobDto>();
+            _totalCount = resp == null ? 0 : (int)Math.Min(resp.TotalCount, int.MaxValue);
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("JOB_LOAD_FAILED")}: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task HandleTableChange(QueryModel<BackgroundJobDto> query)
+    {
+        _page = query.PageIndex;
+        _pageSize = query.PageSize;
+        await LoadAsync();
+    }
+
+    private async Task OpenLogs(BackgroundJobDto job)
+    {
+        try
+        {
+            _selected = await Jobs.GetJobAsync(job.Id) ?? job;
+            _logs = await Jobs.GetLogsAsync(job.Id);
+            _drawerTitle = $"{I18n.T("JOB_LOGS_TITLE")}: {job.Id}";
+            _drawerVisible = true;
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("JOB_LOGS_LOAD_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private void CloseDrawer()
+    {
+        _drawerVisible = false;
+        _drawerTitle = "";
+        _selected = null;
+        _logs = new List<BackgroundJobLogDto>();
+    }
+
+    private async Task CancelAsync(BackgroundJobDto job)
+    {
+        try
+        {
+            await Jobs.CancelAsync(job.Id);
+            Toast.Success(I18n.T("JOB_CANCEL_REQUESTED"));
+            await LoadAsync();
+            if (_drawerVisible && _selected?.Id == job.Id)
+            {
+                await OpenLogs(job);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"{I18n.T("JOB_CANCEL_FAILED")}: {ex.Message}");
+        }
+    }
+
+    private bool CanCancel(BackgroundJobDto job)
+    {
+        return job.CanCancel && string.Equals(job.Status, "Running", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleAutoRefresh(bool value)
+    {
+        _autoRefresh = value;
+        if (_autoRefresh)
+        {
+            StartPolling();
+        }
+        else
+        {
+            StopPolling();
+        }
+    }
+
+    private void StartPolling()
+    {
+        StopPolling();
+
+        if (!_autoRefresh)
+        {
+            return;
+        }
+
+        _pollCts = new CancellationTokenSource();
+        var token = _pollCts.Token;
+
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Clamp(_refreshSeconds, 3, 60)));
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    if (_timer == null) return;
+                    if (!await _timer.WaitForNextTickAsync(token)) return;
+                    await InvokeAsync(LoadAsync);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch
+                {
+                    // ignore polling errors; LoadAsync already reports when invoked
+                }
+            }
+        }, CancellationToken.None);
+    }
+
+    private void StopPolling()
+    {
+        try { _pollCts?.Cancel(); } catch { }
+        _pollCts?.Dispose();
+        _pollCts = null;
+        _timer?.Dispose();
+        _timer = null;
+    }
+
+    private string GetStatusText(string? status)
+    {
+        return status switch
+        {
+            "Running" => I18n.T("JOB_STATUS_RUNNING"),
+            "Completed" => I18n.T("JOB_STATUS_COMPLETED"),
+            "Failed" => I18n.T("JOB_STATUS_FAILED"),
+            "CancelRequested" => I18n.T("JOB_STATUS_CANCEL_REQUESTED"),
+            "Canceled" => I18n.T("JOB_STATUS_CANCELED"),
+            _ => status ?? "-"
+        };
+    }
+
+    private static BadgeStatus GetBadgeStatus(string? status)
+    {
+        return status switch
+        {
+            "Running" => BadgeStatus.Processing,
+            "Completed" => BadgeStatus.Success,
+            "Failed" => BadgeStatus.Error,
+            "CancelRequested" => BadgeStatus.Warning,
+            "Canceled" => BadgeStatus.Default,
+            _ => BadgeStatus.Default
+        };
+    }
+
+    private static ProgressStatus GetProgressStatus(string? status)
+    {
+        return status switch
+        {
+            "Failed" => ProgressStatus.Exception,
+            _ => ProgressStatus.Active
+        };
+    }
+}
