@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.DataProtection;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
@@ -25,10 +26,12 @@ public class SettingsService
     };
 
     private readonly AppDbContext _db;
+    private readonly IDataProtector _smtpProtector;
 
-    public SettingsService(AppDbContext db)
+    public SettingsService(AppDbContext db, IDataProtectionProvider dataProtectionProvider)
     {
         _db = db;
+        _smtpProtector = dataProtectionProvider.CreateProtector("BobCrm.SystemSettings.SmtpPassword.v1");
     }
 
     public async Task<SystemSettings> GetSystemSettingsAsync() => await EnsureSystemSettingsAsync();
@@ -53,6 +56,22 @@ public class SettingsService
             entity.TimeZoneId = request.TimeZoneId.Trim();
         if (request.AllowSelfRegistration.HasValue)
             entity.AllowSelfRegistration = request.AllowSelfRegistration.Value;
+
+        if (request.SmtpHost is not null)
+            entity.SmtpHost = string.IsNullOrWhiteSpace(request.SmtpHost) ? null : request.SmtpHost.Trim();
+        if (request.SmtpPort.HasValue)
+            entity.SmtpPort = Math.Clamp(request.SmtpPort.Value, 1, 65535);
+        if (request.SmtpUsername is not null)
+            entity.SmtpUsername = string.IsNullOrWhiteSpace(request.SmtpUsername) ? null : request.SmtpUsername.Trim();
+        if (request.SmtpEnableSsl.HasValue)
+            entity.SmtpEnableSsl = request.SmtpEnableSsl.Value;
+        if (request.SmtpFromAddress is not null)
+            entity.SmtpFromAddress = string.IsNullOrWhiteSpace(request.SmtpFromAddress) ? null : request.SmtpFromAddress.Trim();
+        if (request.SmtpDisplayName is not null)
+            entity.SmtpDisplayName = string.IsNullOrWhiteSpace(request.SmtpDisplayName) ? null : request.SmtpDisplayName.Trim();
+
+        if (!string.IsNullOrWhiteSpace(request.SmtpPassword))
+            entity.SmtpPasswordEncrypted = _smtpProtector.Protect(request.SmtpPassword.Trim());
 
         entity.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -158,7 +177,14 @@ public class SettingsService
             system.DefaultHomeRoute,
             system.DefaultNavMode,
             system.TimeZoneId,
-            system.AllowSelfRegistration);
+            system.AllowSelfRegistration,
+            system.SmtpHost,
+            system.SmtpPort,
+            system.SmtpUsername,
+            system.SmtpEnableSsl,
+            system.SmtpFromAddress,
+            system.SmtpDisplayName,
+            !string.IsNullOrWhiteSpace(system.SmtpPasswordEncrypted));
 
     private static UserSettingsDto ToUserDto(UserPreferences prefs) =>
         new(

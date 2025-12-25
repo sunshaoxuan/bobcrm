@@ -1,6 +1,12 @@
 using Microsoft.JSInterop;
 
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
+using System.Web;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Requests.I18n;
+using BobCrm.Api.Contracts.Responses.System;
 
 namespace BobCrm.App.Services;
 
@@ -59,6 +65,65 @@ public class I18nService : II18nService
     public Task LoadAsync(string lang, bool force = false, CancellationToken ct = default) =>
 
         LoadInternalAsync(lang, force, scheduleRetry: true, ct);
+
+    public async Task<PagedResponse<I18nResourceEntryDto>?> SearchI18nResourcesAsync(
+        int page,
+        int pageSize,
+        string? key,
+        string? culture,
+        CancellationToken ct = default)
+    {
+        var http = await _auth.CreateAuthedClientAsync();
+
+        var query = HttpUtility.ParseQueryString(string.Empty);
+        query["page"] = page.ToString();
+        query["pageSize"] = pageSize.ToString();
+        if (!string.IsNullOrWhiteSpace(key)) query["key"] = key;
+        if (!string.IsNullOrWhiteSpace(culture)) query["culture"] = culture;
+
+        var url = "/api/system/i18n";
+        var queryString = query.ToString();
+        if (!string.IsNullOrWhiteSpace(queryString))
+        {
+            url += "?" + queryString;
+        }
+
+        return await http.GetFromJsonAsync<PagedResponse<I18nResourceEntryDto>>(url, ct);
+    }
+
+    public async Task<(bool Success, string? ErrorCode, string? ErrorMessage)> SaveI18nResourceAsync(
+        SaveI18nResourceRequest request,
+        CancellationToken ct = default)
+    {
+        var http = await _auth.CreateAuthedClientAsync();
+        var resp = await http.PostAsJsonAsync("/api/system/i18n", request, ct);
+
+        if (resp.IsSuccessStatusCode)
+        {
+            return (true, null, null);
+        }
+
+        if (resp.StatusCode == HttpStatusCode.BadRequest)
+        {
+            try
+            {
+                var err = await resp.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: ct);
+                return (false, err?.Code, err?.Message);
+            }
+            catch
+            {
+            }
+        }
+
+        return (false, "HTTP_ERROR", $"HTTP {(int)resp.StatusCode}");
+    }
+
+    public async Task ReloadI18nCacheAsync(CancellationToken ct = default)
+    {
+        var http = await _auth.CreateAuthedClientAsync();
+        var resp = await http.PostAsync("/api/system/i18n/reload", content: null, ct);
+        resp.EnsureSuccessStatusCode();
+    }
 
     private async Task LoadInternalAsync(string lang, bool force, bool scheduleRetry, CancellationToken ct)
 
@@ -570,7 +635,63 @@ public class I18nService : II18nService
 
         ["MSG_VALIDATION_MAX_LENGTH"] = new() { ["zh"] = "最多输入 {0} 个字符", ["ja"] = "{0} 文字以内で入力してください", ["en"] = "Max length: {0}." },
 
-        ["MSG_VALIDATION_PATTERN"] = new() { ["zh"] = "格式不正确", ["ja"] = "形式が正しくありません", ["en"] = "Invalid format." }
+        ["MSG_VALIDATION_PATTERN"] = new() { ["zh"] = "格式不正确", ["ja"] = "形式が正しくありません", ["en"] = "Invalid format." },
+
+
+        ["MENU_AUDIT_LOGS"] = new() { ["zh"] = "审计日志", ["ja"] = "監査ログ", ["en"] = "Audit Logs" },
+        ["AUDIT_FILTER_ENTITY_TYPE"] = new() { ["zh"] = "实体类型", ["ja"] = "エンティティ種別", ["en"] = "Entity Type" },
+        ["AUDIT_FILTER_USER"] = new() { ["zh"] = "用户", ["ja"] = "ユーザー", ["en"] = "User" },
+        ["AUDIT_FILTER_ACTION"] = new() { ["zh"] = "操作类型", ["ja"] = "操作種別", ["en"] = "Action" },
+        ["AUDIT_FILTER_FROM"] = new() { ["zh"] = "开始时间(UTC)", ["ja"] = "開始時刻(UTC)", ["en"] = "From (UTC)" },
+        ["AUDIT_FILTER_TO"] = new() { ["zh"] = "结束时间(UTC)", ["ja"] = "終了時刻(UTC)", ["en"] = "To (UTC)" },
+        ["AUDIT_ACTION_CREATE"] = new() { ["zh"] = "创建", ["ja"] = "作成", ["en"] = "Create" },
+        ["AUDIT_ACTION_UPDATE"] = new() { ["zh"] = "更新", ["ja"] = "更新", ["en"] = "Update" },
+        ["AUDIT_ACTION_DELETE"] = new() { ["zh"] = "删除", ["ja"] = "削除", ["en"] = "Delete" },
+        ["AUDIT_ACTION_PUBLISH"] = new() { ["zh"] = "发布", ["ja"] = "公開", ["en"] = "Publish" },
+        ["AUDIT_COL_TIME"] = new() { ["zh"] = "时间", ["ja"] = "時刻", ["en"] = "Time" },
+        ["AUDIT_COL_ENTITY"] = new() { ["zh"] = "实体", ["ja"] = "エンティティ", ["en"] = "Entity" },
+        ["AUDIT_COL_ACTION"] = new() { ["zh"] = "操作", ["ja"] = "操作", ["en"] = "Action" },
+        ["AUDIT_COL_USER"] = new() { ["zh"] = "用户", ["ja"] = "ユーザー", ["en"] = "User" },
+        ["AUDIT_COL_TARGET"] = new() { ["zh"] = "对象", ["ja"] = "対象", ["en"] = "Target" },
+        ["AUDIT_COL_IP"] = new() { ["zh"] = "IP", ["ja"] = "IP", ["en"] = "IP" },
+        ["AUDIT_COL_DESC"] = new() { ["zh"] = "描述", ["ja"] = "説明", ["en"] = "Description" },
+        ["AUDIT_DETAIL_TITLE"] = new() { ["zh"] = "审计详情", ["ja"] = "監査詳細", ["en"] = "Audit Details" },
+        ["AUDIT_TAB_CHANGES"] = new() { ["zh"] = "变更", ["ja"] = "変更", ["en"] = "Changes" },
+        ["AUDIT_TAB_BEFORE"] = new() { ["zh"] = "变更前", ["ja"] = "変更前", ["en"] = "Before" },
+        ["AUDIT_TAB_AFTER"] = new() { ["zh"] = "变更后", ["ja"] = "変更後", ["en"] = "After" },
+        ["AUDIT_TAB_DIFF"] = new() { ["zh"] = "差异", ["ja"] = "差分", ["en"] = "Diff" },
+        ["AUDIT_NO_CHANGES"] = new() { ["zh"] = "无变更内容", ["ja"] = "変更はありません", ["en"] = "No changes" },
+        ["AUDIT_CHANGE_PROPERTY"] = new() { ["zh"] = "字段", ["ja"] = "項目", ["en"] = "Field" },
+        ["AUDIT_CHANGE_BEFORE"] = new() { ["zh"] = "变更前", ["ja"] = "変更前", ["en"] = "Before" },
+        ["AUDIT_CHANGE_AFTER"] = new() { ["zh"] = "变更后", ["ja"] = "変更後", ["en"] = "After" },
+        ["AUDIT_LOAD_MODULES_FAILED"] = new() { ["zh"] = "加载实体类型失败", ["ja"] = "エンティティ種別の読み込みに失敗しました", ["en"] = "Failed to load entity types" },
+        ["AUDIT_SEARCH_FAILED"] = new() { ["zh"] = "查询审计日志失败", ["ja"] = "監査ログの検索に失敗しました", ["en"] = "Failed to search audit logs" },
+
+        ["MENU_SYS_JOBS"] = new() { ["zh"] = "后台任务监控", ["ja"] = "ジョブ監視", ["en"] = "Job Monitor" },
+        ["JOB_AUTO_REFRESH"] = new() { ["zh"] = "自动刷新", ["ja"] = "自動更新", ["en"] = "Auto refresh" },
+        ["JOB_COL_STARTED"] = new() { ["zh"] = "开始时间(UTC)", ["ja"] = "開始時刻(UTC)", ["en"] = "Started (UTC)" },
+        ["JOB_COL_NAME"] = new() { ["zh"] = "任务", ["ja"] = "ジョブ", ["en"] = "Job" },
+        ["JOB_COL_CATEGORY"] = new() { ["zh"] = "类别", ["ja"] = "カテゴリ", ["en"] = "Category" },
+        ["JOB_COL_STATUS"] = new() { ["zh"] = "状态", ["ja"] = "状態", ["en"] = "Status" },
+        ["JOB_COL_PROGRESS"] = new() { ["zh"] = "进度", ["ja"] = "進捗", ["en"] = "Progress" },
+        ["JOB_COL_ACTOR"] = new() { ["zh"] = "执行人", ["ja"] = "実行者", ["en"] = "Actor" },
+        ["JOB_COL_UPDATED"] = new() { ["zh"] = "更新时间(UTC)", ["ja"] = "更新時刻(UTC)", ["en"] = "Updated (UTC)" },
+        ["JOB_STATUS_RUNNING"] = new() { ["zh"] = "运行中", ["ja"] = "実行中", ["en"] = "Running" },
+        ["JOB_STATUS_COMPLETED"] = new() { ["zh"] = "已完成", ["ja"] = "完了", ["en"] = "Completed" },
+        ["JOB_STATUS_FAILED"] = new() { ["zh"] = "失败", ["ja"] = "失敗", ["en"] = "Failed" },
+        ["JOB_STATUS_CANCEL_REQUESTED"] = new() { ["zh"] = "已请求取消", ["ja"] = "キャンセル要求済み", ["en"] = "Cancel requested" },
+        ["JOB_STATUS_CANCELED"] = new() { ["zh"] = "已取消", ["ja"] = "キャンセル済み", ["en"] = "Canceled" },
+        ["JOB_BTN_CANCEL"] = new() { ["zh"] = "取消", ["ja"] = "キャンセル", ["en"] = "Cancel" },
+        ["JOB_CONFIRM_CANCEL"] = new() { ["zh"] = "确定要取消该任务吗？", ["ja"] = "このジョブをキャンセルしますか？", ["en"] = "Cancel this job?" },
+        ["JOB_CANCEL_REQUESTED"] = new() { ["zh"] = "已提交取消请求", ["ja"] = "キャンセル要求を送信しました", ["en"] = "Cancel requested" },
+        ["JOB_CANCEL_FAILED"] = new() { ["zh"] = "取消失败", ["ja"] = "キャンセルに失敗しました", ["en"] = "Failed to cancel" },
+        ["JOB_LOAD_FAILED"] = new() { ["zh"] = "加载任务列表失败", ["ja"] = "ジョブ一覧の読み込みに失敗しました", ["en"] = "Failed to load jobs" },
+        ["JOB_LOGS_TITLE"] = new() { ["zh"] = "执行日志", ["ja"] = "実行ログ", ["en"] = "Execution Logs" },
+        ["JOB_LOGS_LOAD_FAILED"] = new() { ["zh"] = "加载日志失败", ["ja"] = "ログの読み込みに失敗しました", ["en"] = "Failed to load logs" },
+        ["JOB_LOG_TIME"] = new() { ["zh"] = "时间(UTC)", ["ja"] = "時刻(UTC)", ["en"] = "Time (UTC)" },
+        ["JOB_LOG_LEVEL"] = new() { ["zh"] = "级别", ["ja"] = "レベル", ["en"] = "Level" },
+        ["JOB_LOG_MESSAGE"] = new() { ["zh"] = "消息", ["ja"] = "メッセージ", ["en"] = "Message" },
+        ["JOB_ERROR"] = new() { ["zh"] = "错误", ["ja"] = "エラー", ["en"] = "Error" }
 
     };
 

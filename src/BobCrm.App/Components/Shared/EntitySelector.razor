@@ -1,4 +1,5 @@
 @typeparam TEntity where TEntity : BobCrm.App.Abstractions.ISelectableEntity
+@using AntDesign
 @inject IJSRuntime JS
 @inject BobCrm.App.Services.I18nService I18n
 
@@ -44,13 +45,13 @@
     }
     else
     {
-        @if (EnableSearch && dataSource.Count > 5)
+        @if (EnableSearch)
         {
             <div class="entity-selector-search">
-                <Input @bind-Value="searchKeyword" 
-                       Placeholder="@I18n.T("LBL_SEARCH_PLACEHOLDER")" 
-                       AllowClear 
-                       @bind-Value:after="FilterData" />
+                <Input @bind-Value="searchKeyword"
+                       Placeholder="@I18n.T("LBL_SEARCH_PLACEHOLDER")"
+                       AllowClear
+                       @bind-Value:after="OnSearchChanged" />
             </div>
         }
         
@@ -93,7 +94,18 @@
         @if (filteredData.Count < dataSource.Count)
         {
             <div class="entity-selector-empty-tip">
-                @I18n.T("LBL_SHOWING") @filteredData.Count / @dataSource.Count @I18n.T("LBL_ITEMS")
+                @I18n.T("LBL_SHOWING") @filteredData.Count / @totalCount @I18n.T("LBL_ITEMS")
+            </div>
+        }
+
+        @if (usePagedLoader && totalPages > 1)
+        {
+            <div style="margin-top:12px; display:flex; justify-content:center;">
+                <Pagination Current="@currentPage"
+                            Total="@totalCount"
+                            PageSize="@PageSize"
+                            OnChange="OnPageChanged"
+                            ShowSizeChanger="false" />
             </div>
         }
     }
@@ -108,8 +120,11 @@
     [Parameter] public string EmptyText { get; set; } = string.Empty;
     [Parameter] public bool Disabled { get; set; } = false;
     [Parameter] public bool EnableSearch { get; set; } = true;
+    [Parameter] public int PageSize { get; set; } = 20;
     
     [Parameter] public Func<Task<List<TEntity>>>? DataLoader { get; set; }
+    [Parameter] public Func<string?, int, int, Task<(List<TEntity> Items, int Total)>>? PagedDataLoader { get; set; }
+    [Parameter] public Func<string, Task<TEntity?>>? ItemLoader { get; set; }
     [Parameter] public Func<TEntity, string>? ValueGetter { get; set; }
     [Parameter] public Func<TEntity, string>? DisplayTextGetter { get; set; }  // 获取显示文本
     [Parameter] public RenderFragment<TEntity>? TitleRenderer { get; set; }
@@ -122,11 +137,18 @@
     private bool dataLoaded = false;
     private string? errorMessage = null;
     private string searchKeyword = "";
+    private int currentPage = 1;
+    private int totalCount = 0;
+    private int totalPages = 1;
+    private string? selectedDisplayText;
     
     private List<TEntity> dataSource = new();
     private List<TEntity> filteredData = new();
     
-    private string DisplayText => string.IsNullOrWhiteSpace(Value) ? "" : GetDisplayTextForValue(Value);
+    private bool usePagedLoader => PagedDataLoader != null;
+    private string DisplayText => string.IsNullOrWhiteSpace(Value)
+        ? ""
+        : (!string.IsNullOrWhiteSpace(selectedDisplayText) ? selectedDisplayText! : GetDisplayTextForValue(Value));
     
     protected override void OnInitialized()
     {
@@ -138,9 +160,24 @@
     protected override async Task OnParametersSetAsync()
     {
         // 如果有初始值但数据未加载，预加载数据以显示 DisplayName
-        if (!string.IsNullOrWhiteSpace(Value) && !dataLoaded && DataLoader != null)
+        if (!string.IsNullOrWhiteSpace(Value) && !dataLoaded && (DataLoader != null || PagedDataLoader != null))
         {
             await LoadData();
+        }
+
+        if (!string.IsNullOrWhiteSpace(Value) && ItemLoader != null && string.IsNullOrWhiteSpace(selectedDisplayText))
+        {
+            try
+            {
+                var item = await ItemLoader(Value);
+                if (item != null)
+                {
+                    selectedDisplayText = DisplayTextGetter?.Invoke(item) ?? item.DisplayName;
+                }
+            }
+            catch
+            {
+            }
         }
     }
     
@@ -151,7 +188,7 @@
         modalVisible = true;
         StateHasChanged();
         
-        if (!dataLoaded && DataLoader != null)
+        if (!dataLoaded && (DataLoader != null || PagedDataLoader != null))
         {
             await LoadData();
         }
@@ -159,19 +196,26 @@
     
     private async Task LoadData()
     {
-        if (DataLoader == null) return;
-        
         try
         {
             loading = true;
             errorMessage = null;
             StateHasChanged();
-            
-            dataSource = await DataLoader() ?? new();
-            filteredData = dataSource;
-            dataLoaded = true;
-            
-            await JS.InvokeVoidAsync("console.log", $"[EntitySelector] Loaded {dataSource.Count} items");
+
+            if (usePagedLoader && PagedDataLoader != null)
+            {
+                await LoadPageAsync(1);
+            }
+            else if (DataLoader != null)
+            {
+                dataSource = await DataLoader() ?? new();
+                totalCount = dataSource.Count;
+                totalPages = 1;
+                currentPage = 1;
+                filteredData = dataSource;
+                dataLoaded = true;
+                await JS.InvokeVoidAsync("console.log", $"[EntitySelector] Loaded {dataSource.Count} items");
+            }
         }
         catch (Exception ex)
         {
@@ -184,6 +228,22 @@
             StateHasChanged();
         }
     }
+
+    private async Task LoadPageAsync(int page)
+    {
+        if (PagedDataLoader == null)
+        {
+            return;
+        }
+
+        currentPage = Math.Max(1, page);
+        var (items, total) = await PagedDataLoader(searchKeyword, currentPage, Math.Max(1, PageSize));
+        dataSource = items ?? new();
+        filteredData = dataSource;
+        totalCount = Math.Max(0, total);
+        totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)Math.Max(1, PageSize)));
+        dataLoaded = true;
+    }
     
     private async void ReloadData()
     {
@@ -191,7 +251,30 @@
         await LoadData();
     }
     
-    private void FilterData()
+    private async Task OnSearchChanged()
+    {
+        if (usePagedLoader)
+        {
+            try
+            {
+                loading = true;
+                await LoadPageAsync(1);
+            }
+            catch
+            {
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+            return;
+        }
+
+        FilterDataClientSide();
+    }
+
+    private void FilterDataClientSide()
     {
         if (string.IsNullOrWhiteSpace(searchKeyword))
         {
@@ -199,15 +282,36 @@
         }
         else
         {
-            // 简化搜索：只搜索 Value
-            var keyword = searchKeyword.ToLower();
+            var keyword = searchKeyword.ToLowerInvariant();
             filteredData = dataSource.Where(item =>
             {
-                var value = ValueGetter?.Invoke(item) ?? "";
-                return value.ToLower().Contains(keyword);
+                var text = (DisplayTextGetter?.Invoke(item) ?? item.DisplayName ?? ValueGetter?.Invoke(item) ?? item.Value) ?? "";
+                return text.ToLowerInvariant().Contains(keyword);
             }).ToList();
         }
         StateHasChanged();
+    }
+
+    private async Task OnPageChanged(PaginationEventArgs args)
+    {
+        if (!usePagedLoader)
+        {
+            return;
+        }
+
+        try
+        {
+            loading = true;
+            await LoadPageAsync(args.Page);
+        }
+        catch
+        {
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
     }
     
     private async void SelectItem(TEntity item)
@@ -218,6 +322,7 @@
             Value = value;
             await ValueChanged.InvokeAsync(value);
         }
+        selectedDisplayText = DisplayTextGetter?.Invoke(item) ?? item.DisplayName;
         
         modalVisible = false;
         StateHasChanged();
@@ -233,6 +338,11 @@
         if (item != null && DisplayTextGetter != null)
         {
             return DisplayTextGetter(item);
+        }
+
+        if (item != null)
+        {
+            return item.DisplayName;
         }
         
         // 如果找不到或没有 DisplayTextGetter，返回 value 本身

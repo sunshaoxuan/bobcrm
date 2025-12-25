@@ -21,6 +21,8 @@ public class FieldMetadataDto
     public bool IsRequired { get; set; }
     public bool IsEntityRef { get; set; }
     public Guid? ReferencedEntityId { get; set; }
+    public string? LookupEntityName { get; set; }
+    public string? LookupDisplayField { get; set; }
     public string? TableName { get; set; }
     public int SortOrder { get; set; }
     public string? DefaultValue { get; set; }

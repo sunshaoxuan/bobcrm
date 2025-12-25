@@ -46,6 +46,8 @@ builder.Services.AddScoped<BobCrm.App.Services.EntityDefinitionService>();
 builder.Services.AddScoped<BobCrm.App.Services.EntityDomainService>();
 builder.Services.AddScoped<BobCrm.App.Services.DynamicEntityService>();
 builder.Services.AddScoped<BobCrm.App.Services.EnumDefinitionService>();
+builder.Services.AddScoped<BobCrm.App.Services.AuditLogService>();
+builder.Services.AddScoped<BobCrm.App.Services.BackgroundJobService>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignWidgetContentRenderer, BobCrm.App.Services.Widgets.Rendering.DesignWidgetContentRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignContainerRenderer, BobCrm.App.Services.Widgets.Rendering.DesignContainerRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IRuntimeWidgetRenderer, BobCrm.App.Services.Widgets.Rendering.RuntimeWidgetRenderer>();

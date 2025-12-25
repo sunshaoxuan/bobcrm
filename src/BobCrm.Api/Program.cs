@@ -22,6 +22,7 @@ using BobCrm.Api.Services;
 using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Services.HealthChecks;
 using BobCrm.Api.Middleware;
+using BobCrm.Api.Services.BackgroundJobs;
 using Serilog;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -198,7 +199,7 @@ builder.Services.AddHealthChecks()
     .AddCheck<SmtpConnectivityHealthCheck>("smtp", tags: new[] { "ready" })
     .AddCheck<S3ConnectivityHealthCheck>("s3", tags: new[] { "ready" });
 
-builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
+builder.Services.AddScoped<IEmailSender, DbSmtpEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
@@ -240,6 +241,10 @@ builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<FunctionTreeBuilder>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AuditTrailService>();
+builder.Services.AddScoped<AuditLogService>();
+builder.Services.AddScoped<LookupResolveService>();
+builder.Services.AddSingleton<BobCrm.Api.Abstractions.IBackgroundJobClient, InMemoryBackgroundJobClient>();
+builder.Services.AddScoped<I18nAdminService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
 builder.Services.AddScoped<FieldFilterService>();
@@ -424,6 +429,7 @@ app.MapDomainEndpoints();
 app.MapEntityDefinitionEndpoints();
 app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
+app.MapLookupEndpoints();
 app.MapFieldActionEndpoints();
 app.MapSystemEndpoints();
 app.MapOrganizationEndpoints();

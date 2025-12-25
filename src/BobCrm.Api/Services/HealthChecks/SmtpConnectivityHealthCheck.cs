@@ -1,4 +1,7 @@
+using BobCrm.Api.Infrastructure;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net.Sockets;
 
 namespace BobCrm.Api.Services.HealthChecks;
@@ -8,17 +11,25 @@ namespace BobCrm.Api.Services.HealthChecks;
 /// </summary>
 public sealed class SmtpConnectivityHealthCheck : IHealthCheck
 {
-    private readonly IConfiguration _configuration;
+    private readonly IServiceProvider _serviceProvider;
 
-    public SmtpConnectivityHealthCheck(IConfiguration configuration)
+    public SmtpConnectivityHealthCheck(IServiceProvider serviceProvider)
     {
-        _configuration = configuration;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        var host = _configuration["Smtp:Host"];
-        var port = _configuration.GetValue<int?>("Smtp:Port") ?? 25;
+        string? host = null;
+        var port = 25;
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var settings = await db.SystemSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+            host = settings?.SmtpHost;
+            port = settings?.SmtpPort ?? 25;
+        }
 
         if (string.IsNullOrWhiteSpace(host))
         {
@@ -39,4 +50,3 @@ public sealed class SmtpConnectivityHealthCheck : IHealthCheck
         }
     }
 }
-

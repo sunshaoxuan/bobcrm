@@ -27,4 +27,25 @@ public class SystemSettingsDto
 
     [JsonPropertyName("allowSelfRegistration")]
     public bool AllowSelfRegistration { get; set; }
+
+    [JsonPropertyName("smtpHost")]
+    public string? SmtpHost { get; set; }
+
+    [JsonPropertyName("smtpPort")]
+    public int SmtpPort { get; set; } = 25;
+
+    [JsonPropertyName("smtpUsername")]
+    public string? SmtpUsername { get; set; }
+
+    [JsonPropertyName("smtpEnableSsl")]
+    public bool SmtpEnableSsl { get; set; }
+
+    [JsonPropertyName("smtpFromAddress")]
+    public string? SmtpFromAddress { get; set; }
+
+    [JsonPropertyName("smtpDisplayName")]
+    public string? SmtpDisplayName { get; set; }
+
+    [JsonPropertyName("smtpPasswordConfigured")]
+    public bool SmtpPasswordConfigured { get; set; }
 }

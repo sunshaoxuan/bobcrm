@@ -52,6 +52,12 @@ public class AccessService
             ["ja"] = "メニュー管理",
             ["en"] = "Menu Management"
         }),
+        new("SYS.I18N", "多语言资源", null, "global", false, 113, "SYS.SET", new Dictionary<string, string?>
+        {
+            ["zh"] = "多语言资源",
+            ["ja"] = "多言語リソース",
+            ["en"] = "I18n Resources"
+        }),
         new("SYS.MSG", "邮件与消息", null, "mail", true, 12, "SYS"),
         new("SYS.MSG.MAIL", "邮件服务器", null, "mail", true, 121, "SYS.MSG"),
         new("SYS.MSG.NOTIFY", "系统通知", null, "notification", false, 122, "SYS.MSG"),
@@ -80,6 +86,18 @@ public class AccessService
         new("SYS.LOG", "日志管理", null, "audit", true, 15, "SYS"),
         new("SYS.LOG.USER", "用户使用记录", null, "user", false, 151, "SYS.LOG"),
         new("SYS.LOG.SYSTEM", "系统日志", null, "file-search", false, 152, "SYS.LOG"),
+        new("SYS.AUDIT", "审计日志", "/system/audit-logs", "audit", true, 153, "SYS.LOG", new Dictionary<string, string?>
+        {
+            ["zh"] = "审计日志",
+            ["ja"] = "監査ログ",
+            ["en"] = "Audit Logs"
+        }),
+        new("SYS.JOBS", "后台任务监控", "/system/jobs", "dashboard", true, 154, "SYS.LOG", new Dictionary<string, string?>
+        {
+            ["zh"] = "后台任务监控",
+            ["ja"] = "ジョブ監視",
+            ["en"] = "Job Monitor"
+        }),
         new("SYS.AI", "人工智能", null, "robot", true, 16, "SYS"),
         new("SYS.AI.MODEL", "模型设置", null, "sliders", false, 161, "SYS.AI"),
         new("SYS.AI.WORKFLOW", "工作流程", null, "branches", false, 162, "SYS.AI"),

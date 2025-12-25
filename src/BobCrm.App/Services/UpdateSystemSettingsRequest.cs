@@ -27,4 +27,25 @@ public class UpdateSystemSettingsRequest
 
     [JsonPropertyName("allowSelfRegistration")]
     public bool? AllowSelfRegistration { get; set; }
+
+    [JsonPropertyName("smtpHost")]
+    public string? SmtpHost { get; set; }
+
+    [JsonPropertyName("smtpPort")]
+    public int? SmtpPort { get; set; }
+
+    [JsonPropertyName("smtpUsername")]
+    public string? SmtpUsername { get; set; }
+
+    [JsonPropertyName("smtpPassword")]
+    public string? SmtpPassword { get; set; }
+
+    [JsonPropertyName("smtpEnableSsl")]
+    public bool? SmtpEnableSsl { get; set; }
+
+    [JsonPropertyName("smtpFromAddress")]
+    public string? SmtpFromAddress { get; set; }
+
+    [JsonPropertyName("smtpDisplayName")]
+    public string? SmtpDisplayName { get; set; }
 }
