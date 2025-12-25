@@ -347,7 +347,7 @@ public static class LayoutMapper
         if (element.TryGetProperty("Placeholder", out var placeholder))
             textbox.Placeholder = placeholder.GetString();
 
-        if (element.TryGetProperty("Required", out var required))
+        if (element.TryGetProperty("Required", out var required) || element.TryGetProperty("required", out required))
             textbox.Required = required.GetBoolean();
 
         if (element.TryGetProperty("Readonly", out var readonly_))
@@ -409,6 +409,9 @@ public static class LayoutMapper
         if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.Number)
             number.DefaultValue = defaultValue.GetDouble();
 
+        if (element.TryGetProperty("Required", out var required) || element.TryGetProperty("required", out required))
+            number.Required = required.GetBoolean();
+
         if (element.TryGetProperty("MinValue", out var minValue) && minValue.ValueKind == JsonValueKind.Number)
             number.MinValue = minValue.GetDouble();
 
@@ -446,6 +449,9 @@ public static class LayoutMapper
 
         if (element.TryGetProperty("Placeholder", out var placeholder))
             select.Placeholder = placeholder.GetString();
+
+        if (element.TryGetProperty("Required", out var required) || element.TryGetProperty("required", out required))
+            select.Required = required.GetBoolean();
 
         if (element.TryGetProperty("AllowSearch", out var allowSearch))
             select.AllowSearch = allowSearch.GetBoolean();
@@ -756,6 +762,9 @@ public static class LayoutMapper
         if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
             checkbox.DefaultValue = defaultValue.GetString();
 
+        if (element.TryGetProperty("Required", out var required) || element.TryGetProperty("required", out required))
+            checkbox.Required = required.GetBoolean();
+
         if (element.TryGetProperty("ButtonStyle", out var buttonStyle))
             checkbox.ButtonStyle = buttonStyle.GetBoolean();
 
@@ -781,6 +790,9 @@ public static class LayoutMapper
 
         if (element.TryGetProperty("DefaultValue", out var defaultValue) && defaultValue.ValueKind == JsonValueKind.String)
             radio.DefaultValue = defaultValue.GetString();
+
+        if (element.TryGetProperty("Required", out var required) || element.TryGetProperty("required", out required))
+            radio.Required = required.GetBoolean();
 
         if (element.TryGetProperty("ButtonStyle", out var buttonStyle))
             radio.ButtonStyle = buttonStyle.GetBoolean();

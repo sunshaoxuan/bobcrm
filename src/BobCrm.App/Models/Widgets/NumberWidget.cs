@@ -17,6 +17,9 @@ public class NumberWidget : TextWidget
     /// <summary>默认值</summary>
     public double? DefaultValue { get; set; }
 
+    /// <summary>是否必填</summary>
+    public bool Required { get; set; } = false;
+
     /// <summary>最小值</summary>
     public double? MinValue { get; set; }
 
@@ -43,6 +46,7 @@ public class NumberWidget : TextWidget
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "DefaultValue", Label = "LBL_DEFAULT_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number },
+            new() { PropertyPath = "Required", Label = "LBL_REQUIRED", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "MinValue", Label = "PROP_MIN_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number },
             new() { PropertyPath = "MaxValue", Label = "PROP_MAX_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number },
             new() { PropertyPath = "Step", Label = "PROP_STEP", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 100 },

@@ -740,7 +740,7 @@ else if (entityData != null)
             var isValid = formContext.ValidateAll(key => editValueManager.GetValue(key));
             if (!isValid)
             {
-                validationError = "Validation failed.";
+                validationError = I18n.T("MSG_FORM_VALIDATION_FAILED");
                 await ScrollToFirstValidationErrorAsync();
                 return;
             }

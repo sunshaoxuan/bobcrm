@@ -4,6 +4,7 @@
 @using BobCrm.App.Services.Widgets
 @using System.Text.RegularExpressions
 @using System.Text.Json
+@inject BobCrm.App.Services.I18nService I18n
 
 @if (Context is null)
 {
@@ -158,7 +159,7 @@ else
             Context.RegisterValidator(field, value =>
             {
                 var s = value?.ToString();
-                return string.IsNullOrWhiteSpace(s) ? "Required" : null;
+                return string.IsNullOrWhiteSpace(s) ? I18n.T("MSG_VALIDATION_REQUIRED") : null;
             });
         }
 
@@ -168,7 +169,7 @@ else
             Context.RegisterValidator(field, value =>
             {
                 var s = value?.ToString() ?? string.Empty;
-                return s.Length < min ? $"Min length: {min}" : null;
+                return s.Length < min ? string.Format(I18n.T("MSG_VALIDATION_MIN_LENGTH"), min) : null;
             });
         }
 
@@ -178,7 +179,7 @@ else
             Context.RegisterValidator(field, value =>
             {
                 var s = value?.ToString() ?? string.Empty;
-                return s.Length > max ? $"Max length: {max}" : null;
+                return s.Length > max ? string.Format(I18n.T("MSG_VALIDATION_MAX_LENGTH"), max) : null;
             });
         }
 
@@ -195,7 +196,7 @@ else
 
                 try
                 {
-                    return Regex.IsMatch(s, pattern!) ? null : "Pattern mismatch";
+                    return Regex.IsMatch(s, pattern!) ? null : I18n.T("MSG_VALIDATION_PATTERN");
                 }
                 catch
                 {

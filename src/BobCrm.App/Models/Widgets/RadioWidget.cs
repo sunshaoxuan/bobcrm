@@ -20,6 +20,9 @@ public class RadioWidget : TextWidget
     /// <summary>默认选中的值</summary>
     public string? DefaultValue { get; set; }
 
+    /// <summary>是否必填</summary>
+    public bool Required { get; set; } = false;
+
     /// <summary>是否显示为按钮样式</summary>
     public bool ButtonStyle { get; set; } = false;
 
@@ -37,6 +40,7 @@ public class RadioWidget : TextWidget
         {
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "DefaultValue", Label = "LBL_DEFAULT_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
+            new() { PropertyPath = "Required", Label = "LBL_REQUIRED", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "ButtonStyle", Label = "PROP_BUTTON_STYLE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Direction", Label = "PROP_FLEX_DIRECTION", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Select,
                 Options = new List<BobCrm.App.Models.Designer.PropertyOption>

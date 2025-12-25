@@ -560,7 +560,17 @@ public class I18nService : II18nService
 
         ["TXT_ORG_DETAIL_HINT"] = new() { ["zh"] = "编辑当前选中节点的编码与名称，保存后同步至组织树。", ["ja"] = "選択中ノードのコードと名称を編集し、保存するとツリーに反映されます。", ["en"] = "Edit the selected node's code and name. Save to update the tree." },
 
-        ["LBL_ORG_CHILDREN"] = new() { ["zh"] = "子节点列表", ["ja"] = "子ノード一覧", ["en"] = "Children" }
+        ["LBL_ORG_CHILDREN"] = new() { ["zh"] = "子节点列表", ["ja"] = "子ノード一覧", ["en"] = "Children" },
+
+        ["MSG_FORM_VALIDATION_FAILED"] = new() { ["zh"] = "表单校验失败，请先修正错误字段。", ["ja"] = "入力内容の検証に失敗しました。エラー項目を修正してください。", ["en"] = "Validation failed. Please fix the highlighted fields." },
+
+        ["MSG_VALIDATION_REQUIRED"] = new() { ["zh"] = "必填项", ["ja"] = "必須項目です", ["en"] = "Required." },
+
+        ["MSG_VALIDATION_MIN_LENGTH"] = new() { ["zh"] = "最少输入 {0} 个字符", ["ja"] = "{0} 文字以上で入力してください", ["en"] = "Min length: {0}." },
+
+        ["MSG_VALIDATION_MAX_LENGTH"] = new() { ["zh"] = "最多输入 {0} 个字符", ["ja"] = "{0} 文字以内で入力してください", ["en"] = "Max length: {0}." },
+
+        ["MSG_VALIDATION_PATTERN"] = new() { ["zh"] = "格式不正确", ["ja"] = "形式が正しくありません", ["en"] = "Invalid format." }
 
     };
 

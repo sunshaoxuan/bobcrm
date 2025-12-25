@@ -3,6 +3,7 @@
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services.Widgets
 @using System.Text.Json
+@inject BobCrm.App.Services.I18nService I18n
 
 @if (Context is null)
 {
@@ -89,6 +90,7 @@ else
     protected override void OnParametersSet()
     {
         currentValue = GetValue() ?? string.Empty;
+        TryRegisterValidators();
     }
 
     private Task OnValueChanged(string? value)
@@ -164,6 +166,33 @@ else
         }
 
         Context.ValidateField(Widget.DataField, value);
+    }
+
+    private bool _validatorsRegistered;
+
+    private void TryRegisterValidators()
+    {
+        if (_validatorsRegistered)
+        {
+            return;
+        }
+
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        if (Widget.Required)
+        {
+            var field = Widget.DataField;
+            Context.RegisterValidator(field, value =>
+            {
+                var s = value?.ToString();
+                return string.IsNullOrWhiteSpace(s) ? I18n.T("MSG_VALIDATION_REQUIRED") : null;
+            });
+        }
+
+        _validatorsRegistered = true;
     }
 
     private IReadOnlyList<string> GetFieldErrors()
