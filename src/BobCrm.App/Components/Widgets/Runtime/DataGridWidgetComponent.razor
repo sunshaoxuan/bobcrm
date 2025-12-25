@@ -18,11 +18,10 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
 }
 else
 {
-    <BobCrm.App.Components.Shared.DataGridRuntime Widget="Widget" ContainerStyle="" />
+    <BobCrm.App.Components.Shared.DataGridRuntime Widget="Widget" Context="Context" ContainerStyle="" />
 }
 
 @code {
     [Parameter, EditorRequired] public DataGridWidget Widget { get; set; } = default!;
     [CascadingParameter] public FormRuntimeContext? Context { get; set; }
 }
-

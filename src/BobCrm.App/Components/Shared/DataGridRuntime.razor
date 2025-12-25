@@ -1,11 +1,14 @@
 @using BobCrm.App.Models.Widgets
+@using BobCrm.App.Models
 @using BobCrm.App.Services
 @using BobCrm.Api.Contracts.DTOs
 @using BobCrm.Api.Contracts.DTOs.Enum
+@using BobCrm.Api.Contracts.Responses.DynamicEntity
 @using System.Text.Json
 @using System.Linq
 @using System.Globalization
 @inject AuthService Auth
+@inject EntityDefinitionService EntityDefinitionService
 @inject BobCrm.App.Services.EnumDefinitionService EnumService
 @inject BobCrm.App.Services.I18nService I18n
 @inject NavigationManager Nav
@@ -153,6 +156,11 @@
     private List<EnumDefinitionDto> _enumDefinitions = new();
     private List<RowAction> _rowActions = new();
     private string? _entityType;
+    private static readonly Dictionary<string, string> EntityRouteToFullTypeCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, EntityDefinitionDto> EntityRouteToDefinitionCache = new(StringComparer.OrdinalIgnoreCase);
+    private string? _lastContextFingerprint;
+    private bool _initialized;
+    private readonly Dictionary<string, Dictionary<string, string>> _lookupDisplayByField = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -216,6 +224,24 @@
         }
 
         await LoadDataAsync();
+        _initialized = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_initialized || !Widget.FilterByContext)
+        {
+            return;
+        }
+
+        var fingerprint = ComputeContextFingerprint();
+        if (string.Equals(fingerprint, _lastContextFingerprint, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _currentPage = 1;
+        await LoadDataAsync();
     }
 
     private async Task LoadDataAsync()
@@ -228,11 +254,64 @@
 
             var client = await Auth.CreateClientWithAuthAsync();
 
-                if (Widget.DataSetId.HasValue)
+            if (Widget.FilterByContext && !string.IsNullOrWhiteSpace(Widget.EntityType))
+            {
+                var fullTypeName = await ResolveEntityFullTypeNameAsync(Widget.EntityType);
+                if (!string.IsNullOrWhiteSpace(fullTypeName))
                 {
+                    var (hasFilter, filter) = TryBuildContextFilter();
+                    if (!hasFilter)
+                    {
+                        _error = "Context filter is enabled but context data is missing";
+                        return;
+                    }
+
                     var request = new
                     {
-                        Page = _currentPage,
+                        Filters = new[]
+                        {
+                            new { Field = filter.Field, Operator = filter.Operator, Value = filter.Value }
+                        },
+                        OrderBy = Widget.DefaultSortField,
+                        OrderByDescending = string.Equals(Widget.DefaultSortDirection, "desc", StringComparison.OrdinalIgnoreCase),
+                        Skip = Math.Max(0, (_currentPage - 1) * GetPageSize()),
+                        Take = GetPageSize()
+                    };
+
+                    var resp = await client.PostAsJsonAsync($"/api/dynamic-entities/{Uri.EscapeDataString(fullTypeName)}/query", request);
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        _error = $"Failed to load data: {resp.StatusCode}";
+                        return;
+                    }
+
+                    var result = await ApiResponseHelper.ReadDataAsync<DynamicEntityQueryResultDto>(resp);
+                    if (result == null)
+                    {
+                        _error = "Failed to parse dynamic entity response";
+                        return;
+                    }
+
+                    _totalCount = result.Total;
+                    _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)GetPageSize()));
+
+                    var json = JsonSerializer.Serialize(result.Data);
+                    _data = JsonDocument.Parse(json);
+                    _dataRows = _data.RootElement.ValueKind == JsonValueKind.Array
+                        ? _data.RootElement.EnumerateArray().ToList()
+                        : new List<JsonElement>();
+
+                    await PopulateLookupDisplayAsync(client);
+                    _lastContextFingerprint = ComputeContextFingerprint();
+                    return;
+                }
+            }
+
+            if (Widget.DataSetId.HasValue)
+            {
+                var request = new
+                {
+                    Page = _currentPage,
                         PageSize = GetPageSize(),
                         SortField = Widget.DefaultSortField,
                         SortDirection = Widget.DefaultSortDirection
@@ -248,6 +327,7 @@
 
                 var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
                 ProcessDataSetResult(result);
+                await PopulateLookupDisplayAsync(client);
             }
             else if (!string.IsNullOrWhiteSpace(Widget.ApiEndpoint))
             {
@@ -294,6 +374,7 @@
                 var content = await response.Content.ReadAsStringAsync();
                 var doc = JsonDocument.Parse(content);
                 ProcessApiResponse(doc);
+                await PopulateLookupDisplayAsync(client);
             }
             else
             {
@@ -310,6 +391,343 @@
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task<string?> ResolveEntityFullTypeNameAsync(string entityRoute)
+    {
+        if (string.IsNullOrWhiteSpace(entityRoute))
+        {
+            return null;
+        }
+
+        if (EntityRouteToFullTypeCache.TryGetValue(entityRoute, out var cached))
+        {
+            return cached;
+        }
+
+        try
+        {
+            var all = await EntityDefinitionService.GetAllAsync();
+            var match = all.FirstOrDefault(e =>
+                string.Equals(e.EntityRoute, entityRoute, StringComparison.OrdinalIgnoreCase));
+
+            if (match == null || string.IsNullOrWhiteSpace(match.FullTypeName))
+            {
+                return null;
+            }
+
+            EntityRouteToFullTypeCache[entityRoute] = match.FullTypeName;
+            return match.FullTypeName;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to resolve entity full type name for route {EntityRoute}", entityRoute);
+            return null;
+        }
+    }
+
+    private async Task<EntityDefinitionDto?> ResolveEntityDefinitionAsync(string entityRoute)
+    {
+        if (string.IsNullOrWhiteSpace(entityRoute))
+        {
+            return null;
+        }
+
+        if (EntityRouteToDefinitionCache.TryGetValue(entityRoute, out var cached))
+        {
+            return cached;
+        }
+
+        try
+        {
+            var all = await EntityDefinitionService.GetAllAsync();
+            foreach (var def in all)
+            {
+                if (string.Equals(def.EntityRoute, entityRoute, StringComparison.OrdinalIgnoreCase))
+                {
+                    EntityRouteToDefinitionCache[entityRoute] = def;
+                    if (!string.IsNullOrWhiteSpace(def.FullTypeName))
+                    {
+                        EntityRouteToFullTypeCache[entityRoute] = def.FullTypeName;
+                    }
+                    return def;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to resolve entity definition for route {EntityRoute}", entityRoute);
+        }
+
+        return null;
+    }
+
+    private async Task PopulateLookupDisplayAsync(HttpClient client)
+    {
+        _lookupDisplayByField.Clear();
+
+        if (_dataRows.Count == 0 || string.IsNullOrWhiteSpace(Widget.EntityType))
+        {
+            return;
+        }
+
+        var entityDef = await ResolveEntityDefinitionAsync(Widget.EntityType);
+        if (entityDef == null || entityDef.Fields == null || entityDef.Fields.Count == 0)
+        {
+            return;
+        }
+
+        var columns = _columns
+            .Where(c => !string.IsNullOrWhiteSpace(c.Field))
+            .ToList();
+
+        if (columns.Count == 0)
+        {
+            return;
+        }
+
+        var lookupFields = new Dictionary<string, FieldMetadataDto>(StringComparer.OrdinalIgnoreCase);
+        foreach (var col in columns)
+        {
+            var meta = entityDef.Fields.FirstOrDefault(f =>
+                string.Equals(f.PropertyName, col.Field, StringComparison.OrdinalIgnoreCase));
+            if (meta == null)
+            {
+                meta = entityDef.Fields.FirstOrDefault(f =>
+                    string.Equals(f.PropertyName, col.Field, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (meta == null)
+            {
+                continue;
+            }
+
+            var isLookup = meta.IsEntityRef ||
+                           meta.ReferencedEntityId.HasValue ||
+                           !string.IsNullOrWhiteSpace(meta.LookupEntityName) ||
+                           string.Equals(meta.DataType, "Lookup", StringComparison.OrdinalIgnoreCase);
+
+            if (!isLookup)
+            {
+                continue;
+            }
+
+            lookupFields[col.Field] = meta;
+        }
+
+        if (lookupFields.Count == 0)
+        {
+            return;
+        }
+
+        var allEntities = await EntityDefinitionService.GetAllAsync();
+        var groupIds = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var fieldToGroupKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kv in lookupFields)
+        {
+            var field = kv.Key;
+            var meta = kv.Value;
+
+            EntityDefinitionDto? targetEntity = null;
+            if (!string.IsNullOrWhiteSpace(meta.LookupEntityName))
+            {
+                targetEntity = allEntities.FirstOrDefault(e =>
+                    string.Equals(e.EntityRoute, meta.LookupEntityName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(e.EntityName, meta.LookupEntityName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (targetEntity == null && meta.ReferencedEntityId.HasValue)
+            {
+                targetEntity = allEntities.FirstOrDefault(e => e.Id == meta.ReferencedEntityId.Value);
+            }
+
+            if (targetEntity == null || string.IsNullOrWhiteSpace(targetEntity.FullTypeName))
+            {
+                continue;
+            }
+
+            var displayField = string.IsNullOrWhiteSpace(meta.LookupDisplayField) ? string.Empty : meta.LookupDisplayField.Trim();
+            var groupKey = $"{targetEntity.FullTypeName}||{displayField}";
+            fieldToGroupKey[field] = groupKey;
+
+            if (!groupIds.TryGetValue(groupKey, out var set))
+            {
+                set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                groupIds[groupKey] = set;
+            }
+
+            foreach (var row in _dataRows)
+            {
+                if (!TryGetPropertyCaseInsensitive(row, field, out var value) || value.ValueKind == JsonValueKind.Null)
+                {
+                    continue;
+                }
+
+                if (value.ValueKind == JsonValueKind.Object)
+                {
+                    if (value.TryGetProperty("Name", out _) || value.TryGetProperty("Title", out _))
+                    {
+                        continue;
+                    }
+
+                    if (value.TryGetProperty("Id", out var embeddedId))
+                    {
+                        var embeddedKey = embeddedId.ValueKind == JsonValueKind.String
+                            ? embeddedId.GetString()
+                            : embeddedId.GetRawText();
+                        if (!string.IsNullOrWhiteSpace(embeddedKey))
+                        {
+                            set.Add(embeddedKey);
+                        }
+                    }
+
+                    continue;
+                }
+
+                var key = value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText();
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    set.Add(key);
+                }
+            }
+        }
+
+        foreach (var group in groupIds)
+        {
+            var split = group.Key.Split("||", 2, StringSplitOptions.None);
+            var fullTypeName = split[0];
+            var displayField = split.Length > 1 && !string.IsNullOrWhiteSpace(split[1]) ? split[1] : null;
+            var ids = group.Value.Take(2000).ToList();
+            if (ids.Count == 0)
+            {
+                continue;
+            }
+
+            try
+            {
+                var resp = await client.PostAsJsonAsync("/api/lookups/resolve", new
+                {
+                    target = fullTypeName,
+                    displayField,
+                    ids
+                });
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    continue;
+                }
+
+                var map = await ApiResponseHelper.ReadDataAsync<Dictionary<string, string>>(resp);
+                if (map == null || map.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var field in fieldToGroupKey.Where(p => string.Equals(p.Value, group.Key, StringComparison.OrdinalIgnoreCase)).Select(p => p.Key))
+                {
+                    _lookupDisplayByField[field] = map;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Lookup resolve failed for {GroupKey}", group.Key);
+            }
+        }
+    }
+
+    private (bool HasFilter, FilterConditionDto Filter) TryBuildContextFilter()
+    {
+        var contextKey = string.IsNullOrWhiteSpace(Widget.ContextKey) ? "Id" : Widget.ContextKey.Trim();
+        var targetField = Widget.TargetField?.Trim();
+
+        if (string.IsNullOrWhiteSpace(targetField) || Context?.Data == null)
+        {
+            return (false, new FilterConditionDto());
+        }
+
+        if (!TryGetContextValue(Context.Data, contextKey, out var ctxValue) || ctxValue == null)
+        {
+            return (false, new FilterConditionDto());
+        }
+
+        return (true, new FilterConditionDto
+        {
+            Field = targetField,
+            Operator = "equals",
+            Value = ctxValue
+        });
+    }
+
+    private string? ComputeContextFingerprint()
+    {
+        if (!Widget.FilterByContext || Context?.Data == null)
+        {
+            return null;
+        }
+
+        var key = string.IsNullOrWhiteSpace(Widget.ContextKey) ? "Id" : Widget.ContextKey.Trim();
+        if (!TryGetContextValue(Context.Data, key, out var value) || value == null)
+        {
+            return $"missing:{key}";
+        }
+
+        return $"{key}:{value}";
+    }
+
+    private static bool TryGetContextValue(object data, string key, out object? value)
+    {
+        value = null;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        if (data is Dictionary<string, object> dict)
+        {
+            foreach (var kv in dict)
+            {
+                if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = kv.Value;
+                    return true;
+                }
+            }
+        }
+
+        if (data is JsonElement json)
+        {
+            if (json.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in json.EnumerateObject())
+                {
+                    if (string.Equals(prop.Name, key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = prop.Value.ValueKind switch
+                        {
+                            JsonValueKind.String => prop.Value.GetString(),
+                            JsonValueKind.Number => prop.Value.TryGetInt64(out var n) ? n : prop.Value.GetRawText(),
+                            JsonValueKind.True => true,
+                            JsonValueKind.False => false,
+                            JsonValueKind.Null => null,
+                            _ => prop.Value.GetRawText()
+                        };
+                        return true;
+                    }
+                }
+            }
+        }
+
+        var type = data.GetType();
+        var propInfo = type.GetProperties()
+            .FirstOrDefault(p => string.Equals(p.Name, key, StringComparison.OrdinalIgnoreCase));
+        if (propInfo != null)
+        {
+            value = propInfo.GetValue(data);
+            return true;
+        }
+
+        return false;
     }
 
     private void ProcessDataSetResult(DataSetExecutionResponse? result)
@@ -403,7 +821,7 @@
 
     private string GetCellValue(JsonElement row, string field)
     {
-        if (row.TryGetProperty(field, out var value))
+        if (TryGetPropertyCaseInsensitive(row, field, out var value))
         {
             var rawValue = value.ValueKind switch
             {
@@ -415,6 +833,14 @@
                 _ => value.GetRawText()
             };
 
+            if (_lookupDisplayByField.TryGetValue(field, out var lookup) &&
+                !string.IsNullOrWhiteSpace(rawValue) &&
+                lookup.TryGetValue(rawValue, out var friendly) &&
+                !string.IsNullOrWhiteSpace(friendly))
+            {
+                return friendly;
+            }
+
             var column = _columns.FirstOrDefault(c => c.Field == field);
             if (column != null && column.EnumDefinitionId.HasValue)
             {
@@ -424,6 +850,31 @@
             return rawValue;
         }
         return "";
+    }
+
+    private static bool TryGetPropertyCaseInsensitive(JsonElement row, string field, out JsonElement value)
+    {
+        value = default;
+        if (row.ValueKind != JsonValueKind.Object || string.IsNullOrWhiteSpace(field))
+        {
+            return false;
+        }
+
+        if (row.TryGetProperty(field, out value))
+        {
+            return true;
+        }
+
+        foreach (var prop in row.EnumerateObject())
+        {
+            if (string.Equals(prop.Name, field, StringComparison.OrdinalIgnoreCase))
+            {
+                value = prop.Value;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string GetEnumLabel(Guid enumId, string value, bool isMultiSelect)

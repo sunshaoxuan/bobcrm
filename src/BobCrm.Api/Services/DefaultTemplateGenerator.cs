@@ -164,6 +164,12 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             FormTemplate? template = binding?.Template;
 
             var layoutJson = BuildLayoutJson(entity, fieldsForUsage, viewState);
+            if (_db != null &&
+                string.Equals(entityType, "customer", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(viewState, "DetailView", StringComparison.OrdinalIgnoreCase))
+            {
+                layoutJson = await TryApplyCustomer360Async(layoutJson, ct);
+            }
 
                 if (template == null)
                 {
@@ -521,6 +527,131 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 widgets.Add(permTreeWidget);
             }
         }
+
+        return JsonSerializer.Serialize(widgets, JsonOptions);
+    }
+
+    private async Task<string> TryApplyCustomer360Async(string layoutJson, CancellationToken ct)
+    {
+        if (_db == null)
+        {
+            return layoutJson;
+        }
+
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "contact",
+            "contacts",
+            "opportunity",
+            "opportunities"
+        };
+
+        var related = await _db.EntityDefinitions
+            .AsNoTracking()
+            .Include(e => e.Fields)
+            .Where(e => candidates.Contains(e.EntityRoute))
+            .OrderBy(e => e.Order)
+            .ToListAsync(ct);
+
+        if (related.Count == 0)
+        {
+            return layoutJson;
+        }
+
+        List<Dictionary<string, object?>> widgets;
+        try
+        {
+            widgets = JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(layoutJson, JsonOptions) ?? new List<Dictionary<string, object?>>();
+        }
+        catch
+        {
+            return layoutJson;
+        }
+
+        if (widgets.Any(w => w.TryGetValue("type", out var t) && string.Equals(t?.ToString(), "tabbox", StringComparison.OrdinalIgnoreCase)))
+        {
+            return layoutJson;
+        }
+
+        var tabs = new List<Dictionary<string, object?>>();
+        var firstTabId = string.Empty;
+
+        foreach (var entity in related)
+        {
+            var tabId = Guid.NewGuid().ToString("N");
+            if (string.IsNullOrWhiteSpace(firstTabId))
+            {
+                firstTabId = tabId;
+            }
+
+            var fields = PrepareFields(entity);
+            var columns = fields.Take(8).Select(f => new ListColumn(
+                field: f.PropertyName?.ToLowerInvariant(),
+                label: ResolveLabel(f),
+                width: WIDTH_COLUMN_PX,
+                sortable: true,
+                enumDefinitionId: f.EnumDefinitionId,
+                isMultiSelect: f.IsMultiSelect)).ToList();
+
+            if (columns.Count == 0)
+            {
+                columns.Add(new ListColumn(
+                    field: "id",
+                    label: "LBL_ID",
+                    width: WIDTH_COLUMN_PX,
+                    sortable: true,
+                    enumDefinitionId: null,
+                    isMultiSelect: false));
+            }
+
+            var tabLabel = entity.EntityName;
+            var dataGrid = new Dictionary<string, object?>
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = "datagrid",
+                ["label"] = "",
+                ["entityType"] = entity.EntityRoute,
+                ["apiEndpoint"] = string.IsNullOrWhiteSpace(entity.ApiEndpoint) ? $"/api/{entity.EntityRoute}s" : entity.ApiEndpoint,
+                ["columnsJson"] = JsonSerializer.Serialize(columns, JsonOptions),
+                ["defaultSortField"] = columns.First().field,
+                ["defaultSortDirection"] = "asc",
+                ["showPagination"] = true,
+                ["pageSize"] = 20,
+                ["allowMultiSelect"] = false,
+                ["showSearch"] = false,
+                ["showRefreshButton"] = true,
+                ["showBordered"] = true,
+                ["size"] = "middle",
+                ["emptyTextKey"] = "MSG_NO_DATA",
+                ["filterByContext"] = true,
+                ["contextKey"] = "Id",
+                ["targetField"] = "CustomerId"
+            };
+
+            tabs.Add(new Dictionary<string, object?>
+            {
+                ["id"] = Guid.NewGuid().ToString(),
+                ["type"] = "tab",
+                ["label"] = tabLabel,
+                ["tabId"] = tabId,
+                ["isDefault"] = tabId == firstTabId,
+                ["children"] = new List<Dictionary<string, object?>> { dataGrid }
+            });
+        }
+
+        if (tabs.Count == 0)
+        {
+            return layoutJson;
+        }
+
+        widgets.Add(new Dictionary<string, object?>
+        {
+            ["id"] = Guid.NewGuid().ToString(),
+            ["type"] = "tabbox",
+            ["label"] = "Related",
+            ["activeTabId"] = firstTabId,
+            ["children"] = tabs
+        });
 
         return JsonSerializer.Serialize(widgets, JsonOptions);
     }

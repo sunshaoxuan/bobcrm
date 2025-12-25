@@ -30,6 +30,21 @@ public class DataGridWidget : DraggableWidget
     public string? EntityType { get; set; }
 
     /// <summary>
+    /// 是否根据父上下文过滤（Related List 模式）
+    /// </summary>
+    public bool FilterByContext { get; set; }
+
+    /// <summary>
+    /// 父上下文键（例如：Id）
+    /// </summary>
+    public string? ContextKey { get; set; } = "Id";
+
+    /// <summary>
+    /// 目标实体外键字段（例如：CustomerId）
+    /// </summary>
+    public string? TargetField { get; set; }
+
+    /// <summary>
     /// API端点(当数据源为API时使用)
     /// </summary>
     public string? ApiEndpoint { get; set; }
@@ -172,6 +187,30 @@ public class DataGridWidget : DraggableWidget
                 Label = "PROP_DEFAULT_SORT_FIELD",
                 EditorType = PropertyEditorType.Text,
                 Group = "PROP_GROUP_DATA"
+            },
+            new WidgetPropertyMetadata
+            {
+                PropertyPath = "FilterByContext",
+                Label = "PROP_FILTER_BY_CONTEXT",
+                EditorType = PropertyEditorType.Boolean,
+                Group = "PROP_GROUP_BEHAVIOR",
+                HelpText = "PROP_FILTER_BY_CONTEXT_HELP"
+            },
+            new WidgetPropertyMetadata
+            {
+                PropertyPath = "ContextKey",
+                Label = "PROP_CONTEXT_KEY",
+                EditorType = PropertyEditorType.Text,
+                Group = "PROP_GROUP_BEHAVIOR",
+                HelpText = "PROP_CONTEXT_KEY_HELP"
+            },
+            new WidgetPropertyMetadata
+            {
+                PropertyPath = "TargetField",
+                Label = "PROP_TARGET_FIELD",
+                EditorType = PropertyEditorType.Text,
+                Group = "PROP_GROUP_BEHAVIOR",
+                HelpText = "PROP_TARGET_FIELD_HELP"
             },
             new WidgetPropertyMetadata
             {
