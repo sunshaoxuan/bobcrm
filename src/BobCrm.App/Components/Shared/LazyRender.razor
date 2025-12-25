@@ -1,0 +1,72 @@
+@using AntDesign
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div @ref="_host">
+    @if (_isVisible)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <div style="min-height:@PlaceholderHeightPx; padding:8px;">
+            <Skeleton Active="true" Title="false" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+    [Parameter] public int PlaceholderHeightPx { get; set; } = 56;
+
+    private ElementReference _host;
+    private DotNetObjectReference<LazyRender>? _dotNetRef;
+    private bool _isVisible;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("bobcrm.lazyRender.observe", _host, _dotNetRef);
+        }
+        catch
+        {
+            _isVisible = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public Task OnVisible()
+    {
+        if (_isVisible)
+        {
+            return Task.CompletedTask;
+        }
+
+        _isVisible = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("bobcrm.lazyRender.unobserve", _host);
+        }
+        catch
+        {
+            // ignore
+        }
+
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+    }
+}
+

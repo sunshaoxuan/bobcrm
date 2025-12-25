@@ -1,4 +1,5 @@
 @* Number 设计态预览组件 *@
+@using BobCrm.App.Models.Widgets
 <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px; justify-content:space-between">
     <span style="color:#ccc; font-size:11px">0</span>
     <div style="display:flex; flex-direction:column; gap:2px">
@@ -8,8 +9,6 @@
 </div>
 
 @code {
-    [Parameter] public object? Widget { get; set; }
-    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+    [Parameter, EditorRequired] public NumberWidget Widget { get; set; } = default!;
 }
-
 

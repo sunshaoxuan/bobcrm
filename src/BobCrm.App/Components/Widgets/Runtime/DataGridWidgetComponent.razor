@@ -1,0 +1,28 @@
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+
+@if (Context is null)
+{
+    <span style="color:#999; font-size:12px;">Missing FormRuntimeContext</span>
+}
+else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
+{
+    <div style="padding:10px; background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:12px; font-weight:600;">@Widget.Label</span>
+            <Tag Color="@TagColor.Blue">Design</Tag>
+        </div>
+        <div style="height:120px; background:#fff; border:1px solid #e0e0e0; border-radius:4px;"></div>
+    </div>
+}
+else
+{
+    <BobCrm.App.Components.Shared.DataGridRuntime Widget="Widget" ContainerStyle="" />
+}
+
+@code {
+    [Parameter, EditorRequired] public DataGridWidget Widget { get; set; } = default!;
+    [CascadingParameter] public FormRuntimeContext? Context { get; set; }
+}
+

@@ -105,6 +105,45 @@ window.bobcrm = {
     this._designerShortcutHandler = null;
     this._designerDotNetRef = null;
   }
+  , lazyRender: {
+      _observers: new WeakMap(),
+      observe: function (element, dotnetRef) {
+        try {
+          if (!element || !dotnetRef || !dotnetRef.invokeMethodAsync) return;
+
+          if (!('IntersectionObserver' in window)) {
+            dotnetRef.invokeMethodAsync('OnVisible');
+            return;
+          }
+
+          const observers = this._observers;
+          const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+              if (entry && entry.isIntersecting) {
+                try { observer.disconnect(); } catch (_) { }
+                try { observers.delete(element); } catch (_) { }
+                dotnetRef.invokeMethodAsync('OnVisible');
+                break;
+              }
+            }
+          }, { root: null, rootMargin: '200px', threshold: 0.01 });
+
+          observer.observe(element);
+          observers.set(element, observer);
+        } catch (_) {
+          try { dotnetRef.invokeMethodAsync('OnVisible'); } catch (_) { }
+        }
+      },
+      unobserve: function (element) {
+        try {
+          const obs = this._observers.get(element);
+          if (obs) {
+            try { obs.disconnect(); } catch (_) { }
+            this._observers.delete(element);
+          }
+        } catch (_) { }
+      }
+    }
   , registerCustomerEvents: function(dotnetRef){
     try { this._customerRef = dotnetRef; } catch (e) { }
   }

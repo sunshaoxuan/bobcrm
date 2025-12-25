@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using BobCrm.App.Models.Designer;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -13,6 +12,7 @@ namespace BobCrm.App.Models.Widgets;
 public class DataGridWidget : DraggableWidget
 {
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.DataGridPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.DataGridWidgetComponent);
 
     /// <summary>
     /// 数据源ID(关联到 DataSet)
@@ -205,14 +205,6 @@ public class DataGridWidget : DraggableWidget
 
     public override void RenderRuntime(RuntimeRenderContext context)
     {
-        var builder = context.Builder;
 
-        // 使用 DataGridRuntime 组件进行渲染
-        builder.OpenComponent<BobCrm.App.Components.Shared.DataGridRuntime>(0);
-        builder.AddAttribute(1, "Widget", this);
-        builder.AddAttribute(2, "ContainerStyle", "");
-        builder.CloseComponent();
     }
-
-    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Shared.DataGridRuntime);
 }

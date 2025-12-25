@@ -1,5 +1,4 @@
 using System;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -199,17 +198,9 @@ public class SubFormWidget : ContainerWidget
 
     public override void RenderRuntime(RuntimeRenderContext context)
     {
-        var builder = context.Builder;
-
-        // 使用 SubFormRuntime 组件进行渲染
-        builder.OpenComponent<BobCrm.App.Components.Shared.SubFormRuntime>(0);
-        builder.AddAttribute(1, "Widget", this);
-        builder.AddAttribute(2, "ContainerStyle", "");
-        builder.AddAttribute(3, "MasterEntityId", context.Widget.ExtendedProperties?.GetValueOrDefault("MasterEntityId")?.ToString());
-        builder.CloseComponent();
     }
 
-    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Shared.SubFormRuntime);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.SubFormWidgetComponent);
 
     public override void RenderDesign(DesignRenderContext context)
     {

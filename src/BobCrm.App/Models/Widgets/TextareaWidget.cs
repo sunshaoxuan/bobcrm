@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -33,6 +30,7 @@ public class TextareaWidget : TextWidget
     public bool AutoSize { get; set; } = true;
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.TextareaPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.TextareaWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
@@ -52,35 +50,7 @@ public class TextareaWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-            builder.OpenElement(4, "textarea");
-            builder.AddAttribute(5, "class", "runtime-field-input");
-            builder.AddAttribute(6, "style", "min-height:80px; resize:vertical;");
-            if (context.ValueSetter != null)
-            {
-                builder.AddAttribute(7, "oninput",
-                    callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                        e => context.ValueSetter!(e.Value?.ToString())));
-            }
-            builder.AddContent(8, value);
-            builder.CloseElement(); // textarea
-            builder.CloseElement(); // container
-        }
-        else
-        {
-            RenderReadOnlyValue(context, value);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

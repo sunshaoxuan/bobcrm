@@ -1,13 +1,49 @@
+@using AntDesign
 @using BobCrm.App.Models
 
-<CascadingValue Value="context">
-    @ChildContent
-</CascadingValue>
+@if (IsLoading)
+{
+    <div style="padding:12px;">
+        <Skeleton Active="true" Title="true" />
+        <Skeleton Active="true" Title="false" />
+        <Skeleton Active="true" Title="false" />
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div style="padding:12px;">
+        <Alert Message="@ErrorMessage" Type="@AlertType.Error" ShowIcon="true" />
+        @if (OnRetry.HasDelegate)
+        {
+            <div style="margin-top:12px;">
+                <Button Type="@ButtonType.Primary" OnClick="OnRetry">Retry</Button>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <ErrorBoundary>
+        <ChildContent>
+            <CascadingValue Value="context">
+                @ChildContent
+            </CascadingValue>
+        </ChildContent>
+        <ErrorContent Context="ex">
+            <div style="padding:12px;">
+                <Alert Message="Form render failed" Description="@ex.Message" Type="@AlertType.Error" ShowIcon="true" />
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+}
 
 @code {
     [Parameter] public FormRuntimeContext.Mode RenderMode { get; set; } = FormRuntimeContext.Mode.Browse;
     [Parameter] public object? Data { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
 
     private readonly FormRuntimeContext context = new();
 
@@ -17,4 +53,3 @@
         context.Data = Data;
     }
 }
-

@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -42,40 +39,7 @@ public class CalendarWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-        if (DateTime.TryParse(value, out var dt))
-        {
-            value = dt.ToString("yyyy-MM-dd");
-        }
-
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-            builder.OpenElement(4, "input");
-            builder.AddAttribute(5, "class", "runtime-field-input");
-            builder.AddAttribute(6, "type", "date");
-            builder.AddAttribute(7, "value", value);
-            if (context.ValueSetter != null)
-            {
-                builder.AddAttribute(8, "onchange",
-                    callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                        e => context.ValueSetter!(e.Value?.ToString())));
-            }
-            builder.CloseElement(); // input
-            builder.CloseElement(); // container
-        }
-        else
-        {
-            RenderReadOnlyValue(context, value);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

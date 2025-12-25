@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -36,6 +33,7 @@ public class NumberWidget : TextWidget
     public bool ShowThousandsSeparator { get; set; } = false;
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.NumberPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.NumberWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
@@ -55,44 +53,7 @@ public class NumberWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-            builder.OpenElement(4, "input");
-            builder.AddAttribute(5, "class", "runtime-field-input");
-            builder.AddAttribute(6, "type", AllowDecimal ? "number" : "number");
-            builder.AddAttribute(7, "step", AllowDecimal ? Step.ToString() : "1");
-            if (MinValue.HasValue)
-            {
-                builder.AddAttribute(8, "min", MinValue.Value);
-            }
-            if (MaxValue.HasValue)
-            {
-                builder.AddAttribute(9, "max", MaxValue.Value);
-            }
-            builder.AddAttribute(10, "value", value);
-            if (context.ValueSetter != null)
-            {
-                builder.AddAttribute(11, "oninput",
-                    callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                        e => context.ValueSetter!(e.Value?.ToString())));
-            }
-            builder.CloseElement(); // input
-            builder.CloseElement(); // container
-        }
-        else
-        {
-            RenderReadOnlyValue(context, value);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

@@ -9,6 +9,5 @@
             Style="width:100%;" />
 
 @code {
-    [Parameter] public CalendarWidget? Widget { get; set; }
-    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+    [Parameter, EditorRequired] public CalendarWidget Widget { get; set; } = default!;
 }

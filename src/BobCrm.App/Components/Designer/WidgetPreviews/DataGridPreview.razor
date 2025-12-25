@@ -55,12 +55,11 @@
 </div>
 
 @code {
-    [Parameter] public object? Widget { get; set; }
-    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+    [Parameter, EditorRequired] public DataGridWidget Widget { get; set; } = default!;
 
     [CascadingParameter] public DesignerDragState? DragState { get; set; }
 
-    private DataGridWidget Grid => (Widget as DataGridWidget) ?? new DataGridWidget();
+    private DataGridWidget Grid => Widget;
 
     private readonly JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private List<DataGridColumn> _columns = new();

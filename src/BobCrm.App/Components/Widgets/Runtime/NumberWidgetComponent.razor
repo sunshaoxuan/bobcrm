@@ -1,0 +1,200 @@
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using System.Globalization
+@using System.Text.Json
+
+@if (Context is null)
+{
+    <span style="color:#999; font-size:12px;">Missing FormRuntimeContext</span>
+}
+else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
+{
+    <div style="padding:6px; background:#fafafa; border:1px dashed #d9d9d9; border-radius:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:600;">@Widget.Label</span>
+            <Tag Color="@TagColor.Blue">Design</Tag>
+        </div>
+        <AntDesign.InputNumber TValue="double?"
+                               Value="@(default(double?))"
+                               Disabled="true"
+                               Style="width:100%;"
+                               Precision="@GetPrecision()" />
+    </div>
+}
+else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMode == FormRuntimeContext.Mode.Disabled)
+{
+    var disabled = Context.RenderMode == FormRuntimeContext.Mode.Disabled;
+    <div style="display:flex; flex-direction:column; gap:6px;">
+        <div class="runtime-field-label">@Widget.Label</div>
+        <AntDesign.InputNumber TValue="double?"
+                               Value="@currentValue"
+                               ValueChanged="OnValueChanged"
+                               Disabled="@disabled"
+                               Min="@Widget.MinValue"
+                               Max="@Widget.MaxValue"
+                               Step="@Widget.Step"
+                               Precision="@GetPrecision()"
+                               Style="width:100%;" />
+    </div>
+}
+else
+{
+    var value = currentValue;
+    var display = value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : (GetRawValue() ?? string.Empty);
+    <div style="display:flex; flex-direction:column; gap:4px; padding:4px 0;">
+        <div class="runtime-field-label">@Widget.Label</div>
+        <span>@(string.IsNullOrWhiteSpace(display) ? "--" : display)</span>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public NumberWidget Widget { get; set; } = default!;
+    [CascadingParameter] public FormRuntimeContext? Context { get; set; }
+
+    private double? currentValue;
+
+    protected override void OnParametersSet()
+    {
+        currentValue = ParseNumber(GetRawValue());
+    }
+
+    private Task OnValueChanged(double? value)
+    {
+        if (Context?.RenderMode == FormRuntimeContext.Mode.Disabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        currentValue = value;
+        SetRawValue(value?.ToString(CultureInfo.InvariantCulture));
+        return Task.CompletedTask;
+    }
+
+    private int GetPrecision()
+    {
+        if (!Widget.AllowDecimal)
+        {
+            return 0;
+        }
+
+        var step = Widget.Step;
+        if (step <= 0)
+        {
+            return 2;
+        }
+
+        var s = step.ToString(CultureInfo.InvariantCulture);
+        var idx = s.IndexOf('.');
+        if (idx < 0)
+        {
+            return 0;
+        }
+
+        var digits = s.Length - idx - 1;
+        return Math.Clamp(digits, 0, 10);
+    }
+
+    private double? ParseNumber(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return Widget.DefaultValue;
+        }
+
+        if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (double.TryParse(raw, out parsed))
+        {
+            return parsed;
+        }
+
+        return Widget.DefaultValue;
+    }
+
+    private string? GetRawValue()
+    {
+        if (Context?.Data is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Widget.DefaultValue?.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (Context.Data is EditValueManager evm)
+        {
+            return evm.GetValue(Widget.DataField);
+        }
+
+        if (Context.Data is JsonElement json)
+        {
+            return GetValueFromJson(json, Widget.DataField);
+        }
+
+        if (Context.Data is IDictionary<string, object?> dict)
+        {
+            return dict.TryGetValue(Widget.DataField, out var v) ? v?.ToString() : null;
+        }
+
+        var prop = Context.Data.GetType().GetProperty(Widget.DataField);
+        return prop?.GetValue(Context.Data)?.ToString();
+    }
+
+    private void SetRawValue(string? value)
+    {
+        if (Context?.Data is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        if (Context.Data is EditValueManager evm)
+        {
+            evm.SetValue(Widget.DataField, value);
+            return;
+        }
+
+        if (Context.Data is IDictionary<string, object?> dict)
+        {
+            dict[Widget.DataField] = value;
+            return;
+        }
+
+        var prop = Context.Data.GetType().GetProperty(Widget.DataField);
+        if (prop?.CanWrite == true)
+        {
+            prop.SetValue(Context.Data, value);
+        }
+    }
+
+    private static string? GetValueFromJson(JsonElement json, string key)
+    {
+        if (json.ValueKind == JsonValueKind.Object)
+        {
+            if (json.TryGetProperty("fields", out var fieldsElement) && fieldsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var field in fieldsElement.EnumerateArray())
+                {
+                    if (field.ValueKind != JsonValueKind.Object) continue;
+                    if (field.TryGetProperty("key", out var keyProp) &&
+                        string.Equals(keyProp.GetString(), key, StringComparison.OrdinalIgnoreCase) &&
+                        field.TryGetProperty("value", out var valueProp))
+                    {
+                        return valueProp.GetString() ?? valueProp.ToString();
+                    }
+                }
+            }
+
+            foreach (var prop in json.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return prop.Value.ToString();
+                }
+            }
+        }
+
+        return null;
+    }
+}
