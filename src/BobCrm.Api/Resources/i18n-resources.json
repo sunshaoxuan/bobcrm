@@ -2194,6 +2194,81 @@
     "ja": "システム既定値",
     "en": "System defaults"
   },
+  "LBL_SMTP_SETTINGS": {
+    "zh": "SMTP 邮件设置",
+    "ja": "SMTP メール設定",
+    "en": "SMTP settings"
+  },
+  "TXT_SMTP_SETTINGS_DESC": {
+    "zh": "配置系统发送邮件的 SMTP 参数（密码将加密保存）。",
+    "ja": "システムのメール送信（SMTP）設定を構成します（パスワードは暗号化保存）。",
+    "en": "Configure SMTP for sending system emails (password is stored encrypted)."
+  },
+  "LBL_SMTP_HOST": {
+    "zh": "SMTP 主机",
+    "ja": "SMTP ホスト",
+    "en": "SMTP Host"
+  },
+  "LBL_SMTP_PORT": {
+    "zh": "SMTP 端口",
+    "ja": "SMTP ポート",
+    "en": "SMTP Port"
+  },
+  "LBL_SMTP_USERNAME": {
+    "zh": "用户名",
+    "ja": "ユーザー名",
+    "en": "Username"
+  },
+  "LBL_SMTP_PASSWORD": {
+    "zh": "密码",
+    "ja": "パスワード",
+    "en": "Password"
+  },
+  "LBL_SMTP_ENABLE_SSL": {
+    "zh": "启用 SSL",
+    "ja": "SSL を有効化",
+    "en": "Enable SSL"
+  },
+  "LBL_SMTP_FROM_ADDRESS": {
+    "zh": "发件人地址",
+    "ja": "送信元アドレス",
+    "en": "From Address"
+  },
+  "LBL_SMTP_DISPLAY_NAME": {
+    "zh": "显示名称",
+    "ja": "表示名",
+    "en": "Display Name"
+  },
+  "LBL_TEST_EMAIL_TO": {
+    "zh": "测试收件人",
+    "ja": "テスト送信先",
+    "en": "Test recipient"
+  },
+  "BTN_SEND_TEST_EMAIL": {
+    "zh": "发送测试邮件",
+    "ja": "テストメール送信",
+    "en": "Send test email"
+  },
+  "LBL_SENDING": {
+    "zh": "发送中",
+    "ja": "送信中",
+    "en": "Sending"
+  },
+  "MSG_TEST_EMAIL_SENT": {
+    "zh": "测试邮件已发送。",
+    "ja": "テストメールを送信しました。",
+    "en": "Test email sent."
+  },
+  "MSG_TEST_EMAIL_FAILED": {
+    "zh": "测试邮件发送失败。",
+    "ja": "テストメール送信に失敗しました。",
+    "en": "Failed to send test email."
+  },
+  "MSG_TEST_EMAIL_REQUIRED": {
+    "zh": "请输入测试收件人邮箱。",
+    "ja": "テスト送信先メールアドレスを入力してください。",
+    "en": "Please enter a test recipient email."
+  },
   "LBL_TAB": {
     "zh": "标签页",
     "ja": "タブ",
@@ -6504,26 +6579,6 @@
     "en": "Select date",
     "ja": "日付を選択"
   },
-  "ERR_VALIDATION_FAILED": {
-    "zh": "验证失败",
-    "ja": "検証に失敗しました",
-    "en": "Validation failed"
-  },
-  "ERR_ENTITY_NAME_REQUIRED": {
-    "zh": "实体名称不能为空",
-    "ja": "エンティティ名は必須です",
-    "en": "Entity name is required."
-  },
-  "ERR_DISPLAY_NAME_REQUIRED": {
-    "zh": "显示名称不能为空",
-    "ja": "表示名は必須です",
-    "en": "Display name is required."
-  },
-  "ERR_NAMESPACE_REQUIRED": {
-    "zh": "命名空间不能为空",
-    "ja": "名前空間は必須です",
-    "en": "Namespace is required."
-  },
   "ERR_SUBENTITY_CODE_EXISTS": {
     "zh": "子实体编码 '{0}' 已存在",
     "ja": "子エンティティコード '{0}' は既に存在します",
@@ -6713,9 +6768,380 @@
     "zh": "管理角色档案",
     "ja": "ロールプロファイルを管理します",
     "en": "Manage role profiles"
+  },
+  "MENU_AUDIT_LOGS": {
+    "zh": "审计日志",
+    "ja": "監査ログ",
+    "en": "Audit Logs"
+  },
+  "MENU_SYS_AUDIT": {
+    "zh": "审计日志",
+    "ja": "監査ログ",
+    "en": "Audit Logs"
+  },
+  "BTN_SEARCH": {
+    "zh": "搜索",
+    "ja": "検索",
+    "en": "Search"
+  },
+  "AUDIT_FILTER_ENTITY_TYPE": {
+    "zh": "实体类型",
+    "ja": "エンティティ種別",
+    "en": "Entity Type"
+  },
+  "AUDIT_FILTER_USER": {
+    "zh": "用户",
+    "ja": "ユーザー",
+    "en": "User"
+  },
+  "AUDIT_FILTER_ACTION": {
+    "zh": "操作类型",
+    "ja": "操作種別",
+    "en": "Action"
+  },
+  "AUDIT_FILTER_FROM": {
+    "zh": "开始时间(UTC)",
+    "ja": "開始時刻(UTC)",
+    "en": "From (UTC)"
+  },
+  "AUDIT_FILTER_TO": {
+    "zh": "结束时间(UTC)",
+    "ja": "終了時刻(UTC)",
+    "en": "To (UTC)"
+  },
+  "AUDIT_ACTION_CREATE": {
+    "zh": "创建",
+    "ja": "作成",
+    "en": "Create"
+  },
+  "AUDIT_ACTION_UPDATE": {
+    "zh": "更新",
+    "ja": "更新",
+    "en": "Update"
+  },
+  "AUDIT_ACTION_DELETE": {
+    "zh": "删除",
+    "ja": "削除",
+    "en": "Delete"
+  },
+  "AUDIT_ACTION_PUBLISH": {
+    "zh": "发布",
+    "ja": "公開",
+    "en": "Publish"
+  },
+  "AUDIT_COL_TIME": {
+    "zh": "时间",
+    "ja": "時刻",
+    "en": "Time"
+  },
+  "AUDIT_COL_ENTITY": {
+    "zh": "实体",
+    "ja": "エンティティ",
+    "en": "Entity"
+  },
+  "AUDIT_COL_ACTION": {
+    "zh": "操作",
+    "ja": "操作",
+    "en": "Action"
+  },
+  "AUDIT_COL_USER": {
+    "zh": "用户",
+    "ja": "ユーザー",
+    "en": "User"
+  },
+  "AUDIT_COL_TARGET": {
+    "zh": "对象",
+    "ja": "対象",
+    "en": "Target"
+  },
+  "AUDIT_COL_IP": {
+    "zh": "IP",
+    "ja": "IP",
+    "en": "IP"
+  },
+  "AUDIT_COL_DESC": {
+    "zh": "描述",
+    "ja": "説明",
+    "en": "Description"
+  },
+  "AUDIT_DETAIL_TITLE": {
+    "zh": "审计详情",
+    "ja": "監査詳細",
+    "en": "Audit Details"
+  },
+  "AUDIT_TAB_CHANGES": {
+    "zh": "变更",
+    "ja": "変更",
+    "en": "Changes"
+  },
+  "AUDIT_TAB_BEFORE": {
+    "zh": "变更前",
+    "ja": "変更前",
+    "en": "Before"
+  },
+  "AUDIT_TAB_AFTER": {
+    "zh": "变更后",
+    "ja": "変更後",
+    "en": "After"
+  },
+  "AUDIT_TAB_DIFF": {
+    "zh": "差异",
+    "ja": "差分",
+    "en": "Diff"
+  },
+  "AUDIT_NO_CHANGES": {
+    "zh": "无变更内容",
+    "ja": "変更はありません",
+    "en": "No changes"
+  },
+  "AUDIT_CHANGE_PROPERTY": {
+    "zh": "字段",
+    "ja": "項目",
+    "en": "Field"
+  },
+  "AUDIT_CHANGE_BEFORE": {
+    "zh": "变更前",
+    "ja": "変更前",
+    "en": "Before"
+  },
+  "AUDIT_CHANGE_AFTER": {
+    "zh": "变更后",
+    "ja": "変更後",
+    "en": "After"
+  },
+  "AUDIT_LOAD_MODULES_FAILED": {
+    "zh": "加载实体类型失败",
+    "ja": "エンティティ種別の読み込みに失敗しました",
+    "en": "Failed to load entity types"
+  },
+  "AUDIT_SEARCH_FAILED": {
+    "zh": "查询审计日志失败",
+    "ja": "監査ログの検索に失敗しました",
+    "en": "Failed to search audit logs"
+  },
+  "MENU_SYS_JOBS": {
+    "zh": "后台任务监控",
+    "ja": "ジョブ監視",
+    "en": "Job Monitor"
+  },
+  "JOB_AUTO_REFRESH": {
+    "zh": "自动刷新",
+    "ja": "自動更新",
+    "en": "Auto refresh"
+  },
+  "JOB_COL_STARTED": {
+    "zh": "开始时间(UTC)",
+    "ja": "開始時刻(UTC)",
+    "en": "Started (UTC)"
+  },
+  "JOB_COL_NAME": {
+    "zh": "任务",
+    "ja": "ジョブ",
+    "en": "Job"
+  },
+  "JOB_COL_CATEGORY": {
+    "zh": "类别",
+    "ja": "カテゴリ",
+    "en": "Category"
+  },
+  "JOB_COL_STATUS": {
+    "zh": "状态",
+    "ja": "状態",
+    "en": "Status"
+  },
+  "JOB_COL_PROGRESS": {
+    "zh": "进度",
+    "ja": "進捗",
+    "en": "Progress"
+  },
+  "JOB_COL_ACTOR": {
+    "zh": "执行人",
+    "ja": "実行者",
+    "en": "Actor"
+  },
+  "JOB_COL_UPDATED": {
+    "zh": "更新时间(UTC)",
+    "ja": "更新時刻(UTC)",
+    "en": "Updated (UTC)"
+  },
+  "JOB_STATUS_RUNNING": {
+    "zh": "运行中",
+    "ja": "実行中",
+    "en": "Running"
+  },
+  "JOB_STATUS_COMPLETED": {
+    "zh": "已完成",
+    "ja": "完了",
+    "en": "Completed"
+  },
+  "JOB_STATUS_FAILED": {
+    "zh": "失败",
+    "ja": "失敗",
+    "en": "Failed"
+  },
+  "JOB_STATUS_CANCEL_REQUESTED": {
+    "zh": "已请求取消",
+    "ja": "キャンセル要求済み",
+    "en": "Cancel requested"
+  },
+  "JOB_STATUS_CANCELED": {
+    "zh": "已取消",
+    "ja": "キャンセル済み",
+    "en": "Canceled"
+  },
+  "JOB_BTN_CANCEL": {
+    "zh": "取消",
+    "ja": "キャンセル",
+    "en": "Cancel"
+  },
+  "JOB_CONFIRM_CANCEL": {
+    "zh": "确定要取消该任务吗？",
+    "ja": "このジョブをキャンセルしますか？",
+    "en": "Cancel this job?"
+  },
+  "JOB_CANCEL_REQUESTED": {
+    "zh": "已提交取消请求",
+    "ja": "キャンセル要求を送信しました",
+    "en": "Cancel requested"
+  },
+  "JOB_CANCEL_FAILED": {
+    "zh": "取消失败",
+    "ja": "キャンセルに失敗しました",
+    "en": "Failed to cancel"
+  },
+  "JOB_LOAD_FAILED": {
+    "zh": "加载任务列表失败",
+    "ja": "ジョブ一覧の読み込みに失敗しました",
+    "en": "Failed to load jobs"
+  },
+  "JOB_LOGS_TITLE": {
+    "zh": "执行日志",
+    "ja": "実行ログ",
+    "en": "Execution Logs"
+  },
+  "JOB_LOGS_LOAD_FAILED": {
+    "zh": "加载日志失败",
+    "ja": "ログの読み込みに失敗しました",
+    "en": "Failed to load logs"
+  },
+  "JOB_LOG_TIME": {
+    "zh": "时间(UTC)",
+    "ja": "時刻(UTC)",
+    "en": "Time (UTC)"
+  },
+  "JOB_LOG_LEVEL": {
+    "zh": "级别",
+    "ja": "レベル",
+    "en": "Level"
+  },
+  "JOB_LOG_MESSAGE": {
+    "zh": "消息",
+    "ja": "メッセージ",
+    "en": "Message"
+  },
+  "JOB_ERROR": {
+    "zh": "错误",
+    "ja": "エラー",
+    "en": "Error"
+  },
+  "TITLE_I18N_EDITOR": {
+    "zh": "多语言资源编辑器",
+    "ja": "多言語リソース編集",
+    "en": "I18n Resource Editor"
+  },
+  "I18N_EDITOR_WARNING": {
+    "zh": "注意：修改核心翻译键可能影响整个系统 UI，请谨慎操作。",
+    "ja": "注意：コア翻訳キーの変更はシステム全体の UI に影響する可能性があります。",
+    "en": "Warning: Editing core translation keys may affect the entire UI."
+  },
+  "I18N_FILTER_KEY": {
+    "zh": "按 Key 搜索",
+    "ja": "キーで検索",
+    "en": "Search by key"
+  },
+  "I18N_FILTER_CULTURE": {
+    "zh": "语言",
+    "ja": "言語",
+    "en": "Language"
+  },
+  "TXT_I18N_EDITOR_DESC": {
+    "zh": "在界面中维护翻译 Key 与文本，无需直接操作数据库。",
+    "ja": "DB に直接触れずに翻訳キーと文言を管理します。",
+    "en": "Manage translation keys and texts in UI without direct DB access."
+  },
+  "I18N_COL_KEY": {
+    "zh": "Key",
+    "ja": "キー",
+    "en": "Key"
+  },
+  "I18N_COL_CULTURE": {
+    "zh": "语言",
+    "ja": "言語",
+    "en": "Language"
+  },
+  "I18N_COL_VALUE": {
+    "zh": "翻译",
+    "ja": "翻訳",
+    "en": "Translation"
+  },
+  "I18N_TAG_PROTECTED": {
+    "zh": "核心",
+    "ja": "コア",
+    "en": "Core"
+  },
+  "BTN_RELOAD_CACHE": {
+    "zh": "重载缓存",
+    "ja": "キャッシュ再読込",
+    "en": "Reload Cache"
+  },
+  "MSG_RELOADED": {
+    "zh": "已重载缓存",
+    "ja": "キャッシュを再読込しました",
+    "en": "Cache reloaded"
+  },
+  "MSG_RELOAD_FAILED": {
+    "zh": "重载失败",
+    "ja": "再読込に失敗しました",
+    "en": "Reload failed"
+  },
+  "I18N_CONFIRM_PROTECTED_TITLE": {
+    "zh": "确认修改核心 Key？",
+    "ja": "コアキーを変更しますか？",
+    "en": "Edit a core key?"
+  },
+  "I18N_CONFIRM_PROTECTED_DESC": {
+    "zh": "该 Key 属于系统核心翻译，修改可能影响大量页面。确认继续？",
+    "ja": "このキーはコア翻訳です。変更すると多くの画面に影響する可能性があります。続行しますか？",
+    "en": "This is a core translation key and may affect many pages. Continue?"
+  },
+  "PROP_FILTER_BY_CONTEXT": {
+    "zh": "按上下文过滤",
+    "ja": "コンテキストで絞り込み",
+    "en": "Filter by context"
+  },
+  "PROP_FILTER_BY_CONTEXT_HELP": {
+    "zh": "启用后，DataGrid 将使用父表单的上下文值作为过滤条件（Related List）。",
+    "ja": "有効にすると、親フォームのコンテキスト値で DataGrid を絞り込みます（関連リスト）。",
+    "en": "When enabled, DataGrid filters by the parent form context value (related list)."
+  },
+  "PROP_CONTEXT_KEY": {
+    "zh": "上下文键",
+    "ja": "コンテキストキー",
+    "en": "Context key"
+  },
+  "PROP_CONTEXT_KEY_HELP": {
+    "zh": "父上下文中用于过滤的字段名（例如：Id）。",
+    "ja": "親コンテキストから取得するキー名（例：Id）。",
+    "en": "Key name to read from parent context (e.g., Id)."
+  },
+  "PROP_TARGET_FIELD": {
+    "zh": "目标字段",
+    "ja": "対象フィールド",
+    "en": "Target field"
+  },
+  "PROP_TARGET_FIELD_HELP": {
+    "zh": "目标实体中用于关联父实体的外键字段名（例如：CustomerId）。",
+    "ja": "対象エンティティ側の外部キー名（例：CustomerId）。",
+    "en": "Foreign key field on target entity (e.g., CustomerId)."
   }
 }
-
-
-
-
