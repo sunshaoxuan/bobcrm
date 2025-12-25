@@ -11,4 +11,11 @@ public record UpdateSystemSettingsRequest(
     string? DefaultHomeRoute,
     string? DefaultNavDisplayMode,
     string? TimeZoneId,
-    bool? AllowSelfRegistration);
+    bool? AllowSelfRegistration,
+    string? SmtpHost,
+    int? SmtpPort,
+    string? SmtpUsername,
+    string? SmtpPassword,
+    bool? SmtpEnableSsl,
+    string? SmtpFromAddress,
+    string? SmtpDisplayName);
