@@ -21,5 +21,13 @@ public class SystemSettingsConfiguration : IEntityTypeConfiguration<SystemSettin
             .IsRequired();
         builder.Property(s => s.TimeZoneId).HasMaxLength(64).IsRequired();
         builder.Property(s => s.AllowSelfRegistration).HasDefaultValue(false);
+
+        builder.Property(s => s.SmtpHost).HasMaxLength(256);
+        builder.Property(s => s.SmtpPort).HasDefaultValue(25);
+        builder.Property(s => s.SmtpUsername).HasMaxLength(256);
+        builder.Property(s => s.SmtpPasswordEncrypted).HasMaxLength(2048);
+        builder.Property(s => s.SmtpEnableSsl).HasDefaultValue(false);
+        builder.Property(s => s.SmtpFromAddress).HasMaxLength(256);
+        builder.Property(s => s.SmtpDisplayName).HasMaxLength(256);
     }
 }

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BobCrm.Api.Base;
+using BobCrm.Api.Base.Attributes;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Base.Models.Metadata;
 using BobCrm.Api.Abstractions;
@@ -678,12 +680,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             }
 
             var propName = prop.Metadata.Name;
-            if (IsSensitivePropertyName(propName))
-            {
-                continue;
-            }
-
-            snapshot[propName] = useOriginalValues ? prop.OriginalValue : prop.CurrentValue;
+            var value = useOriginalValues ? prop.OriginalValue : prop.CurrentValue;
+            snapshot[propName] = IsSensitiveProperty(entry, propName) ? MaskSensitiveValue(value) : value;
         }
 
         return snapshot;
@@ -706,10 +704,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             }
 
             var propName = prop.Metadata.Name;
-            if (IsSensitivePropertyName(propName))
-            {
-                continue;
-            }
+            var isSensitive = IsSensitiveProperty(entry, propName);
 
             var before = prop.OriginalValue;
             var after = prop.CurrentValue;
@@ -732,12 +727,28 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             changes.Add(new Dictionary<string, object?>
             {
                 ["property"] = propName,
-                ["before"] = before,
-                ["after"] = after
+                ["before"] = isSensitive ? MaskSensitiveValue(before) : before,
+                ["after"] = isSensitive ? MaskSensitiveValue(after) : after
             });
         }
 
         return changes.Count == 0 ? null : changes;
+    }
+
+    private static bool IsSensitiveProperty(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry, string propertyName)
+    {
+        if (IsSensitivePropertyName(propertyName))
+        {
+            return true;
+        }
+
+        var propertyInfo = entry.Metadata.ClrType.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        return propertyInfo?.GetCustomAttribute<SensitiveAttribute>(inherit: true) != null;
+    }
+
+    private static object? MaskSensitiveValue(object? value)
+    {
+        return value == null ? null : "***";
     }
 
     private static bool IsSensitivePropertyName(string propertyName)

@@ -963,6 +963,7 @@ public static class EntityDefinitionEndpoints
             Guid id,
             AppDbContext db,
             Services.IEntityPublishingService publishService,
+            BobCrm.Api.Abstractions.IBackgroundJobClient jobs,
             HttpContext http,
             ILocalization loc,
             ILogger<Program> logger) =>
@@ -972,14 +973,19 @@ public static class EntityDefinitionEndpoints
 
             logger.LogInformation("[Publish] Publishing new entity: {Id}", id);
 
+            var jobId = jobs.StartJob($"Publish entity {id}", "EntityPublishing", uid, http.User?.Identity?.Name, canCancel: false);
+            jobs.AppendLog(jobId, "INFO", $"Publishing new entity {id}.");
+
             var result = await publishService.PublishNewEntityAsync(id, uid);
 
             if (!result.Success)
             {
                 logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
+                jobs.Fail(jobId, result.ErrorMessage ?? "Publish failed");
                 return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? loc.T("ERR_PUBLISH_FAILED", lang), "PUBLISH_FAILED"));
             }
 
+            jobs.Complete(jobId);
             return Results.Ok(new SuccessResponse<PublishResultDto>(new PublishResultDto
             {
                 Success = true,
@@ -1024,6 +1030,7 @@ public static class EntityDefinitionEndpoints
             Guid id,
             AppDbContext db,
             Services.IEntityPublishingService publishService,
+            BobCrm.Api.Abstractions.IBackgroundJobClient jobs,
             HttpContext http,
             ILocalization loc,
             ILogger<Program> logger) =>
@@ -1033,14 +1040,19 @@ public static class EntityDefinitionEndpoints
 
             logger.LogInformation("[Publish] Publishing changes for entity: {Id}", id);
 
+            var jobId = jobs.StartJob($"Publish entity changes {id}", "EntityPublishing", uid, http.User?.Identity?.Name, canCancel: false);
+            jobs.AppendLog(jobId, "INFO", $"Publishing changes for entity {id}.");
+
             var result = await publishService.PublishEntityChangesAsync(id, uid);
 
             if (!result.Success)
             {
                 logger.LogError("[Publish] Failed: {Error}", result.ErrorMessage);
+                jobs.Fail(jobId, result.ErrorMessage ?? "Publish changes failed");
                 return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? loc.T("ERR_PUBLISH_FAILED", lang), "PUBLISH_FAILED"));
             }
 
+            jobs.Complete(jobId);
             return Results.Ok(new SuccessResponse<PublishResultDto>(new PublishResultDto
             {
                 Success = true,
@@ -1090,6 +1102,7 @@ public static class EntityDefinitionEndpoints
         group.MapPost("/{id:guid}/withdraw", async (
             Guid id,
             Services.IEntityPublishingService publishService,
+            BobCrm.Api.Abstractions.IBackgroundJobClient jobs,
             HttpContext http,
             ILocalization loc,
             ILogger<Program> logger) =>
@@ -1099,13 +1112,18 @@ public static class EntityDefinitionEndpoints
 
             logger.LogInformation("[Withdraw] Withdrawing entity: {Id}", id);
 
+            var jobId = jobs.StartJob($"Withdraw entity {id}", "EntityPublishing", uid, http.User?.Identity?.Name, canCancel: false);
+            jobs.AppendLog(jobId, "INFO", $"Withdrawing entity {id}.");
+
             var result = await publishService.WithdrawAsync(id, uid);
             if (!result.Success)
             {
                 logger.LogError("[Withdraw] Failed: {Error}", result.ErrorMessage);
+                jobs.Fail(jobId, result.ErrorMessage ?? "Withdraw failed");
                 return Results.BadRequest(new ErrorResponse(result.ErrorMessage ?? "Withdraw failed", "WITHDRAW_FAILED"));
             }
 
+            jobs.Complete(jobId);
             return Results.Ok(new SuccessResponse<WithdrawResultDto>(new WithdrawResultDto
             {
                 Success = true,

@@ -16,6 +16,7 @@ public class EfLocalization : ILocalization
     private const string CacheKeyPrefix = "i18n_";
     private const string VersionCacheKey = "i18n_version";
     private const string LanguagesCacheKey = "i18n_languages";
+    private const string CacheKeySetKey = "i18n_cache_keys";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(30);
     private static readonly string[] FallbackLanguages = new[] { "ja", "en", "zh" };
 
@@ -95,7 +96,8 @@ public class EfLocalization : ILocalization
     private Dictionary<string, string> EnsureLoaded(string lang)
     {
         lang = (lang ?? "ja").ToLowerInvariant();
-        var cacheKey = $"{CacheKeyPrefix}{lang}";
+        var version = GetCacheVersion();
+        var cacheKey = $"{CacheKeyPrefix}{lang}:{version}";
 
         // 尝试从缓存获取
         if (_cache.TryGetValue(cacheKey, out Dictionary<string, string>? dict) && dict != null)
@@ -123,6 +125,7 @@ public class EfLocalization : ILocalization
 
         // 写入缓存
         _cache.Set(cacheKey, map, CacheExpiration);
+        TrackCacheKey(cacheKey);
         return map;
     }
 
@@ -140,12 +143,20 @@ public class EfLocalization : ILocalization
 
     public void InvalidateCache()
     {
-        // ✅ 动态清除所有语言的缓存，不硬编码语言列表
-        var languages = GetAvailableLanguages();
-        foreach (var lang in languages)
+        if (_cache.TryGetValue(CacheKeySetKey, out HashSet<string>? keys) && keys != null)
         {
-            _cache.Remove($"{CacheKeyPrefix}{lang}");
+            lock (keys)
+            {
+                foreach (var key in keys)
+                {
+                    _cache.Remove(key);
+                }
+
+                keys.Clear();
+            }
         }
+
+        _cache.Remove(CacheKeySetKey);
 
         // 清除语言列表缓存
         _cache.Remove(LanguagesCacheKey);
@@ -165,5 +176,25 @@ public class EfLocalization : ILocalization
         var newVersion = DateTime.UtcNow.Ticks;
         _cache.Set(VersionCacheKey, newVersion, CacheExpiration);
         return newVersion;
+    }
+
+    private void TrackCacheKey(string cacheKey)
+    {
+        var set = _cache.GetOrCreate(CacheKeySetKey, entry =>
+        {
+            entry.SetSlidingExpiration(CacheExpiration);
+            entry.SetAbsoluteExpiration(CacheExpiration);
+            return new HashSet<string>(StringComparer.Ordinal);
+        });
+
+        if (set == null)
+        {
+            return;
+        }
+
+        lock (set)
+        {
+            set.Add(cacheKey);
+        }
     }
 }
