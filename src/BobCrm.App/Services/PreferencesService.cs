@@ -40,7 +40,7 @@ public class PreferencesService
                 return _cache;
             }
 
-            var snapshot = await resp.Content.ReadFromJsonAsync<UserSettingsSnapshot>(JsonOptions);
+            var snapshot = await ApiResponseHelper.ReadDataAsync<UserSettingsSnapshot>(resp);
             if (snapshot is null)
             {
                 return _cache;
@@ -71,7 +71,7 @@ public class PreferencesService
                 return null;
             }
 
-            var snapshot = await resp.Content.ReadFromJsonAsync<UserSettingsSnapshot>(JsonOptions);
+            var snapshot = await ApiResponseHelper.ReadDataAsync<UserSettingsSnapshot>(resp);
             if (snapshot is null)
             {
                 return null;
@@ -97,7 +97,7 @@ public class PreferencesService
                 return null;
             }
 
-            return await resp.Content.ReadFromJsonAsync<SystemSettingsDto>(JsonOptions);
+            return await ApiResponseHelper.ReadDataAsync<SystemSettingsDto>(resp);
         }
         catch
         {
@@ -115,11 +115,24 @@ public class PreferencesService
                 return null;
             }
 
-            return await resp.Content.ReadFromJsonAsync<SystemSettingsDto>(JsonOptions);
+            return await ApiResponseHelper.ReadDataAsync<SystemSettingsDto>(resp);
         }
         catch
         {
             return null;
+        }
+    }
+
+    public async Task<bool> SendSmtpTestEmailAsync(string to)
+    {
+        try
+        {
+            var resp = await _auth.PostAsJsonWithRefreshAsync("/api/settings/system/smtp/test", new { to });
+            return resp.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
         }
     }
 

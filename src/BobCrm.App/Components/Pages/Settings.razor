@@ -7,6 +7,7 @@
 @inject ThemeState ThemeState
 @inject LayoutState Layout
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <PageTitle>@I18n.T("MENU_SETTINGS") · OneCRM</PageTitle>
 
@@ -193,6 +194,122 @@
                     </button>
                 </div>
             </section>
+
+            <section class="settings-card">
+                <div class="card-header">
+                    <div>
+                        <p class="eyebrow">@I18n.T("LBL_SYSTEM_SETTINGS")</p>
+                        <h3>@I18n.T("LBL_SMTP_SETTINGS")</h3>
+                        <p class="muted">@I18n.T("TXT_SMTP_SETTINGS_DESC")</p>
+                    </div>
+                    @if (!canEditSystem)
+                    {
+                        <span class="pill warn">@I18n.T("MSG_SETTINGS_ADMIN_ONLY")</span>
+                    }
+                </div>
+
+                @if (smtpMessage is not null)
+                {
+                    <div class="settings-alert @(smtpMessageSuccess ? "ok" : "error")">
+                        @smtpMessage
+                    </div>
+                }
+
+                <div class="settings-form">
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_HOST")</span>
+                        <input class="field-control"
+                               @bind="systemForm.SmtpHost"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_PORT")</span>
+                        <input class="field-control"
+                               type="number"
+                               min="1"
+                               max="65535"
+                               @bind="systemForm.SmtpPort"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_USERNAME")</span>
+                        <input class="field-control"
+                               @bind="systemForm.SmtpUsername"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_PASSWORD")</span>
+                        <input class="field-control"
+                               type="password"
+                               placeholder="@((systemForm.SmtpPasswordConfigured ? "********" : string.Empty))"
+                               @bind="systemForm.SmtpPassword"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label class="toggle">
+                        <span>@I18n.T("LBL_SMTP_ENABLE_SSL")</span>
+                        <input type="checkbox"
+                               @bind="systemForm.SmtpEnableSsl"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_FROM_ADDRESS")</span>
+                        <input class="field-control"
+                               @bind="systemForm.SmtpFromAddress"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+                    <label>
+                        <span>@I18n.T("LBL_SMTP_DISPLAY_NAME")</span>
+                        <input class="field-control"
+                               @bind="systemForm.SmtpDisplayName"
+                               disabled="@(!canEditSystem)" />
+                    </label>
+
+                    <button type="button"
+                            class="primary"
+                            disabled="@(!canEditSystem || savingSmtp)"
+                            @onclick="SaveSmtpAsync">
+                        @(savingSmtp ? I18n.T("LBL_SAVING") : I18n.T("BTN_SAVE_SETTINGS"))
+                    </button>
+
+                    <div style="display:flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                        <label style="flex: 1 1 260px;">
+                            <span>@I18n.T("LBL_TEST_EMAIL_TO")</span>
+                            <input class="field-control"
+                                   @bind="systemForm.SmtpTestTo"
+                                   disabled="@(!canEditSystem || savingSmtpTest)" />
+                        </label>
+                        <button type="button"
+                                class="primary"
+                                disabled="@(!canEditSystem || savingSmtpTest)"
+                                @onclick="SendSmtpTestAsync">
+                            @(savingSmtpTest ? I18n.T("LBL_SENDING") : I18n.T("BTN_SEND_TEST_EMAIL"))
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="settings-card">
+                <div class="card-header">
+                    <div>
+                        <p class="eyebrow">@I18n.T("LBL_SYSTEM_SETTINGS")</p>
+                        <h3>@I18n.T("TITLE_I18N_EDITOR")</h3>
+                        <p class="muted">@I18n.T("TXT_I18N_EDITOR_DESC")</p>
+                    </div>
+                    @if (!canEditSystem)
+                    {
+                        <span class="pill warn">@I18n.T("MSG_SETTINGS_ADMIN_ONLY")</span>
+                    }
+                </div>
+
+                <div class="settings-form">
+                    <button type="button"
+                            class="primary"
+                            disabled="@(!canEditSystem)"
+                            @onclick="OpenI18nEditor">
+                        @I18n.T("BTN_VIEW")
+                    </button>
+                </div>
+            </section>
         </div>
     }
 </div>
@@ -338,11 +455,15 @@
     private bool loading = true;
     private bool savingSystem;
     private bool savingUser;
+    private bool savingSmtp;
+    private bool savingSmtpTest;
     private bool canEditSystem = true;
     private string? systemMessage;
     private bool systemMessageSuccess;
     private string? userMessage;
     private bool userMessageSuccess;
+    private string? smtpMessage;
+    private bool smtpMessageSuccess;
 
     private readonly ThemeOption[] ThemeOptions =
     [
@@ -516,6 +637,100 @@
         }
     }
 
+    private async Task SaveSmtpAsync()
+    {
+        if (!canEditSystem)
+        {
+            smtpMessageSuccess = false;
+            smtpMessage = I18n.T("MSG_SETTINGS_ADMIN_ONLY");
+            return;
+        }
+
+        savingSmtp = true;
+        smtpMessage = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var update = new UpdateSystemSettingsRequest
+            {
+                SmtpHost = systemForm.SmtpHost,
+                SmtpPort = systemForm.SmtpPort,
+                SmtpUsername = systemForm.SmtpUsername,
+                SmtpPassword = string.IsNullOrWhiteSpace(systemForm.SmtpPassword) ? null : systemForm.SmtpPassword,
+                SmtpEnableSsl = systemForm.SmtpEnableSsl,
+                SmtpFromAddress = systemForm.SmtpFromAddress,
+                SmtpDisplayName = systemForm.SmtpDisplayName
+            };
+
+            var updated = await PrefsService.SaveSystemSettingsAsync(update);
+            if (updated is null)
+            {
+                smtpMessageSuccess = false;
+                smtpMessage = I18n.T("MSG_SETTINGS_FAILED");
+            }
+            else
+            {
+                systemForm = MapSystem(updated);
+                systemForm.SmtpPassword = string.Empty;
+                smtpMessageSuccess = true;
+                smtpMessage = I18n.T("MSG_SETTINGS_SAVED");
+            }
+        }
+        catch
+        {
+            smtpMessageSuccess = false;
+            smtpMessage = I18n.T("MSG_SETTINGS_FAILED");
+        }
+        finally
+        {
+            savingSmtp = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SendSmtpTestAsync()
+    {
+        if (!canEditSystem)
+        {
+            smtpMessageSuccess = false;
+            smtpMessage = I18n.T("MSG_SETTINGS_ADMIN_ONLY");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(systemForm.SmtpTestTo))
+        {
+            smtpMessageSuccess = false;
+            smtpMessage = I18n.T("MSG_TEST_EMAIL_REQUIRED");
+            return;
+        }
+
+        savingSmtpTest = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var ok = await PrefsService.SendSmtpTestEmailAsync(systemForm.SmtpTestTo.Trim());
+            smtpMessageSuccess = ok;
+            smtpMessage = ok ? I18n.T("MSG_TEST_EMAIL_SENT") : I18n.T("MSG_TEST_EMAIL_FAILED");
+        }
+        catch
+        {
+            smtpMessageSuccess = false;
+            smtpMessage = I18n.T("MSG_TEST_EMAIL_FAILED");
+        }
+        finally
+        {
+            savingSmtpTest = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OpenI18nEditor()
+    {
+        Nav.NavigateTo("/settings/i18n");
+    }
+
     private void ApplyUserSnapshot(UserSettingsSnapshot snapshot)
     {
         var source = snapshot.Overrides ?? snapshot.Effective;
@@ -539,7 +754,14 @@
             DefaultHomeRoute = dto.DefaultHomeRoute,
             DefaultNavMode = PreferencesService.ToLayoutMode(dto.DefaultNavDisplayMode),
             TimeZoneId = dto.TimeZoneId,
-            AllowSelfRegistration = dto.AllowSelfRegistration
+            AllowSelfRegistration = dto.AllowSelfRegistration,
+            SmtpHost = dto.SmtpHost,
+            SmtpPort = dto.SmtpPort,
+            SmtpUsername = dto.SmtpUsername,
+            SmtpEnableSsl = dto.SmtpEnableSsl,
+            SmtpFromAddress = dto.SmtpFromAddress,
+            SmtpDisplayName = dto.SmtpDisplayName,
+            SmtpPasswordConfigured = dto.SmtpPasswordConfigured
         };
 
     private record ThemeOption(string Value, string LabelKey);
@@ -557,6 +779,16 @@
         public NavDisplayMode DefaultNavMode { get; set; } = NavDisplayMode.IconText;
         public string TimeZoneId { get; set; } = "Asia/Tokyo";
         public bool AllowSelfRegistration { get; set; }
+
+        public string? SmtpHost { get; set; }
+        public int SmtpPort { get; set; } = 25;
+        public string? SmtpUsername { get; set; }
+        public string SmtpPassword { get; set; } = string.Empty;
+        public bool SmtpEnableSsl { get; set; }
+        public string? SmtpFromAddress { get; set; }
+        public string? SmtpDisplayName { get; set; }
+        public bool SmtpPasswordConfigured { get; set; }
+        public string SmtpTestTo { get; set; } = string.Empty;
     }
 
     private class UserSettingsModel

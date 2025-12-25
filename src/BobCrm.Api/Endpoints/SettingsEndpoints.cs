@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services.Settings;
+using BobCrm.Api.Abstractions;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -27,7 +28,14 @@ public static class SettingsEndpoints
                 system.DefaultHomeRoute,
                 system.DefaultNavMode,
                 system.TimeZoneId,
-                system.AllowSelfRegistration)));
+                system.AllowSelfRegistration,
+                system.SmtpHost,
+                system.SmtpPort,
+                system.SmtpUsername,
+                system.SmtpEnableSsl,
+                system.SmtpFromAddress,
+                system.SmtpDisplayName,
+                !string.IsNullOrWhiteSpace(system.SmtpPasswordEncrypted))));
         })
         .WithName("GetSystemSettings")
         .WithSummary("Get system settings")
@@ -44,11 +52,49 @@ public static class SettingsEndpoints
                 updated.DefaultHomeRoute,
                 updated.DefaultNavMode,
                 updated.TimeZoneId,
-                updated.AllowSelfRegistration)));
+                updated.AllowSelfRegistration,
+                updated.SmtpHost,
+                updated.SmtpPort,
+                updated.SmtpUsername,
+                updated.SmtpEnableSsl,
+                updated.SmtpFromAddress,
+                updated.SmtpDisplayName,
+                !string.IsNullOrWhiteSpace(updated.SmtpPasswordEncrypted))));
         })
         .WithName("UpdateSystemSettings")
         .WithSummary("Update system settings")
         .Produces<SuccessResponse<SystemSettingsDto>>(StatusCodes.Status200OK);
+
+        systemGroup.MapPost("/smtp/test", async (
+            SendTestEmailRequest request,
+            SettingsService svc,
+            IEmailSender email) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.To))
+            {
+                return Results.BadRequest(new ErrorResponse("Recipient is required", "SMTP_TEST_RECIPIENT_REQUIRED"));
+            }
+
+            var system = await svc.GetSystemSettingsAsync();
+            if (string.IsNullOrWhiteSpace(system.SmtpHost) || string.IsNullOrWhiteSpace(system.SmtpFromAddress))
+            {
+                return Results.BadRequest(new ErrorResponse("SMTP not configured", "SMTP_NOT_CONFIGURED"));
+            }
+
+            try
+            {
+                await email.SendAsync(request.To.Trim(), "SMTP Test", $"This is a test email from {system.CompanyName}.");
+                return Results.Ok(new SuccessResponse("Sent"));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new ErrorResponse(ex.Message, "SMTP_TEST_FAILED"));
+            }
+        })
+        .WithName("SendSmtpTestEmail")
+        .WithSummary("Send a test email using current SMTP settings")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         var userGroup = settingsGroup.MapGroup("/user")
             .RequireAuthorization();
