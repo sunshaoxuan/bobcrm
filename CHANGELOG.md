@@ -9,6 +9,15 @@
 
 ## [未发布] - 进行中
 
+---
+
+## [0.9.5] - 2025-12-25
+
+### Added
+- **System Governance**：审计日志管理页（`/system/audit-logs`）、后台任务监控页（`/system/jobs`）。
+- **Advanced Settings**：I18n 资源编辑器、SMTP & 通知设置（支持保存与测试邮件，密码不回传明文）。
+- **Business Core**：Customer 360（主从聚合视图/Related List）、Lookup 显示优化（外键显示友好名称，批量解析避免 N+1）。
+
 ### Fixed
 - **模板运行链路修复** (PLAN-06):
   - 统一模板 JSON 格式：所有环节使用数组式 Widget JSON（含 children / layout），`WidgetJsonConverter` 支持 `WidgetRegistry` 和递归反序列化。

@@ -1,6 +1,6 @@
 {
   "name": "bobcrm",
-  "version": "1.0.0",
+  "version": "0.9.5",
   "description": "基于 .NET 8 的 Blazor Server 客户信息管理系统（CRM）。本仓库聚焦于最小依赖、可快速验证与持续交付。",
   "main": "index.js",
   "directories": {
