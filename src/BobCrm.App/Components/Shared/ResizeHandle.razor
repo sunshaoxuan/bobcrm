@@ -1,16 +1,31 @@
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="resize-handle-corner"
-     draggable="false"
-     @onmousedown="OnMouseDown"
-     @onmousedown:stopPropagation
-     @onmousedown:preventDefault
-     @ondragstart:preventDefault="true"
-     style="position:absolute; right:2px; bottom:2px; width:10px; height:10px; background:#1890ff; border-radius:2px; cursor:nwse-resize; z-index:30; box-shadow:0 2px 6px rgba(24,144,255,0.35);">
-</div>
+@foreach (var dir in new[] { "nw", "n", "ne", "e", "se", "s", "sw", "w" })
+{
+    <div class="resize-handle resize-handle-@dir"
+         draggable="false"
+         @onmousedown="@(e => OnMouseDown.InvokeAsync((dir, e)))"
+         @onmousedown:stopPropagation
+         @onmousedown:preventDefault
+         @ondragstart:preventDefault="true"
+         style="@GetHandleStyle(dir)">
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired]
-    public EventCallback<MouseEventArgs> OnMouseDown { get; set; }
-}
+    public EventCallback<(string Direction, MouseEventArgs Args)> OnMouseDown { get; set; }
 
+    private static string GetHandleStyle(string direction) => direction switch
+    {
+        "nw" => "top:-3px; left:-3px; width:10px; height:10px; cursor:nwse-resize;",
+        "n" => "top:-3px; left:50%; transform:translateX(-50%); width:20px; height:6px; cursor:ns-resize;",
+        "ne" => "top:-3px; right:-3px; width:10px; height:10px; cursor:nesw-resize;",
+        "e" => "top:50%; right:-3px; transform:translateY(-50%); width:6px; height:20px; cursor:ew-resize;",
+        "se" => "bottom:-3px; right:-3px; width:10px; height:10px; cursor:nwse-resize;",
+        "s" => "bottom:-3px; left:50%; transform:translateX(-50%); width:20px; height:6px; cursor:ns-resize;",
+        "sw" => "bottom:-3px; left:-3px; width:10px; height:10px; cursor:nesw-resize;",
+        "w" => "top:50%; left:-3px; transform:translateY(-50%); width:6px; height:20px; cursor:ew-resize;",
+        _ => ""
+    };
+}

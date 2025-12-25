@@ -20,7 +20,7 @@ class DragManager {
    * @param {string} widgetId - 控件ID
    * @param {number} startX - 起始X坐标
    * @param {number} startY - 起始Y坐标
-   * @param {string} direction - 方向: 'horizontal', 'vertical', 'both'
+   * @param {string} direction - 方向: 'nw','n','ne','e','se','s','sw','w'（兼容: 'horizontal','vertical','both'）
    */
   startResize(widgetId, startX, startY, direction = 'horizontal') {
     if (this.activeSession) {
@@ -44,15 +44,32 @@ class DragManager {
 
     // 设置样式
     document.body.style.userSelect = 'none';
-    if (direction === 'horizontal') {
-      document.body.style.cursor = 'ew-resize';
-    } else if (direction === 'vertical') {
-      document.body.style.cursor = 'ns-resize';
-    } else {
-      document.body.style.cursor = 'nwse-resize';
-    }
+    document.body.style.cursor = this._getResizeCursor(direction);
 
     console.log('[DragManager] Resize session started:', widgetId, direction);
+  }
+
+  _getResizeCursor(direction) {
+    switch ((direction || '').toLowerCase()) {
+      case 'nw':
+      case 'se':
+        return 'nwse-resize';
+      case 'ne':
+      case 'sw':
+        return 'nesw-resize';
+      case 'n':
+      case 's':
+      case 'vertical':
+        return 'ns-resize';
+      case 'e':
+      case 'w':
+      case 'horizontal':
+        return 'ew-resize';
+      case 'both':
+        return 'nwse-resize';
+      default:
+        return 'nwse-resize';
+    }
   }
 
   /**

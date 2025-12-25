@@ -1,0 +1,30 @@
+@using AntDesign
+
+@if (IsVisible)
+{
+    <div class="ghost-placeholder @(IsInserting ? "inserting" : "")"
+         style="@BuildStyle()">
+        <div class="ghost-placeholder-inner">
+            <Icon Type="@IconType.Outline.PlusCircle" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public double Width { get; set; }
+    [Parameter] public double Height { get; set; }
+    [Parameter] public bool IsInserting { get; set; }
+
+    private string BuildStyle()
+    {
+        var left = X <= 0 ? "0" : $"{X}px";
+        var top = Y <= 0 ? "0" : $"{Y}px";
+        var width = Width <= 0 ? "100%" : $"{Width}px";
+        var height = Height <= 0 ? "100%" : $"{Height}px";
+        return $"left:{left}; top:{top}; width:{width}; height:{height};";
+    }
+}
+

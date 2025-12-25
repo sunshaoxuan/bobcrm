@@ -302,6 +302,10 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     // 调整大小时的初始状态（用于基于总增量计算）
     private int? _resizeStartWidth;
     private int? _resizeStartHeight;
+    private int? _resizeStartX;
+    private int? _resizeStartY;
+    private int? _resizeStartW;
+    private int? _resizeStartH;
 
     /// <summary>
     /// 开始调整大小（保存初始状态）
@@ -310,6 +314,10 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
     {
         _resizeStartWidth = Width;
         _resizeStartHeight = Height;
+        _resizeStartX = X;
+        _resizeStartY = Y;
+        _resizeStartW = W;
+        _resizeStartH = H;
     }
 
     /// <summary>
@@ -327,43 +335,86 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         if (!_resizeStartWidth.HasValue)
         {
             // 如果没有调用OnResizeStart，使用当前值作为起始值
-            _resizeStartWidth = Width;
-            _resizeStartHeight = Height;
+            OnResizeStart();
         }
 
-        if (direction == "horizontal" || direction == "both")
+        var dir = (direction ?? string.Empty).Trim().ToLowerInvariant();
+        dir = dir switch
+        {
+            "horizontal" => "e",
+            "vertical" => "s",
+            "both" => "se",
+            _ => dir
+        };
+
+        var affectsWidth = dir.Contains('e') || dir.Contains('w');
+        var affectsHeight = dir.Contains('n') || dir.Contains('s');
+        var fromWest = dir.Contains('w');
+        var fromNorth = dir.Contains('n');
+
+        var widthDelta = fromWest ? -totalDeltaX : totalDeltaX;
+        var heightDelta = fromNorth ? -totalDeltaY : totalDeltaY;
+
+        const int minWidthPx = 50;
+        const int minHeightPx = 30;
+
+        if (Layout.Mode == LayoutMode.Absolute && _resizeStartW.HasValue && _resizeStartH.HasValue && _resizeStartX.HasValue && _resizeStartY.HasValue)
+        {
+            var startX = _resizeStartX.Value;
+            var startY = _resizeStartY.Value;
+            var startW = _resizeStartW.Value;
+            var startH = _resizeStartH.Value;
+
+            var rightEdge = startX + startW;
+            var bottomEdge = startY + startH;
+
+            var newW = affectsWidth ? startW + widthDelta : startW;
+            var newH = affectsHeight ? startH + heightDelta : startH;
+
+            newW = Math.Max(minWidthPx, newW);
+            newH = Math.Max(minHeightPx, newH);
+
+            if (affectsWidth)
+            {
+                W = newW;
+                if (fromWest)
+                {
+                    X = rightEdge - newW;
+                }
+            }
+
+            if (affectsHeight)
+            {
+                H = newH;
+                if (fromNorth)
+                {
+                    Y = bottomEdge - newH;
+                }
+            }
+
+            return;
+        }
+
+        if (affectsWidth)
         {
             if (WidthUnit == "%")
             {
-                // 百分比模式：将像素总增量转换为百分比增量
-                if (containerWidth > 0)
-                {
-                    double deltaPercent = (totalDeltaX / containerWidth) * 100;
-                    int newWidth = (int)Math.Round(_resizeStartWidth.Value + deltaPercent);
-                    Width = Math.Max(8, Math.Min(100, newWidth));
-                }
-                else
-                {
-                    // 容器宽度为0时的保底处理：假设1200px作为基准
-                    double deltaPercent = (totalDeltaX / 1200.0) * 100;
-                    int newWidth = (int)Math.Round(_resizeStartWidth.Value + deltaPercent);
-                    Width = Math.Max(8, Math.Min(100, newWidth));
-                    System.Diagnostics.Debug.WriteLine($"[DraggableWidget] Container width is 0, using fallback 1200px. Width: {_resizeStartWidth.Value}% -> {Width}%");
-                }
+                var widthBasis = containerWidth > 0 ? containerWidth : 1200.0;
+                var minPercent = (minWidthPx / widthBasis) * 100.0;
+                var deltaPercent = (widthDelta / widthBasis) * 100.0;
+                var newWidth = (int)Math.Round(_resizeStartWidth!.Value + deltaPercent);
+                var clamped = (int)Math.Round(Math.Max(minPercent, Math.Min(100.0, newWidth)));
+                Width = Math.Max(1, clamped);
             }
             else
             {
-                // 像素模式：使用总增量
-                Width = Math.Max(100, _resizeStartWidth.Value + totalDeltaX);
+                Width = Math.Max(minWidthPx, _resizeStartWidth!.Value + widthDelta);
             }
         }
 
-        if (direction == "vertical" || direction == "both")
+        if (affectsHeight && HeightUnit == "px" && _resizeStartHeight.HasValue)
         {
-            if (HeightUnit == "px" && _resizeStartHeight.HasValue)
-            {
-                Height = Math.Max(40, _resizeStartHeight.Value + totalDeltaY);
-            }
+            Height = Math.Max(minHeightPx, _resizeStartHeight.Value + heightDelta);
         }
     }
 
@@ -376,5 +427,9 @@ public abstract class DraggableWidget : IResizable, IFlowSized, IAbsolutePositio
         // 清除初始状态
         _resizeStartWidth = null;
         _resizeStartHeight = null;
+        _resizeStartX = null;
+        _resizeStartY = null;
+        _resizeStartW = null;
+        _resizeStartH = null;
     }
 }

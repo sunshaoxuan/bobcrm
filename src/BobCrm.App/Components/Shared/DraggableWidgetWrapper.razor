@@ -15,7 +15,6 @@
 @code {
     [Parameter, EditorRequired] public DraggableWidget Widget { get; set; } = default!;
     [Parameter] public bool EnableResize { get; set; } = true;
-    [Parameter] public string ResizeDirection { get; set; } = "both";
     [Parameter] public string? ContainerWidthSelector { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback OnWidgetChanged { get; set; }
@@ -35,11 +34,15 @@
         _dotNetRef = null;
     }
 
-    private async Task StartResizeAsync(MouseEventArgs e)
+    private async Task StartResizeAsync((string Direction, MouseEventArgs Args) resize)
     {
+        var direction = (resize.Direction ?? string.Empty).Trim().ToLowerInvariant();
+        var e = resize.Args;
+
         Widget.OnResizeStart();
 
-        if (Widget.HeightUnit != "px")
+        var vertical = direction.Contains('n') || direction.Contains('s') || direction is "vertical" or "both";
+        if (Widget.Layout.Mode != BobCrm.App.Models.Widgets.LayoutMode.Absolute && vertical && Widget.HeightUnit != "px")
         {
             Widget.HeightUnit = "px";
             if (Widget.Height <= 0)
@@ -62,7 +65,7 @@
         }
 
         await JS.InvokeVoidAsync("bobcrm.dragManager.registerCallback", _dotNetRef);
-        await JS.InvokeVoidAsync("bobcrm.dragManager.startResize", Widget.Id, (int)e.ClientX, (int)e.ClientY, ResizeDirection);
+        await JS.InvokeVoidAsync("bobcrm.dragManager.startResize", Widget.Id, (int)e.ClientX, (int)e.ClientY, direction);
     }
 
     [JSInvokable]

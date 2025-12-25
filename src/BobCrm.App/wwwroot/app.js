@@ -66,7 +66,7 @@ window.bobcrm = {
       this._designerDotNetRef = dotnetRef;
       this._designerShortcutHandler = (e) => {
         try {
-          if (!e || !e.ctrlKey) return;
+          if (!e || !(e.ctrlKey || e.metaKey)) return;
 
           const target = e.target;
           const tag = target && target.tagName ? String(target.tagName).toLowerCase() : '';
@@ -74,18 +74,21 @@ window.bobcrm = {
           if (isEditable) return;
 
           const key = (e.key || '').toLowerCase();
-          if (key === 'z') {
+          const invoke = (methodName, fallbackAction) => {
+            if (!this._designerDotNetRef || !this._designerDotNetRef.invokeMethodAsync) return;
+            this._designerDotNetRef.invokeMethodAsync(methodName).catch(() => {
+              this._designerDotNetRef.invokeMethodAsync('OnDesignerShortcut', fallbackAction);
+            });
+          };
+
+          if (key === 'z' && !e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
-            if (this._designerDotNetRef && this._designerDotNetRef.invokeMethodAsync) {
-              this._designerDotNetRef.invokeMethodAsync('OnDesignerShortcut', 'undo');
-            }
-          } else if (key === 'y') {
+            invoke('OnUndo', 'undo');
+          } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
             e.preventDefault();
             e.stopPropagation();
-            if (this._designerDotNetRef && this._designerDotNetRef.invokeMethodAsync) {
-              this._designerDotNetRef.invokeMethodAsync('OnDesignerShortcut', 'redo');
-            }
+            invoke('OnRedo', 'redo');
           }
         } catch (_) { }
       };

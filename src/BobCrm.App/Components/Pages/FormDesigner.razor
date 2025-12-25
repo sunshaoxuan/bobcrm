@@ -2,6 +2,7 @@
 @page "/designer/{TemplateId:int}"
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using System.Threading
 @using AntDesign
 @using BobCrm.App.Models
 @using BobCrm.App.Models.Widgets
@@ -60,6 +61,16 @@
                         </div>
                     </div>
                     <div class="designer-header-actions">
+                        <Tooltip Title="撤销 (Ctrl+Z)">
+                            <Button Icon="@IconType.Outline.Undo"
+                                    Disabled="@(!(_stateStore?.CanUndo ?? false))"
+                                    OnClick="OnUndo" />
+                        </Tooltip>
+                        <Tooltip Title="重做 (Ctrl+Y)">
+                            <Button Icon="@IconType.Outline.Redo"
+                                    Disabled="@(!(_stateStore?.CanRedo ?? false))"
+                                    OnClick="OnRedo" />
+                        </Tooltip>
                         <Button OnClick="NavigateBack">@I18n.T("BTN_CANCEL")</Button>
                         <Button Type="@ButtonType.Primary" Loading="@_saving" OnClick="SaveAsync" Icon="@IconType.Outline.Save">
                             @I18n.T("BTN_SAVE")
@@ -203,6 +214,7 @@
     };
     private DesignerStateStore? _stateStore;
     private DotNetObjectReference<FormDesigner>? _shortcutDotNetRef;
+    private CancellationTokenSource? _snapshotDebounceCts;
     private List<DraggableWidget> _widgets = new();
     private List<EntityDefinitionDto> _entities = new();
     private DraggableWidget? _selectedWidget;
@@ -432,24 +444,31 @@
 
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", isActive ? "designer-drop-zone active" : "designer-drop-zone");
-        builder.AddAttribute(2, "ondragenter",
-            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
-        builder.AddAttribute(3, "ondragover",
-            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
-        builder.AddEventPreventDefaultAttribute(4, "ondragover", true);
-
-        builder.AddAttribute(5, "ondrop",
-            EventCallback.Factory.Create<DragEventArgs>(this, e => OnDrop(containerId, insertIndex, e)));
-        builder.AddEventPreventDefaultAttribute(6, "ondrop", true);
-        builder.AddEventStopPropagationAttribute(7, "ondrop", true);
-
         if (isActive)
         {
-            builder.OpenElement(8, "div");
-            builder.AddAttribute(9, "class", "designer-ghost-placeholder");
-            builder.AddContent(10, " ");
-            builder.CloseElement();
+            builder.AddAttribute(2, "style", $"--ghost-height:{GetGhostPlaceholderHeight()}px;");
         }
+        builder.AddAttribute(3, "ondragenter",
+            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
+        builder.AddAttribute(4, "ondragover",
+            EventCallback.Factory.Create<DragEventArgs>(this, _ => SetDragHover(containerId, insertIndex)));
+        builder.AddEventPreventDefaultAttribute(5, "ondragover", true);
+
+        builder.AddAttribute(6, "ondrop",
+            EventCallback.Factory.Create<DragEventArgs>(this, e => OnDrop(containerId, insertIndex, e)));
+        builder.AddEventPreventDefaultAttribute(7, "ondrop", true);
+        builder.AddEventStopPropagationAttribute(8, "ondrop", true);
+
+        builder.OpenElement(9, "div");
+        builder.AddAttribute(10, "class", "designer-ghost-placeholder");
+        builder.OpenComponent<GhostPlaceholder>(11);
+        builder.AddAttribute(12, "IsVisible", isActive);
+        builder.AddAttribute(13, "X", 0d);
+        builder.AddAttribute(14, "Y", 0d);
+        builder.AddAttribute(15, "Width", 0d);
+        builder.AddAttribute(16, "Height", 0d);
+        builder.CloseComponent();
+        builder.CloseElement();
 
         builder.CloseElement();
     };
@@ -460,7 +479,7 @@
         var style = widget.Layout.GetCssStyle();
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", $"card {(isSelected ? "selected-widget" : string.Empty)}");
-        builder.AddAttribute(2, "style", $"{style}; position:relative; padding:8px; border:1px solid {(isSelected ? "#1890ff" : "#d9d9d9")}; border-radius:8px; background:#fff;");
+        builder.AddAttribute(2, "style", $"{style}; padding:8px; border:1px solid {(isSelected ? "#1890ff" : "#d9d9d9")}; border-radius:8px; background:#fff;");
         builder.AddAttribute(3, "draggable", true);
         builder.AddAttribute(4, "data-widget-id", widget.Id);
         builder.AddAttribute(5, "ondragstart",
@@ -485,11 +504,10 @@
         builder.OpenComponent<DraggableWidgetWrapper>(20);
         builder.AddAttribute(21, "Widget", widget);
         builder.AddAttribute(22, "EnableResize", isSelected);
-        builder.AddAttribute(23, "ResizeDirection", "both");
-        builder.AddAttribute(24, "ContainerWidthSelector", $"[data-container-id='{parentContainerId}']");
-        builder.AddAttribute(25, "OnWidgetChanged", EventCallback.Factory.Create(this, StateHasChanged));
-        builder.AddAttribute(26, "OnResizeCompleted", EventCallback.Factory.Create(this, SaveSnapshot));
-        builder.AddAttribute(27, "ChildContent", (RenderFragment)(b =>
+        builder.AddAttribute(23, "ContainerWidthSelector", $"[data-container-id='{parentContainerId}']");
+        builder.AddAttribute(24, "OnWidgetChanged", EventCallback.Factory.Create(this, StateHasChanged));
+        builder.AddAttribute(25, "OnResizeCompleted", EventCallback.Factory.Create(this, SaveSnapshot));
+        builder.AddAttribute(26, "ChildContent", (RenderFragment)(b =>
         {
             b.OpenElement(0, "div");
             b.AddAttribute(1, "style", "pointer-events:none;");
@@ -652,7 +670,7 @@
             }
         }
 
-        _stateStore?.SaveSnapshot(_widgets);
+        SaveSnapshot();
         ClearDragState();
         await InvokeAsync(StateHasChanged);
     }
@@ -795,39 +813,61 @@
 
     private void SaveSnapshot()
     {
+        _snapshotDebounceCts?.Cancel();
         _stateStore?.SaveSnapshot(_widgets);
     }
 
     [JSInvokable]
     public Task OnDesignerShortcut(string action)
     {
-        if (_stateStore is null)
+        if (string.Equals(action, "undo", StringComparison.OrdinalIgnoreCase))
+        {
+            return OnUndo();
+        }
+        else if (string.Equals(action, "redo", StringComparison.OrdinalIgnoreCase))
+        {
+            return OnRedo();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task OnUndo()
+    {
+        if (_stateStore is null || !_stateStore.CanUndo)
         {
             return Task.CompletedTask;
         }
 
-        if (string.Equals(action, "undo", StringComparison.OrdinalIgnoreCase))
+        var snapshot = _stateStore.Undo(_widgets);
+        if (snapshot == null)
         {
-            var snapshot = _stateStore.Undo(_widgets);
-            if (snapshot != null)
-            {
-                _widgets = snapshot;
-                _selectedWidget = null;
-                return InvokeAsync(StateHasChanged);
-            }
-        }
-        else if (string.Equals(action, "redo", StringComparison.OrdinalIgnoreCase))
-        {
-            var snapshot = _stateStore.Redo(_widgets);
-            if (snapshot != null)
-            {
-                _widgets = snapshot;
-                _selectedWidget = null;
-                return InvokeAsync(StateHasChanged);
-            }
+            return Task.CompletedTask;
         }
 
-        return Task.CompletedTask;
+        _widgets = snapshot;
+        _selectedWidget = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnRedo()
+    {
+        if (_stateStore is null || !_stateStore.CanRedo)
+        {
+            return Task.CompletedTask;
+        }
+
+        var snapshot = _stateStore.Redo(_widgets);
+        if (snapshot == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _widgets = snapshot;
+        _selectedWidget = null;
+        return InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -843,6 +883,10 @@
 
         _shortcutDotNetRef?.Dispose();
         _shortcutDotNetRef = null;
+
+        _snapshotDebounceCts?.Cancel();
+        _snapshotDebounceCts?.Dispose();
+        _snapshotDebounceCts = null;
     }
 
     private void RemoveWidget(DraggableWidget target)
@@ -933,8 +977,61 @@
         _dragHoverIndex = 0;
     }
 
+    private void ScheduleSnapshot()
+    {
+        if (_stateStore is null)
+        {
+            return;
+        }
+
+        _snapshotDebounceCts?.Cancel();
+        _snapshotDebounceCts?.Dispose();
+        _snapshotDebounceCts = new CancellationTokenSource();
+
+        var token = _snapshotDebounceCts.Token;
+        _ = DebouncedSnapshotAsync(token);
+    }
+
+    private async Task DebouncedSnapshotAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(300, token);
+        }
+        catch
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await InvokeAsync(() => _stateStore?.SaveSnapshot(_widgets));
+    }
+
+    private int GetGhostPlaceholderHeight()
+    {
+        if (_draggingWidget != null)
+        {
+            if (_draggingWidget.Layout.Mode == BobCrm.App.Models.Widgets.LayoutMode.Absolute)
+            {
+                return Math.Max(30, _draggingWidget.H);
+            }
+
+            if (_draggingWidget.HeightUnit == "px")
+            {
+                return Math.Max(30, _draggingWidget.Height);
+            }
+        }
+
+        return 48;
+    }
+
     private void OnPropertiesChanged()
     {
+        ScheduleSnapshot();
         StateHasChanged();
     }
 
