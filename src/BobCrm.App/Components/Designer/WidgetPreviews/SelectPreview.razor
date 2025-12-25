@@ -1,11 +1,11 @@
 @* Select/Listbox preview component *@
 @inject BobCrm.App.Services.I18nService I18n
+@using BobCrm.App.Models.Widgets
 <div style="height:32px; background:#fff; border:1px solid #e0e0e0; border-radius:2px; display:flex; align-items:center; padding:0 8px; justify-content:space-between">
     <span style="color:#ccc; font-size:11px">@I18n.T("PREVIEW_PLACEHOLDER")</span>
     <Icon Type="@IconType.Outline.Down" Style="color:#999; font-size:10px" />
 </div>
 
 @code {
-    [Parameter] public object? Widget { get; set; }
-    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+    [Parameter, EditorRequired] public SelectWidget Widget { get; set; } = default!;
 }

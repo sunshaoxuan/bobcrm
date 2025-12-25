@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -30,6 +27,7 @@ public class RadioWidget : TextWidget
     public string Direction { get; set; } = "horizontal";
 
     public override Type? PreviewComponentType => typeof(BobCrm.App.Components.Designer.WidgetPreviews.RadioPreview);
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Runtime.RadioWidgetComponent);
 
     public override List<BobCrm.App.Models.Designer.WidgetPropertyMetadata> GetPropertyMetadata()
     {
@@ -53,55 +51,7 @@ public class RadioWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-            var flexDirection = Direction == "vertical" ? "column" : "row";
-            var radioGroupName = $"radio_{Id}";
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-
-            builder.OpenElement(4, "div");
-            builder.AddAttribute(5, "style", $"display:flex; flex-direction:{flexDirection}; gap:8px; flex-wrap:wrap;");
-
-            foreach (var item in Items)
-            {
-                builder.OpenElement(6, "label");
-                builder.AddAttribute(7, "style", "display:flex; align-items:center; gap:4px; cursor:pointer;");
-                builder.OpenElement(8, "input");
-                builder.AddAttribute(9, "type", "radio");
-                builder.AddAttribute(10, "name", radioGroupName);
-                builder.AddAttribute(11, "value", item.Value);
-                builder.AddAttribute(12, "checked", item.Value == value);
-                if (context.ValueSetter != null)
-                {
-                    builder.AddAttribute(13, "onchange",
-                        callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                            e => context.ValueSetter!(e.Value?.ToString() ?? "")));
-                }
-                builder.CloseElement(); // input
-                builder.OpenElement(14, "span");
-                builder.AddContent(15, item.Label ?? item.Value);
-                builder.CloseElement(); // span
-                builder.CloseElement(); // label
-            }
-
-            builder.CloseElement(); // radio container
-            builder.CloseElement(); // outer container
-        }
-        else
-        {
-            var displayValue = Items.FirstOrDefault(i => i.Value == value)?.Label ?? value;
-            RenderReadOnlyValue(context, displayValue);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

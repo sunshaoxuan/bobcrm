@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -54,92 +51,7 @@ public class CheckboxWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-        var selectedValues = value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim()).ToHashSet();
-
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-            var flexDirection = Direction == "vertical" ? "column" : "row";
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-
-            builder.OpenElement(4, "div");
-            builder.AddAttribute(5, "style", $"display:flex; flex-direction:{flexDirection}; gap:8px; flex-wrap:wrap;");
-
-            if (Items.Count == 0)
-            {
-                // Single checkbox
-                builder.OpenElement(6, "label");
-                builder.AddAttribute(7, "style", "display:flex; align-items:center; gap:4px; cursor:pointer;");
-                builder.OpenElement(8, "input");
-                builder.AddAttribute(9, "type", "checkbox");
-                builder.AddAttribute(10, "checked", !string.IsNullOrWhiteSpace(value));
-                if (context.ValueSetter != null)
-                {
-                    builder.AddAttribute(11, "onchange",
-                        callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                            e => context.ValueSetter!(e.Value?.ToString() == "true" ? "true" : "")));
-                }
-                builder.CloseElement(); // input
-                builder.OpenElement(12, "span");
-                builder.AddContent(13, Label);
-                builder.CloseElement(); // span
-                builder.CloseElement(); // label
-            }
-            else
-            {
-                // Checkbox group
-                foreach (var item in Items)
-                {
-                    builder.OpenElement(14, "label");
-                    builder.AddAttribute(15, "style", "display:flex; align-items:center; gap:4px; cursor:pointer;");
-                    builder.OpenElement(16, "input");
-                    builder.AddAttribute(17, "type", "checkbox");
-                    builder.AddAttribute(18, "value", item.Value);
-                    builder.AddAttribute(19, "checked", selectedValues.Contains(item.Value));
-                    if (context.ValueSetter != null)
-                    {
-                        builder.AddAttribute(20, "onchange",
-                            callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                                e =>
-                                {
-                                    var isChecked = e.Value?.ToString() == "true";
-                                    if (isChecked)
-                                    {
-                                        selectedValues.Add(item.Value);
-                                    }
-                                    else
-                                    {
-                                        selectedValues.Remove(item.Value);
-                                    }
-                                    return context.ValueSetter!(string.Join(",", selectedValues));
-                                }));
-                    }
-                    builder.CloseElement(); // input
-                    builder.OpenElement(21, "span");
-                    builder.AddContent(22, item.Label ?? item.Value);
-                    builder.CloseElement(); // span
-                    builder.CloseElement(); // label
-                }
-            }
-
-            builder.CloseElement(); // checkbox container
-            builder.CloseElement(); // outer container
-        }
-        else
-        {
-            var displayValue = Items.Count > 0
-                ? string.Join(", ", selectedValues.Select(v => Items.FirstOrDefault(i => i.Value == v)?.Label ?? v))
-                : (string.IsNullOrWhiteSpace(value) ? "No" : "Yes");
-            RenderReadOnlyValue(context, displayValue);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

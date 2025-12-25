@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using AntDesign;
 using BobCrm.App.Services.Widgets;
 
 namespace BobCrm.App.Models.Widgets;
@@ -48,54 +45,7 @@ public class SelectWidget : TextWidget
         return properties;
     }
 
-    public override void RenderRuntime(RuntimeRenderContext context)
-    {
-        var items = context.Items ?? Items;
-        var value = context.ValueGetter?.Invoke() ?? string.Empty;
-        var display = items.FirstOrDefault(i => i.Value == value)?.Label ?? value;
-
-        if (context.Mode == RuntimeWidgetRenderMode.Edit)
-        {
-            var builder = context.Builder;
-            var callbackFactory = new EventCallbackFactory();
-
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "style", "display:flex; flex-direction:column; gap:6px;");
-            RenderFieldLabel(builder, context.Label);
-            builder.OpenElement(4, "select");
-            builder.AddAttribute(5, "class", "runtime-field-input");
-            if (context.ValueSetter != null)
-            {
-                builder.AddAttribute(6, "onchange",
-                    callbackFactory.Create<ChangeEventArgs>(context.EventTarget,
-                        e => context.ValueSetter!(e.Value?.ToString())));
-            }
-
-            builder.OpenElement(7, "option");
-            builder.AddAttribute(8, "value", string.Empty);
-            builder.AddContent(9, "--");
-            builder.CloseElement();
-
-            foreach (var item in items)
-            {
-                builder.OpenElement(10, "option");
-                builder.AddAttribute(11, "value", item.Value);
-                if (item.Value == value)
-                {
-                    builder.AddAttribute(12, "selected", true);
-                }
-                builder.AddContent(13, item.Label ?? item.Value);
-                builder.CloseElement();
-            }
-
-            builder.CloseElement(); // select
-            builder.CloseElement(); // container
-        }
-        else
-        {
-            RenderReadOnlyValue(context, display);
-        }
-    }
+    public override void RenderRuntime(RuntimeRenderContext context) { }
 
     public override void RenderDesign(DesignRenderContext context)
     {

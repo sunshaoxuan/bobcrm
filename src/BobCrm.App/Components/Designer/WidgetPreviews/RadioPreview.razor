@@ -1,5 +1,6 @@
 @* Radio preview component *@
 @inject BobCrm.App.Services.I18nService I18n
+@using BobCrm.App.Models.Widgets
 <div style="display:flex; gap:8px; align-items:center; padding:4px 0">
     <Icon Type="@IconType.Fill.CheckCircle" Style="color:#1890ff; font-size:16px" />
     <span style="color:#999; font-size:12px">@I18n.T("PREVIEW_OPTION_1")</span>
@@ -8,6 +9,5 @@
 </div>
 
 @code {
-    [Parameter] public object? Widget { get; set; }
-    [Parameter] public BobCrm.App.Models.FormRuntimeContext? Context { get; set; }
+    [Parameter, EditorRequired] public RadioWidget Widget { get; set; } = default!;
 }
