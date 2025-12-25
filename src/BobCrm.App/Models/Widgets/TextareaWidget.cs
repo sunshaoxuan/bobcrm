@@ -23,6 +23,9 @@ public class TextareaWidget : TextWidget
     /// <summary>最大长度</summary>
     public int? MaxLength { get; set; }
 
+    /// <summary>最小长度</summary>
+    public int? MinLength { get; set; }
+
     /// <summary>行数</summary>
     public int Rows { get; set; } = 4;
 
@@ -41,6 +44,7 @@ public class TextareaWidget : TextWidget
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Placeholder", Label = "LBL_PLACEHOLDER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "DefaultValue", Label = "LBL_DEFAULT_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
+            new() { PropertyPath = "MinLength", Label = "LBL_MIN_LENGTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 10000 },
             new() { PropertyPath = "MaxLength", Label = "LBL_MAX_LENGTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 10000 },
             new() { PropertyPath = "Rows", Label = "PROP_ROWS", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 2, Max = 20 },
             new() { PropertyPath = "AutoSize", Label = "PROP_AUTO_SIZE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },

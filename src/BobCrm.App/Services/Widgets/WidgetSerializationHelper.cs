@@ -45,6 +45,8 @@ public static class WidgetSerializationHelper
                     data["required"] = textbox.Required;
                 if (textbox.Readonly)
                     data["readonly"] = textbox.Readonly;
+                if (textbox.MinLength.HasValue)
+                    data["minLength"] = textbox.MinLength.Value;
                 if (textbox.MaxLength.HasValue)
                     data["maxLength"] = textbox.MaxLength.Value;
                 if (!string.IsNullOrWhiteSpace(textbox.ValidationPattern))
@@ -93,6 +95,8 @@ public static class WidgetSerializationHelper
                     data["defaultValue"] = textarea.DefaultValue;
                 if (!string.IsNullOrWhiteSpace(textarea.Placeholder))
                     data["placeholder"] = textarea.Placeholder;
+                if (textarea.MinLength.HasValue)
+                    data["minLength"] = textarea.MinLength.Value;
                 if (textarea.MaxLength.HasValue)
                     data["maxLength"] = textarea.MaxLength.Value;
                 if (textarea.Rows != 4)

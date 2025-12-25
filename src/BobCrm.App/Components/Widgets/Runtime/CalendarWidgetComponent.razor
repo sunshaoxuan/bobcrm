@@ -26,6 +26,8 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
 }
 else if (Context.RenderMode == FormRuntimeContext.Mode.Edit)
 {
+    var errors = GetFieldErrors();
+    var hasErrors = errors.Count > 0;
     <div style="display:flex; flex-direction:column; gap:6px;">
         <div class="runtime-field-label">@Widget.Label</div>
         <DatePicker Value="@currentDate"
@@ -34,6 +36,15 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Edit)
                     ShowTime="@Widget.ShowTime"
                     Disabled="false"
                     Style="width:100%;" />
+        @if (hasErrors)
+        {
+            <div style="color:#cf1322; font-size:12px; line-height:1.4;">
+                @foreach (var err in errors)
+                {
+                    <div>@err</div>
+                }
+            </div>
+        }
     </div>
 }
 else
@@ -60,6 +71,7 @@ else
     {
         currentDate = value;
         SetValue(FormatDateForStore(value));
+        ValidateField(value);
         return Task.CompletedTask;
     }
 
@@ -148,6 +160,26 @@ else
         {
             prop.SetValue(Context.Data, value);
         }
+    }
+
+    private void ValidateField(DateTime? value)
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        Context.ValidateField(Widget.DataField, value);
+    }
+
+    private IReadOnlyList<string> GetFieldErrors()
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Array.Empty<string>();
+        }
+
+        return Context.GetErrors(Widget.DataField);
     }
 
     private static string? GetValueFromJson(JsonElement json, string key)

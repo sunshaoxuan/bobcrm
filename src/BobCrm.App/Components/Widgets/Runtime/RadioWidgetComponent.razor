@@ -37,6 +37,8 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
 else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMode == FormRuntimeContext.Mode.Disabled)
 {
     var disabled = Context.RenderMode == FormRuntimeContext.Mode.Disabled;
+    var errors = GetFieldErrors();
+    var hasErrors = errors.Count > 0;
     var effectiveItems = Widget.Items.Count > 0
         ? Widget.Items
         : new List<BobCrm.App.Models.Widgets.ListItem> { new() { Value = "true", Label = Widget.Label } };
@@ -57,6 +59,15 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMod
                 }
             </RadioGroup>
         </div>
+        @if (hasErrors)
+        {
+            <div style="color:#cf1322; font-size:12px; line-height:1.4;">
+                @foreach (var err in errors)
+                {
+                    <div>@err</div>
+                }
+            </div>
+        }
     </div>
 }
 else
@@ -89,6 +100,7 @@ else
 
         currentValue = value ?? string.Empty;
         SetValue(currentValue);
+        ValidateField(currentValue);
         return Task.CompletedTask;
     }
 
@@ -142,6 +154,26 @@ else
         {
             prop.SetValue(Context.Data, value);
         }
+    }
+
+    private void ValidateField(string? value)
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        Context.ValidateField(Widget.DataField, value);
+    }
+
+    private IReadOnlyList<string> GetFieldErrors()
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Array.Empty<string>();
+        }
+
+        return Context.GetErrors(Widget.DataField);
     }
 
     private static string? GetValueFromJson(JsonElement json, string key)

@@ -20,6 +20,7 @@ public class TextboxWidget : TextWidget
     public string? Placeholder { get; set; }
     public bool Required { get; set; } = false;
     public bool Readonly { get; set; } = false;
+    public int? MinLength { get; set; }
     public int? MaxLength { get; set; }
     public string? ValidationPattern { get; set; }
     public string? DefaultValue { get; set; }
@@ -36,7 +37,9 @@ public class TextboxWidget : TextWidget
             new() { PropertyPath = "Label", Label = "PROP_LABEL", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "Placeholder", Label = "LBL_PLACEHOLDER", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
             new() { PropertyPath = "DefaultValue", Label = "LBL_DEFAULT_VALUE", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text },
+            new() { PropertyPath = "MinLength", Label = "LBL_MIN_LENGTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 0, Max = 1000 },
             new() { PropertyPath = "MaxLength", Label = "LBL_MAX_LENGTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = 1000 },
+            new() { PropertyPath = "ValidationPattern", Label = "PROP_VALIDATION_PATTERN", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Text, Placeholder = "PROP_VALIDATION_PATTERN_PLACEHOLDER" },
             new() { PropertyPath = "Required", Label = "LBL_REQUIRED", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Readonly", Label = "LBL_READONLY", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Boolean },
             new() { PropertyPath = "Width", Label = "PROP_WIDTH", EditorType = BobCrm.App.Models.Designer.PropertyEditorType.Number, Min = 1, Max = GetMaxWidth() }

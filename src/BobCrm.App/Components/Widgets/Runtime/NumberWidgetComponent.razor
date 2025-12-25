@@ -26,6 +26,8 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
 else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMode == FormRuntimeContext.Mode.Disabled)
 {
     var disabled = Context.RenderMode == FormRuntimeContext.Mode.Disabled;
+    var errors = GetFieldErrors();
+    var hasErrors = errors.Count > 0;
     <div style="display:flex; flex-direction:column; gap:6px;">
         <div class="runtime-field-label">@Widget.Label</div>
         <AntDesign.InputNumber TValue="double?"
@@ -37,6 +39,15 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMod
                                Step="@Widget.Step"
                                Precision="@GetPrecision()"
                                Style="width:100%;" />
+        @if (hasErrors)
+        {
+            <div style="color:#cf1322; font-size:12px; line-height:1.4;">
+                @foreach (var err in errors)
+                {
+                    <div>@err</div>
+                }
+            </div>
+        }
     </div>
 }
 else
@@ -69,6 +80,7 @@ else
 
         currentValue = value;
         SetRawValue(value?.ToString(CultureInfo.InvariantCulture));
+        ValidateField(value);
         return Task.CompletedTask;
     }
 
@@ -166,6 +178,26 @@ else
         {
             prop.SetValue(Context.Data, value);
         }
+    }
+
+    private void ValidateField(double? value)
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        Context.ValidateField(Widget.DataField, value);
+    }
+
+    private IReadOnlyList<string> GetFieldErrors()
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Array.Empty<string>();
+        }
+
+        return Context.GetErrors(Widget.DataField);
     }
 
     private static string? GetValueFromJson(JsonElement json, string key)

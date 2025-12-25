@@ -144,6 +144,22 @@ window.bobcrm = {
         } catch (_) { }
       }
     }
+  , scrollToValidationField: function (field) {
+      try {
+        if (!field) return;
+        const escape = (s) => {
+          try { return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/'/g, \"\\\\'\"); } catch (_) { return String(s); }
+        };
+        const key = escape(field);
+        const el = document.querySelector(`[data-field='${key}']`) || document.querySelector(`[data-field=\"${key}\"]`);
+        if (!el) return;
+        try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { el.scrollIntoView(); }
+        const focusable = el.querySelector('input,textarea,select,[tabindex]');
+        if (focusable && focusable.focus) {
+          try { focusable.focus({ preventScroll: true }); } catch (_) { try { focusable.focus(); } catch (_) { } }
+        }
+      } catch (_) { }
+    }
   , registerCustomerEvents: function(dotnetRef){
     try { this._customerRef = dotnetRef; } catch (e) { }
   }

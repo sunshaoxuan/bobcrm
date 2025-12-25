@@ -93,6 +93,13 @@ else if (entityData != null)
             var hasNameWidget = HasWidgetForField("name");
         }
 
+        @if (isEditMode && !string.IsNullOrWhiteSpace(validationError))
+        {
+            <div style="margin:12px 0;">
+                <Alert Message="@validationError" Type="@AlertType.Error" ShowIcon="true" />
+            </div>
+        }
+
         @if (isEditMode && (!hasCodeWidget || !hasNameWidget))
     {
         <div class="runtime-basic-grid">
@@ -136,7 +143,10 @@ else if (entityData != null)
                     {
                         <div style="width:100%; height:0; flex-basis:100%"></div>
                     }
-                    <div class="runtime-widget-shell" style="@(WidgetStyleHelper.GetRuntimeWidgetStyle(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse))">
+                    <div class="runtime-widget-shell"
+                         data-field="@widget.DataField"
+                         data-widget-id="@widget.Id"
+                         style="@(WidgetStyleHelper.GetRuntimeWidgetStyle(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse))">
                         @RenderRuntimeWidget(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse)
                     </div>
                 }
@@ -153,6 +163,7 @@ else if (entityData != null)
     private bool loading = true;
     private bool saving = false;
     private string? error;
+    private string? validationError;
     private bool isEditMode = false;
 
     private System.Text.Json.JsonElement? entityData;
@@ -724,6 +735,15 @@ else if (entityData != null)
         try
         {
             saving = true;
+            validationError = null;
+
+            var isValid = formContext.ValidateAll(key => editValueManager.GetValue(key));
+            if (!isValid)
+            {
+                validationError = "Validation failed.";
+                await ScrollToFirstValidationErrorAsync();
+                return;
+            }
 
             // Collect only dynamic-field payloads (skip base columns like Code/Name/Id/Version)
             HashSet<string>? allowedKeys = null;
@@ -803,6 +823,24 @@ else if (entityData != null)
         {
             saving = false;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ScrollToFirstValidationErrorAsync()
+    {
+        try
+        {
+            var firstField = formContext.Errors.Keys.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(firstField))
+            {
+                return;
+            }
+
+            await JS.InvokeVoidAsync("bobcrm.scrollToValidationField", firstField);
+        }
+        catch
+        {
+            // ignore
         }
     }
 

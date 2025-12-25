@@ -2,6 +2,7 @@
 @using BobCrm.App.Models
 @using BobCrm.App.Models.Widgets
 @using BobCrm.App.Services.Widgets
+@using System.Text.RegularExpressions
 @using System.Text.Json
 
 @if (Context is null)
@@ -22,8 +23,11 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Design)
         </div>
     </div>
 }
-else if (Context.RenderMode == FormRuntimeContext.Mode.Edit)
+else if (Context.RenderMode == FormRuntimeContext.Mode.Edit || Context.RenderMode == FormRuntimeContext.Mode.Disabled)
 {
+    var errors = GetFieldErrors();
+    var hasErrors = errors.Count > 0;
+    var disabled = Context.RenderMode == FormRuntimeContext.Mode.Disabled || Widget.Readonly;
     <div style="display:flex; flex-direction:column; gap:6px;">
         <div class="runtime-field-label">@Widget.Label</div>
         @if (Widget.MaxLength.HasValue)
@@ -32,14 +36,25 @@ else if (Context.RenderMode == FormRuntimeContext.Mode.Edit)
                    @bind-Value:after="OnValueChanged"
                    Placeholder="@Widget.Placeholder"
                    MaxLength="@Widget.MaxLength.Value"
-                   Disabled="@Widget.Readonly" />
+                   Disabled="@disabled"
+                   Style="@(hasErrors ? "width:100%; border-color:#ff4d4f;" : "width:100%;")" />
         }
         else
         {
             <Input @bind-Value="currentValue"
                    @bind-Value:after="OnValueChanged"
                    Placeholder="@Widget.Placeholder"
-                   Disabled="@Widget.Readonly" />
+                   Disabled="@disabled"
+                   Style="@(hasErrors ? "width:100%; border-color:#ff4d4f;" : "width:100%;")" />
+        }
+        @if (hasErrors)
+        {
+            <div style="color:#cf1322; font-size:12px; line-height:1.4;">
+                @foreach (var err in errors)
+                {
+                    <div>@err</div>
+                }
+            </div>
         }
     </div>
 }
@@ -57,15 +72,18 @@ else
     [CascadingParameter] public FormRuntimeContext? Context { get; set; }
 
     private string currentValue = string.Empty;
+    private bool _validatorsRegistered;
 
     protected override void OnParametersSet()
     {
+        TryRegisterValidators();
         currentValue = GetValue() ?? string.Empty;
     }
 
     private Task OnValueChanged()
     {
         SetValue(currentValue);
+        ValidateField(currentValue);
         return Task.CompletedTask;
     }
 
@@ -119,6 +137,94 @@ else
         {
             prop.SetValue(Context.Data, value);
         }
+    }
+
+    private void TryRegisterValidators()
+    {
+        if (_validatorsRegistered)
+        {
+            return;
+        }
+
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        var field = Widget.DataField;
+
+        if (Widget.Required)
+        {
+            Context.RegisterValidator(field, value =>
+            {
+                var s = value?.ToString();
+                return string.IsNullOrWhiteSpace(s) ? "Required" : null;
+            });
+        }
+
+        if (Widget.MinLength.HasValue && Widget.MinLength.Value > 0)
+        {
+            var min = Widget.MinLength.Value;
+            Context.RegisterValidator(field, value =>
+            {
+                var s = value?.ToString() ?? string.Empty;
+                return s.Length < min ? $"Min length: {min}" : null;
+            });
+        }
+
+        if (Widget.MaxLength.HasValue && Widget.MaxLength.Value > 0)
+        {
+            var max = Widget.MaxLength.Value;
+            Context.RegisterValidator(field, value =>
+            {
+                var s = value?.ToString() ?? string.Empty;
+                return s.Length > max ? $"Max length: {max}" : null;
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(Widget.ValidationPattern))
+        {
+            var pattern = Widget.ValidationPattern;
+            Context.RegisterValidator(field, value =>
+            {
+                var s = value?.ToString() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(s))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    return Regex.IsMatch(s, pattern!) ? null : "Pattern mismatch";
+                }
+                catch
+                {
+                    return null;
+                }
+            });
+        }
+
+        _validatorsRegistered = true;
+    }
+
+    private void ValidateField(string? value)
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return;
+        }
+
+        Context.ValidateField(Widget.DataField, value);
+    }
+
+    private IReadOnlyList<string> GetFieldErrors()
+    {
+        if (Context is null || string.IsNullOrWhiteSpace(Widget.DataField))
+        {
+            return Array.Empty<string>();
+        }
+
+        return Context.GetErrors(Widget.DataField);
     }
 
     private static string? GetValueFromJson(JsonElement json, string key)
