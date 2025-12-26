@@ -20,6 +20,9 @@ jobs:
 
       - name: Verify I18n Completeness
         run: pwsh scripts/check-i18n-completeness.ps1
+      
+      - name: Verify JS Interop Policy
+        run: pwsh scripts/check-js-interop.ps1
 
       - name: 1. Verify Crash on Missing Config (Expected Failure)
         run: |
