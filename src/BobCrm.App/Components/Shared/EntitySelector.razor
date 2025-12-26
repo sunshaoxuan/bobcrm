@@ -181,7 +181,7 @@
         }
     }
     
-    private async void OpenSelector()
+    private async Task OpenSelector()
     {
         if (Disabled) return;
         
@@ -245,7 +245,7 @@
         dataLoaded = true;
     }
     
-    private async void ReloadData()
+    private async Task ReloadData()
     {
         dataLoaded = false;
         await LoadData();
@@ -314,7 +314,7 @@
         }
     }
     
-    private async void SelectItem(TEntity item)
+    private async Task SelectItem(TEntity item)
     {
         if (ValueGetter != null)
         {

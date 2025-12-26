@@ -119,7 +119,7 @@ app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), apiApp =>
                             var baseType = context.Request.ContentType.Split(';')[0].Trim();
                             requestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(baseType);
                         }
-                        catch { }
+                        catch { /* Ignored: Fallback ContentType parse failed */ }
                     }
                 }
             }

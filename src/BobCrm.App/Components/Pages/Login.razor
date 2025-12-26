@@ -85,7 +85,7 @@
 
     private void HandleI18nChanged()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -109,7 +109,7 @@
                         { Nav.NavigateTo("/setup"); return; }
                     }
                 }
-                catch { }
+                catch (Exception ex) { Console.WriteLine($"[Login] Admin check failed: {ex.Message}"); }
                 var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(token))
                 {
@@ -122,11 +122,11 @@
                     InitializeHeroImages();
                     _ = RunSliderAsync();
                 }
-                catch { }
+                catch (Exception ex) { Console.WriteLine($"[Login] Hero slider init failed: {ex.Message}"); }
 
                 StateHasChanged();
             }
-            catch { }
+            catch (Exception ex) { Console.WriteLine($"[Login] OnAfterRender error: {ex.Message}"); }
         }
     }
 
@@ -139,12 +139,12 @@
         var token = cts.Token;
         while (!token.IsCancellationRequested)
         {
-            try { await Task.Delay(8000, token); } catch { break; }
+            try { await Task.Delay(8000, token); } catch { break; /* Cancelled */ }
             var reloaded = ReloadSliderImages();
             if (slider.Count == 0) continue;
             if (reloaded)
             {
-                try { await InvokeAsync(StateHasChanged); } catch { }
+                try { await InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                 continue;
             }
             sliderIndex = (sliderIndex + 1) % slider.Count;
@@ -159,7 +159,7 @@
                 heroImageUrl = next;
                 heroUseAlt = false;
             }
-            try { await InvokeAsync(StateHasChanged); } catch { }
+            try { await InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
         }
     }
 
@@ -278,7 +278,7 @@
                 if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = await JS.InvokeAsync<string?>("bobcrm.getOrigin");
                 if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
                 await JS.InvokeVoidAsync("console.log", $"[Login] Using API base: {http.BaseAddress}");
-            } catch { }
+            } catch { /* Ignored: Configuration load failed */ }
             // attach X-Lang header
             try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (string.IsNullOrWhiteSpace(lang)) lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
             
@@ -309,10 +309,10 @@
                                 detailedError = errorObj["error"]?.ToString() ?? detailedError;
                             }
                         }
-                        catch { }
+                        catch { /* Ignored: JSON parse failed */ }
                     }
                 }
-                catch { }
+                catch { /* Ignored: Error content read failed */ }
                 
                 error = detailedError;
                 // 恢复输入值

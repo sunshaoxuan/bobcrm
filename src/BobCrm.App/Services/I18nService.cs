@@ -110,8 +110,10 @@ public class I18nService : II18nService
                 var err = await resp.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: ct);
                 return (false, err?.Code, err?.Message);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[I18nService] SaveI18nResourceAsync JSON parse failed: {ex.Message}");
+                /* Ignored: Error response parse failed */
             }
         }
 
@@ -189,9 +191,9 @@ public class I18nService : II18nService
 
             OnChanged?.Invoke();
 
-            try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+            try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { /* Ignored: UI update failed */ }
 
-            try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { }
+            try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { /* Ignored: Cookie update failed */ }
 
         }
 

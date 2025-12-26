@@ -365,7 +365,7 @@
         }
     }
 
-    private async void OnGroupByChanged(ChangeEventArgs e)
+    private async Task OnGroupByChanged(ChangeEventArgs e)
     {
         groupBy = e.Value?.ToString() ?? "none";
         await LoadTemplates();

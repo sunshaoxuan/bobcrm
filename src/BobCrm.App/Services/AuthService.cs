@@ -45,12 +45,12 @@ public class AuthService
                 {
                     resolvedBase = NormalizeBase(cookieBase!);
                     // 同步回写，避免再次回退
-                    try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase); } catch { }
-                    try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365); } catch { }
+try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase); } catch { /* Ignored: LocalStorage access failed */ }
+try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365); } catch { /* Ignored: Cookie access failed */ }
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { Console.WriteLine($"[AuthService] Error resolving base URL: {ex.Message}"); }
 
         // 如果配置已经设置了 BaseAddress，就不要再强行覆盖成前端 Origin；
         // 只有当配置为空时，才回退到浏览器 Origin，避免出现“前端调用自己”导致死循环。
@@ -64,7 +64,7 @@ public class AuthService
                     resolvedBase = NormalizeBase(origin!);
                 }
             }
-            catch { }
+            catch { /* Ignored: Origin retrieval failed */ }
         }
 
         if (!string.IsNullOrWhiteSpace(resolvedBase))
@@ -73,7 +73,7 @@ public class AuthService
             {
                 http.BaseAddress = new Uri(resolvedBase, UriKind.Absolute);
             }
-            catch { }
+            catch { /* Ignored: Invalid URI format */ }
         }
         // attach language header (no auth required)
         try
@@ -83,7 +83,7 @@ public class AuthService
                 http.DefaultRequestHeaders.Remove("X-Lang");
             http.DefaultRequestHeaders.Add("X-Lang", lang.ToLowerInvariant());
         }
-        catch { }
+        catch { /* Ignored: Language header setup failed */ }
         return http;
     }
 
@@ -97,7 +97,7 @@ public class AuthService
             var builder = new UriBuilder(u) { Port = 5200 };
             return builder.Uri.ToString().TrimEnd('/');
         }
-        catch { return baseUrl; }
+        catch { return baseUrl; /* Use original on error */ }
     }
 
     public async Task<HttpClient> CreateClientWithAuthAsync()
@@ -147,7 +147,7 @@ public class AuthService
                     {
                         await _js.InvokeVoidAsync("console.log", $"[Auth] Race recovery - retry {methodName}");
                     }
-                    catch { }
+                    catch { /* Ignored: Log failure */ }
                     http = await CreateClientWithAuthAsync();
                     resp = await sendFunc(http);
                 }
@@ -181,7 +181,7 @@ public class AuthService
                 {
                     await _js.InvokeVoidAsync("console.log", "[Auth] Skip refresh - recent refresh detected");
                 }
-                catch { }
+                catch { /* Ignored: Log failure */ }
                 return true;
             }
 
@@ -192,7 +192,7 @@ public class AuthService
                 {
                     await _js.InvokeVoidAsync("console.log", "[Auth] Waiting for in-progress refresh");
                 }
-                catch { }
+                catch { /* Ignored: Log failure */ }
                 return await _refreshTask;
             }
 
@@ -212,7 +212,7 @@ public class AuthService
         {
             await _js.InvokeVoidAsync("console.log", "[Auth] Starting token refresh");
         }
-        catch { }
+        catch { /* Ignored: Log failure */ }
 
         var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
         if (string.IsNullOrWhiteSpace(refresh))
@@ -221,7 +221,7 @@ public class AuthService
             {
                 await _js.InvokeVoidAsync("console.warn", "[Auth] No refresh token found");
             }
-            catch { }
+            catch { /* Ignored: Log failure */ }
             await ClearTokensAsync();
             return false;
         }
@@ -236,7 +236,7 @@ public class AuthService
             {
                 await _js.InvokeVoidAsync("console.error", $"[Auth] Refresh failed: {res.StatusCode}");
             }
-            catch { }
+            catch { /* Ignored: Log failure */ }
             await ClearTokensAsync();
             OnUnauthorized?.Invoke();
             return false;
@@ -249,7 +249,7 @@ public class AuthService
             {
                 await _js.InvokeVoidAsync("console.error", "[Auth] Refresh response parse failed");
             }
-            catch { }
+            catch { /* Ignored: Log failure */ }
             await ClearTokensAsync();
             return false;
         }
@@ -262,7 +262,7 @@ public class AuthService
         {
             await _js.InvokeVoidAsync("console.log", "[Auth] Token refresh successful");
         }
-        catch { }
+        catch { /* Ignored: Log failure */ }
         
         return true;
     }
@@ -277,7 +277,7 @@ public class AuthService
             await _js.InvokeVoidAsync("localStorage.removeItem", "accessToken");
             await _js.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
         }
-        catch { }
+        catch { /* Ignored: Storage cleanup failed */ }
     }
 
     /// <summary>
