@@ -28,4 +28,8 @@ public record CreateFieldMetadataDto
     public int SortOrder { get; init; }
     public string? DefaultValue { get; init; }
     public string? ValidationRules { get; init; }
+
+    // ===== Enum Support (Dynamic Enum System) =====
+    public Guid? EnumDefinitionId { get; init; }
+    public bool IsMultiSelect { get; init; }
 }

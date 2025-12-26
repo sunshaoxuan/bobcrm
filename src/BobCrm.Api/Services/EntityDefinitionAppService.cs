@@ -101,7 +101,9 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                     ForeignKeyAction = fieldDto.ForeignKeyAction,
                     SortOrder = fieldDto.SortOrder,
                     DefaultValue = fieldDto.DefaultValue,
-                    ValidationRules = fieldDto.ValidationRules
+                    ValidationRules = fieldDto.ValidationRules,
+                    EnumDefinitionId = fieldDto.EnumDefinitionId,
+                    IsMultiSelect = fieldDto.IsMultiSelect
                 });
             }
         }
@@ -251,6 +253,26 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                     var existingField = definition.Fields.FirstOrDefault(f => f.Id == fieldDto.Id.Value);
                     if (existingField != null)
                     {
+                        var source = existingField.Source;
+                        if (string.Equals(source, FieldSource.System, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
+                            if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
+                            existingField.UpdatedAt = DateTime.UtcNow;
+                            existingField.IsDeleted = false;
+                            continue;
+                        }
+
+                        if (string.Equals(source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
+                            if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
+                            existingField.DefaultValue = fieldDto.DefaultValue;
+                            existingField.UpdatedAt = DateTime.UtcNow;
+                            existingField.IsDeleted = false;
+                            continue;
+                        }
+
                         if (fieldDto.PropertyName != null) existingField.PropertyName = fieldDto.PropertyName;
                         if (fieldDto.DisplayName != null) existingField.DisplayName = fieldDto.DisplayName;
                         if (fieldDto.DataType != null) existingField.DataType = fieldDto.DataType;
@@ -266,6 +288,7 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                         if (fieldDto.SortOrder.HasValue) existingField.SortOrder = fieldDto.SortOrder.Value;
                         existingField.DefaultValue = fieldDto.DefaultValue;
                         existingField.ValidationRules = fieldDto.ValidationRules;
+                        ApplyEnumConfig(existingField, fieldDto.DataType, fieldDto.EnumDefinitionId, fieldDto.IsMultiSelect);
                         existingField.UpdatedAt = DateTime.UtcNow;
                         existingField.IsDeleted = false;
                     }
@@ -289,6 +312,8 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                         SortOrder = fieldDto.SortOrder ?? 0,
                         DefaultValue = fieldDto.DefaultValue,
                         ValidationRules = fieldDto.ValidationRules,
+                        EnumDefinitionId = fieldDto.EnumDefinitionId,
+                        IsMultiSelect = fieldDto.IsMultiSelect ?? false,
                         Source = FieldSource.Custom,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -397,5 +422,34 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
         var newInterfaceTypes = incomingInterfaces.Except(existingInterfaces).ToList();
         ApplyInterfaces(definition, newInterfaceTypes);
     }
-}
 
+    private static void ApplyEnumConfig(
+        FieldMetadata field,
+        string? newDataType,
+        Guid? enumDefinitionId,
+        bool? isMultiSelect)
+    {
+        if (newDataType != null &&
+            !string.Equals(newDataType, FieldDataType.Enum, StringComparison.OrdinalIgnoreCase))
+        {
+            field.EnumDefinitionId = null;
+            field.IsMultiSelect = false;
+            return;
+        }
+
+        if (!string.Equals(field.DataType, FieldDataType.Enum, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (enumDefinitionId.HasValue)
+        {
+            field.EnumDefinitionId = enumDefinitionId;
+        }
+
+        if (isMultiSelect.HasValue)
+        {
+            field.IsMultiSelect = isMultiSelect.Value;
+        }
+    }
+}
