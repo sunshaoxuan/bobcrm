@@ -21,5 +21,10 @@
 
 ---
 
+## Code Quality (PLAN-18) - P3
+- [x] P3-001: 统一 JS Interop 错误处理（commit: `02f0479`）
+
+---
+
 ## 历史归档 (v0.9.x Completed)
 > 详情见 `history/task-v0.9.x-archive.md`

@@ -1,9 +1,5 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.JSInterop;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-// using BobCrm.App.Services.JsInterop; removed
 
 namespace BobCrm.App.Services;
 

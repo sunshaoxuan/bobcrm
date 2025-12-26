@@ -1,5 +1,3 @@
-using BobCrm.App.Components.Shared;
-using BobCrm.Api.Abstractions;
 using Microsoft.JSInterop;
 
 namespace BobCrm.App.Services;
@@ -9,18 +7,15 @@ public class JsInteropService : IJsInteropService
     private readonly IJSRuntime _js;
     private readonly ILogger<JsInteropService> _logger;
     private readonly ToastService _toastService;
-    private readonly II18nService _i18n;
 
     public JsInteropService(
         IJSRuntime js,
         ILogger<JsInteropService> logger,
-        ToastService toastService,
-        II18nService i18n)
+        ToastService toastService)
     {
         _js = js;
         _logger = logger;
         _toastService = toastService;
-        _i18n = i18n;
     }
 
     public async Task<(bool Success, T? Value)> TryInvokeAsync<T>(string identifier, params object?[]? args)
@@ -71,13 +66,27 @@ public class JsInteropService : IJsInteropService
         }
     }
 
-    public async Task<bool> TryInvokeVoidWithToastAsync(string identifier, string errorI18nKey, params object?[]? args)
+    public async Task<bool> TryInvokeVoidWithToastAsync(string identifier, Func<string> errorMessageFactory, params object?[]? args)
     {
         var success = await TryInvokeVoidAsync(identifier, args);
         if (!success)
         {
-            var msg = _i18n.T(errorI18nKey);
-            if (string.IsNullOrWhiteSpace(msg)) msg = errorI18nKey;
+            string msg;
+            try
+            {
+                msg = errorMessageFactory();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error message factory failed for JS toast, identifier={Identifier}", identifier);
+                msg = string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(msg))
+            {
+                msg = "JS interop failed.";
+            }
+
             _toastService.Error(msg);
         }
         return success;

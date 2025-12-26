@@ -29,5 +29,5 @@ public interface IJsInteropService
     /// <summary>
     /// Safely invokes a void JavaScript function and shows an error toast if it fails.
     /// </summary>
-    Task<bool> TryInvokeVoidWithToastAsync(string identifier, string errorI18nKey, params object?[]? args);
+    Task<bool> TryInvokeVoidWithToastAsync(string identifier, Func<string> errorMessageFactory, params object?[]? args);
 }

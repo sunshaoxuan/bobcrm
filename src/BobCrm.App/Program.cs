@@ -19,6 +19,7 @@ builder.Services.AddTransient<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<BobCrm.App.Services.LangHeaderHandler>();
 
+builder.Services.AddScoped<IJsInteropService, JsInteropService>();
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 builder.Services.AddScoped<BobCrm.App.Services.OrganizationService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
@@ -29,6 +30,8 @@ builder.Services.AddScoped<BobCrm.App.Services.MenuService>();
 builder.Services.AddScoped<BobCrm.App.Services.UserService>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateRuntimeClient>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateBindingService>();
+builder.Services.AddScoped<I18nService>();
+builder.Services.AddScoped<BobCrm.Api.Abstractions.II18nService>(sp => sp.GetRequiredService<I18nService>());
 builder.Services.Configure<MultilingualOptions>(options =>
 {
     options.DefaultLanguage = "ja";

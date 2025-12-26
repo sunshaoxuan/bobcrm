@@ -97,8 +97,8 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
             {
                 var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
-                await I18n.LoadAsync(langToLoad); 
-                try { await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
+                await I18n.LoadAsync(langToLoad);
+                await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
                 
                 // Check backend whether admin exists; avoid localStorage
                 try
@@ -336,7 +336,7 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
             if (json is null)
             {
                 error = I18n.T("ERR_PARSE_RESPONSE");
-                await JS.TryInvokeVoidWithToastAsync("console.error", "ERR_PARSE_RESPONSE", "[Login] ParseError: json is null");
+                await JS.TryInvokeVoidAsync("console.error", "[Login] ParseError: json is null");
                 return;
             }
             await JS.TryInvokeVoidAsync("console.log", "[Login] Storing accessToken...");
@@ -353,7 +353,7 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
         {
             error = $"{I18n.T("ERR_LOGIN_FAILED")}: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"[Login] Exception: {ex}");
-            await JS.TryInvokeVoidWithToastAsync("console.error", "ERR_JS_INTEROP", $"[Login] Exception: {ex}");
+            await JS.TryInvokeVoidAsync("console.error", $"[Login] Exception: {ex}");
         }
         finally
         {
