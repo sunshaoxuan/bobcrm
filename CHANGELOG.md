@@ -23,6 +23,7 @@
 ### Changed
 - **全局异常处理**：统一使用 `app.UseExceptionHandler()` 触发已注册的 `GlobalExceptionHandler`（移除空的中间件占位）。
 - **API 端点分层**：将部分 Controller/Endpoint 逻辑下沉到 AppService/Service，提升可测试性与一致性。
+- **JS Interop 重构**：全量迁移至 `IJsInteropService`，统一异常处理与日志记录；移除 `BobCrm.App` 中直接的 `IJSRuntime` 注入；新增 CI 门禁检查。
 
 ### Fixed
 - **EF Core 兼容映射**：修复 `FunctionNode` 旧字段（`TemplateId` / `TemplateBindingId`）被忽略导致的 shadow column（如 `TemplateBindingId1`）与 SQLite 运行时错误。
