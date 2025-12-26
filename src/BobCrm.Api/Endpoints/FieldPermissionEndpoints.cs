@@ -112,15 +112,8 @@ public static class FieldPermissionEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                await service.DeletePermissionAsync(permissionId);
-                return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSION_DELETED", lang)));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return Results.NotFound(new ErrorResponse(ex.Message, "FIELD_PERMISSION_NOT_FOUND"));
-            }
+            await service.DeletePermissionAsync(permissionId);
+            return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSION_DELETED", lang)));
         })
         .WithName("DeleteFieldPermission")
         .WithSummary("Delete a field permission")

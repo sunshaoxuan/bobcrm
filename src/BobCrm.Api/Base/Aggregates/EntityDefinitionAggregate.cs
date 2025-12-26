@@ -67,7 +67,7 @@ public class EntityDefinitionAggregate
             ThrowDomain("ERR_SUBENTITY_NOT_FOUND", subEntityId);
         }
 
-        subEntity.DisplayName = displayName;
+        subEntity!.DisplayName = displayName;
         subEntity.Description = description;
         if (sortOrder.HasValue)
         {
@@ -103,7 +103,7 @@ public class EntityDefinitionAggregate
             ThrowDomain("ERR_SUBENTITY_NOT_FOUND", subEntityId);
         }
 
-        if (subEntity.Fields.Any(f => f.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase)))
+        if (subEntity!.Fields.Any(f => f.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase)))
         {
             ThrowDomain("ERR_SUBENTITY_FIELD_EXISTS", subEntity.Code, propertyName);
         }
@@ -142,15 +142,15 @@ public class EntityDefinitionAggregate
             ThrowDomain("ERR_SUBENTITY_NOT_FOUND", subEntityId);
         }
 
-        var field = subEntity.Fields.FirstOrDefault(f => f.Id == fieldId);
+        var field = subEntity!.Fields.FirstOrDefault(f => f.Id == fieldId);
         if (field == null)
         {
             ThrowDomain("ERR_FIELD_NOT_FOUND", fieldId);
         }
 
-        if (!field.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+        if (!field!.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
         {
-            if (subEntity.Fields.Any(f => f.Id != fieldId && f.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase)))
+            if (subEntity!.Fields.Any(f => f.Id != fieldId && f.PropertyName.Equals(propertyName, StringComparison.OrdinalIgnoreCase)))
             {
                 ThrowDomain("ERR_SUBENTITY_FIELD_EXISTS", subEntity.Code, propertyName);
             }

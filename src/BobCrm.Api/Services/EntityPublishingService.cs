@@ -20,7 +20,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly DDLExecutionService _ddlExecutor;
     private readonly IEntityLockService _lockService;
     private readonly TemplateBindingService _templateBindingService;
-    private readonly AccessService _accessService;
+    private readonly FunctionService _functionService;
     private readonly ILogger<EntityPublishingService> _logger;
     private readonly IDefaultTemplateService _defaultTemplateService;
     private readonly IConfiguration _configuration;
@@ -31,7 +31,7 @@ public class EntityPublishingService : IEntityPublishingService
         DDLExecutionService ddlExecutor,
         IEntityLockService lockService,
         TemplateBindingService templateBindingService,
-        AccessService accessService,
+        FunctionService functionService,
         IDefaultTemplateService defaultTemplateService,
         IConfiguration configuration,
         ILogger<EntityPublishingService> logger)
@@ -41,7 +41,7 @@ public class EntityPublishingService : IEntityPublishingService
         _ddlExecutor = ddlExecutor;
         _lockService = lockService;
         _templateBindingService = templateBindingService;
-        _accessService = accessService;
+        _functionService = functionService;
         _defaultTemplateService = defaultTemplateService;
         _configuration = configuration;
         _logger = logger;
@@ -799,7 +799,7 @@ public class EntityPublishingService : IEntityPublishingService
 
         if (bindingMap.Count > 0)
         {
-            var nodes = await _accessService.EnsureEntityMenuAsync(entity, bindingMap);
+            var nodes = await _functionService.EnsureEntityMenuAsync(entity, bindingMap);
             foreach (var node in nodes)
             {
                 result.MenuNodes.Add(new PublishedMenuInfo(

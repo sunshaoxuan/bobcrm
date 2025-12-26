@@ -363,84 +363,76 @@ public static class AdminEndpoints
 
             var entityType = entity.EntityRoute!; // EntityRoute is the canonical identifier
 
-            try
+            var existingBefore = await db.FormTemplates
+                .Where(t => t.EntityType == entityType)
+                .CountAsync();
+            logger.LogInformation("[TemplateReset] Starting reset for {Entity}. Existing templates: {Count}", entityType, existingBefore);
+
+            // Remove ALL templates for this entity (system + user/test data) to ensure clean rebuild
+            var allTemplates = await db.FormTemplates
+                .Where(t => t.EntityType == entityType)
+                .ToListAsync();
+
+            db.FormTemplates.RemoveRange(allTemplates);
+            logger.LogInformation("[TemplateReset] Deleting {Count} templates for {Entity}",
+                allTemplates.Count, entityType);
+
+            // Delete bindings tied to this entity
+            var stateBindings = await db.TemplateStateBindings
+                .Where(b => b.EntityType == entityType)
+                .ToListAsync();
+
+            db.TemplateStateBindings.RemoveRange(stateBindings);
+            logger.LogInformation("[TemplateReset] Deleting {Count} state bindings for {Entity}", 
+                stateBindings.Count, entityType);
+
+            var legacyBindings = await db.TemplateBindings
+                .Where(b => b.EntityType == entityType)
+                .ToListAsync();
+
+            db.TemplateBindings.RemoveRange(legacyBindings);
+            logger.LogInformation("[TemplateReset] Deleting {Count} legacy bindings for {Entity}", 
+                legacyBindings.Count, entityType);
+
+            await db.SaveChangesAsync();
+            logger.LogInformation("[TemplateReset] System templates and bindings deleted for {Entity}", entityType);
+
+            // Recreate fresh system default templates
+            var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
+
+            logger.LogInformation("[TemplateReset] Reset complete for {Entity}. Deleted={Deleted}, CreatedSystem={Created} templates",
+                normalizedEntityType, allTemplates.Count, result.Created.Count);
+
+            // Fetch current templates to aid debugging (ids + updatedAt)
+            var current = await db.FormTemplates
+                .Where(t => t.EntityType == entityType)
+                .OrderByDescending(t => t.IsUserDefault)
+                .ThenByDescending(t => t.IsSystemDefault)
+                .ThenByDescending(t => t.UpdatedAt)
+                .ToListAsync();
+            if (current.Count == 0)
             {
-                var existingBefore = await db.FormTemplates
-                    .Where(t => t.EntityType == entityType)
-                    .CountAsync();
-                logger.LogInformation("[TemplateReset] Starting reset for {Entity}. Existing templates: {Count}", entityType, existingBefore);
-
-                // Remove ALL templates for this entity (system + user/test data) to ensure clean rebuild
-                var allTemplates = await db.FormTemplates
-                    .Where(t => t.EntityType == entityType)
-                    .ToListAsync();
-
-                db.FormTemplates.RemoveRange(allTemplates);
-                logger.LogInformation("[TemplateReset] Deleting {Count} templates for {Entity}",
-                    allTemplates.Count, entityType);
-
-                // Delete bindings tied to this entity
-                var stateBindings = await db.TemplateStateBindings
-                    .Where(b => b.EntityType == entityType)
-                    .ToListAsync();
-
-                db.TemplateStateBindings.RemoveRange(stateBindings);
-                logger.LogInformation("[TemplateReset] Deleting {Count} state bindings for {Entity}", 
-                    stateBindings.Count, entityType);
-
-                var legacyBindings = await db.TemplateBindings
-                    .Where(b => b.EntityType == entityType)
-                    .ToListAsync();
-
-                db.TemplateBindings.RemoveRange(legacyBindings);
-                logger.LogInformation("[TemplateReset] Deleting {Count} legacy bindings for {Entity}", 
-                    legacyBindings.Count, entityType);
-
-                await db.SaveChangesAsync();
-                logger.LogInformation("[TemplateReset] System templates and bindings deleted for {Entity}", entityType);
-
-                // Recreate fresh system default templates
-                var result = await templateService.EnsureTemplatesAsync(entity, "admin", force: true);
-
-                logger.LogInformation("[TemplateReset] Reset complete for {Entity}. Deleted={Deleted}, CreatedSystem={Created} templates",
-                    normalizedEntityType, allTemplates.Count, result.Created.Count);
-
-                // Fetch current templates to aid debugging (ids + updatedAt)
-                var current = await db.FormTemplates
-                    .Where(t => t.EntityType == entityType)
-                    .OrderByDescending(t => t.IsUserDefault)
-                    .ThenByDescending(t => t.IsSystemDefault)
-                    .ThenByDescending(t => t.UpdatedAt)
-                    .ToListAsync();
-                if (current.Count == 0)
-                {
-                    logger.LogWarning("[TemplateReset] No templates found after reset for {Entity}", entityType);
-                }
-                else
-                {
-                    logger.LogInformation("[TemplateReset] Post-reset templates for {Entity}: {Templates}",
-                        entityType,
-                        string.Join(", ", current.Select(c =>
-                            $"{c.Id}:{c.UsageType}:{(c.IsSystemDefault ? "sys" : c.IsUserDefault ? "user" : c.UserId)}:{c.Name}@{c.UpdatedAt:O}")));
-                }
-
-                var payload = new ResetTemplatesForEntityResultDto
-                {
-                    Entity = normalizedEntityType,
-                    Deleted = allTemplates.Count,
-                    DeletedBindings = stateBindings.Count + legacyBindings.Count,
-                    CreatedSystemTemplates = result.Created.Count,
-                    CreatedTemplates = result.Templates.Keys.Select(k => k.ToString()).ToList(),
-                    CurrentTemplates = current
-                };
-
-                return Results.Ok(new SuccessResponse<ResetTemplatesForEntityResultDto>(payload));
+                logger.LogWarning("[TemplateReset] No templates found after reset for {Entity}", entityType);
             }
-            catch (Exception ex)
+            else
             {
-                logger.LogError(ex, "[TemplateReset] Failed to reset templates for {Entity}", normalizedEntityType);
-                return Results.Problem($"Failed to reset templates: {ex.Message}");
+                logger.LogInformation("[TemplateReset] Post-reset templates for {Entity}: {Templates}",
+                    entityType,
+                    string.Join(", ", current.Select(c =>
+                        $"{c.Id}:{c.UsageType}:{(c.IsSystemDefault ? "sys" : c.IsUserDefault ? "user" : c.UserId)}:{c.Name}@{c.UpdatedAt:O}")));
             }
+
+            var payload = new ResetTemplatesForEntityResultDto
+            {
+                Entity = normalizedEntityType,
+                Deleted = allTemplates.Count,
+                DeletedBindings = stateBindings.Count + legacyBindings.Count,
+                CreatedSystemTemplates = result.Created.Count,
+                CreatedTemplates = result.Templates.Keys.Select(k => k.ToString()).ToList(),
+                CurrentTemplates = current
+            };
+
+            return Results.Ok(new SuccessResponse<ResetTemplatesForEntityResultDto>(payload));
         })
         .WithName("ResetTemplatesForEntity")
         .WithSummary(Doc("ADMIN_TEMPLATE_RESET_SUMMARY"))

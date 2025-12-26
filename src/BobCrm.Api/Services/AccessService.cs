@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.DTOs.Access;
-using BobCrm.Api.Contracts.Requests.Access;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
@@ -18,7 +19,303 @@ public class AccessService
     private readonly UserManager<IdentityUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly MultilingualFieldService _multilingual;
+    private readonly FunctionService _functionService;
+    private readonly RoleService _roleService;
 
+    public AccessService(
+        AppDbContext db, 
+        UserManager<IdentityUser> userManager, 
+        RoleManager<IdentityRole> roleManager, 
+        MultilingualFieldService multilingual,
+        FunctionService functionService,
+        RoleService roleService)
+    {
+        _db = db;
+        _userManager = userManager;
+        _roleManager = roleManager;
+        _multilingual = multilingual;
+        _functionService = functionService;
+        _roleService = roleService;
+    }
+
+    public async Task EnsureFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(functionCode))
+        {
+            return;
+        }
+
+        if (!await HasFunctionAccessAsync(userId, functionCode, ct))
+        {
+            throw new UnauthorizedAccessException("User does not have required function permission.");
+        }
+    }
+
+    public async Task<bool> HasFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(functionCode))
+        {
+            return true;
+        }
+
+        var normalizedCode = functionCode.Trim();
+        var now = DateTime.UtcNow;
+
+        return await _db.RoleAssignments
+            .Where(a => a.UserId == userId &&
+                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
+                        (!a.ValidTo.HasValue || a.ValidTo >= now))
+            .SelectMany(a => a.Role!.Functions)
+            .Join(_db.FunctionNodes,
+                rf => rf.FunctionId,
+                fn => fn.Id,
+                (rf, fn) => fn.Code)
+            .AnyAsync(code => code == normalizedCode, ct);
+    }
+
+    public async Task<DataScopeEvaluationResult> EvaluateDataScopeAsync(string userId, string entityName, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var normalizedEntity = entityName.Trim().ToLowerInvariant();
+
+        var scopeBindings = await (
+                from assignment in _db.RoleAssignments
+                where assignment.UserId == userId
+                      && (!assignment.ValidFrom.HasValue || assignment.ValidFrom <= now)
+                      && (!assignment.ValidTo.HasValue || assignment.ValidTo >= now)
+                join dataScope in _db.RoleDataScopes
+                    on assignment.RoleId equals dataScope.RoleId
+                where dataScope.EntityName == "*" || dataScope.EntityName.ToLower() == normalizedEntity
+                select new ScopeBinding(dataScope, assignment.OrganizationId)
+            )
+            .ToListAsync(ct);
+
+        if (scopeBindings.Any(sb => sb.Scope.ScopeType == RoleDataScopeTypes.All))
+        {
+            return new DataScopeEvaluationResult(true, Array.Empty<ScopeBinding>());
+        }
+
+        return new DataScopeEvaluationResult(false, scopeBindings);
+    }
+
+    // Seeding methods managed here or delegating to new services
+    public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
+    {
+        // Still needs internal logic to seed initial functions if not present
+        // Calling private methods moved? No, we need to invoke FunctionService logic or replicate minimal seeding logic here.
+        // For safer refactoring, we'll keep minimal seeding orchestrator here but usage of private helpers is tricky if they are gone.
+        // Let's assume FunctionService handles Import/Create.
+        // Re-implementing minimal needed logic for seeding using FunctionService is cleaner.
+        // But Import logic was complex. Let's look at how SeedFunctionTreeAsync worked.
+        // It used DefaultFunctionSeeds. 
+        // We will move DefaultFunctionSeeds to FunctionService or a Seeder class? 
+        // For now, let's keep SeedFunctionTreeAsync and related helpers private HERE in AccessService to minimize risk, 
+        // as they are only used for seeding.
+        
+        await SeedFunctionTreeAsync(ct);
+
+        var allFunctionIds = await _db.FunctionNodes
+            .OrderBy(f => f.SortOrder)
+            .Select(f => f.Id)
+            .ToListAsync(ct);
+
+        var adminRole = await _db.RoleProfiles
+            .Include(r => r.Functions)
+            .Include(r => r.DataScopes)
+            .FirstOrDefaultAsync(r => r.IsSystem, ct);
+
+        if (adminRole == null)
+        {
+            adminRole = new RoleProfile
+            {
+                Code = "SYS.ADMIN",
+                Name = "System Administrator",
+                Description = "Has every function and data scope",
+                IsEnabled = true,
+                IsSystem = true,
+                OrganizationId = null,
+                Functions = allFunctionIds.Select(id => new RoleFunctionPermission
+                {
+                    FunctionId = id
+                }).ToList(),
+                DataScopes = new List<RoleDataScope>
+                {
+                    new()
+                    {
+                        EntityName = "*",
+                        ScopeType = RoleDataScopeTypes.All
+                    }
+                }
+            };
+
+            _db.RoleProfiles.Add(adminRole);
+            await _db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            var existingFunctionIds = adminRole.Functions.Select(f => f.FunctionId).ToHashSet();
+            var missingFunctions = allFunctionIds.Where(id => !existingFunctionIds.Contains(id))
+                .Select(id => new RoleFunctionPermission
+                {
+                    RoleId = adminRole.Id,
+                    FunctionId = id
+                }).ToList();
+            var roleChanged = false;
+            if (missingFunctions.Count > 0)
+            {
+                adminRole.Functions.AddRange(missingFunctions);
+                roleChanged = true;
+            }
+
+            if (!adminRole.DataScopes.Any())
+            {
+                adminRole.DataScopes.Add(new RoleDataScope
+                {
+                    RoleId = adminRole.Id,
+                    EntityName = "*",
+                    ScopeType = RoleDataScopeTypes.All
+                });
+                roleChanged = true;
+            }
+
+            if (roleChanged)
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
+        await EnsureDefaultAdminUserAsync();
+        
+        // Ensure admin user role assignment
+        var sysAdminUsers = await _db.Users
+            .Where(u => u.NormalizedUserName == "ADMIN" || u.Email == "admin@local")
+            .ToListAsync(ct);
+
+        if (sysAdminUsers.Count > 0)
+        {
+             var assignmentsAdded = false;
+            foreach (var user in sysAdminUsers)
+            {
+                var exists = await _db.RoleAssignments.AnyAsync(a =>
+                    a.UserId == user.Id &&
+                    a.RoleId == adminRole.Id &&
+                    a.OrganizationId == null, ct);
+                if (!exists)
+                {
+                    _db.RoleAssignments.Add(new RoleAssignment
+                    {
+                        UserId = user.Id,
+                        RoleId = adminRole.Id,
+                        OrganizationId = null
+                    });
+                    assignmentsAdded = true;
+                }
+            }
+
+            if (assignmentsAdded)
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+    }
+
+    private async Task SeedFunctionTreeAsync(CancellationToken ct)
+    {
+         var existing = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
+        
+        foreach (var seed in DefaultFunctionSeeds)
+        {
+            if (!existing.TryGetValue(seed.Code, out var node))
+            {
+                node = new FunctionNode { Code = seed.Code };
+                _db.FunctionNodes.Add(node);
+                existing[seed.Code] = node;
+            }
+
+            node.Name = seed.Name;
+            node.DisplayName = new Dictionary<string, string?>(seed.DisplayNameMap, StringComparer.OrdinalIgnoreCase);
+            node.Route = seed.Route;
+            node.Icon = seed.Icon;
+            node.IsMenu = seed.IsMenu;
+            node.SortOrder = seed.SortOrder;
+            var displayNameKey = ResolveDisplayNameKey(seed);
+            node.DisplayNameKey = displayNameKey;
+            node.DisplayName = await _multilingual.ResolveAsync(displayNameKey, seed.DisplayNameMap, ct);
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        var refreshed = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
+        foreach (var seed in DefaultFunctionSeeds)
+        {
+            var node = refreshed[seed.Code];
+            Guid? parentId = null;
+            if (!string.IsNullOrWhiteSpace(seed.ParentCode) && refreshed.TryGetValue(seed.ParentCode, out var parent))
+            {
+                parentId = parent.Id;
+            }
+
+            if (node.ParentId != parentId)
+            {
+                node.ParentId = parentId;
+            }
+        }
+
+        if (_db.ChangeTracker.HasChanges())
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+    }
+
+    private async Task EnsureDefaultAdminUserAsync()
+    {
+        // Keep existing logic
+        if (!await _roleManager.RoleExistsAsync("admin"))
+        {
+            await _roleManager.CreateAsync(new IdentityRole("admin"));
+        }
+
+        var adminUser = await _userManager.FindByNameAsync("admin");
+        if (adminUser != null)
+        {
+            if (string.IsNullOrWhiteSpace(adminUser.Email))
+            {
+                adminUser.Email = "admin@local";
+                adminUser.EmailConfirmed = true;
+                await _userManager.UpdateAsync(adminUser);
+            }
+
+            if (!await _userManager.IsInRoleAsync(adminUser, "admin"))
+            {
+                await _userManager.AddToRoleAsync(adminUser, "admin");
+            }
+            return;
+        }
+
+        adminUser = new IdentityUser
+        {
+            UserName = "admin",
+            Email = "admin@local",
+            EmailConfirmed = true
+        };
+
+        var result = await _userManager.CreateAsync(adminUser, "Admin@12345");
+        if (!result.Succeeded)
+        {
+             var message = string.Join("; ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Failed to create default administrator: {message}");
+        }
+
+        await _userManager.AddToRoleAsync(adminUser, "admin");
+    }
+
+    // Keep helpers needed for seeding
+    private static string ResolveDisplayNameKey(FunctionSeed seed) =>
+        string.IsNullOrWhiteSpace(seed.DisplayNameKey)
+            ? $"MENU_{seed.Code.Replace('.', '_')}"
+            : seed.DisplayNameKey.Trim();
+
+    // Data Structure for Seeding
     private record FunctionSeed(
         string Code,
         string Name,
@@ -38,7 +335,7 @@ public class AccessService
         };
     }
 
-    private static readonly FunctionSeed[] DefaultFunctionSeeds =
+     private static readonly FunctionSeed[] DefaultFunctionSeeds =
     [
         new("APP.ROOT", "应用根节点", null, "appstore", true, 0, null),
 
@@ -149,979 +446,4 @@ public class AccessService
         new("COLLAB.FILE.ATTACH", "附件管理", null, "paper-clip", true, 521, "COLLAB.FILE"),
         new("COLLAB.FILE.COMMENT", "评论历史", null, "comment", false, 522, "COLLAB.FILE")
     ];
-
-    public AccessService(AppDbContext db, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, MultilingualFieldService multilingual)
-    {
-        _db = db;
-        _userManager = userManager;
-        _roleManager = roleManager;
-        _multilingual = multilingual;
-    }
-
-    public async Task<FunctionNode> CreateFunctionAsync(CreateFunctionRequest request, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(request.Code))
-        {
-            throw new InvalidOperationException("Function code is required.");
-        }
-
-        var exists = await _db.FunctionNodes.AnyAsync(f => f.Code == request.Code, ct);
-        if (exists)
-        {
-            throw new InvalidOperationException("Function code already exists.");
-        }
-
-        var displayName = request.DisplayName != null
-            ? new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase)
-            : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
-        if (!string.IsNullOrWhiteSpace(request.Name))
-        {
-            displayName.TryAdd("zh", request.Name.Trim());
-        }
-
-        var resolvedName = !string.IsNullOrWhiteSpace(request.Name)
-            ? request.Name.Trim()
-            : MultilingualTextHelper.Resolve(displayName, request.Code);
-
-        if (string.IsNullOrWhiteSpace(resolvedName))
-        {
-            throw new InvalidOperationException("Function name is required.");
-        }
-
-        TemplateBinding? templateBinding = null;
-        FormTemplate? template = null;
-        if (request.TemplateId.HasValue)
-        {
-            templateBinding = await _db.TemplateBindings
-                .Include(b => b.Template)
-                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
-
-            if (templateBinding != null)
-            {
-                template = templateBinding.Template
-                    ?? await _db.FormTemplates.FindAsync(new object[] { templateBinding.TemplateId }, ct);
-            }
-            else
-            {
-                template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
-                if (template == null)
-                {
-                    throw new InvalidOperationException("Template binding not found.");
-                }
-            }
-        }
-
-        var node = new FunctionNode
-        {
-            ParentId = request.ParentId,
-            Code = request.Code.Trim(),
-            Name = resolvedName,
-            DisplayName = displayName,
-            Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim(),
-            Icon = request.Icon?.Trim(),
-            IsMenu = request.IsMenu,
-            SortOrder = request.SortOrder,
-            TemplateId = template?.Id,
-            Template = template,
-            TemplateBindingId = templateBinding?.Id,
-            TemplateBinding = templateBinding
-        };
-
-        _db.FunctionNodes.Add(node);
-        await _db.SaveChangesAsync(ct);
-        return node;
-    }
-
-    public async Task<FunctionNode> UpdateFunctionAsync(Guid id, UpdateFunctionRequest request, CancellationToken ct = default)
-    {
-        var node = await _db.FunctionNodes.FindAsync(new object[] { id }, ct);
-        if (node == null)
-        {
-            throw new InvalidOperationException("Function node not found.");
-        }
-
-        if (request.ParentId.HasValue)
-        {
-            if (request.ParentId.Value == id)
-            {
-                throw new InvalidOperationException("Node cannot be its own parent.");
-            }
-
-            var parentExists = await _db.FunctionNodes.AnyAsync(f => f.Id == request.ParentId.Value, ct);
-            if (!parentExists)
-            {
-                throw new InvalidOperationException("Parent node does not exist.");
-            }
-
-            node.ParentId = request.ParentId;
-        }
-        else if (request.ClearParent)
-        {
-            node.ParentId = null;
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Name))
-        {
-            node.Name = request.Name.Trim();
-        }
-
-        if (request.DisplayName != null)
-        {
-            node.DisplayName = new Dictionary<string, string?>(request.DisplayName, StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(request.Name))
-            {
-                node.Name = MultilingualTextHelper.Resolve(node.DisplayName, node.Name);
-            }
-        }
-
-        if (request.ClearRoute)
-        {
-            node.Route = null;
-        }
-        else if (request.Route != null)
-        {
-            node.Route = string.IsNullOrWhiteSpace(request.Route) ? null : request.Route.Trim();
-        }
-
-        if (request.Icon != null)
-        {
-            node.Icon = string.IsNullOrWhiteSpace(request.Icon) ? null : request.Icon.Trim();
-        }
-
-        if (request.IsMenu.HasValue)
-        {
-            node.IsMenu = request.IsMenu.Value;
-        }
-
-        if (request.SortOrder.HasValue)
-        {
-            node.SortOrder = request.SortOrder.Value;
-        }
-
-        if (request.ClearTemplate)
-        {
-            node.TemplateId = null;
-            node.Template = null;
-            node.TemplateBindingId = null;
-            node.TemplateBinding = null;
-        }
-        else if (request.TemplateId.HasValue)
-        {
-            TemplateBinding? templateBinding = await _db.TemplateBindings
-                .Include(b => b.Template)
-                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
-
-            FormTemplate? template;
-            if (templateBinding != null)
-            {
-                template = templateBinding.Template
-                    ?? await _db.FormTemplates.FindAsync(new object[] { templateBinding.TemplateId }, ct);
-            }
-            else
-            {
-                template = await _db.FormTemplates.FindAsync(new object[] { request.TemplateId.Value }, ct);
-                if (template == null)
-                {
-                    throw new InvalidOperationException("Template binding not found.");
-                }
-            }
-
-            node.TemplateId = template?.Id;
-            node.Template = template;
-            node.TemplateBindingId = templateBinding?.Id;
-            node.TemplateBinding = templateBinding;
-        }
-
-        if (node.TemplateId.HasValue && node.Template == null)
-        {
-            await _db.Entry(node).Reference(n => n.Template).LoadAsync(ct);
-        }
-        else if (!node.TemplateId.HasValue)
-        {
-            node.Template = null;
-        }
-
-        if (node.TemplateBindingId.HasValue && node.TemplateBinding == null)
-        {
-            await _db.Entry(node).Reference(n => n.TemplateBinding).LoadAsync(ct);
-        }
-        else if (!node.TemplateBindingId.HasValue)
-        {
-            node.TemplateBinding = null;
-        }
-
-        await _db.SaveChangesAsync(ct);
-        return node;
-    }
-
-    public async Task<List<FunctionNodeDto>> GetMyFunctionsAsync(string userId, string? lang = null, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            throw new ArgumentException("UserId is required.", nameof(userId));
-        }
-
-        var now = DateTime.UtcNow;
-        var functionIds = await _db.RoleAssignments
-            .AsNoTracking()
-            .Where(a => a.UserId == userId &&
-                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
-                        (!a.ValidTo.HasValue || a.ValidTo >= now))
-            .Join(_db.RoleFunctionPermissions.AsNoTracking(),
-                a => a.RoleId,
-                rfp => rfp.RoleId,
-                (assignment, permission) => permission.FunctionId)
-            .Distinct()
-            .ToListAsync(ct);
-
-        var nodes = await _db.FunctionNodes
-            .AsNoTracking()
-            .Include(f => f.Template)
-            .OrderBy(f => f.SortOrder)
-            .ToListAsync(ct);
-
-        if (nodes.Count == 0)
-        {
-            return new List<FunctionNodeDto>();
-        }
-
-        var dict = nodes.ToDictionary(n => n.Id);
-        var allowed = new HashSet<Guid>(functionIds);
-        if (nodes.FirstOrDefault(n => n.Code == "APP.ROOT") is { } rootNode)
-        {
-            allowed.Add(rootNode.Id);
-        }
-
-        foreach (var id in functionIds)
-        {
-            var current = id;
-            while (dict.TryGetValue(current, out var node) && node.ParentId.HasValue)
-            {
-                var parentId = node.ParentId.Value;
-                if (!allowed.Add(parentId))
-                {
-                    break;
-                }
-
-                current = parentId;
-            }
-        }
-
-        var filtered = nodes.Where(n => allowed.Contains(n.Id)).ToList();
-        if (filtered.Count == 0)
-        {
-            return new List<FunctionNodeDto>();
-        }
-
-        var treeBuilder = new FunctionTreeBuilder(_db, _multilingual);
-        return await treeBuilder.BuildAsync(filtered, lang, ct);
-    }
-
-    public async Task DeleteFunctionAsync(Guid id, CancellationToken ct = default)
-    {
-        var node = await _db.FunctionNodes
-            .Include(n => n.Children)
-            .FirstOrDefaultAsync(n => n.Id == id, ct);
-
-        if (node == null)
-        {
-            throw new InvalidOperationException("Function node not found.");
-        }
-
-        if (node.Children.Count > 0)
-        {
-            throw new InvalidOperationException("Cannot delete node with children.");
-        }
-
-        var referenced = await _db.RoleFunctionPermissions.AnyAsync(rf => rf.FunctionId == id, ct);
-        if (referenced)
-        {
-            throw new InvalidOperationException("Cannot delete node referenced by roles.");
-        }
-
-        _db.FunctionNodes.Remove(node);
-        await _db.SaveChangesAsync(ct);
-    }
-
-    public async Task ReorderFunctionsAsync(IEnumerable<FunctionOrderUpdate> updates, CancellationToken ct = default)
-    {
-        var updateList = updates.ToList();
-        if (updateList.Count == 0)
-        {
-            return;
-        }
-
-        var ids = updateList.Select(u => u.Id).ToList();
-        var nodes = await _db.FunctionNodes.Where(n => ids.Contains(n.Id)).ToListAsync(ct);
-
-        var parentMap = await _db.FunctionNodes
-            .AsNoTracking()
-            .Select(n => new { n.Id, n.ParentId })
-            .ToDictionaryAsync(n => n.Id, n => n.ParentId, ct);
-
-        foreach (var update in updateList)
-        {
-            var node = nodes.FirstOrDefault(n => n.Id == update.Id);
-            if (node == null)
-            {
-                throw new InvalidOperationException($"Function node {update.Id} not found.");
-            }
-
-            if (update.ParentId.HasValue && !parentMap.ContainsKey(update.ParentId.Value))
-            {
-                throw new InvalidOperationException("Cannot move node under a non-existent parent.");
-            }
-
-            if (update.ParentId.HasValue && update.ParentId.Value == update.Id)
-            {
-                throw new InvalidOperationException("Cannot set a node as its own parent.");
-            }
-
-            if (!parentMap.ContainsKey(update.Id))
-            {
-                parentMap[update.Id] = node.ParentId;
-            }
-
-            var currentParentId = update.ParentId;
-            var visited = new HashSet<Guid>();
-
-            while (currentParentId.HasValue)
-            {
-                var currentValue = currentParentId.Value;
-
-                if (!visited.Add(currentValue))
-                {
-                    throw new InvalidOperationException("Detected a cycle in the menu hierarchy.");
-                }
-
-                if (currentValue == update.Id)
-                {
-                    throw new InvalidOperationException("Cannot move a node under its own descendant.");
-                }
-
-                if (!parentMap.TryGetValue(currentValue, out var nextParent) || !nextParent.HasValue)
-                {
-                    break;
-                }
-
-                currentParentId = nextParent;
-            }
-
-            parentMap[update.Id] = update.ParentId;
-
-            node.ParentId = update.ParentId;
-            node.SortOrder = update.SortOrder;
-        }
-
-        await _db.SaveChangesAsync(ct);
-    }
-
-    public async Task<RoleProfile> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name))
-        {
-            throw new InvalidOperationException("Role code and name are required.");
-        }
-
-        var exists = await _db.RoleProfiles
-            .AnyAsync(r => r.Code == request.Code && r.OrganizationId == request.OrganizationId, ct);
-        if (exists)
-        {
-            throw new InvalidOperationException("Role code already exists within the organization.");
-        }
-
-        var role = new RoleProfile
-        {
-            OrganizationId = request.OrganizationId,
-            Code = request.Code.Trim(),
-            Name = request.Name.Trim(),
-            Description = request.Description,
-            IsEnabled = request.IsEnabled,
-            IsSystem = false
-        };
-
-        if (request.FunctionIds?.Count > 0)
-        {
-            var functions = await _db.FunctionNodes
-                .Where(f => request.FunctionIds.Contains(f.Id))
-                .Select(f => f.Id)
-                .ToListAsync(ct);
-            role.Functions = functions.Select(f => new RoleFunctionPermission
-            {
-                Role = role,
-                FunctionId = f
-            }).ToList();
-        }
-
-        if (request.DataScopes?.Count > 0)
-        {
-            role.DataScopes = request.DataScopes.Select(ds => new RoleDataScope
-            {
-                Role = role,
-                EntityName = ds.EntityName,
-                ScopeType = ds.ScopeType,
-                FilterExpression = ds.FilterExpression
-            }).ToList();
-        }
-
-        _db.RoleProfiles.Add(role);
-        await _db.SaveChangesAsync(ct);
-        return role;
-    }
-
-    public async Task<RoleAssignment> AssignRoleAsync(AssignRoleRequest request, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(request.UserId))
-        {
-            throw new InvalidOperationException("UserId is required.");
-        }
-
-        var exists = await _db.RoleAssignments.AnyAsync(a =>
-            a.UserId == request.UserId &&
-            a.RoleId == request.RoleId &&
-            a.OrganizationId == request.OrganizationId, ct);
-
-        if (exists)
-        {
-            throw new InvalidOperationException("Assignment already exists.");
-        }
-
-        var assignment = new RoleAssignment
-        {
-            UserId = request.UserId,
-            RoleId = request.RoleId,
-            OrganizationId = request.OrganizationId,
-            ValidFrom = request.ValidFrom,
-            ValidTo = request.ValidTo
-        };
-
-        _db.RoleAssignments.Add(assignment);
-        await _db.SaveChangesAsync(ct);
-        return assignment;
-    }
-
-    /// <summary>
-    /// 为实体确保菜单节点存在
-    /// </summary>
-    /// <param name="entity">实体定义</param>
-    /// <param name="bindings">模板状态绑定字典，Key 为视图状态</param>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>ViewState -> FunctionNode 的映射</returns>
-    public async Task<IReadOnlyDictionary<string, FunctionNode>> EnsureEntityMenuAsync(
-        EntityDefinition entity,
-        IReadOnlyDictionary<string, TemplateStateBinding> bindings,
-        CancellationToken ct = default)
-    {
-        if (entity == null)
-        {
-            throw new ArgumentNullException(nameof(entity));
-        }
-
-        if (bindings == null)
-        {
-            throw new ArgumentNullException(nameof(bindings));
-        }
-
-        var result = new Dictionary<string, FunctionNode>();
-        var legacyBindings = await _db.TemplateBindings
-            .Where(b => b.EntityType == entity.EntityRoute && b.IsSystem)
-            .ToDictionaryAsync(b => b.UsageType, b => b, ct);
-
-        var root = await EnsureFunctionNodeAsync(
-            code: "APP.ROOT",
-            name: "应用根节点",
-            parentId: null,
-            route: null,
-            icon: "appstore",
-            isMenu: true,
-            sortOrder: 0,
-            ct);
-
-        var parent = await EnsureFunctionNodeAsync(
-            code: "CRM.CORE",
-            name: "基本档案",
-            parentId: root.Id,
-            route: null,
-            icon: "database",
-            isMenu: true,
-            sortOrder: 31,
-            ct);
-
-        var codes = BuildFunctionCodes(entity.EntityRoute);
-        var displayName = ResolveDisplayName(entity);
-        var listRoute = ResolveListRoute(entity);
-        var listNode = await EnsureFunctionNodeAsync(
-            codes.ListCode,
-            displayName,
-            parent.Id,
-            listRoute,
-            entity.Icon ?? "profile",
-            isMenu: true,
-            sortOrder: 500 + entity.Order,
-            ct);
-        if (bindings.TryGetValue("List", out var listBinding))
-        {
-            AttachStateBinding(listNode, listBinding);
-            AttachLegacyBinding(listNode, "List", legacyBindings);
-        }
-        result["List"] = listNode;
-
-        if (bindings.TryGetValue("DetailView", out _))
-        {
-            var detailNode = await EnsureFunctionNodeAsync(
-                codes.DetailCode,
-                $"{displayName} Detail",
-                listNode.Id,
-                null,
-                entity.Icon ?? "profile",
-                isMenu: false,
-                sortOrder: listNode.SortOrder + 1,
-                ct);
-            if (bindings.TryGetValue("DetailView", out var detailBinding))
-            {
-                AttachStateBinding(detailNode, detailBinding);
-                AttachLegacyBinding(detailNode, "DetailView", legacyBindings);
-            }
-            result["DetailView"] = detailNode;
-        }
-
-        if (bindings.TryGetValue("DetailEdit", out _))
-        {
-            var editNode = await EnsureFunctionNodeAsync(
-                codes.EditCode,
-                $"{displayName} Edit",
-                listNode.Id,
-                null,
-                entity.Icon ?? "profile",
-                isMenu: false,
-                sortOrder: listNode.SortOrder + 2,
-                ct);
-            if (bindings.TryGetValue("DetailEdit", out var editBinding))
-            {
-                AttachStateBinding(editNode, editBinding);
-                AttachLegacyBinding(editNode, "DetailEdit", legacyBindings);
-            }
-            result["DetailEdit"] = editNode;
-        }
-
-        if (bindings.TryGetValue("Create", out _))
-        {
-            var createNode = await EnsureFunctionNodeAsync(
-                $"{codes.EditCode}.CREATE",
-                $"{displayName} Create",
-                listNode.Id,
-                null,
-                entity.Icon ?? "profile",
-                isMenu: false,
-                sortOrder: listNode.SortOrder + 3,
-                ct);
-            if (bindings.TryGetValue("Create", out var createBinding))
-            {
-                AttachStateBinding(createNode, createBinding);
-                AttachLegacyBinding(createNode, "Create", legacyBindings);
-            }
-            result["Create"] = createNode;
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        var adminRole = await _db.RoleProfiles
-            .Include(r => r.Functions)
-            .FirstOrDefaultAsync(r => r.IsSystem, ct);
-
-        if (adminRole != null)
-        {
-            foreach (var (viewState, node) in result)
-            {
-                if (!bindings.TryGetValue(viewState, out var binding))
-                {
-                    continue;
-                }
-
-                var permission = adminRole.Functions.FirstOrDefault(f => f.FunctionId == node.Id);
-
-                if (permission == null)
-                {
-                    permission = new RoleFunctionPermission
-                    {
-                        RoleId = adminRole.Id,
-                        FunctionId = node.Id
-                    };
-                    adminRole.Functions.Add(permission);
-                }
-
-                var usage = MapViewStateToUsage(viewState);
-                if (legacyBindings.TryGetValue(usage, out var legacy))
-                {
-                    permission.TemplateBindingId = legacy.Id;
-                }
-            }
-
-            await _db.SaveChangesAsync(ct);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 关联模板状态绑定到功能节点
-    /// </summary>
-    private static void AttachStateBinding(FunctionNode node, TemplateStateBinding binding)
-    {
-        node.TemplateStateBindingId = binding.Id;
-        node.TemplateStateBinding = binding;
-    }
-
-    private static void AttachLegacyBinding(
-        FunctionNode node,
-        string viewState,
-        IReadOnlyDictionary<FormTemplateUsageType, TemplateBinding> legacyBindings)
-    {
-        var usage = MapViewStateToUsage(viewState);
-        if (legacyBindings.TryGetValue(usage, out var legacy))
-        {
-            node.TemplateBindingId = legacy.Id;
-            node.TemplateId = legacy.TemplateId;
-        }
-    }
-
-    private static FormTemplateUsageType MapViewStateToUsage(string viewState) =>
-        viewState switch
-        {
-            "List" => FormTemplateUsageType.List,
-            "DetailEdit" => FormTemplateUsageType.Edit,
-            "Create" => FormTemplateUsageType.Combined,
-            _ => FormTemplateUsageType.Detail
-        };
-
-    public async Task SeedSystemAdministratorAsync(CancellationToken ct = default)
-    {
-        await SeedFunctionTreeAsync(ct);
-
-        var allFunctionIds = await _db.FunctionNodes
-            .OrderBy(f => f.SortOrder)
-            .Select(f => f.Id)
-            .ToListAsync(ct);
-
-        var adminRole = await _db.RoleProfiles
-            .Include(r => r.Functions)
-            .Include(r => r.DataScopes)
-            .FirstOrDefaultAsync(r => r.IsSystem, ct);
-
-        if (adminRole == null)
-        {
-            adminRole = new RoleProfile
-            {
-                Code = "SYS.ADMIN",
-                Name = "System Administrator",
-                Description = "Has every function and data scope",
-                IsEnabled = true,
-                IsSystem = true,
-                OrganizationId = null,
-                Functions = allFunctionIds.Select(id => new RoleFunctionPermission
-                {
-                    FunctionId = id
-                }).ToList(),
-                DataScopes = new List<RoleDataScope>
-                {
-                    new()
-                    {
-                        EntityName = "*",
-                        ScopeType = RoleDataScopeTypes.All
-                    }
-                }
-            };
-
-            _db.RoleProfiles.Add(adminRole);
-            await _db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            var existingFunctionIds = adminRole.Functions.Select(f => f.FunctionId).ToHashSet();
-            var missingFunctions = allFunctionIds.Where(id => !existingFunctionIds.Contains(id))
-                .Select(id => new RoleFunctionPermission
-                {
-                    RoleId = adminRole.Id,
-                    FunctionId = id
-                }).ToList();
-            var roleChanged = false;
-            if (missingFunctions.Count > 0)
-            {
-                adminRole.Functions.AddRange(missingFunctions);
-                roleChanged = true;
-            }
-
-            if (!adminRole.DataScopes.Any())
-            {
-                adminRole.DataScopes.Add(new RoleDataScope
-                {
-                    RoleId = adminRole.Id,
-                    EntityName = "*",
-                    ScopeType = RoleDataScopeTypes.All
-                });
-                roleChanged = true;
-            }
-
-            if (roleChanged)
-            {
-                await _db.SaveChangesAsync(ct);
-            }
-        }
-
-        await EnsureDefaultAdminUserAsync();
-
-        var sysAdminUsers = await _db.Users
-            .Where(u => u.NormalizedUserName == "ADMIN" || u.Email == "admin@local")
-            .ToListAsync(ct);
-
-        if (sysAdminUsers.Count > 0)
-        {
-            var assignmentsAdded = false;
-            foreach (var user in sysAdminUsers)
-            {
-                var exists = await _db.RoleAssignments.AnyAsync(a =>
-                    a.UserId == user.Id &&
-                    a.RoleId == adminRole.Id &&
-                    a.OrganizationId == null, ct);
-                if (!exists)
-                {
-                    _db.RoleAssignments.Add(new RoleAssignment
-                    {
-                        UserId = user.Id,
-                        RoleId = adminRole.Id,
-                        OrganizationId = null
-                    });
-                    assignmentsAdded = true;
-                }
-            }
-
-            if (assignmentsAdded)
-            {
-                await _db.SaveChangesAsync(ct);
-            }
-        }
-    }
-
-    public async Task EnsureFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(functionCode))
-        {
-            return;
-        }
-
-        if (!await HasFunctionAccessAsync(userId, functionCode, ct))
-        {
-            throw new UnauthorizedAccessException("User does not have required function permission.");
-        }
-    }
-
-    public async Task<bool> HasFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(functionCode))
-        {
-            return true;
-        }
-
-        var normalizedCode = functionCode.Trim();
-        var now = DateTime.UtcNow;
-
-        return await _db.RoleAssignments
-            .Where(a => a.UserId == userId &&
-                        (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
-                        (!a.ValidTo.HasValue || a.ValidTo >= now))
-            .SelectMany(a => a.Role!.Functions)
-            .Join(_db.FunctionNodes,
-                rf => rf.FunctionId,
-                fn => fn.Id,
-                (rf, fn) => fn.Code)
-            .AnyAsync(code => code == normalizedCode, ct);
-    }
-
-    public async Task<DataScopeEvaluationResult> EvaluateDataScopeAsync(string userId, string entityName, CancellationToken ct = default)
-    {
-        var now = DateTime.UtcNow;
-        var normalizedEntity = entityName.Trim().ToLowerInvariant();
-
-        var scopeBindings = await (
-                from assignment in _db.RoleAssignments
-                where assignment.UserId == userId
-                      && (!assignment.ValidFrom.HasValue || assignment.ValidFrom <= now)
-                      && (!assignment.ValidTo.HasValue || assignment.ValidTo >= now)
-                join dataScope in _db.RoleDataScopes
-                    on assignment.RoleId equals dataScope.RoleId
-                where dataScope.EntityName == "*" || dataScope.EntityName.ToLower() == normalizedEntity
-                select new ScopeBinding(dataScope, assignment.OrganizationId)
-            )
-            .ToListAsync(ct);
-
-        if (scopeBindings.Any(sb => sb.Scope.ScopeType == RoleDataScopeTypes.All))
-        {
-            return new DataScopeEvaluationResult(true, Array.Empty<ScopeBinding>());
-        }
-
-        return new DataScopeEvaluationResult(false, scopeBindings);
-    }
-
-    private async Task<FunctionNode> EnsureFunctionNodeAsync(
-        string code,
-        string name,
-        Guid? parentId,
-        string? route,
-        string? icon,
-        bool isMenu,
-        int sortOrder,
-        CancellationToken ct)
-    {
-        var node = await _db.FunctionNodes.FirstOrDefaultAsync(f => f.Code == code, ct);
-        if (node == null)
-        {
-            node = new FunctionNode { Code = code };
-            _db.FunctionNodes.Add(node);
-        }
-
-        node.Name = name;
-        node.ParentId = parentId;
-        node.Route = route;
-        node.Icon = icon;
-        node.IsMenu = isMenu;
-        node.SortOrder = sortOrder;
-
-        return node;
-    }
-
-    private static (string ListCode, string DetailCode, string EditCode) BuildFunctionCodes(string entityRoute)
-    {
-        var baseCode = $"CRM.CORE.{entityRoute.ToUpperInvariant()}";
-        return (baseCode, $"{baseCode}.DETAIL", $"{baseCode}.EDIT");
-    }
-
-    private static string ResolveDisplayName(EntityDefinition entity)
-    {
-        if (entity.DisplayName != null)
-        {
-            var value = entity.DisplayName.Values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return entity.EntityName;
-    }
-
-    private static string? ResolveListRoute(EntityDefinition entity)
-    {
-        if (string.IsNullOrWhiteSpace(entity.ApiEndpoint))
-        {
-            return null;
-        }
-
-        if (entity.ApiEndpoint.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
-            return entity.ApiEndpoint[4..];
-        }
-
-        return entity.ApiEndpoint;
-    }
-
-    private async Task EnsureDefaultAdminUserAsync()
-    {
-        // Ensure admin role exists
-        if (!await _roleManager.RoleExistsAsync("admin"))
-        {
-            await _roleManager.CreateAsync(new IdentityRole("admin"));
-        }
-
-        var adminUser = await _userManager.FindByNameAsync("admin");
-        if (adminUser != null)
-        {
-            if (string.IsNullOrWhiteSpace(adminUser.Email))
-            {
-                adminUser.Email = "admin@local";
-                adminUser.EmailConfirmed = true;
-                await _userManager.UpdateAsync(adminUser);
-            }
-
-            // Ensure admin user has admin role
-            if (!await _userManager.IsInRoleAsync(adminUser, "admin"))
-            {
-                await _userManager.AddToRoleAsync(adminUser, "admin");
-            }
-            return;
-        }
-
-        adminUser = new IdentityUser
-        {
-            UserName = "admin",
-            Email = "admin@local",
-            EmailConfirmed = true
-        };
-
-        var result = await _userManager.CreateAsync(adminUser, "Admin@12345");
-        if (!result.Succeeded)
-        {
-            var message = string.Join("; ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Failed to create default administrator: {message}");
-        }
-
-        // Assign admin role to admin user
-        await _userManager.AddToRoleAsync(adminUser, "admin");
-    }
-
-    private async Task SeedFunctionTreeAsync(CancellationToken ct)
-    {
-        var existing = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
-        var displayNameCache = new Dictionary<string, Dictionary<string, string?>?>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var seed in DefaultFunctionSeeds)
-        {
-            if (!existing.TryGetValue(seed.Code, out var node))
-            {
-                node = new FunctionNode { Code = seed.Code };
-                _db.FunctionNodes.Add(node);
-                existing[seed.Code] = node;
-            }
-
-            node.Name = seed.Name;
-            node.DisplayName = new Dictionary<string, string?>(seed.DisplayNameMap, StringComparer.OrdinalIgnoreCase);
-            node.Route = seed.Route;
-            node.Icon = seed.Icon;
-            node.IsMenu = seed.IsMenu;
-            node.SortOrder = seed.SortOrder;
-            var displayNameKey = ResolveDisplayNameKey(seed);
-            node.DisplayNameKey = displayNameKey;
-            node.DisplayName = await _multilingual.ResolveAsync(displayNameKey, seed.DisplayNameMap, ct);
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        var refreshed = await _db.FunctionNodes.ToDictionaryAsync(f => f.Code, f => f, ct);
-        foreach (var seed in DefaultFunctionSeeds)
-        {
-            var node = refreshed[seed.Code];
-            Guid? parentId = null;
-            if (!string.IsNullOrWhiteSpace(seed.ParentCode) && refreshed.TryGetValue(seed.ParentCode, out var parent))
-            {
-                parentId = parent.Id;
-            }
-
-            if (node.ParentId != parentId)
-            {
-                node.ParentId = parentId;
-            }
-        }
-
-        if (_db.ChangeTracker.HasChanges())
-        {
-            await _db.SaveChangesAsync(ct);
-        }
-    }
-
-    private static string ResolveDisplayNameKey(FunctionSeed seed) =>
-        string.IsNullOrWhiteSpace(seed.DisplayNameKey)
-            ? $"MENU_{seed.Code.Replace('.', '_')}"
-            : seed.DisplayNameKey.Trim();
-
-
 }

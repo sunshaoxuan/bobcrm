@@ -76,15 +76,8 @@ public static class DataSetEndpoints
         // Create data set
         group.MapPost("/", async ([FromBody] CreateDataSetRequest request, [FromServices] DataSetService service, CancellationToken ct) =>
         {
-            try
-            {
-                var dataSet = await service.CreateAsync(request, ct);
-                return Results.Created($"/api/datasets/{dataSet.Id}", new SuccessResponse<DataSetDto>(dataSet));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "INVALID_OPERATION"));
-            }
+            var dataSet = await service.CreateAsync(request, ct);
+            return Results.Created($"/api/datasets/{dataSet.Id}", new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("CreateDataSet")
         .WithSummary("Create data set")
@@ -98,15 +91,8 @@ public static class DataSetEndpoints
             [FromServices] DataSetService service,
             CancellationToken ct) =>
         {
-            try
-            {
-                var dataSet = await service.UpdateAsync(id, request, ct);
-                return Results.Ok(new SuccessResponse<DataSetDto>(dataSet));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "INVALID_OPERATION"));
-            }
+            var dataSet = await service.UpdateAsync(id, request, ct);
+            return Results.Ok(new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("UpdateDataSet")
         .WithSummary("Update data set")
@@ -116,15 +102,8 @@ public static class DataSetEndpoints
         // Delete data set
         group.MapDelete("/{id:int}", async ([FromRoute] int id, [FromServices] DataSetService service, CancellationToken ct) =>
         {
-            try
-            {
-                await service.DeleteAsync(id, ct);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse());
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "INVALID_OPERATION"));
-            }
+            await service.DeleteAsync(id, ct);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         })
         .WithName("DeleteDataSet")
         .WithSummary("Delete data set")
@@ -138,15 +117,8 @@ public static class DataSetEndpoints
             [FromServices] DataSetService service,
             CancellationToken ct) =>
         {
-            try
-            {
-                var result = await service.ExecuteAsync(id, request, ct);
-                return Results.Ok(new SuccessResponse<DataSetExecutionResponse>(result));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "INVALID_OPERATION"));
-            }
+            var result = await service.ExecuteAsync(id, request, ct);
+            return Results.Ok(new SuccessResponse<DataSetExecutionResponse>(result));
         })
         .WithName("ExecuteDataSet")
         .WithSummary("Execute data set query")
@@ -156,15 +128,8 @@ public static class DataSetEndpoints
         // Get data set field metadata
         group.MapGet("/{id:int}/fields", async ([FromRoute] int id, [FromServices] DataSetService service, CancellationToken ct) =>
         {
-            try
-            {
-                var fields = await service.GetFieldsAsync(id, ct);
-                return Results.Ok(new SuccessResponse<List<DataSourceFieldMetadata>>(fields));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "INVALID_OPERATION"));
-            }
+            var fields = await service.GetFieldsAsync(id, ct);
+            return Results.Ok(new SuccessResponse<List<DataSourceFieldMetadata>>(fields));
         })
         .WithName("GetDataSetFields")
         .WithSummary("Get data set field metadata")

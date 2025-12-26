@@ -3,6 +3,7 @@ using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Core.DomainCommon;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -88,7 +89,7 @@ public static class SettingsEndpoints
             }
             catch (Exception ex)
             {
-                return Results.BadRequest(new ErrorResponse(ex.Message, "SMTP_TEST_FAILED"));
+                throw new DomainException(ex.Message, "SMTP_TEST_FAILED");
             }
         })
         .WithName("SendSmtpTestEmail")

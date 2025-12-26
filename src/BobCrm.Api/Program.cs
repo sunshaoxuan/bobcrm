@@ -246,6 +246,8 @@ builder.Services.AddScoped<BobCrm.Api.Services.IAggregateMetadataPublisher, BobC
 builder.Services.AddScoped<BobCrm.Api.Services.OrganizationService>();
 builder.Services.AddScoped<MultilingualFieldService>();
 builder.Services.AddScoped<AccessService>();
+builder.Services.AddScoped<FunctionService>();
+builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<FunctionTreeBuilder>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AuditTrailService>();
@@ -257,6 +259,9 @@ builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IFieldPermissionService, FieldPermissionService>();
 builder.Services.AddScoped<FieldFilterService>();
 builder.Services.AddScoped<TemplateBindingService>();
+builder.Services.AddScoped<ITemplateBindingAppService, TemplateBindingAppService>();
+builder.Services.AddScoped<IEntityDefinitionAppService, EntityDefinitionAppService>();
+builder.Services.AddScoped<IUserAppService, UserAppService>();
 builder.Services.AddScoped<TemplateRuntimeService>();
 builder.Services.AddScoped<ViewStateSeeder>();
 

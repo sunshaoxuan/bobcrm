@@ -27,10 +27,13 @@ public class AccessServiceTests
         return new AppDbContext(options);
     }
 
-    private static AccessService CreateService(AppDbContext context)
+    private static (AccessService AccessService, FunctionService FunctionService, RoleService RoleService) CreateServices(AppDbContext context)
     {
         var multilingual = new MultilingualFieldService(context, NullLogger<MultilingualFieldService>.Instance);
-        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual);
+        var functionService = new FunctionService(context, multilingual);
+        var roleService = new RoleService(context);
+        var accessService = new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService);
+        return (accessService, functionService, roleService);
     }
 
     private static async Task EnsureLocalizationResourcesAsync(AppDbContext context)
@@ -86,8 +89,8 @@ public class AccessServiceTests
         ctx.FunctionNodes.Add(function);
         await ctx.SaveChangesAsync();
 
-        var service = CreateService(ctx);
-        var role = await service.CreateRoleAsync(new CreateRoleRequest
+        var (_, _, roleService) = CreateServices(ctx);
+        var role = await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "CRM.OP",
             Name = "CRM Operator",
@@ -110,8 +113,8 @@ public class AccessServiceTests
         ctx.RoleProfiles.Add(role);
         await ctx.SaveChangesAsync();
 
-        var service = CreateService(ctx);
-        var assignment = await service.AssignRoleAsync(new AssignRoleRequest
+        var (_, _, roleService) = CreateServices(ctx);
+        var assignment = await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
@@ -127,8 +130,8 @@ public class AccessServiceTests
     {
         await using var ctx = CreateContext();
         await EnsureLocalizationResourcesAsync(ctx);
-        var service = CreateService(ctx);
-        await service.SeedSystemAdministratorAsync();
+        var (accessService, _, _) = CreateServices(ctx);
+        await accessService.SeedSystemAdministratorAsync();
 
         var role = await ctx.RoleProfiles.Include(r => r.Functions).Include(r => r.DataScopes).FirstOrDefaultAsync(r => r.IsSystem);
         role.Should().NotBeNull();
@@ -152,8 +155,8 @@ public class AccessServiceTests
         });
         await ctx.SaveChangesAsync();
 
-        var service = CreateService(ctx);
-        await service.SeedSystemAdministratorAsync();
+        var (accessService, _, _) = CreateServices(ctx);
+        await accessService.SeedSystemAdministratorAsync();
 
         var assignment = await ctx.RoleAssignments.Include(a => a.Role).FirstOrDefaultAsync();
         assignment.Should().NotBeNull();
@@ -168,15 +171,15 @@ public class AccessServiceTests
         ctx.RoleProfiles.Add(role);
         await ctx.SaveChangesAsync();
 
-        var service = CreateService(ctx);
-        await service.AssignRoleAsync(new AssignRoleRequest
+        var (_, _, roleService) = CreateServices(ctx);
+        await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
             OrganizationId = null
         });
 
-        var act = async () => await service.AssignRoleAsync(new AssignRoleRequest
+        var act = async () => await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
@@ -198,15 +201,15 @@ public class AccessServiceTests
         var orgId1 = Guid.NewGuid();
         var orgId2 = Guid.NewGuid();
 
-        var service = CreateService(ctx);
-        var assignment1 = await service.AssignRoleAsync(new AssignRoleRequest
+        var (_, _, roleService) = CreateServices(ctx);
+        var assignment1 = await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
             OrganizationId = orgId1
         });
 
-        var assignment2 = await service.AssignRoleAsync(new AssignRoleRequest
+        var assignment2 = await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
@@ -229,8 +232,8 @@ public class AccessServiceTests
         var validFrom = DateTime.UtcNow.AddDays(1);
         var validTo = DateTime.UtcNow.AddDays(30);
 
-        var service = CreateService(ctx);
-        var assignment = await service.AssignRoleAsync(new AssignRoleRequest
+        var (_, _, roleService) = CreateServices(ctx);
+        var assignment = await roleService.AssignRoleAsync(new AssignRoleRequest
         {
             UserId = "user-1",
             RoleId = role.Id,
@@ -246,9 +249,9 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldValidateRequiredFields()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, _, roleService) = CreateServices(ctx);
 
-        var act = async () => await service.CreateRoleAsync(new CreateRoleRequest
+        var act = async () => await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "",
             Name = "Test Role"
@@ -262,15 +265,15 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldPreventDuplicateCode()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, _, roleService) = CreateServices(ctx);
 
-        await service.CreateRoleAsync(new CreateRoleRequest
+        await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "DUPLICATE.ROLE",
             Name = "First Role"
         });
 
-        var act = async () => await service.CreateRoleAsync(new CreateRoleRequest
+        var act = async () => await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "DUPLICATE.ROLE",
             Name = "Second Role"
@@ -284,16 +287,16 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldAllowSameCodeInDifferentOrganizations()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, _, roleService) = CreateServices(ctx);
 
-        var role1 = await service.CreateRoleAsync(new CreateRoleRequest
+        var role1 = await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "SALES.MANAGER",
             Name = "Sales Manager",
             OrganizationId = Guid.NewGuid()
         });
 
-        var role2 = await service.CreateRoleAsync(new CreateRoleRequest
+        var role2 = await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "SALES.MANAGER",
             Name = "Sales Manager",
@@ -310,9 +313,9 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldCreateRoleWithDataScopes()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, _, roleService) = CreateServices(ctx);
 
-        var role = await service.CreateRoleAsync(new CreateRoleRequest
+        var role = await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "DATA.SCOPED.ROLE",
             Name = "Data Scoped Role",
@@ -334,9 +337,9 @@ public class AccessServiceTests
     public async Task CreateRoleAsync_ShouldCreateRoleWithCustomFilterExpression()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, _, roleService) = CreateServices(ctx);
 
-        var role = await service.CreateRoleAsync(new CreateRoleRequest
+        var role = await roleService.CreateRoleAsync(new CreateRoleRequest
         {
             Code = "CUSTOM.FILTER.ROLE",
             Name = "Custom Filter Role",
@@ -359,15 +362,15 @@ public class AccessServiceTests
     public async Task CreateFunctionAsync_ShouldCreateFunctionWithParent()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, functionService, _) = CreateServices(ctx);
 
-        var parent = await service.CreateFunctionAsync(new CreateFunctionRequest
+        var parent = await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "APP.CRM",
             Name = "CRM Module"
         });
 
-        var child = await service.CreateFunctionAsync(new CreateFunctionRequest
+        var child = await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "APP.CRM.CUSTOMERS",
             Name = "Customers",
@@ -392,15 +395,15 @@ public class AccessServiceTests
     public async Task CreateFunctionAsync_ShouldPreventDuplicateCode()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, functionService, _) = CreateServices(ctx);
 
-        await service.CreateFunctionAsync(new CreateFunctionRequest
+        await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "DUPLICATE.FUNCTION",
             Name = "First Function"
         });
 
-        var act = async () => await service.CreateFunctionAsync(new CreateFunctionRequest
+        var act = async () => await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "DUPLICATE.FUNCTION",
             Name = "Second Function"
@@ -428,37 +431,35 @@ public class AccessServiceTests
         ctx.FormTemplates.Add(template);
         await ctx.SaveChangesAsync();
 
-        var binding = new TemplateBinding
+        var stateBinding = new TemplateStateBinding
         {
             EntityType = "customer",
-            UsageType = FormTemplateUsageType.Detail,
             TemplateId = template.Id,
-            IsSystem = true,
-            UpdatedBy = "seed",
-            UpdatedAt = DateTime.UtcNow
+            ViewState = "DetailView",
+            IsDefault = true,
+            CreatedAt = DateTime.UtcNow
         };
-        ctx.TemplateBindings.Add(binding);
+        ctx.TemplateStateBindings.Add(stateBinding);
         await ctx.SaveChangesAsync();
 
-        var service = CreateService(ctx);
-        var node = await service.CreateFunctionAsync(new CreateFunctionRequest
+        var (_, functionService, _) = CreateServices(ctx);
+        var node = await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "CRM.CUSTOMER.DETAIL",
             Name = "Customer Detail",
-            TemplateId = binding.Id
+            TemplateId = stateBinding.Id
         });
 
-        node.TemplateBindingId.Should().Be(binding.Id);
-        node.TemplateId.Should().Be(template.Id);
+        node.TemplateStateBindingId.Should().Be(stateBinding.Id);
     }
 
     [Fact]
     public async Task CreateFunctionAsync_ShouldThrowWhenTemplateBindingMissing()
     {
         await using var ctx = CreateContext();
-        var service = CreateService(ctx);
+        var (_, functionService, _) = CreateServices(ctx);
 
-        var act = async () => await service.CreateFunctionAsync(new CreateFunctionRequest
+        var act = async () => await functionService.CreateFunctionAsync(new CreateFunctionRequest
         {
             Code = "CRM.INVALID",
             Name = "Invalid",
@@ -474,10 +475,10 @@ public class AccessServiceTests
     {
         await using var ctx = CreateContext();
         await EnsureLocalizationResourcesAsync(ctx);
-        var service = CreateService(ctx);
+        var (accessService, _, _) = CreateServices(ctx);
 
         // First seed
-        await service.SeedSystemAdministratorAsync();
+        await accessService.SeedSystemAdministratorAsync();
         var role = await ctx.RoleProfiles.Include(r => r.Functions).FirstOrDefaultAsync(r => r.IsSystem);
         var initialFunctionCount = role!.Functions.Count;
 
@@ -492,7 +493,7 @@ public class AccessServiceTests
         await ctx.SaveChangesAsync();
 
         // Second seed should add the new function to admin role
-        await service.SeedSystemAdministratorAsync();
+        await accessService.SeedSystemAdministratorAsync();
         await ctx.Entry(role).ReloadAsync();
         await ctx.Entry(role).Collection(r => r.Functions).LoadAsync();
 

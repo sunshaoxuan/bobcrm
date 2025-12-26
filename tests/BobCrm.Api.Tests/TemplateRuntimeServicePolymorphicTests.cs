@@ -138,7 +138,9 @@ public class TemplateRuntimeServicePolymorphicTests : IDisposable
     {
         var multilingualLogger = Mock.Of<ILogger<MultilingualFieldService>>();
         var multilingual = new MultilingualFieldService(context, multilingualLogger);
-        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual);
+        var functionService = new FunctionService(context, multilingual);
+        var roleService = new RoleService(context);
+        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService);
     }
 
     private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)

@@ -58,44 +58,21 @@ public static class EntityAggregateEndpoints
             CancellationToken cancellationToken) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                // 1. 构建聚合
-                var aggregate = await BuildAggregateFromRequest(request, aggregateService, cancellationToken);
+            // 1. 构建聚合
+            var aggregate = await BuildAggregateFromRequest(request, aggregateService, cancellationToken);
 
-                // 2. 保存聚合
-                var savedAggregate = await aggregateService.SaveAggregateAsync(aggregate, cancellationToken);
+            // 2. 保存聚合
+            var savedAggregate = await aggregateService.SaveAggregateAsync(aggregate, cancellationToken);
 
-                // 3. 生成代码
-                await codeGenerator.GenerateSubEntitiesAsync(savedAggregate, cancellationToken);
+            // 3. 生成代码
+            await codeGenerator.GenerateSubEntitiesAsync(savedAggregate, cancellationToken);
 
-                // 4. 发布元数据
-                await metadataPublisher.PublishAsync(savedAggregate, cancellationToken);
+            // 4. 发布元数据
+            await metadataPublisher.PublishAsync(savedAggregate, cancellationToken);
 
-                // 5. 返回结果
-                var dto = MapToAggregateDto(savedAggregate);
-                return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
-            }
-            catch (DomainException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(LocalizeDomainException(loc, lang, ex), ex.MessageKey));
-            }
-            catch (ValidationException ex)
-            {
-                var details = ex.Errors
-                    .GroupBy(e => e.PropertyPath)
-                    .ToDictionary(g => g.Key, g => g.Select(e => LocalizeValidationError(loc, lang, e)).ToArray());
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang), details, "VALIDATION_ERROR"));
-            }
-            catch (Exception ex)
-            {
-                var resp = new ErrorResponse(loc.T("ERR_AGGREGATE_SAVE_FAILED", lang), "INTERNAL_ERROR")
-                {
-                    TraceId = http.TraceIdentifier,
-                    Timestamp = DateTime.UtcNow
-                };
-                return Results.Json(resp, statusCode: StatusCodes.Status500InternalServerError);
-            }
+            // 5. 返回结果
+            var dto = MapToAggregateDto(savedAggregate);
+            return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
         })
         .WithName("SaveEntityAggregate")
         .WithSummary("Save entity aggregate")
@@ -113,56 +90,28 @@ public static class EntityAggregateEndpoints
             CancellationToken cancellationToken) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                var aggregate = await BuildAggregateFromRequest(request, aggregateService, cancellationToken);
-                var validationResult = aggregateService.ValidateAggregate(aggregate);
+            var aggregate = await BuildAggregateFromRequest(request, aggregateService, cancellationToken);
+            var validationResult = aggregateService.ValidateAggregate(aggregate);
 
-                if (validationResult.IsValid)
-                {
-                    return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
-                    {
-                        IsValid = true,
-                        Message = loc.T("MSG_AGGREGATE_VALID", lang)
-                    }));
-                }
-                else
-                {
-                    return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
-                    {
-                        IsValid = false,
-                        Errors = validationResult.Errors.Select(e => new EntityAggregateValidationErrorDto
-                        {
-                            PropertyPath = e.PropertyPath,
-                            Message = LocalizeValidationError(loc, lang, e)
-                        }).ToList()
-                    }));
-                }
-            }
-            catch (DomainException ex)
+            if (validationResult.IsValid)
             {
-                return Results.BadRequest(new ErrorResponse(LocalizeDomainException(loc, lang, ex), ex.MessageKey));
+                return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
+                {
+                    IsValid = true,
+                    Message = loc.T("MSG_AGGREGATE_VALID", lang)
+                }));
             }
-            catch (ValidationException ex)
+            else
             {
                 return Results.Ok(new SuccessResponse<EntityAggregateValidationResponseDto>(new EntityAggregateValidationResponseDto
                 {
                     IsValid = false,
-                    Errors = ex.Errors.Select(e => new EntityAggregateValidationErrorDto
+                    Errors = validationResult.Errors.Select(e => new EntityAggregateValidationErrorDto
                     {
                         PropertyPath = e.PropertyPath,
                         Message = LocalizeValidationError(loc, lang, e)
                     }).ToList()
                 }));
-            }
-            catch (Exception ex)
-            {
-                var resp = new ErrorResponse(loc.T("ERR_AGGREGATE_VALIDATION_FAILED", lang), "INTERNAL_ERROR")
-                {
-                    TraceId = http.TraceIdentifier,
-                    Timestamp = DateTime.UtcNow
-                };
-                return Results.Json(resp, statusCode: StatusCodes.Status500InternalServerError);
             }
         })
         .WithName("ValidateEntityAggregate")

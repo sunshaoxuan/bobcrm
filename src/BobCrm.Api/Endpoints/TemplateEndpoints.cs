@@ -98,22 +98,9 @@ public static class TemplateEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-                var template = await templateService.UpdateTemplateAsync(id, uid, req);
-                return Results.Ok(new SuccessResponse<FormTemplate>(template));
-            }
-            catch (KeyNotFoundException)
-            {
-                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
-                    "TEMPLATE_UPDATE_FAILED"));
-            }
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var template = await templateService.UpdateTemplateAsync(id, uid, req);
+            return Results.Ok(new SuccessResponse<FormTemplate>(template));
         })
         .WithName("UpdateTemplate")
         .WithSummary("更新模板")
@@ -131,22 +118,9 @@ public static class TemplateEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-                await templateService.DeleteTemplateAsync(id, uid);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_TEMPLATE_DELETED", lang)));
-            }
-            catch (KeyNotFoundException)
-            {
-                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
-                    "TEMPLATE_DELETE_FAILED"));
-            }
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            await templateService.DeleteTemplateAsync(id, uid);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_TEMPLATE_DELETED", lang)));
         })
         .WithName("DeleteTemplate")
         .WithSummary("删除模板")
@@ -165,16 +139,9 @@ public static class TemplateEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-                var newTemplate = await templateService.CopyTemplateAsync(id, uid, req);
-                return Results.Created($"/api/templates/{newTemplate.Id}", new SuccessResponse<FormTemplate>(newTemplate));
-            }
-            catch (KeyNotFoundException)
-            {
-                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
-            }
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var newTemplate = await templateService.CopyTemplateAsync(id, uid, req);
+            return Results.Created($"/api/templates/{newTemplate.Id}", new SuccessResponse<FormTemplate>(newTemplate));
         })
         .WithName("CopyTemplate")
         .WithSummary("复制模板")
@@ -191,37 +158,24 @@ public static class TemplateEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-                var template = await templateService.ApplyTemplateAsync(id, uid);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var template = await templateService.ApplyTemplateAsync(id, uid);
 
-                var payload = new ApplyTemplateResultDto
+            var payload = new ApplyTemplateResultDto
+            {
+                Message = loc.T("MSG_TEMPLATE_APPLIED_DEFAULT", lang),
+                Template = new AppliedTemplateDto
                 {
-                    Message = loc.T("MSG_TEMPLATE_APPLIED_DEFAULT", lang),
-                    Template = new AppliedTemplateDto
-                    {
-                        Id = template.Id,
-                        Name = template.Name,
-                        EntityType = template.EntityType,
-                        UsageType = "Unknown",
-                        IsUserDefault = template.IsUserDefault,
-                        IsSystemDefault = template.IsSystemDefault
-                    }
-                };
+                    Id = template.Id,
+                    Name = template.Name,
+                    EntityType = template.EntityType,
+                    UsageType = "Unknown",
+                    IsUserDefault = template.IsUserDefault,
+                    IsSystemDefault = template.IsSystemDefault
+                }
+            };
 
-                return Results.Ok(new SuccessResponse<ApplyTemplateResultDto>(payload));
-            }
-            catch (KeyNotFoundException)
-            {
-                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
-                    "TEMPLATE_APPLY_FAILED"));
-            }
+            return Results.Ok(new SuccessResponse<ApplyTemplateResultDto>(payload));
         })
         .WithName("ApplyTemplate")
         .WithSummary("应用模板")
@@ -258,10 +212,9 @@ public static class TemplateEndpoints
         group.MapGet("/menu-bindings", async (
             string? lang,
             ClaimsPrincipal user,
-            AppDbContext db,
-            ILocalization loc,
+            ITemplateBindingAppService bindingAppService,
             HttpContext http,
-            ILogger<Program> logger,
+            FormTemplateUsageType? usageType,
             string? viewState,
             CancellationToken ct) =>
         {
@@ -272,153 +225,17 @@ public static class TemplateEndpoints
                 return Results.Unauthorized();
             }
 
-            var resolvedViewState = viewState ?? "DetailView";
-            var now = DateTime.UtcNow;
-
-            var accessibleFunctionIds = await db.RoleAssignments
-                .Where(a => a.UserId == uid &&
-                            (!a.ValidFrom.HasValue || a.ValidFrom <= now) &&
-                            (!a.ValidTo.HasValue || a.ValidTo >= now))
-                .SelectMany(a => a.Role!.Functions)
-                .Select(rf => rf.FunctionId)
-                .Distinct()
-                .ToListAsync(ct);
-
-            if (accessibleFunctionIds.Count == 0)
-            {
-                return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(new List<MenuTemplateIntersectionDto>()));
-            }
-
-            var menuNodes = await db.FunctionNodes
-                .AsNoTracking()
-                .Include(fn => fn.TemplateStateBinding!)
-                .ThenInclude(tsb => tsb.Template)
-                .Where(fn => fn.TemplateStateBindingId != null && accessibleFunctionIds.Contains(fn.Id))
-                .ToListAsync(ct);
-
-            var filteredNodes = menuNodes
-                .Where(fn => fn.TemplateStateBinding != null && fn.TemplateStateBinding.ViewState == resolvedViewState)
-                .OrderBy(fn => fn.SortOrder)
-                .ToList();
-
-            if (filteredNodes.Count == 0)
-            {
-                return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(new List<MenuTemplateIntersectionDto>()));
-            }
-
-            var entityTypes = filteredNodes
-                .Select(fn => fn.TemplateStateBinding!.EntityType)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var entityTypeSet = new HashSet<string>(entityTypes, StringComparer.OrdinalIgnoreCase);
-
-            var entityMetadata = await db.EntityDefinitions
-                .AsNoTracking()
-                .Where(ed => ed.EntityRoute != null && entityTypeSet.Contains(ed.EntityRoute))
-                .ToDictionaryAsync(
-                    ed => ed.EntityRoute!,
-                    ed =>
-                    {
-                        var summary = ed.ToSummaryDto(targetLang);
-                        var displayNameSingle = summary.DisplayName
-                            ?? summary.DisplayNameTranslations?.Resolve(targetLang ?? string.Empty)
-                            ?? ed.EntityName;
-                        return (DisplayName: displayNameSingle, DisplayNameTranslations: summary.DisplayNameTranslations, Route: ResolveRoute(ed));
-                    },
-                    StringComparer.OrdinalIgnoreCase,
-                    ct);
-
-            var candidateTemplates = await db.FormTemplates
-                .AsNoTracking()
-                .Where(t => t.EntityType != null &&
-                            entityTypeSet.Contains(t.EntityType!) &&
-                            (t.UserId == uid || t.IsSystemDefault))
-                .ToListAsync(ct);
-
-            var templatesByEntity = candidateTemplates
-                .GroupBy(t => t.EntityType!, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-            var result = new List<MenuTemplateIntersectionDto>(filteredNodes.Count);
-            foreach (var node in filteredNodes)
-            {
-                var binding = node.TemplateStateBinding!;
-                var key = binding.EntityType;
-                var usageType = binding.ViewState switch
+            var resolvedViewState = !string.IsNullOrWhiteSpace(viewState)
+                ? viewState!
+                : usageType switch
                 {
-                    "List" => FormTemplateUsageType.List,
-                    "DetailEdit" => FormTemplateUsageType.Edit,
-                    "Create" => FormTemplateUsageType.Combined,
-                    _ => FormTemplateUsageType.Detail
-                };
-                templatesByEntity.TryGetValue(key, out var templateList);
-                templateList ??= new List<FormTemplate>();
-
-                if (binding.Template != null && templateList.All(t => t.Id != binding.TemplateId))
-                {
-                    templateList = new List<FormTemplate>(templateList) { binding.Template };
-                }
-
-                var templates = templateList
-                    .OrderByDescending(t => t.IsUserDefault)
-                    .ThenByDescending(t => t.IsSystemDefault)
-                    .ThenBy(t => t.Name)
-                    .Select(t => new TemplateSummaryDto
-                    {
-                        Id = t.Id,
-                        Name = t.Name,
-                        EntityType = t.EntityType,
-                        UsageType = t.UsageType,
-                        IsUserDefault = t.IsUserDefault,
-                        IsSystemDefault = t.IsSystemDefault,
-                        Description = t.Description,
-                        CreatedAt = t.CreatedAt,
-                        UpdatedAt = t.UpdatedAt,
-                        IsInUse = t.IsInUse
-                    })
-                    .ToList();
-
-                entityMetadata.TryGetValue(binding.EntityType, out var metadata);
-                var displayName = metadata.DisplayName ?? node.Name;
-                var resolvedRoute = metadata.Route ?? node.Route;
-                var displayNameTranslations = metadata.DisplayNameTranslations ??
-                    (node.DisplayName == null ? null : new MultilingualText(node.DisplayName));
-                var resolvedMenuName = !string.IsNullOrWhiteSpace(targetLang)
-                    ? (displayNameTranslations?.Resolve(targetLang) ?? displayName ?? node.Name)
-                    : null;
-
-                var entry = new MenuTemplateIntersectionDto
-                {
-                    Menu = new MenuNodeSummaryDto
-                    {
-                        Id = node.Id,
-                        Code = NormalizeMenuCode(node.Code),
-                        Name = resolvedMenuName ?? displayName,
-                        DisplayNameKey = node.DisplayNameKey,
-                        DisplayName = string.IsNullOrWhiteSpace(targetLang) ? null : (resolvedMenuName ?? displayName),
-                        DisplayNameTranslations = string.IsNullOrWhiteSpace(targetLang) ? displayNameTranslations : null,
-                        Route = resolvedRoute,
-                        Icon = node.Icon,
-                        SortOrder = node.SortOrder
-                    },
-                    Binding = new TemplateStateBindingSummaryDto
-                    {
-                        Id = binding.Id,
-                        EntityType = binding.EntityType,
-                        ViewState = binding.ViewState,
-                        UsageType = usageType,
-                        TemplateId = binding.TemplateId,
-                        IsDefault = binding.IsDefault,
-                        RequiredPermission = binding.RequiredPermission
-                    },
-                    Templates = templates
+                    FormTemplateUsageType.List => "List",
+                    FormTemplateUsageType.Edit => "DetailEdit",
+                    FormTemplateUsageType.Combined => "Create",
+                    _ => "DetailView"
                 };
 
-                result.Add(entry);
-            }
-
-            logger.LogDebug("[Templates] Calculated {Count} menu/template intersections for user {UserId}.", result.Count, uid);
+            var result = await bindingAppService.GetMenuTemplateIntersectionsAsync(uid, targetLang, resolvedViewState, ct);
             return Results.Ok(new SuccessResponse<List<MenuTemplateIntersectionDto>>(result));
         })
         .WithName("GetMenuTemplateIntersections")
@@ -439,7 +256,9 @@ public static class TemplateEndpoints
             var binding = await bindingService.GetBindingAsync(entityType, resolvedUsage, ct);
             return binding is null
                 ? Results.NotFound(new ErrorResponse(loc.T("ERR_TEMPLATE_BINDING_NOT_FOUND", lang), "TEMPLATE_BINDING_NOT_FOUND"))
+#pragma warning disable CS0618
                 : Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
+#pragma warning restore CS0618
         })
         .WithName("GetTemplateBinding")
         .WithSummary("获取实体模板绑定")
@@ -471,7 +290,9 @@ public static class TemplateEndpoints
                 request.RequiredFunctionCode,
                 ct);
 
+#pragma warning disable CS0618
             return Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
+#pragma warning restore CS0618
         })
         .WithName("UpsertTemplateBinding")
         .WithSummary("更新模板绑定")
@@ -495,21 +316,8 @@ public static class TemplateEndpoints
             }
 
                 request ??= new TemplateRuntimeRequest();
-            try
-            {
-                var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
-                return Results.Ok(new SuccessResponse<TemplateRuntimeResponse>(context));
-            }
-            catch (KeyNotFoundException)
-            {
-                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_TEMPLATE_OPERATION_FAILED", lang), ex.Message),
-                    "TEMPLATE_RUNTIME_FAILED"));
-            }
+            var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
+            return Results.Ok(new SuccessResponse<TemplateRuntimeResponse>(context));
         })
         .WithName("BuildTemplateRuntime")
         .WithSummary("获取模板运行时上下文")
@@ -521,37 +329,7 @@ public static class TemplateEndpoints
         return app;
     }
 
-    private static string NormalizeMenuCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-        {
-            return string.Empty;
-        }
 
-        if (code.EndsWith(".DETAIL", StringComparison.OrdinalIgnoreCase) ||
-            code.EndsWith(".EDIT", StringComparison.OrdinalIgnoreCase))
-        {
-            var index = code.LastIndexOf('.');
-            return index > 0 ? code[..index] : code;
-        }
-
-        return code;
-    }
-
-    private static string? ResolveRoute(EntityDefinition definition)
-    {
-        if (string.IsNullOrWhiteSpace(definition.ApiEndpoint))
-        {
-            return null;
-        }
-
-        var route = definition.ApiEndpoint;
-        if (route.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
-            route = route[4..];
-        }
-        return route;
-    }
 
 
 }

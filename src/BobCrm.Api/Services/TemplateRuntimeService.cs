@@ -75,18 +75,18 @@ public class TemplateRuntimeService
 
         var requiredFunction = request.FunctionCodeOverride
             ?? bindingToUse.RequiredFunctionCode
-            ?? bindingToUse.Template.RequiredFunctionCode;
+            ?? bindingToUse.Template!.RequiredFunctionCode;
 
         await _accessService.EnsureFunctionAccessAsync(userId, requiredFunction, ct);
-        var scopeResult = await _accessService.EvaluateDataScopeAsync(userId, entityType, ct);
-
+        var scopeResult = await _accessService.EvaluateDataScopeAsync(userId, entityType ?? "", ct);
+        
         var appliedScopes = DescribeScopes(scopeResult);
 
         _logger.LogDebug("Runtime context for {EntityType}/{Usage} built with template {TemplateId}", entityType, usage, binding.TemplateId);
 
         return new TemplateRuntimeResponse(
             bindingToUse.ToDto(),
-            bindingToUse.Template.ToDescriptor(),
+            bindingToUse.Template!.ToDescriptor(),
             scopeResult.HasFullAccess,
             appliedScopes);
     }

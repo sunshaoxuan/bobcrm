@@ -99,17 +99,8 @@ public static class EnumDefinitionEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 var created = await service.CreateAsync(request);
                 return Results.Created($"/api/enums/{created.Id}", new SuccessResponse<EnumDefinitionDto>(created));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
-                    "ENUM_CREATE_FAILED"));
-            }
         })
         .WithName("CreateEnum")
         .WithSummary("创建枚举定义")
@@ -125,19 +116,10 @@ public static class EnumDefinitionEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 var updated = await service.UpdateAsync(id, request);
                 return updated == null
                     ? Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"))
                     : Results.Ok(new SuccessResponse<EnumDefinitionDto>(updated));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
-                    "ENUM_UPDATE_FAILED"));
-            }
         })
         .WithName("UpdateEnum")
         .WithSummary("更新枚举定义")
@@ -153,19 +135,10 @@ public static class EnumDefinitionEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 var deleted = await service.DeleteAsync(id);
                 return deleted
                     ? Results.Ok(ApiResponseExtensions.SuccessResponse())
                     : Results.NotFound(new ErrorResponse(loc.T("ERR_ENUM_NOT_FOUND", lang), "ENUM_NOT_FOUND"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
-                    "ENUM_DELETE_FAILED"));
-            }
         })
         .WithName("DeleteEnum")
         .WithSummary("删除枚举定义")
@@ -182,17 +155,8 @@ public static class EnumDefinitionEndpoints
             HttpContext http) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 var options = await service.UpdateOptionsAsync(id, request);
                 return Results.Ok(new SuccessResponse<List<EnumOptionDto>>(options));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_ENUM_OPERATION_FAILED", lang), ex.Message),
-                    "ENUM_UPDATE_FAILED"));
-            }
         })
         .WithName("UpdateEnumOptions")
         .WithSummary("批量更新枚举选项")

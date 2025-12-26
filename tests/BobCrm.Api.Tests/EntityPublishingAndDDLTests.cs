@@ -33,6 +33,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly DefaultTemplateGenerator _templateGenerator;
     private readonly TemplateBindingService _bindingService;
     private readonly AccessService _accessService;
+    private readonly FunctionService _functionService;
     private readonly Mock<IDefaultTemplateService> _defaultTemplateService;
     private readonly EntityMenuRegistrar _menuRegistrar;
     private readonly IConfiguration _configuration;
@@ -57,7 +58,9 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         var multilingualLogger = Mock.Of<ILogger<MultilingualFieldService>>();
         var multilingual = new MultilingualFieldService(_db, multilingualLogger);
-        _accessService = new AccessService(_db, CreateUserManager(_db), CreateRoleManager(_db), multilingual);
+        _functionService = new FunctionService(_db, multilingual);
+        var roleService = new RoleService(_db);
+        _accessService = new AccessService(_db, CreateUserManager(_db), CreateRoleManager(_db), multilingual, _functionService, roleService);
 
         var menuRegistrarLogger = new Mock<ILogger<EntityMenuRegistrar>>();
         _menuRegistrar = new EntityMenuRegistrar(_db, menuRegistrarLogger.Object);
@@ -900,7 +903,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             ddlExecutor,
             _mockLockService.Object,
             _bindingService,
-            _accessService,
+            _functionService,
             _defaultTemplateService.Object,
             _configuration,
             _mockPublishLogger.Object);
@@ -1559,7 +1562,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             ddlExecutor,
             _mockLockService.Object,
             _bindingService,
-            _accessService,
+            _functionService,
             _defaultTemplateService.Object,
             config,
             _mockPublishLogger.Object);

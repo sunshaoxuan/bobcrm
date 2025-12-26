@@ -38,47 +38,37 @@ public static class DynamicEntityEndpoints
         {
             var uiLang = LangHelper.GetLang(http);
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-            try
+            logger.LogInformation("[DynamicEntity] Querying {EntityType}", fullTypeName);
+
+            var options = new QueryOptions
             {
-                logger.LogInformation("[DynamicEntity] Querying {EntityType}", fullTypeName);
+                Filters = request.Filters,
+                OrderBy = request.OrderBy,
+                OrderByDescending = request.OrderByDescending,
+                Skip = request.Skip,
+                Take = request.Take ?? 100 // 默认100条
+            };
 
-                var options = new QueryOptions
-                {
-                    Filters = request.Filters,
-                    OrderBy = request.OrderBy,
-                    OrderByDescending = request.OrderByDescending,
-                    Skip = request.Skip,
-                    Take = request.Take ?? 100 // 默认100条
-                };
+            var results = await persistenceService.QueryAsync(fullTypeName, options);
+            var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
 
-                var results = await persistenceService.QueryAsync(fullTypeName, options);
-                var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
+            var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
 
-                var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
-
-                var dto = new DynamicEntityQueryResultDto
-                {
-                    Meta = new DynamicEntityMetaDto
-                    {
-                        Fields = fields
-                    },
-                    Data = results,
-                    Total = count,
-                    Page = request.Skip.HasValue && request.Take.HasValue
-                        ? (request.Skip.Value / request.Take.Value) + 1
-                        : 1,
-                    PageSize = request.Take ?? 100
-                };
-
-                return Results.Ok(new SuccessResponse<DynamicEntityQueryResultDto>(dto));
-            }
-            catch (Exception ex)
+            var dto = new DynamicEntityQueryResultDto
             {
-                logger.LogError(ex, "[DynamicEntity] Query failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", uiLang), ex.Message),
-                    "DYNAMIC_QUERY_FAILED"));
-            }
+                Meta = new DynamicEntityMetaDto
+                {
+                    Fields = fields
+                },
+                Data = results,
+                Total = count,
+                Page = request.Skip.HasValue && request.Take.HasValue
+                    ? (request.Skip.Value / request.Take.Value) + 1
+                    : 1,
+                PageSize = request.Take ?? 100
+            };
+
+            return Results.Ok(new SuccessResponse<DynamicEntityQueryResultDto>(dto));
         })
         .WithName("QueryDynamicEntities")
         .WithSummary("查询动态实体列表")
@@ -101,34 +91,24 @@ public static class DynamicEntityEndpoints
         {
             var uiLang = LangHelper.GetLang(http);
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-            try
+            logger.LogInformation("[DynamicEntity] Getting {EntityType} with ID {Id}", fullTypeName, id);
+
+            var entity = await persistenceService.GetByIdAsync(fullTypeName, id);
+
+            if (entity == null)
+                return Results.NotFound(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", uiLang), id),
+                    "DYNAMIC_ENTITY_NOT_FOUND"));
+
+            var result = new DynamicEntityGetResultDto
             {
-                logger.LogInformation("[DynamicEntity] Getting {EntityType} with ID {Id}", fullTypeName, id);
+                Meta = includeMeta == true
+                    ? new DynamicEntityMetaDto { Fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct) }
+                    : null,
+                Data = entity
+            };
 
-                var entity = await persistenceService.GetByIdAsync(fullTypeName, id);
-
-                if (entity == null)
-                    return Results.NotFound(new ErrorResponse(
-                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", uiLang), id),
-                        "DYNAMIC_ENTITY_NOT_FOUND"));
-
-                var result = new DynamicEntityGetResultDto
-                {
-                    Meta = includeMeta == true
-                        ? new DynamicEntityMetaDto { Fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct) }
-                        : null,
-                    Data = entity
-                };
-
-                return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "[DynamicEntity] Get failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_QUERY_FAILED", uiLang), ex.Message),
-                    "DYNAMIC_QUERY_FAILED"));
-            }
+            return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
         })
         .WithName("GetDynamicEntityById")
         .WithSummary("根据ID查询动态实体")
@@ -147,36 +127,26 @@ public static class DynamicEntityEndpoints
             ILogger<Program> logger) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
+            logger.LogInformation("[DynamicEntity] Raw query on table {TableName}", tableName);
+
+            var options = new QueryOptions
             {
-                logger.LogInformation("[DynamicEntity] Raw query on table {TableName}", tableName);
+                Filters = request.Filters,
+                OrderBy = request.OrderBy,
+                OrderByDescending = request.OrderByDescending,
+                Skip = request.Skip,
+                Take = request.Take ?? 100
+            };
 
-                var options = new QueryOptions
-                {
-                    Filters = request.Filters,
-                    OrderBy = request.OrderBy,
-                    OrderByDescending = request.OrderByDescending,
-                    Skip = request.Skip,
-                    Take = request.Take ?? 100
-                };
+            var results = await persistenceService.QueryRawAsync(tableName, options);
 
-                var results = await persistenceService.QueryRawAsync(tableName, options);
-
-                var dto = new DynamicEntityRawQueryResultDto
-                {
-                    Data = results,
-                    Count = results.Count
-                };
-
-                return Results.Ok(new SuccessResponse<DynamicEntityRawQueryResultDto>(dto));
-            }
-            catch (Exception ex)
+            var dto = new DynamicEntityRawQueryResultDto
             {
-                logger.LogError(ex, "[DynamicEntity] Raw query failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_RAW_QUERY_FAILED", lang), ex.Message),
-                    "DYNAMIC_RAW_QUERY_FAILED"));
-            }
+                Data = results,
+                Count = results.Count
+            };
+
+            return Results.Ok(new SuccessResponse<DynamicEntityRawQueryResultDto>(dto));
         })
         .WithName("RawQueryDynamicEntities")
         .WithSummary("原始SQL查询")
@@ -196,36 +166,26 @@ public static class DynamicEntityEndpoints
             ILogger<Program> logger) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
+            var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            logger.LogInformation("[DynamicEntity] Creating {EntityType}", fullTypeName);
+
+            // 自动添加审计字段（如果存在）
+            if (data.ContainsKey("CreatedBy") || data.ContainsKey("createdBy"))
             {
-                var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-
-                logger.LogInformation("[DynamicEntity] Creating {EntityType}", fullTypeName);
-
-                // 自动添加审计字段（如果存在）
-                if (data.ContainsKey("CreatedBy") || data.ContainsKey("createdBy"))
-                {
-                    data["CreatedBy"] = uid;
-                }
-                if (data.ContainsKey("CreatedAt") || data.ContainsKey("createdAt"))
-                {
-                    data["CreatedAt"] = DateTime.UtcNow;
-                }
-
-                var entity = await persistenceService.CreateAsync(fullTypeName, data);
-
-                logger.LogInformation("[DynamicEntity] Created {EntityType} successfully", fullTypeName);
-
-                var result = new DynamicEntityGetResultDto { Data = entity };
-                return Results.Created($"/api/dynamic-entities/{fullTypeName}/{GetEntityId(entity)}", new SuccessResponse<DynamicEntityGetResultDto>(result));
+                data["CreatedBy"] = uid;
             }
-            catch (Exception ex)
+            if (data.ContainsKey("CreatedAt") || data.ContainsKey("createdAt"))
             {
-                logger.LogError(ex, "[DynamicEntity] Create failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_CREATE_FAILED", lang), ex.Message),
-                    "DYNAMIC_CREATE_FAILED"));
+                data["CreatedAt"] = DateTime.UtcNow;
             }
+
+            var entity = await persistenceService.CreateAsync(fullTypeName, data);
+
+            logger.LogInformation("[DynamicEntity] Created {EntityType} successfully", fullTypeName);
+
+            var result = new DynamicEntityGetResultDto { Data = entity };
+            return Results.Created($"/api/dynamic-entities/{fullTypeName}/{GetEntityId(entity)}", new SuccessResponse<DynamicEntityGetResultDto>(result));
         })
         .WithName("CreateDynamicEntity")
         .WithSummary("创建动态实体")
@@ -246,41 +206,31 @@ public static class DynamicEntityEndpoints
             ILogger<Program> logger) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
+            var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+
+            logger.LogInformation("[DynamicEntity] Updating {EntityType} with ID {Id}", fullTypeName, id);
+
+            // 自动添加审计字段（如果存在）
+            if (data.ContainsKey("UpdatedBy") || data.ContainsKey("updatedBy"))
             {
-                var uid = http.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-
-                logger.LogInformation("[DynamicEntity] Updating {EntityType} with ID {Id}", fullTypeName, id);
-
-                // 自动添加审计字段（如果存在）
-                if (data.ContainsKey("UpdatedBy") || data.ContainsKey("updatedBy"))
-                {
-                    data["UpdatedBy"] = uid;
-                }
-                if (data.ContainsKey("UpdatedAt") || data.ContainsKey("updatedAt"))
-                {
-                    data["UpdatedAt"] = DateTime.UtcNow;
-                }
-
-                var entity = await persistenceService.UpdateAsync(fullTypeName, id, data);
-
-                if (entity == null)
-                    return Results.NotFound(new ErrorResponse(
-                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
-                        "DYNAMIC_ENTITY_NOT_FOUND"));
-
-                logger.LogInformation("[DynamicEntity] Updated {EntityType} successfully", fullTypeName);
-
-                var result = new DynamicEntityGetResultDto { Data = entity };
-                return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
+                data["UpdatedBy"] = uid;
             }
-            catch (Exception ex)
+            if (data.ContainsKey("UpdatedAt") || data.ContainsKey("updatedAt"))
             {
-                logger.LogError(ex, "[DynamicEntity] Update failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_UPDATE_FAILED", lang), ex.Message),
-                    "DYNAMIC_UPDATE_FAILED"));
+                data["UpdatedAt"] = DateTime.UtcNow;
             }
+
+            var entity = await persistenceService.UpdateAsync(fullTypeName, id, data);
+
+            if (entity == null)
+                return Results.NotFound(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                    "DYNAMIC_ENTITY_NOT_FOUND"));
+
+            logger.LogInformation("[DynamicEntity] Updated {EntityType} successfully", fullTypeName);
+
+            var result = new DynamicEntityGetResultDto { Data = entity };
+            return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));
         })
         .WithName("UpdateDynamicEntity")
         .WithSummary("更新动态实体")
@@ -301,28 +251,18 @@ public static class DynamicEntityEndpoints
             ILogger<Program> logger) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                logger.LogInformation("[DynamicEntity] Deleting {EntityType} with ID {Id}", fullTypeName, id);
+            logger.LogInformation("[DynamicEntity] Deleting {EntityType} with ID {Id}", fullTypeName, id);
 
-                var deleted = await persistenceService.DeleteAsync(fullTypeName, id);
+            var deleted = await persistenceService.DeleteAsync(fullTypeName, id);
 
-                if (!deleted)
-                    return Results.NotFound(new ErrorResponse(
-                        string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
-                        "DYNAMIC_ENTITY_NOT_FOUND"));
+            if (!deleted)
+                return Results.NotFound(new ErrorResponse(
+                    string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", lang), id),
+                    "DYNAMIC_ENTITY_NOT_FOUND"));
 
-                logger.LogInformation("[DynamicEntity] Deleted {EntityType} successfully", fullTypeName);
+            logger.LogInformation("[DynamicEntity] Deleted {EntityType} successfully", fullTypeName);
 
-                return Results.Ok(new SuccessResponse());
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "[DynamicEntity] Delete failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_DELETE_FAILED", lang), ex.Message),
-                    "DYNAMIC_DELETE_FAILED"));
-            }
+            return Results.Ok(new SuccessResponse());
         })
         .WithName("DeleteDynamicEntity")
         .WithSummary("删除动态实体")
@@ -343,22 +283,12 @@ public static class DynamicEntityEndpoints
             ILogger<Program> logger) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                logger.LogInformation("[DynamicEntity] Counting {EntityType}", fullTypeName);
+            logger.LogInformation("[DynamicEntity] Counting {EntityType}", fullTypeName);
 
-                var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
+            var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
 
-                var dto = new EntityCountResponse { Count = count };
-                return Results.Ok(new SuccessResponse<EntityCountResponse>(dto));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "[DynamicEntity] Count failed: {Message}", ex.Message);
-                return Results.BadRequest(new ErrorResponse(
-                    string.Format(loc.T("ERR_DYNAMIC_COUNT_FAILED", lang), ex.Message),
-                    "DYNAMIC_COUNT_FAILED"));
-            }
+            var dto = new EntityCountResponse { Count = count };
+            return Results.Ok(new SuccessResponse<EntityCountResponse>(dto));
         })
         .WithName("CountDynamicEntities")
         .WithSummary("统计动态实体数量")

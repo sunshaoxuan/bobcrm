@@ -30,7 +30,8 @@ public static class OrganizationEndpoints
             HttpContext http,
             CancellationToken ct) =>
         {
-            return await ExecuteAsync(loc, http, () => service.CreateAsync(request, ct));
+            var result = await service.CreateAsync(request, ct);
+            return Results.Ok(new SuccessResponse<OrganizationNodeDto>(result));
         });
 
         group.MapPut("/{id:guid}", async (
@@ -41,7 +42,8 @@ public static class OrganizationEndpoints
             HttpContext http,
             CancellationToken ct) =>
         {
-            return await ExecuteAsync(loc, http, () => service.UpdateAsync(id, request, ct));
+            var result = await service.UpdateAsync(id, request, ct);
+            return Results.Ok(new SuccessResponse<OrganizationNodeDto>(result));
         });
 
         group.MapDelete("/{id:guid}", async (
@@ -51,46 +53,10 @@ public static class OrganizationEndpoints
             HttpContext http,
             CancellationToken ct) =>
         {
-            return await ExecuteAsync(loc, http, async () =>
-            {
-                await service.DeleteAsync(id, ct);
-                return Results.Ok(ApiResponseExtensions.SuccessResponse());
-            });
+            await service.DeleteAsync(id, ct);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
         });
 
         return app;
-    }
-
-    private static async Task<IResult> ExecuteAsync<T>(
-        ILocalization loc,
-        HttpContext http,
-        Func<Task<T>> action)
-    {
-        var lang = LangHelper.GetLang(http);
-        try
-        {
-            var result = await action();
-            return Results.Ok(new SuccessResponse<T>(result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_ORG_OPERATION_FAILED", lang), ex.Message), "ORG_OPERATION_FAILED"));
-        }
-    }
-
-    private static async Task<IResult> ExecuteAsync(
-        ILocalization loc,
-        HttpContext http,
-        Func<Task<IResult>> action)
-    {
-        var lang = LangHelper.GetLang(http);
-        try
-        {
-            return await action();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_ORG_OPERATION_FAILED", lang), ex.Message), "ORG_OPERATION_FAILED"));
-        }
     }
 }

@@ -153,7 +153,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 var nameKey = BuildTemplateNameKey(entity, viewState);
 
                 // 查询通过 TemplateStateBinding 关联的模板
-                var binding = await _db.TemplateStateBindings
+                var binding = await _db!.TemplateStateBindings
                     .Include(b => b.Template)
                 .FirstOrDefaultAsync(
                     b => b.EntityType == entityType &&
@@ -188,19 +188,19 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                         UpdatedAt = DateTime.UtcNow
                     };
 
-                _db.FormTemplates.Add(template);
-                await _db.SaveChangesAsync(ct); // 保存以获取 TemplateId
+                    _db!.FormTemplates.Add(template);
+                    await _db!.SaveChangesAsync(ct); // 保存以获取 TemplateId
 
-                // 创建默认绑定
-                var newBinding = new TemplateStateBinding
-                {
-                    EntityType = entityType,
-                    ViewState = viewState,
-                    TemplateId = template.Id,
-                    IsDefault = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _db.TemplateStateBindings.Add(newBinding);
+                    // 创建默认绑定
+                    var newBinding = new TemplateStateBinding
+                    {
+                        EntityType = entityType,
+                        ViewState = viewState,
+                        TemplateId = template.Id,
+                        IsDefault = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _db!.TemplateStateBindings.Add(newBinding);
 
                 result.Created.Add(template);
             }
@@ -239,14 +239,14 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         if (result.Created.Count > 0 || result.Updated.Count > 0)
         {
-            await _db.SaveChangesAsync(ct);
+            await _db!.SaveChangesAsync(ct);
         }
 
         // 保持旧的 TemplateBindings 表与当前模板同步，便于兼容现有流程
         foreach (var kvp in result.Templates)
         {
             var usage = MapViewStateToUsage(kvp.Key);
-            var binding = await _db.TemplateBindings
+            var binding = await _db!.TemplateBindings
                 .FirstOrDefaultAsync(b => b.EntityType == entityType && b.UsageType == usage && b.IsSystem, ct);
 
             if (binding == null)
@@ -260,16 +260,16 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     UpdatedAt = DateTime.UtcNow,
                     UpdatedBy = "system"
                 };
-                _db.TemplateBindings.Add(binding);
+                _db!.TemplateBindings.Add(binding);
             }
             else
             {
                 binding.TemplateId = kvp.Value.Id;
                 binding.UpdatedAt = DateTime.UtcNow;
-                _db.TemplateBindings.Update(binding);
+                _db!.TemplateBindings.Update(binding);
             }
         }
-        await _db.SaveChangesAsync(ct);
+        await _db!.SaveChangesAsync(ct);
 
         return result;
     }

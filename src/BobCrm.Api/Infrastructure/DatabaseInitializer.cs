@@ -1180,9 +1180,11 @@ public static class DatabaseInitializer
                 var workflowFunctionNodes = await db.FunctionNodes
 
                     .Where(fn =>
+#pragma warning disable CS0618
                         fn.TemplateBindingId != null &&
                         fn.TemplateBinding != null &&
                         entityRoutes.Contains(fn.TemplateBinding.EntityType))
+#pragma warning restore CS0618
 
                     .ToListAsync();
 

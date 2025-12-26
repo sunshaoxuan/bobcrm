@@ -49,23 +49,16 @@ public static class FieldActionEndpoints
         HttpContext http)
     {
         var lang = LangHelper.GetLang(http);
-        try
-        {
-            // 验证必填字段
-            if (string.IsNullOrWhiteSpace(request.Host))
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_RDP_HOST_REQUIRED", lang), "ERR_RDP_HOST_REQUIRED"));
+        // 验证必填字段
+        if (string.IsNullOrWhiteSpace(request.Host))
+            return Results.BadRequest(new ErrorResponse(loc.T("ERR_RDP_HOST_REQUIRED", lang), "ERR_RDP_HOST_REQUIRED"));
 
-            var rdpContent = GenerateRdpContent(request);
-            var fileName = $"{FileNameHelper.SanitizeFileName(request.Host)}_{DateTime.UtcNow:yyyyMMddHHmmss}.rdp";
-            
-            // 返回文件
-            var bytes = Encoding.UTF8.GetBytes(rdpContent);
-            return Results.File(bytes, "application/x-rdp", fileName);
-        }
-        catch (Exception ex)
-        {
-            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_RDP_GENERATE_FAILED", lang), ex.Message), "ERR_RDP_GENERATE_FAILED"));
-        }
+        var rdpContent = GenerateRdpContent(request);
+        var fileName = $"{FileNameHelper.SanitizeFileName(request.Host)}_{DateTime.UtcNow:yyyyMMddHHmmss}.rdp";
+        
+        // 返回文件
+        var bytes = Encoding.UTF8.GetBytes(rdpContent);
+        return Results.File(bytes, "application/x-rdp", fileName);
     }
 
     /// <summary>
@@ -200,62 +193,55 @@ public static class FieldActionEndpoints
         HttpContext http)
     {
         var lang = LangHelper.GetLang(http);
-        try
+        if (string.IsNullOrWhiteSpace(request.Path))
+            return Results.BadRequest(new ErrorResponse(loc.T("ERR_PATH_REQUIRED", lang), "ERR_PATH_REQUIRED"));
+
+        // 安全检查：只允许验证本地文件路径
+        if (request.Path.StartsWith("http://") || request.Path.StartsWith("https://"))
+            return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+            {
+                Exists = true,
+                Type = "url",
+                Message = loc.T("MSG_PATH_IS_URL", lang)
+            }));
+
+        // 检查路径格式
+        if (!Uri.TryCreate(request.Path, UriKind.Absolute, out var uri) && 
+            !Path.IsPathRooted(request.Path))
+            return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PATH", lang), "ERR_INVALID_PATH"));
+
+        // 检查文件是否存在
+        var exists = File.Exists(request.Path);
+        var isDirectory = Directory.Exists(request.Path);
+
+        if (exists)
         {
-            if (string.IsNullOrWhiteSpace(request.Path))
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_PATH_REQUIRED", lang), "ERR_PATH_REQUIRED"));
-
-            // 安全检查：只允许验证本地文件路径
-            if (request.Path.StartsWith("http://") || request.Path.StartsWith("https://"))
-                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
-                {
-                    Exists = true,
-                    Type = "url",
-                    Message = loc.T("MSG_PATH_IS_URL", lang)
-                }));
-
-            // 检查路径格式
-            if (!Uri.TryCreate(request.Path, UriKind.Absolute, out var uri) && 
-                !Path.IsPathRooted(request.Path))
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PATH", lang), "ERR_INVALID_PATH"));
-
-            // 检查文件是否存在
-            var exists = File.Exists(request.Path);
-            var isDirectory = Directory.Exists(request.Path);
-
-            if (exists)
+            var fileInfo = new FileInfo(request.Path);
+            return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
             {
-                var fileInfo = new FileInfo(request.Path);
-                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
-                {
-                    Exists = true,
-                    Type = "file",
-                    Size = fileInfo.Length,
-                    Extension = fileInfo.Extension,
-                    LastModified = fileInfo.LastWriteTime
-                }));
-            }
-            else if (isDirectory)
-            {
-                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
-                {
-                    Exists = true,
-                    Type = "directory"
-                }));
-            }
-            else
-            {
-                return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
-                {
-                    Exists = false,
-                    Type = "notfound",
-                    Message = loc.T("ERR_PATH_NOT_FOUND", lang)
-                }));
-            }
+                Exists = true,
+                Type = "file",
+                Size = fileInfo.Length,
+                Extension = fileInfo.Extension,
+                LastModified = fileInfo.LastWriteTime
+            }));
         }
-        catch (Exception ex)
+        else if (isDirectory)
         {
-            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_VALIDATION_FAILED", lang), ex.Message), "ERR_VALIDATION_FAILED"));
+            return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+            {
+                Exists = true,
+                Type = "directory"
+            }));
+        }
+        else
+        {
+            return Results.Ok(new SuccessResponse<FilePathValidationResponseDto>(new FilePathValidationResponseDto
+            {
+                Exists = false,
+                Type = "notfound",
+                Message = loc.T("ERR_PATH_NOT_FOUND", lang)
+            }));
         }
     }
 
@@ -268,34 +254,27 @@ public static class FieldActionEndpoints
         HttpContext http)
     {
         var lang = LangHelper.GetLang(http);
-        try
-        {
-            if (string.IsNullOrWhiteSpace(request.Email))
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_EMAIL_REQUIRED", lang), "ERR_EMAIL_REQUIRED"));
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return Results.BadRequest(new ErrorResponse(loc.T("ERR_EMAIL_REQUIRED", lang), "ERR_EMAIL_REQUIRED"));
 
-            var mailto = $"mailto:{Uri.EscapeDataString(request.Email)}";
-            var queryParts = new List<string>();
+        var mailto = $"mailto:{Uri.EscapeDataString(request.Email)}";
+        var queryParts = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(request.Subject))
-                queryParts.Add($"subject={Uri.EscapeDataString(request.Subject)}");
+        if (!string.IsNullOrWhiteSpace(request.Subject))
+            queryParts.Add($"subject={Uri.EscapeDataString(request.Subject)}");
 
-            if (!string.IsNullOrWhiteSpace(request.Body))
-                queryParts.Add($"body={Uri.EscapeDataString(request.Body)}");
+        if (!string.IsNullOrWhiteSpace(request.Body))
+            queryParts.Add($"body={Uri.EscapeDataString(request.Body)}");
 
-            if (!string.IsNullOrWhiteSpace(request.Cc))
-                queryParts.Add($"cc={Uri.EscapeDataString(request.Cc)}");
+        if (!string.IsNullOrWhiteSpace(request.Cc))
+            queryParts.Add($"cc={Uri.EscapeDataString(request.Cc)}");
 
-            if (!string.IsNullOrWhiteSpace(request.Bcc))
-                queryParts.Add($"bcc={Uri.EscapeDataString(request.Bcc)}");
+        if (!string.IsNullOrWhiteSpace(request.Bcc))
+            queryParts.Add($"bcc={Uri.EscapeDataString(request.Bcc)}");
 
-            if (queryParts.Count > 0)
-                mailto += "?" + string.Join("&", queryParts);
+        if (queryParts.Count > 0)
+            mailto += "?" + string.Join("&", queryParts);
 
-            return Results.Ok(new SuccessResponse<MailtoLinkResponseDto>(new MailtoLinkResponseDto { Link = mailto }));
-        }
-        catch (Exception ex)
-        {
-            return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_MAILTO_FAILED", lang), ex.Message), "ERR_MAILTO_FAILED"));
-        }
+        return Results.Ok(new SuccessResponse<MailtoLinkResponseDto>(new MailtoLinkResponseDto { Link = mailto }));
     }
 }

@@ -23,9 +23,22 @@ public class FunctionNodeConfiguration : IEntityTypeConfiguration<FunctionNode>
             .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(x => x.TemplateStateBinding)
+            .WithMany()
+            .HasForeignKey(x => x.TemplateStateBindingId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Legacy template link (deprecated but still mapped for backward compatibility / existing schema)
+#pragma warning disable CS0618
         builder.HasOne(x => x.Template)
             .WithMany()
             .HasForeignKey(x => x.TemplateId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.TemplateBinding)
+            .WithMany()
+            .HasForeignKey(x => x.TemplateBindingId)
+            .OnDelete(DeleteBehavior.SetNull);
+#pragma warning restore CS0618
     }
 }

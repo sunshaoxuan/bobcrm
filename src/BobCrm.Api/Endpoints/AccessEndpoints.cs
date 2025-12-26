@@ -60,7 +60,7 @@ public static class AccessEndpoints
             string? lang,
             HttpContext http,
             ClaimsPrincipal user,
-            [FromServices] AccessService accessService,
+            [FromServices] FunctionService functionService,
             CancellationToken ct) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -70,13 +70,13 @@ public static class AccessEndpoints
             }
 
             var targetLang = LangHelper.GetLang(http, lang);
-            var tree = await accessService.GetMyFunctionsAsync(userId, targetLang, ct);
+            var tree = await functionService.GetMyFunctionsAsync(userId, targetLang, ct);
             return Results.Ok(new SuccessResponse<List<FunctionNodeDto>>(tree));
         });
 
         group.MapPost("/functions", async ([FromBody] CreateFunctionRequest request,
             [FromQuery] string? lang,
-            [FromServices] AccessService service,
+            [FromServices] FunctionService service,
             [FromServices] FunctionTreeBuilder treeBuilder,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
@@ -85,8 +85,6 @@ public static class AccessEndpoints
         {
             var uiLang = LangHelper.GetLang(http);
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-            try
-            {
                 var node = await service.CreateFunctionAsync(request, ct);
                 await auditTrail.RecordAsync("MENU", "CREATE", $"Created function {node.Name}", node.Code, new
                 {
@@ -100,17 +98,12 @@ public static class AccessEndpoints
                     TemplateName = node.Template?.Name
                 }, ct);
                 return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_CREATE_FAILED", uiLang), ex.Message), "FUNCTION_CREATE_FAILED"));
-            }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapPut("/functions/{id:guid}", async (Guid id,
             [FromBody] UpdateFunctionRequest request,
             [FromQuery] string? lang,
-            [FromServices] AccessService service,
+            [FromServices] FunctionService service,
             [FromServices] FunctionTreeBuilder treeBuilder,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
@@ -119,8 +112,6 @@ public static class AccessEndpoints
         {
             var uiLang = LangHelper.GetLang(http);
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
-            try
-            {
                 var node = await service.UpdateFunctionAsync(id, request, ct);
                 await auditTrail.RecordAsync("MENU", "UPDATE", $"Updated function {node.Name}", node.Code, new
                 {
@@ -135,51 +126,32 @@ public static class AccessEndpoints
                     TemplateName = node.Template?.Name
                 }, ct);
                 return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_UPDATE_FAILED", uiLang), ex.Message), "FUNCTION_UPDATE_FAILED"));
-            }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapDelete("/functions/{id:guid}", async (Guid id,
-            [FromServices] AccessService service,
+            [FromServices] FunctionService service,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 await service.DeleteFunctionAsync(id, ct);
                 await auditTrail.RecordAsync("MENU", "DELETE", $"Deleted function {id}", id.ToString(), null, ct);
                 return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_FUNCTION_DELETED", lang)));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_DELETE_FAILED", lang), ex.Message), "FUNCTION_DELETE_FAILED"));
-            }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapPost("/functions/reorder", async ([FromBody] List<FunctionOrderUpdate> updates,
-            [FromServices] AccessService service,
+            [FromServices] FunctionService service,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
                 await service.ReorderFunctionsAsync(updates, ct);
                 await auditTrail.RecordAsync("MENU", "REORDER", "Reordered menu nodes", null, updates, ct);
                 return Results.Ok(new SuccessResponse(loc.T("MSG_FUNCTIONS_REORDERED", lang)));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_REORDER_FAILED", lang), ex.Message), "FUNCTION_REORDER_FAILED"));
-            }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/functions/export", async (
@@ -206,49 +178,15 @@ public static class AccessEndpoints
 
         group.MapPost("/functions/import", async (
             [FromBody] MenuImportRequest request,
-            [FromServices] AppDbContext db,
+            [FromServices] FunctionService service,
             [FromServices] AuditTrailService auditTrail,
             [FromServices] ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            try
-            {
-                // 检查冲突
-                var existingCodesList = await db.FunctionNodes
-                    .AsNoTracking()
-                    .Select(f => f.Code)
-                    .ToListAsync(ct);
-                var existingCodes = new HashSet<string>(existingCodesList);
+                var (importedCount, skippedCount) = await service.ImportFunctionsAsync(request, ct);
 
-                var importCodes = ExtractAllCodes(request.Functions);
-                var conflicts = importCodes.Where(code => existingCodes.Contains(code)).ToList();
-
-                if (conflicts.Count > 0 && request.MergeStrategy != "replace")
-                {
-                    return Results.BadRequest(new ErrorResponse(
-                        loc.T("ERR_FUNCTION_CODE_CONFLICT", lang),
-                        new Dictionary<string, string[]>
-                        {
-                            { "Conflicts", conflicts.ToArray() },
-                            { "Hint", new[] { loc.T("ERR_FUNCTION_CODE_CONFLICT_HINT", lang) } }
-                        },
-                        "FUNCTION_CODE_CONFLICT"));
-                }
-
-                // 导入功能节点
-                var importedCount = 0;
-                var skippedCount = 0;
-
-                foreach (var funcNode in request.Functions)
-                {
-                    var result = await ImportFunctionNode(funcNode, null, db, existingCodes, request.MergeStrategy, ct);
-                    importedCount += result.imported;
-                    skippedCount += result.skipped;
-                }
-
-                await db.SaveChangesAsync(ct);
                 await auditTrail.RecordAsync("MENU", "IMPORT", $"Imported {importedCount} functions, skipped {skippedCount}", null, new
                 {
                     importedCount,
@@ -264,11 +202,6 @@ public static class AccessEndpoints
                 };
 
                 return Results.Ok(new SuccessResponse<FunctionImportResultDto>(payload));
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new ErrorResponse(string.Format(loc.T("ERR_FUNCTION_IMPORT_FAILED", lang), ex.Message), "FUNCTION_IMPORT_FAILED"));
-            }
         }).RequireFunction("SYS.SET.MENU");
 
         group.MapGet("/roles", async ([FromServices] AppDbContext db, CancellationToken ct) =>
@@ -282,7 +215,7 @@ public static class AccessEndpoints
             return Results.Ok(new SuccessResponse<List<RoleProfileDto>>(roles.Select(ToRoleDto).ToList()));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapPost("/roles", async ([FromBody] CreateRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
+        group.MapPost("/roles", async ([FromBody] CreateRoleRequest request, [FromServices] RoleService service, CancellationToken ct) =>
         {
             var role = await service.CreateRoleAsync(request, ct);
             return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
@@ -304,115 +237,28 @@ public static class AccessEndpoints
             return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
+        group.MapPut("/roles/{roleId:guid}", async (Guid roleId, [FromBody] UpdateRoleRequest request, [FromServices] RoleService service, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            var role = await db.RoleProfiles.FindAsync(new object[] { roleId }, ct);
-            if (role == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ROLE_NOT_FOUND", lang), "ROLE_NOT_FOUND"));
-
-            if (role.IsSystem)
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ROLE_SYSTEM_IMMUTABLE", lang), "ROLE_SYSTEM_IMMUTABLE"));
-
-            if (!string.IsNullOrWhiteSpace(request.Name))
-                role.Name = request.Name;
-            if (request.Description is not null)
-                role.Description = request.Description;
-            if (request.IsEnabled.HasValue)
-                role.IsEnabled = request.IsEnabled.Value;
-
-            await db.SaveChangesAsync(ct);
-            await db.Entry(role).Collection(r => r.Functions).LoadAsync(ct);
-            await db.Entry(role).Collection(r => r.DataScopes).LoadAsync(ct);
-            return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
+                var role = await service.UpdateRoleAsync(roleId, request, ct);
+                return Results.Ok(new SuccessResponse<RoleProfileDto>(ToRoleDto(role)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
+        group.MapDelete("/roles/{roleId:guid}", async (Guid roleId, [FromServices] RoleService service, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            var role = await db.RoleProfiles
-                .Include(r => r.Functions)
-                .Include(r => r.DataScopes)
-                .Include(r => r.Assignments)
-                .FirstOrDefaultAsync(r => r.Id == roleId, ct);
-
-            if (role == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ROLE_NOT_FOUND", lang), "ROLE_NOT_FOUND"));
-
-            if (role.IsSystem)
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ROLE_SYSTEM_IMMUTABLE", lang), "ROLE_SYSTEM_IMMUTABLE"));
-
-            if (role.Assignments?.Any() == true)
-                return Results.BadRequest(new ErrorResponse(loc.T("ERR_ROLE_HAS_ASSIGNMENTS", lang), "ROLE_HAS_ASSIGNMENTS"));
-
-            db.RoleProfiles.Remove(role);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(ApiResponseExtensions.SuccessResponse());
+                await service.DeleteRoleAsync(roleId, ct);
+                return Results.Ok(ApiResponseExtensions.SuccessResponse());
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapPut("/roles/{roleId:guid}/permissions", async (Guid roleId, [FromBody] UpdatePermissionsRequest request, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
+        group.MapPut("/roles/{roleId:guid}/permissions", async (Guid roleId, [FromBody] UpdatePermissionsRequest request, [FromServices] RoleService service, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            var role = await db.RoleProfiles
-                .Include(r => r.Functions)
-                .Include(r => r.DataScopes)
-                .FirstOrDefaultAsync(r => r.Id == roleId, ct);
-
-            if (role == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ROLE_NOT_FOUND", lang), "ROLE_NOT_FOUND"));
-
-            // Update function permissions
-            db.RoleFunctionPermissions.RemoveRange(role.Functions);
-            var templateSelections = request.FunctionPermissions?
-                .Where(fp => fp.FunctionId != Guid.Empty)
-                .GroupBy(fp => fp.FunctionId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Last().TemplateBindingId);
-
-            var finalFunctionIds = new HashSet<Guid>(request.FunctionIds ?? Enumerable.Empty<Guid>());
-            if (templateSelections != null)
-            {
-                foreach (var functionId in templateSelections.Keys)
-                {
-                    finalFunctionIds.Add(functionId);
-                }
-            }
-
-            if (finalFunctionIds.Count > 0)
-            {
-                role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
-                {
-                    RoleId = roleId,
-                    FunctionId = fid,
-                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
-                        ? bindingId
-                        : null
-                }).ToList();
-            }
-            else
-            {
-                role.Functions = new List<RoleFunctionPermission>();
-            }
-
-            // Update data scopes
-            db.RoleDataScopes.RemoveRange(role.DataScopes);
-            if (request.DataScopes?.Count > 0)
-            {
-                role.DataScopes = request.DataScopes.Select(ds => new RoleDataScope
-                {
-                    RoleId = roleId,
-                    EntityName = ds.EntityName,
-                    ScopeType = ds.ScopeType,
-                    FilterExpression = ds.FilterExpression
-                }).ToList();
-            }
-
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new SuccessResponse(loc.T("MSG_ROLE_PERMISSIONS_UPDATED", lang)));
+                await service.UpdateRolePermissionsAsync(roleId, request, ct);
+                return Results.Ok(new SuccessResponse(loc.T("MSG_ROLE_PERMISSIONS_UPDATED", lang)));
         }).RequireFunction("BAS.AUTH.ROLE.PERM");
 
-        group.MapPost("/assignments", async ([FromBody] AssignRoleRequest request, [FromServices] AccessService service, CancellationToken ct) =>
+        group.MapPost("/assignments", async ([FromBody] AssignRoleRequest request, [FromServices] RoleService service, CancellationToken ct) =>
         {
             var assignment = await service.AssignRoleAsync(request, ct);
             return Results.Ok(new SuccessResponse<RoleAssignment>(assignment));
@@ -439,16 +285,11 @@ public static class AccessEndpoints
             return Results.Ok(new SuccessResponse<List<RoleAssignmentDto>>(assignments));
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
-        group.MapDelete("/assignments/{assignmentId:guid}", async (Guid assignmentId, [FromServices] AppDbContext db, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
+        group.MapDelete("/assignments/{assignmentId:guid}", async (Guid assignmentId, [FromServices] RoleService service, [FromServices] ILocalization loc, HttpContext http, CancellationToken ct) =>
         {
             var lang = LangHelper.GetLang(http);
-            var assignment = await db.RoleAssignments.FindAsync(new object[] { assignmentId }, ct);
-            if (assignment == null)
-                return Results.NotFound(new ErrorResponse(loc.T("ERR_ASSIGNMENT_NOT_FOUND", lang), "ASSIGNMENT_NOT_FOUND"));
-
-            db.RoleAssignments.Remove(assignment);
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(ApiResponseExtensions.SuccessResponse());
+                await service.DeleteAssignmentAsync(assignmentId, ct);
+                return Results.Ok(ApiResponseExtensions.SuccessResponse());
         }).RequireFunction("BAS.AUTH.USER.ROLE");
 
         return app;
@@ -518,87 +359,6 @@ public static class AccessEndpoints
         };
     }
 
-    private static List<string> ExtractAllCodes(List<MenuImportNode> nodes)
-    {
-        var codes = new List<string>();
-        foreach (var node in nodes)
-        {
-            codes.Add(node.Code);
-            if (node.Children != null && node.Children.Count > 0)
-            {
-                codes.AddRange(ExtractAllCodes(node.Children));
-            }
-        }
-        return codes;
-    }
 
-    private static async Task<(int imported, int skipped)> ImportFunctionNode(
-        MenuImportNode importNode,
-        Guid? parentId,
-        AppDbContext db,
-        HashSet<string> existingCodes,
-        string? mergeStrategy,
-        CancellationToken ct)
-    {
-        var imported = 0;
-        var skipped = 0;
-
-        // 检查是否已存在
-        var existing = await db.FunctionNodes
-            .FirstOrDefaultAsync(f => f.Code == importNode.Code, ct);
-
-        if (existing != null)
-        {
-            if (mergeStrategy == "replace")
-            {
-                // 替换现有节点
-                existing.Name = importNode.Name ?? existing.Name;
-                existing.DisplayName = importNode.DisplayName;
-                existing.Route = importNode.Route;
-                existing.Icon = importNode.Icon;
-                existing.IsMenu = importNode.IsMenu;
-                existing.SortOrder = importNode.SortOrder;
-                imported++;
-            }
-            else
-            {
-                // 跳过
-                skipped++;
-                return (imported, skipped);
-            }
-        }
-        else
-        {
-            // 创建新节点
-            var newNode = new FunctionNode
-            {
-                Id = Guid.NewGuid(),
-                ParentId = parentId,
-                Code = importNode.Code,
-                Name = importNode.Name ?? importNode.Code,
-                DisplayName = importNode.DisplayName,
-                Route = importNode.Route,
-                Icon = importNode.Icon,
-                IsMenu = importNode.IsMenu,
-                SortOrder = importNode.SortOrder
-            };
-            db.FunctionNodes.Add(newNode);
-            imported++;
-            existing = newNode;
-        }
-
-        // 递归导入子节点
-        if (importNode.Children != null && importNode.Children.Count > 0)
-        {
-            foreach (var child in importNode.Children)
-            {
-                var result = await ImportFunctionNode(child, existing.Id, db, existingCodes, mergeStrategy, ct);
-                imported += result.imported;
-                skipped += result.skipped;
-            }
-        }
-
-        return (imported, skipped);
-    }
 
 }

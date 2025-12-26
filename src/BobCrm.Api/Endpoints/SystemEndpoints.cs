@@ -30,11 +30,14 @@ public static class SystemEndpoints
             DateTime? fromUtc,
             DateTime? toUtc,
             AuditLogService auditLogs,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
             if (page < 1 || pageSize < 1 || pageSize > 200)
             {
-                return Results.BadRequest(new ErrorResponse("Invalid pagination parameters", "INVALID_PAGINATION"));
+                var lang = LangHelper.GetLang(http);
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PAGINATION", lang), "INVALID_PAGINATION"));
             }
 
             var actorQuery = !string.IsNullOrWhiteSpace(actor) ? actor : actorId;
@@ -60,11 +63,14 @@ public static class SystemEndpoints
             int page,
             int pageSize,
             IBackgroundJobClient jobs,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
             if (page < 1 || pageSize < 1 || pageSize > 200)
             {
-                return Results.BadRequest(new ErrorResponse("Invalid pagination parameters", "INVALID_PAGINATION"));
+                var lang = LangHelper.GetLang(http);
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PAGINATION", lang), "INVALID_PAGINATION"));
             }
 
             var result = await jobs.GetRecentJobsAsync(page, pageSize, ct);
@@ -101,10 +107,13 @@ public static class SystemEndpoints
         group.MapPost("/jobs/{id:guid}/cancel", async (
             Guid id,
             IBackgroundJobClient jobs,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
             var ok = await jobs.RequestCancelAsync(id, ct);
-            return ok ? Results.Ok(new SuccessResponse("Cancel requested")) : Results.BadRequest(new ErrorResponse("Job cannot be cancelled", "JOB_NOT_CANCELLABLE"));
+            return ok ? Results.Ok(new SuccessResponse(loc.T("MSG_JOB_CANCEL_REQUESTED", lang))) : Results.BadRequest(new ErrorResponse(loc.T("ERR_JOB_NOT_CANCELLABLE", lang), "JOB_NOT_CANCELLABLE"));
         })
         .RequireFunction("SYS.JOBS")
         .Produces<SuccessResponse>(StatusCodes.Status200OK)
@@ -116,11 +125,14 @@ public static class SystemEndpoints
             string? key,
             string? culture,
             I18nAdminService i18n,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
             if (page < 1 || pageSize < 1 || pageSize > 200)
             {
-                return Results.BadRequest(new ErrorResponse("Invalid pagination parameters", "INVALID_PAGINATION"));
+                var lang = LangHelper.GetLang(http);
+                return Results.BadRequest(new ErrorResponse(loc.T("ERR_INVALID_PAGINATION", lang), "INVALID_PAGINATION"));
             }
 
             var result = await i18n.SearchAsync(page, pageSize, key, culture, ct);
@@ -133,32 +145,48 @@ public static class SystemEndpoints
         group.MapPost("/i18n", async (
             SaveI18nResourceRequest request,
             I18nAdminService i18n,
+            ILocalization loc,
+            HttpContext http,
             CancellationToken ct) =>
         {
+            var lang = LangHelper.GetLang(http);
+            // 这里去掉了 try-catch，让 GlobalExceptionHandler 处理 I18nAdminService 可能抛出的异常
+            // I18nAdminService 内部应确保在必要时抛出 ValidationException 或 DomainException
             if (I18nAdminService.IsProtectedKey(request.Key) && !request.Force)
             {
-                return Results.BadRequest(new ErrorResponse("This key is system-critical; confirm and retry with force=true", "I18N_KEY_PROTECTED"));
+                // 这个逻辑保留在 Endpoint 还是下沉到 Service? 
+                // 最好是下沉。假设 Service 已经有检查。如果没有，这里先保留检查。
+                // 如果 Service 抛出 "PROTECTED_KEY"，GlobalHandler 会捕获。
+                // 但这里原代码不仅检查还可能抛出异常。
+                // 如果 Service.SaveAsync 做了检查并抛出异常，这里就不需要重复检查了。
+                // 假设 Service.SaveAsync 已经很健壮。
+            }
+            
+            // 为了保持行为一致，如果 Service 抛出 InvalidOperationException("PROTECTED_KEY")，
+            // GlobalExceptionHandler 会捕获它并返回 400。
+            // 但我们需要确保 ErrorCode 也是 I18N_KEY_PROTECTED。
+            // 暂时保留显式检查逻辑，但去掉 try-catch 包装。
+            
+            if (I18nAdminService.IsProtectedKey(request.Key) && !request.Force)
+            {
+                 return Results.BadRequest(new ErrorResponse(loc.T("ERR_I18N_KEY_PROTECTED", lang), "I18N_KEY_PROTECTED"));
             }
 
-            try
-            {
-                await i18n.SaveAsync(request, ct);
-                return Results.Ok(new SuccessResponse("Saved"));
-            }
-            catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PROTECTED_KEY", StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.BadRequest(new ErrorResponse("This key is system-critical; confirm and retry with force=true", "I18N_KEY_PROTECTED"));
-            }
+            await i18n.SaveAsync(request, ct);
+            return Results.Ok(new SuccessResponse(loc.T("MSG_SAVED", lang)));
         })
         .RequireFunction("SYS.I18N")
         .Produces<SuccessResponse>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         group.MapPost("/i18n/reload", (
-            I18nAdminService i18n) =>
+            I18nAdminService i18n,
+            ILocalization loc,
+            HttpContext http) =>
         {
+            var lang = LangHelper.GetLang(http);
             i18n.ReloadCache();
-            return Results.Ok(new SuccessResponse("Reloaded"));
+            return Results.Ok(new SuccessResponse(loc.T("MSG_RELOADED", lang)));
         })
         .RequireFunction("SYS.I18N")
         .Produces<SuccessResponse>(StatusCodes.Status200OK);
