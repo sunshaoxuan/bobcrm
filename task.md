@@ -24,7 +24,7 @@
 ## Code Quality (PLAN-18) - P3
 - [x] P3-001: 统一 JS Interop 错误处理（commit: `02f0479`）
 - [x] P3-002: 后端错误码标准化（commit: `41a1128`）
-- [x] P3-003: 编译告警基线门禁（commit: `TBD`）
+- [x] P3-003: 编译告警基线门禁（commit: `94d4595`）
 
 ---
 
