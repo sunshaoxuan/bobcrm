@@ -13,6 +13,9 @@
 - **JWT 配置校验**：非 Development 环境强制要求 `Jwt:Key` 配置，避免误用默认密钥。
 - **CORS 配置校验**：非 Development 环境强制要求 `Cors:AllowedOrigins`（支持数组或 `;` 分隔字符串）。
 - **部署验证**：新增 `GUIDE-01-部署指南`（含 JWT Issuer/Audience 一致性检查）与 `.github/workflows/verify-deployment.yml`，自动验证“缺配置必启动失败”和“配置齐全 /health=200”。
+- **统一时间源**：引入 `.NET 8 TimeProvider` 替换 `DateTime.UtcNow`，提升时间相关业务（Token/审计）的可测试性。
+- **启动配置重构**：重构 `Program.cs`，将数据库、认证、CORS 配置抽取为独立扩展方法，并补齐非 Dev 环境配置校验与单测覆盖。
+
 
 
 ### Changed

@@ -14,5 +14,11 @@
 
 ---
 
+## Code Quality (PLAN-18) - P2
+- [x] P2-001: TimeProvider 引入（commit: `90bd1b7`）
+- [x] P2-002: Program.cs 启动配置拆分与校验（commit: `90bd1b7`）
+
+---
+
 ## 历史归档 (v0.9.x Completed)
 > 详情见 `history/task-v0.9.x-archive.md`
