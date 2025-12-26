@@ -294,7 +294,7 @@
 
     private void StopPolling()
     {
-        try { _pollCts?.Cancel(); } catch { }
+        _pollCts?.Cancel();
         _pollCts?.Dispose();
         _pollCts = null;
         _timer?.Dispose();

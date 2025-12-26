@@ -53,7 +53,9 @@
         {
             _i18nRenderVersion++;
         }
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private string GetSplashText()

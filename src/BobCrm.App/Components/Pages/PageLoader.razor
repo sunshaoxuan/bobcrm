@@ -349,7 +349,9 @@ else if (entityData != null)
 
     private void HandleI18nChanged()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private List<DraggableWidget> ParseLayoutFromJson(System.Text.Json.JsonElement root)
@@ -799,7 +801,10 @@ else if (entityData != null)
                 var debugJson = System.Text.Json.JsonSerializer.Serialize(payload);
                 Logger.LogDebug("[PageLoader] Save payload: {Payload}", debugJson);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "[PageLoader] Failed to serialize save payload for debug logging.");
+            }
 
             var client = await Auth.CreateClientWithAuthAsync();
             var resp = await client.PutAsJsonAsync($"/api/{EntityType}s/{Id}", payload);

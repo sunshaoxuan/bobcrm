@@ -183,11 +183,7 @@
 
     private void HandleUnauthorized()
     {
-        try
-        {
-            Nav.NavigateTo("/login", forceLoad: true);
-        }
-        catch { }
+        Nav.NavigateTo("/login", forceLoad: true);
     }
 
     private void HandleThemeChanged() => SafeRender();
@@ -297,7 +293,9 @@
 
     private void SafeRender()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private void UpdateRailTagline()

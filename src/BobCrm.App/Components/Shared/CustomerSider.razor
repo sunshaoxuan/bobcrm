@@ -62,12 +62,19 @@
     Nav.LocationChanged += HandleLocationChanged;
   }
   
-  private void HandleI18nChanged() { try { InvokeAsync(StateHasChanged); } catch { } }
+  private void HandleI18nChanged() => SafeRender();
+  
+  private void SafeRender()
+  {
+    try { _ = InvokeAsync(StateHasChanged); }
+    catch (ObjectDisposedException) { }
+    catch (InvalidOperationException) { }
+  }
   
   private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
   {
     TrySyncSelectedFromUrl();
-    InvokeAsync(StateHasChanged);
+    SafeRender();
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -151,13 +158,16 @@
 
   private void TrySyncSelectedFromUrl()
   {
-    try
+    if (!Uri.TryCreate(Nav.Uri, UriKind.Absolute, out var uri))
     {
-      var uri = new Uri(Nav.Uri);
-      var seg = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-      if (seg.Length >= 2 && seg[0] == "customer" && int.TryParse(seg[1], out var id)) selectedId = id;
+      return;
     }
-    catch { }
+
+    var seg = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+    if (seg.Length >= 2 && seg[0] == "customer" && int.TryParse(seg[1], out var id))
+    {
+      selectedId = id;
+    }
   }
 
   public class Item { public int id { get; set; } public string? code { get; set; } public string? name { get; set; } }
@@ -165,17 +175,13 @@
   [JSInvokable]
   public Task OnCustomerUpdated(int id, string code, string name)
   {
-    try
+    var item = _data.FirstOrDefault(x => x.id == id);
+    if (item != null)
     {
-      var item = _data.FirstOrDefault(x => x.id == id);
-      if (item != null)
-      {
-        item.code = code;
-        item.name = name;
-        StateHasChanged();
-      }
+      item.code = code;
+      item.name = name;
+      SafeRender();
     }
-    catch { }
     return Task.CompletedTask;
   }
 }

@@ -198,7 +198,9 @@
 
     private void HandleI18nChanged()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

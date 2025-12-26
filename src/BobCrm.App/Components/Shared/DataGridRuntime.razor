@@ -360,7 +360,7 @@
                     return;
                 }
 
-                try 
+                try
                 {
                     var result = await response.Content.ReadFromJsonAsync<DataSetExecutionResponse>();
                     if (result != null && result.DataJson != null)
@@ -369,7 +369,14 @@
                         return;
                     }
                 }
-                catch {}
+                catch (JsonException ex)
+                {
+                    Logger.LogDebug(ex, "DataGrid response is not DataSetExecutionResponse JSON, will fall back to JsonDocument parsing.");
+                }
+                catch (NotSupportedException ex)
+                {
+                    Logger.LogDebug(ex, "DataGrid response is not supported JSON for DataSetExecutionResponse, will fall back to JsonDocument parsing.");
+                }
 
                 var content = await response.Content.ReadAsStringAsync();
                 var doc = JsonDocument.Parse(content);

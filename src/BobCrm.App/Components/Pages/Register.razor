@@ -49,19 +49,16 @@
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
     [Inject] public NavigationManager Nav { get; set; } = default!;
-    [Inject] public IJSRuntime JS { get; set; } = default!;
+    [Inject] public BobCrm.App.Services.IJsInteropService JS { get; set; } = default!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            try
-            {
-                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
-                await I18n.LoadAsync(langToLoad); try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
-            }
-            catch { }
+            var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+            var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
+            await I18n.LoadAsync(langToLoad);
+            await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
         }
     }
 
@@ -72,19 +69,15 @@
         try
         {
             var http = HttpFactory.CreateClient("api");
-            try
+            var (langOk, lang) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "lang");
+            if (langOk && !string.IsNullOrWhiteSpace(lang))
             {
-                var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang");
-                if (!string.IsNullOrWhiteSpace(lang))
+                if (http.DefaultRequestHeaders.Contains("X-Lang"))
                 {
-                    if (http.DefaultRequestHeaders.Contains("X-Lang"))
-                    {
-                        http.DefaultRequestHeaders.Remove("X-Lang");
-                    }
-                    http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant());
+                    http.DefaultRequestHeaders.Remove("X-Lang");
                 }
+                http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant());
             }
-            catch { }
 
             var resp = await http.PostAsJsonAsync("/api/auth/register", new { username = _model.Username, password = _model.Password, email = _model.Email });
             if (!resp.IsSuccessStatusCode)

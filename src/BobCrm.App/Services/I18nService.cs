@@ -1,5 +1,3 @@
-using Microsoft.JSInterop;
-
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -20,7 +18,7 @@ public class I18nService : II18nService
 
     private readonly AuthService _auth;
 
-    private readonly IJSRuntime _js;
+    private readonly IJsInteropService _js;
 
     private readonly SemaphoreSlim _loadGate = new(1, 1);
 
@@ -36,7 +34,7 @@ public class I18nService : II18nService
 
     public event Action? OnChanged;
 
-    public I18nService(IHttpClientFactory httpFactory, AuthService auth, IJSRuntime js)
+    public I18nService(IHttpClientFactory httpFactory, AuthService auth, IJsInteropService js)
 
     {
 
@@ -191,9 +189,9 @@ public class I18nService : II18nService
 
             OnChanged?.Invoke();
 
-            try { await _js.InvokeVoidAsync("bobcrm.setLang", lang); } catch { /* Ignored: UI update failed */ }
+            await _js.TryInvokeVoidAsync("bobcrm.setLang", lang);
 
-            try { await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365); } catch { /* Ignored: Cookie update failed */ }
+            await _js.TryInvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365);
 
         }
 

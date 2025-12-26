@@ -50,7 +50,9 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
 
     protected virtual void HandleI18nChanged()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     protected virtual void HandleLocationChanged(object? sender, LocationChangedEventArgs e)

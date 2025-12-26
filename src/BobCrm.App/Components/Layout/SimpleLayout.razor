@@ -30,11 +30,7 @@
 
     private void HandleUnauthorized()
     {
-        try
-        {
-            Nav.NavigateTo("/login", forceLoad: true);
-        }
-        catch { }
+        Nav.NavigateTo("/login", forceLoad: true);
     }
 
     public void Dispose()

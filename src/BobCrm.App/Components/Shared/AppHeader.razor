@@ -104,7 +104,9 @@
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         BuildNavigationMeta();
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -244,7 +246,9 @@
 
     private void HandleThemeChanged()
     {
-        try { InvokeAsync(StateHasChanged); } catch { }
+        try { _ = InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private async Task HandleDomainChanged(FunctionMenuNode domain)
