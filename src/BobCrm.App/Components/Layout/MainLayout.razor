@@ -13,7 +13,7 @@
 @inject LayoutState Layout
 @inject InteractionState Interaction
 @inject I18nService I18n
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @implements IDisposable
 
 @* Compact Top Menu Shell *@
@@ -174,15 +174,11 @@
 
     private async Task LoadNavModeAsync()
     {
-        try
+        var (_, stored) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "navMode");
+        if (!string.IsNullOrWhiteSpace(stored) && Enum.TryParse<NavDisplayMode>(stored, true, out var mode))
         {
-            var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "navMode");
-            if (!string.IsNullOrWhiteSpace(stored) && Enum.TryParse<NavDisplayMode>(stored, true, out var mode))
-            {
-                Layout.SetNavMode(mode);
-            }
+            Layout.SetNavMode(mode);
         }
-        catch { }
     }
 
     private void HandleUnauthorized()

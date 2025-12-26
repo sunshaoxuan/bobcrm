@@ -1,7 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.JSInterop;
 
 namespace BobCrm.App.Services;
 
@@ -16,10 +15,10 @@ public class PreferencesService
     };
 
     private readonly AuthService _auth;
-    private readonly IJSRuntime _js;
+    private readonly IJsInteropService _js;
     private UserSettingsSnapshot? _cache;
 
-    public PreferencesService(AuthService auth, IJSRuntime js)
+    public PreferencesService(AuthService auth, IJsInteropService js)
     {
         _auth = auth;
         _js = js;
@@ -138,28 +137,14 @@ public class PreferencesService
 
     private async Task ApplyLocalSideEffectsAsync(UserSettingsDto effective)
     {
-        try
-        {
-            var lang = string.IsNullOrWhiteSpace(effective.Language) ? "ja" : effective.Language;
-            await _js.InvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365);
-            await _js.InvokeVoidAsync("bobcrm.setLang", lang);
-        }
-        catch
-        {
-            // Ignore client language sync failures.
-        }
+        var lang = string.IsNullOrWhiteSpace(effective.Language) ? "ja" : effective.Language;
+        await _js.TryInvokeVoidAsync("bobcrm.setCookie", "lang", lang, 365);
+        await _js.TryInvokeVoidAsync("bobcrm.setLang", lang);
 
-        try
-        {
-            var navMode = string.IsNullOrWhiteSpace(effective.NavDisplayMode)
-                ? "icon-text"
-                : effective.NavDisplayMode.ToLowerInvariant();
-            await _js.InvokeVoidAsync("localStorage.setItem", "navMode", navMode);
-        }
-        catch
-        {
-            // Ignore localStorage errors (Safari private mode, etc.)
-        }
+        var navMode = string.IsNullOrWhiteSpace(effective.NavDisplayMode)
+            ? "icon-text"
+            : effective.NavDisplayMode.ToLowerInvariant();
+        await _js.TryInvokeVoidAsync("localStorage.setItem", "navMode", navMode);
     }
 
     public static NavDisplayMode ToLayoutMode(string? navMode) =>

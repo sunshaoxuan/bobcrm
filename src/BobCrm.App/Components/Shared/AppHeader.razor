@@ -7,7 +7,7 @@
 @implements IDisposable
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
 @inject LayoutState Layout
 @inject InteractionState Interaction
@@ -113,14 +113,12 @@
         {
             try
             {
-                // Load language
-                var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var (_, saved) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
-                
-                // Check auth state and load user info
+
                 isAuthenticated = await Auth.EnsureAuthenticatedAsync();
-                
+
                 if (isAuthenticated)
                 {
                     var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
@@ -128,14 +126,18 @@
                     {
                         var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
                         userName = userInfo?.UserName ?? "User";
-                        // avatarUrl is currently empty; future avatar upload support
                     }
                 }
-                
+            }
+            catch (Exception ex)
+            {
+                await JS.TryInvokeVoidAsync("console.warn", $"[AppHeader] Init failed: {ex.Message}");
+            }
+            finally
+            {
                 await InvokeAsync(StateHasChanged);
                 BuildNavigationMeta();
             }
-            catch { }
         }
     }
 
@@ -160,7 +162,7 @@
 
         Layout.SetNavMode(mode);
         var apiValue = PreferencesService.ToApiNavMode(mode);
-        try { await JS.InvokeVoidAsync("localStorage.setItem", "navMode", apiValue); } catch { }
+        await JS.TryInvokeVoidAsync("localStorage.setItem", "navMode", apiValue);
         _ = PrefsService.SaveUserSettingsAsync(new UpdateUserSettingsRequest
         {
             NavDisplayMode = apiValue
