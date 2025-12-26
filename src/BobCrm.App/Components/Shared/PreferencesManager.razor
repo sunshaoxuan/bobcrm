@@ -2,7 +2,7 @@
 @using BobCrm.App.Services
 @inject PreferencesService PrefsService
 @inject AuthService Auth
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject BobCrm.App.Services.I18nService I18n
 @inject ThemeState ThemeState
 @inject LayoutState Layout
@@ -59,7 +59,8 @@
         var lang = "ja";
         try
         {
-            lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
+            var (_, val) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+             lang = val ?? "ja";
         }
         catch
         {

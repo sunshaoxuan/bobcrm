@@ -8,7 +8,7 @@
 @inject I18nService I18n
 @inject AntDesign.IMessageService Message
 @inject IMultilingualTextResolver MultilingualResolver
-@inject IJSRuntime JSRuntime
+@inject IJsInteropService JS
 
 <PageTitle>@I18n.T("MENU_MENU_MANAGE") · OneCRM</PageTitle>
 
@@ -849,7 +849,7 @@
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
                 var fileName = $"menu-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
-                await JSRuntime.InvokeVoidAsync("bobcrm.downloadFile", fileName, json, "application/json");
+                await JS.TryInvokeVoidAsync("bobcrm.downloadFile", fileName, json, "application/json");
                 Message.Success(I18n.T("MSG_EXPORT_SUCCESS"));
             }
         }

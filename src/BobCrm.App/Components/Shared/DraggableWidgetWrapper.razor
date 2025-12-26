@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using System
 @implements IDisposable
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 
 <div data-widget-id="@Widget.Id" style="position:relative; width:100%; height:100%;">
     @ChildContent
@@ -54,18 +54,15 @@
         _containerWidth = 0;
         if (!string.IsNullOrWhiteSpace(ContainerWidthSelector))
         {
-            try
+            var (ok, width) = await JS.TryInvokeAsync<double>("bobcrm.getElementWidthBySelector", ContainerWidthSelector);
+            if (ok)
             {
-                _containerWidth = await JS.InvokeAsync<double>("bobcrm.getElementWidthBySelector", ContainerWidthSelector);
-            }
-            catch
-            {
-                _containerWidth = 0;
+                _containerWidth = width;
             }
         }
 
-        await JS.InvokeVoidAsync("bobcrm.dragManager.registerCallback", _dotNetRef);
-        await JS.InvokeVoidAsync("bobcrm.dragManager.startResize", Widget.Id, (int)e.ClientX, (int)e.ClientY, direction);
+        await JS.TryInvokeVoidAsync("bobcrm.dragManager.registerCallback", _dotNetRef);
+        await JS.TryInvokeVoidAsync("bobcrm.dragManager.startResize", Widget.Id, (int)e.ClientX, (int)e.ClientY, direction);
     }
 
     [JSInvokable]

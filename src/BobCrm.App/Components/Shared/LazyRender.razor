@@ -1,6 +1,6 @@
 @using AntDesign
 @implements IAsyncDisposable
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 
 <div @ref="_host">
     @if (_isVisible)
@@ -33,7 +33,7 @@
         _dotNetRef = DotNetObjectReference.Create(this);
         try
         {
-            await JS.InvokeVoidAsync("bobcrm.lazyRender.observe", _host, _dotNetRef);
+            await JS.TryInvokeVoidAsync("bobcrm.lazyRender.observe", _host, _dotNetRef);
         }
         catch
         {
@@ -58,7 +58,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("bobcrm.lazyRender.unobserve", _host);
+            await JS.TryInvokeVoidAsync("bobcrm.lazyRender.unobserve", _host);
         }
         catch
         {

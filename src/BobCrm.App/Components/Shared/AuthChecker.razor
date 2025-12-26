@@ -1,5 +1,5 @@
 @rendermode RenderMode.InteractiveServer
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
 
 @ChildContent
@@ -13,7 +13,7 @@
         {
             try
             {
-                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                var (_, token) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (string.IsNullOrWhiteSpace(token))
                 {
                     Nav.NavigateTo("/login", true);

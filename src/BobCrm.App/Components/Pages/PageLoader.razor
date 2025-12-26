@@ -12,7 +12,7 @@
 
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.FieldActionService FieldActions
 @inject BobCrm.App.Services.TemplateRuntimeClient TemplateRuntime
@@ -841,7 +841,7 @@ else if (entityData != null)
                 return;
             }
 
-            await JS.InvokeVoidAsync("bobcrm.scrollToValidationField", firstField);
+            await JS.TryInvokeVoidAsync("bobcrm.scrollToValidationField", firstField);
         }
         catch
         {

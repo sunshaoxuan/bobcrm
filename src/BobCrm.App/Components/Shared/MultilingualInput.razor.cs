@@ -12,7 +12,7 @@ public partial class MultilingualInput : IAsyncDisposable
 {
     [Inject] private HttpClient Http { get; set; } = default!;
     [Inject] private I18nService I18n { get; set; } = default!;
-    [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IJsInteropService JS { get; set; } = default!;
     [Inject] private ILogger<MultilingualInput> Logger { get; set; } = default!;
 
     [Parameter] public MultilingualTextDto? Value { get; set; }
@@ -258,7 +258,11 @@ public partial class MultilingualInput : IAsyncDisposable
     {
         if (_module == null)
         {
-            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/multilingual-input.js");
+            var (ok, mod) = await JS.TryInvokeAsync<IJSObjectReference>("import", "./js/multilingual-input.js");
+            if (ok)
+            {
+                _module = mod;
+            }
         }
     }
 

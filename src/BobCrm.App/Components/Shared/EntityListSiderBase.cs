@@ -13,7 +13,7 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
 {
     [Inject] protected AuthService Auth { get; set; } = null!;
     [Inject] protected NavigationManager Nav { get; set; } = null!;
-    [Inject] protected IJSRuntime JS { get; set; } = null!;
+    [Inject] protected IJsInteropService JS { get; set; } = null!;
     [Inject] protected I18nService I18n { get; set; } = null!;
 
     protected string keyword = string.Empty;
@@ -66,13 +66,13 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
 
         try
         {
-            await JS.InvokeVoidAsync("console.log", $"[{GetType().Name}] OnAfterRenderAsync started");
+            await JS.TryInvokeVoidAsync("console.log", $"[{GetType().Name}] OnAfterRenderAsync started");
 
             // 认证检查
             var isAuthenticated = await Auth.EnsureAuthenticatedAsync();
             if (!isAuthenticated)
             {
-                await JS.InvokeVoidAsync("console.warn", $"[{GetType().Name}] Not authenticated, redirecting to login");
+                await JS.TryInvokeVoidAsync("console.warn", $"[{GetType().Name}] Not authenticated, redirecting to login");
                 Nav.NavigateTo("/login", forceLoad: true);
                 return;
             }
@@ -80,11 +80,11 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
             // 注册跨组件事件（如果需要）
             if (!string.IsNullOrWhiteSpace(RegisterEventsJsMethod))
             {
-                await JS.InvokeVoidAsync(RegisterEventsJsMethod, DotNetObjectReference.Create(this));
+                await JS.TryInvokeVoidAsync(RegisterEventsJsMethod, DotNetObjectReference.Create(this));
             }
 
             // 加载国际化
-            var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+            var (_, saved) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
             var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
             await I18n.LoadAsync(langToLoad);
             await InvokeAsync(StateHasChanged);
@@ -99,7 +99,7 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
         {
             error = $"Error: {ex.Message}";
             loading = false;
-            await JS.InvokeVoidAsync("console.error", $"[{GetType().Name}] Exception: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[{GetType().Name}] Exception: {ex.Message}");
             StateHasChanged();
         }
     }
@@ -109,9 +109,9 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
     /// <summary>加载数据（子类可重写以自定义数据加载逻辑）</summary>
     protected virtual async Task LoadDataAsync()
     {
-        await JS.InvokeVoidAsync("console.log", $"[{GetType().Name}] Loading data from {ApiEndpoint}...");
+        await JS.TryInvokeVoidAsync("console.log", $"[{GetType().Name}] Loading data from {ApiEndpoint}...");
         var resp = await Auth.GetWithRefreshAsync(ApiEndpoint);
-        await JS.InvokeVoidAsync("console.log", $"[{GetType().Name}] Response status: {(int)resp.StatusCode}");
+        await JS.TryInvokeVoidAsync("console.log", $"[{GetType().Name}] Response status: {(int)resp.StatusCode}");
 
         if (resp.IsSuccessStatusCode)
         {
@@ -120,7 +120,7 @@ public abstract class EntityListSiderBase : ComponentBase, IDisposable
         else
         {
             error = I18n.T("ERR_LOGIN_EXPIRED");
-            await JS.InvokeVoidAsync("console.error", $"[{GetType().Name}] Error: {error}");
+            await JS.TryInvokeVoidAsync("console.error", $"[{GetType().Name}] Error: {error}");
         }
     }
 

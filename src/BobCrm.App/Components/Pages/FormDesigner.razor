@@ -17,7 +17,7 @@
 @inject AuthService Auth
 @inject I18nService I18n
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject IMessageService MessageService
 @inject ModalService Modal
 @inject IDesignWidgetContentRenderer DesignRenderer
@@ -254,7 +254,7 @@
         {
             if (_shortcutDotNetRef != null)
             {
-                await JS.InvokeVoidAsync("bobcrm.registerDesignerShortcuts", _shortcutDotNetRef);
+                await JS.TryInvokeVoidAsync("bobcrm.registerDesignerShortcuts", _shortcutDotNetRef);
             }
         }
         catch
@@ -874,7 +874,7 @@
     {
         try
         {
-            _ = JS.InvokeVoidAsync("bobcrm.unregisterDesignerShortcuts");
+            _ = JS.TryInvokeVoidAsync("bobcrm.unregisterDesignerShortcuts");
         }
         catch
         {

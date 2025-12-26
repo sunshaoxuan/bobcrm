@@ -3,7 +3,7 @@
 @implements IDisposable
 @inject BobCrm.App.Services.AuthService Auth
 @inject BobCrm.App.Services.I18nService I18n
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
 
 <PageTitle>@I18n.T("MENU_PROFILE") - OneCRM</PageTitle>
@@ -233,7 +233,7 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Profile] Error: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[Profile] Error: {ex.Message}");
             loading = false;
             await InvokeAsync(StateHasChanged);
         }
@@ -286,7 +286,7 @@
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[Profile] Change password error: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[Profile] Change password error: {ex.Message}");
             ShowMessage(I18n.T("MSG_CHANGE_PASSWORD_FAILED"), "error");
         }
         finally
@@ -299,7 +299,7 @@
     private async Task UploadAvatar()
     {
         // TODO: 实现头像上传功能
-        await JS.InvokeVoidAsync("alert", I18n.T("MSG_FEATURE_COMING_SOON"));
+        await JS.TryInvokeVoidAsync("alert", I18n.T("MSG_FEATURE_COMING_SOON"));
     }
 
     private void ShowMessage(string msg, string type)

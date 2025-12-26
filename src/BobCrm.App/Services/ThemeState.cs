@@ -10,11 +10,11 @@ public class ThemeState
     public const string CalmLight = "theme-calm-light";
     public const string CalmDark = "theme-calm-dark";
 
-    private readonly IJSRuntime _jsRuntime;
+    private readonly IJsInteropService _jsRuntime;
     private string _currentTheme = CalmLight;
     private bool _domInitialized;
 
-    public ThemeState(IJSRuntime jsRuntime)
+    public ThemeState(IJsInteropService jsRuntime)
     {
         _jsRuntime = jsRuntime;
     }
@@ -67,6 +67,6 @@ public class ThemeState
 
     private async Task ApplyToDomAsync(string theme)
     {
-        await _jsRuntime.InvokeVoidAsync("bobcrmTheme.apply", theme);
+        await _jsRuntime.TryInvokeVoidAsync("bobcrmTheme.apply", theme);
     }
 }

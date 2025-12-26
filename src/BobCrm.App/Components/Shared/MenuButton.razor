@@ -3,7 +3,7 @@
 @inject LayoutState Layout
 @inject I18nService I18n
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @implements IDisposable
 
 <div class="menu-button-container">
@@ -129,9 +129,9 @@
     {
         try
         {
-            var rect = await JS.InvokeAsync<BoundingClientRect>("eval",
+            var (_, rect) = await JS.TryInvokeAsync<BoundingClientRect>("eval",
                 $"(function() {{ var el = document.querySelector('.menu-trigger-button'); return el ? el.getBoundingClientRect() : {{left: 32}}; }})()");
-            _panelLeft = rect.Left;
+            _panelLeft = rect?.Left ?? 32;
             StateHasChanged();
         }
         catch

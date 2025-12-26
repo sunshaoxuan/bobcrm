@@ -12,11 +12,11 @@ namespace BobCrm.App.Services;
 public class FieldActionService
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IJSRuntime _js;
+    private readonly IJsInteropService _js;
     private readonly AuthService _auth;
     private readonly ILogger<FieldActionService> _logger;
 
-    public FieldActionService(IHttpClientFactory httpClientFactory, IJSRuntime js, AuthService auth, ILogger<FieldActionService> logger)
+    public FieldActionService(IHttpClientFactory httpClientFactory, IJsInteropService js, AuthService auth, ILogger<FieldActionService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _js = js;
@@ -107,7 +107,7 @@ public class FieldActionService
                     ?? $"{FileNameHelper.SanitizeFileName(config.Host)}_{DateTime.UtcNow:yyyyMMddHHmmss}.rdp";
 
                 // 使用JavaScript触发下载
-                await _js.InvokeVoidAsync("downloadFile", fileName, "application/x-rdp", fileBytes);
+                await _js.TryInvokeVoidAsync("downloadFile", fileName, "application/x-rdp", fileBytes);
                 return true;
             }
             else
@@ -138,7 +138,7 @@ public class FieldActionService
             if (!url.StartsWith("http://") && !url.StartsWith("https://"))
                 url = "https://" + url;
 
-            await _js.InvokeVoidAsync("open", url, "_blank");
+            await _js.TryInvokeVoidAsync("open", url, "_blank");
             return true;
         }
         catch (Exception ex)
@@ -158,7 +158,7 @@ public class FieldActionService
 
         try
         {
-            await _js.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await _js.TryInvokeVoidAsync("navigator.clipboard.writeText", text);
             return true;
         }
         catch (Exception ex)
@@ -205,14 +205,14 @@ public class FieldActionService
                     var mailtoLink = linkElement.GetString();
                     if (!string.IsNullOrEmpty(mailtoLink))
                     {
-                        await _js.InvokeVoidAsync("location.assign", mailtoLink);
+                        await _js.TryInvokeVoidAsync("location.assign", mailtoLink);
                         return true;
                     }
                 }
             }
 
             // 如果API失败，使用简单的mailto链接
-            await _js.InvokeVoidAsync("location.assign", $"mailto:{email}");
+            await _js.TryInvokeVoidAsync("location.assign", $"mailto:{email}");
             return true;
         }
         catch (Exception ex)

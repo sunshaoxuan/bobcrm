@@ -4,7 +4,7 @@
 @rendermode RenderMode.InteractiveServer
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject BobCrm.App.Services.I18nService I18n
 @inject LayoutState Layout
 
@@ -83,56 +83,56 @@
     
     try
     {
-      await JS.InvokeVoidAsync("console.log", "[CustomerSider] OnAfterRenderAsync started");
+      await JS.TryInvokeVoidAsync("console.log", "[CustomerSider] OnAfterRenderAsync started");
       
       // 认证预检查：确保已登录，否则导航到登录页
       var isAuthenticated = await Auth.EnsureAuthenticatedAsync();
       if (!isAuthenticated)
       {
-        await JS.InvokeVoidAsync("console.warn", "[CustomerSider] Not authenticated, redirecting to login");
+        await JS.TryInvokeVoidAsync("console.warn", "[CustomerSider] Not authenticated, redirecting to login");
         Nav.NavigateTo("/login", forceLoad: true);
         return;
       }
       
       // Register for cross-component customer events
-      await JS.InvokeVoidAsync("bobcrm.registerCustomerEvents", DotNetObjectReference.Create(this));
+      await JS.TryInvokeVoidAsync("bobcrm.registerCustomerEvents", DotNetObjectReference.Create(this));
 
       // Load i18n first
-      var saved = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+      var (_, saved) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
       var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
       await I18n.LoadAsync(langToLoad);
       
-      await JS.InvokeVoidAsync("console.log", "[CustomerSider] i18n loaded");
+      await JS.TryInvokeVoidAsync("console.log", "[CustomerSider] i18n loaded");
       
       // Wait for UI to update
       await InvokeAsync(StateHasChanged);
       
       // Load customers
-      await JS.InvokeVoidAsync("console.log", "[CustomerSider] Loading customers...");
+      await JS.TryInvokeVoidAsync("console.log", "[CustomerSider] Loading customers...");
       var resp = await Auth.GetWithRefreshAsync("/api/customers");
-      await JS.InvokeVoidAsync("console.log", $"[CustomerSider] Response status: {(int)resp.StatusCode}");
+      await JS.TryInvokeVoidAsync("console.log", $"[CustomerSider] Response status: {(int)resp.StatusCode}");
       
       if (resp.IsSuccessStatusCode)
       {
         _data = await resp.Content.ReadFromJsonAsync<List<Item>>() ?? new();
-        await JS.InvokeVoidAsync("console.log", $"[CustomerSider] Loaded {_data.Count} customers");
+        await JS.TryInvokeVoidAsync("console.log", $"[CustomerSider] Loaded {_data.Count} customers");
         TrySyncSelectedFromUrl();
       }
       else 
       { 
         error = I18n.T("ERR_LOGIN_EXPIRED");
-        await JS.InvokeVoidAsync("console.error", $"[CustomerSider] Error: {error}");
+        await JS.TryInvokeVoidAsync("console.error", $"[CustomerSider] Error: {error}");
       }
       
       loading = false;
       StateHasChanged();
-      await JS.InvokeVoidAsync("console.log", "[CustomerSider] StateHasChanged called");
+      await JS.TryInvokeVoidAsync("console.log", "[CustomerSider] StateHasChanged called");
     }
     catch (Exception ex)
     {
       error = $"Error: {ex.Message}";
       loading = false;
-      await JS.InvokeVoidAsync("console.error", $"[CustomerSider] Exception: {ex.Message}");
+      await JS.TryInvokeVoidAsync("console.error", $"[CustomerSider] Exception: {ex.Message}");
       StateHasChanged();
     }
   }

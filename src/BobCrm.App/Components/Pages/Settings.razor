@@ -6,7 +6,7 @@
 @inject BobCrm.App.Services.I18nService I18n
 @inject ThemeState ThemeState
 @inject LayoutState Layout
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
 
 <PageTitle>@I18n.T("MENU_SETTINGS") · OneCRM</PageTitle>
@@ -570,7 +570,7 @@
                 userMessage = I18n.T("MSG_SETTINGS_SAVED");
                 await ThemeState.SetThemeAsync(snapshot.Effective.Theme);
                 Layout.SetNavMode(PreferencesService.ToLayoutMode(snapshot.Effective.NavDisplayMode));
-                await JS.InvokeVoidAsync("bobcrm.setCookie", "lang", snapshot.Effective.Language, 365);
+                await JS.TryInvokeVoidAsync("bobcrm.setCookie", "lang", snapshot.Effective.Language, 365);
             }
         }
         catch

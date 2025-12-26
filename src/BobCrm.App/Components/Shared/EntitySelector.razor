@@ -1,6 +1,6 @@
 @typeparam TEntity where TEntity : BobCrm.App.Abstractions.ISelectableEntity
 @using AntDesign
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject BobCrm.App.Services.I18nService I18n
 
 <div class="@($"entity-selector-trigger {(Disabled ? "is-disabled" : string.Empty)}")">
@@ -214,13 +214,13 @@
                 currentPage = 1;
                 filteredData = dataSource;
                 dataLoaded = true;
-                await JS.InvokeVoidAsync("console.log", $"[EntitySelector] Loaded {dataSource.Count} items");
+                await JS.TryInvokeVoidAsync("console.log", $"[EntitySelector] Loaded {dataSource.Count} items");
             }
         }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
-            await JS.InvokeVoidAsync("console.error", $"[EntitySelector] Load failed: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[EntitySelector] Load failed: {ex.Message}");
         }
         finally
         {
