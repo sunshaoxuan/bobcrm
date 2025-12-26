@@ -18,6 +18,7 @@ var apiBase = builder.Configuration["Api:BaseUrl"] ?? "https://localhost:5200";
 builder.Services.AddTransient<BobCrm.App.Services.LangHeaderHandler>();
 builder.Services.AddHttpClient("api", c => c.BaseAddress = new Uri(apiBase))
     .AddHttpMessageHandler<BobCrm.App.Services.LangHeaderHandler>();
+
 builder.Services.AddScoped<BobCrm.App.Services.AuthService>();
 builder.Services.AddScoped<BobCrm.App.Services.OrganizationService>();
 builder.Services.AddScoped<BobCrm.App.Services.FieldService>();
@@ -28,8 +29,6 @@ builder.Services.AddScoped<BobCrm.App.Services.MenuService>();
 builder.Services.AddScoped<BobCrm.App.Services.UserService>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateRuntimeClient>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateBindingService>();
-builder.Services.AddScoped<BobCrm.App.Services.I18nService>();
-// Multilingual text resolution services
 builder.Services.Configure<MultilingualOptions>(options =>
 {
     options.DefaultLanguage = "ja";

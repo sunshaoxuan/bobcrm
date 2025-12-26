@@ -3,9 +3,9 @@
 @layout BobCrm.App.Components.Layout.AuthLayout
 
 @inject IHttpClientFactory HttpFactory
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
-@inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.Api.Abstractions.II18nService I18n
 @inject BobCrm.App.Services.AuthService Auth
 @inject IWebHostEnvironment Env
 @using System.Linq
@@ -95,9 +95,11 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
         {
             try
             {
-                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
-                await I18n.LoadAsync(langToLoad); try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
+                await I18n.LoadAsync(langToLoad); 
+                try { await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
+                
                 // Check backend whether admin exists; avoid localStorage
                 try
                 {
@@ -111,7 +113,8 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                     }
                 }
                 catch (Exception ex) { Console.WriteLine($"[Login] Admin check failed: {ex.Message}"); }
-                var token = await JS.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                
+                var (_, token) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(token))
                 {
                     Nav.NavigateTo("/", forceLoad: true);
@@ -269,28 +272,33 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
             }
             
             System.Diagnostics.Debug.WriteLine($"[Login] Attempting login with username: '{model.username}'");
-            await JS.InvokeVoidAsync("console.log", $"[Login] Attempting login with username: '{model.username}'");
+            await JS.TryInvokeVoidAsync("console.log", $"[Login] Attempting login with username: '{model.username}'");
             
             var http = HttpFactory.CreateClient("api");
             // allow local override: localStorage -> cookie -> origin
-            try {
-                var baseUrl = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-                if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
-                if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = await JS.InvokeAsync<string?>("bobcrm.getOrigin");
-                if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
-                await JS.InvokeVoidAsync("console.log", $"[Login] Using API base: {http.BaseAddress}");
-            } catch { /* Ignored: Configuration load failed */ }
+            var (_, baseUrl) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "apiBase");
+            if (string.IsNullOrWhiteSpace(baseUrl)) (_, baseUrl) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+            if (string.IsNullOrWhiteSpace(baseUrl)) (_, baseUrl) = await JS.TryInvokeAsync<string?>("bobcrm.getOrigin");
+            if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
+            await JS.TryInvokeVoidAsync("console.log", $"[Login] Using API base: {http.BaseAddress}");
+            
             // attach X-Lang header
-            try { var lang = await JS.InvokeAsync<string?>("localStorage.getItem", "lang"); if (string.IsNullOrWhiteSpace(lang)) lang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang"); if (!string.IsNullOrWhiteSpace(lang)) { if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); } } catch { }
+            var (_, lang) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "lang");
+            if (string.IsNullOrWhiteSpace(lang)) (_, lang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+            if (!string.IsNullOrWhiteSpace(lang)) 
+            { 
+                if (http.DefaultRequestHeaders.Contains("X-Lang")) http.DefaultRequestHeaders.Remove("X-Lang"); 
+                http.DefaultRequestHeaders.Add("X-Lang", lang!.ToLowerInvariant()); 
+            }
             
             // 保存当前输入，避免验证失败后被清空
             var usernameToSend = model.username;
             var passwordToSend = model.password;
             
-            await JS.InvokeVoidAsync("console.log", $"[Login] Sending login request to: {http.BaseAddress}api/auth/login");
+            await JS.TryInvokeVoidAsync("console.log", $"[Login] Sending login request to: {http.BaseAddress}api/auth/login");
             var resp = await http.PostAsJsonAsync("/api/auth/login", new { username = usernameToSend, password = passwordToSend });
             System.Diagnostics.Debug.WriteLine($"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
-            await JS.InvokeVoidAsync("console.log", $"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
+            await JS.TryInvokeVoidAsync("console.log", $"[Login] Response: {(int)resp.StatusCode} {resp.StatusCode}");
             if (!resp.IsSuccessStatusCode)
             {
                 // 获取详细错误信息
@@ -299,7 +307,7 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                 {
                     var errorContent = await resp.Content.ReadAsStringAsync();
                     System.Diagnostics.Debug.WriteLine($"[Login] Error response: {errorContent}");
-                    await JS.InvokeVoidAsync("console.log", $"[Login] Error response: {errorContent}");
+                    await JS.TryInvokeVoidAsync("console.log", $"[Login] Error response: {errorContent}");
                     if (!string.IsNullOrWhiteSpace(errorContent))
                     {
                         try
@@ -324,28 +332,28 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                 return;
             }
             var json = await ApiResponseHelper.ReadDataAsync<LoginResult>(resp);
-            await JS.InvokeVoidAsync("console.log", "[Login] ReadDataAsync result:", json != null ? "success" : "null");
+            await JS.TryInvokeVoidAsync("console.log", "[Login] ReadDataAsync result:", json != null ? "success" : "null");
             if (json is null)
             {
                 error = I18n.T("ERR_PARSE_RESPONSE");
-                await JS.InvokeVoidAsync("console.error", "[Login] ParseError: json is null");
+                await JS.TryInvokeVoidWithToastAsync("console.error", "ERR_PARSE_RESPONSE", "[Login] ParseError: json is null");
                 return;
             }
-            await JS.InvokeVoidAsync("console.log", "[Login] Storing accessToken...");
-            await JS.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
-            await JS.InvokeVoidAsync("console.log", "[Login] Storing refreshToken...");
-            await JS.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
-            await JS.InvokeVoidAsync("console.log", "[Login] Storing user...");
+            await JS.TryInvokeVoidAsync("console.log", "[Login] Storing accessToken...");
+            await JS.TryInvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
+            await JS.TryInvokeVoidAsync("console.log", "[Login] Storing refreshToken...");
+            await JS.TryInvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+            await JS.TryInvokeVoidAsync("console.log", "[Login] Storing user...");
             var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
-            await JS.InvokeVoidAsync("localStorage.setItem", "user", userStr);
-            await JS.InvokeVoidAsync("console.log", "[Login] All tokens stored, navigating to /...");
+            await JS.TryInvokeVoidAsync("localStorage.setItem", "user", userStr);
+            await JS.TryInvokeVoidAsync("console.log", "[Login] All tokens stored, navigating to /...");
             Nav.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
         {
             error = $"{I18n.T("ERR_LOGIN_FAILED")}: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"[Login] Exception: {ex}");
-            await JS.InvokeVoidAsync("console.error", $"[Login] Exception: {ex}");
+            await JS.TryInvokeVoidWithToastAsync("console.error", "ERR_JS_INTEROP", $"[Login] Exception: {ex}");
         }
         finally
         {
@@ -353,5 +361,4 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
             StateHasChanged();
         }
     }
-
 }

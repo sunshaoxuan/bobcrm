@@ -1,13 +1,16 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.JSInterop;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+// using BobCrm.App.Services.JsInterop; removed
 
 namespace BobCrm.App.Services;
 
 public class AuthService
 {
     private readonly IHttpClientFactory _httpFactory;
-    private readonly IJSRuntime _js;
+    private readonly IJsInteropService _js;
     private readonly TimeProvider _timeProvider;
     
     // 单飞刷新机制：确保同一时间只有一个刷新请求
@@ -20,7 +23,7 @@ public class AuthService
     /// </summary>
     public event Action? OnUnauthorized;
 
-    public AuthService(IHttpClientFactory httpFactory, IJSRuntime js, TimeProvider timeProvider)
+    public AuthService(IHttpClientFactory httpFactory, IJsInteropService js, TimeProvider timeProvider)
     {
         _httpFactory = httpFactory;
         _js = js;
@@ -35,20 +38,20 @@ public class AuthService
         // Prefer localStorage apiBase (来自 Setup 保存)，其次 cookie
         try
         {
-            var lsBase = await _js.InvokeAsync<string?>("localStorage.getItem", "apiBase");
+            var (_, lsBase) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "apiBase");
             if (!string.IsNullOrWhiteSpace(lsBase))
             {
                 resolvedBase = NormalizeBase(lsBase!);
             }
             else
             {
-                var cookieBase = await _js.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                var (_, cookieBase) = await _js.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
                 if (!string.IsNullOrWhiteSpace(cookieBase))
                 {
                     resolvedBase = NormalizeBase(cookieBase!);
                     // 同步回写，避免再次回退
-try { await _js.InvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase); } catch { /* Ignored: LocalStorage access failed */ }
-try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365); } catch { /* Ignored: Cookie access failed */ }
+                    await _js.TryInvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase);
+                    await _js.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365);
                 }
             }
         }
@@ -60,7 +63,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         {
             try
             {
-                var origin = await _js.InvokeAsync<string?>("bobcrm.getOrigin");
+                var (_, origin) = await _js.TryInvokeAsync<string?>("bobcrm.getOrigin");
                 if (!string.IsNullOrWhiteSpace(origin))
                 {
                     resolvedBase = NormalizeBase(origin!);
@@ -80,7 +83,8 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         // attach language header (no auth required)
         try
         {
-            var lang = await _js.InvokeAsync<string?>("bobcrm.getCookie", "lang") ?? "ja";
+            var (_, lang) = await _js.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+            lang ??= "ja";
             if (http.DefaultRequestHeaders.Contains("X-Lang"))
                 http.DefaultRequestHeaders.Remove("X-Lang");
             http.DefaultRequestHeaders.Add("X-Lang", lang.ToLowerInvariant());
@@ -105,7 +109,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
     public async Task<HttpClient> CreateClientWithAuthAsync()
     {
         var http = await CreateBaseClientAsync();
-        var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+        var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
         if (!string.IsNullOrWhiteSpace(access))
         {
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", access);
@@ -142,14 +146,10 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
             {
                 // 竞态重试：可能刷新已被其他并发请求完成，等待并重试
                 await Task.Delay(200);
-                var newToken = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+                var (_, newToken) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(newToken))
                 {
-                    try
-                    {
-                        await _js.InvokeVoidAsync("console.log", $"[Auth] Race recovery - retry {methodName}");
-                    }
-                    catch { /* Ignored: Log failure */ }
+                    await _js.TryInvokeVoidAsync("console.log", $"[Auth] Race recovery - retry {methodName}");
                     http = await CreateClientWithAuthAsync();
                     resp = await sendFunc(http);
                 }
@@ -179,22 +179,14 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
             // 双重检查：进入临界区后，如果最近1秒内已成功刷新过，直接返回成功
             if ((_timeProvider.GetUtcNow() - _lastRefreshTime).TotalSeconds < 1)
             {
-                try
-                {
-                    await _js.InvokeVoidAsync("console.log", "[Auth] Skip refresh - recent refresh detected");
-                }
-                catch { /* Ignored: Log failure */ }
+                await _js.TryInvokeVoidAsync("console.log", "[Auth] Skip refresh - recent refresh detected");
                 return true;
             }
 
             // 如果有正在进行的刷新任务，等待它
             if (_refreshTask != null && !_refreshTask.IsCompleted)
             {
-                try
-                {
-                    await _js.InvokeVoidAsync("console.log", "[Auth] Waiting for in-progress refresh");
-                }
-                catch { /* Ignored: Log failure */ }
+                await _js.TryInvokeVoidAsync("console.log", "[Auth] Waiting for in-progress refresh");
                 return await _refreshTask;
             }
 
@@ -210,20 +202,12 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
 
     private async Task<bool> PerformRefreshAsync()
     {
-        try
-        {
-            await _js.InvokeVoidAsync("console.log", "[Auth] Starting token refresh");
-        }
-        catch { /* Ignored: Log failure */ }
+        await _js.TryInvokeVoidAsync("console.log", "[Auth] Starting token refresh");
 
-        var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+        var (_, refresh) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "refreshToken");
         if (string.IsNullOrWhiteSpace(refresh))
         {
-            try
-            {
-                await _js.InvokeVoidAsync("console.warn", "[Auth] No refresh token found");
-            }
-            catch { /* Ignored: Log failure */ }
+            await _js.TryInvokeVoidAsync("console.warn", "[Auth] No refresh token found");
             await ClearTokensAsync();
             return false;
         }
@@ -234,11 +218,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         if (!res.IsSuccessStatusCode)
         {
             // 刷新失败，清理本地 token
-            try
-            {
-                await _js.InvokeVoidAsync("console.error", $"[Auth] Refresh failed: {res.StatusCode}");
-            }
-            catch { /* Ignored: Log failure */ }
+            await _js.TryInvokeVoidAsync("console.error", $"[Auth] Refresh failed: {res.StatusCode}");
             await ClearTokensAsync();
             OnUnauthorized?.Invoke();
             return false;
@@ -247,24 +227,16 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         var json = await ApiResponseHelper.ReadDataAsync<TokenPair>(res);
         if (json is null)
         {
-            try
-            {
-                await _js.InvokeVoidAsync("console.error", "[Auth] Refresh response parse failed");
-            }
-            catch { /* Ignored: Log failure */ }
+            await _js.TryInvokeVoidAsync("console.error", "[Auth] Refresh response parse failed");
             await ClearTokensAsync();
             return false;
         }
         
-        await _js.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
-        await _js.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+        await _js.TryInvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
+        await _js.TryInvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
         _lastRefreshTime = _timeProvider.GetUtcNow();
         
-        try
-        {
-            await _js.InvokeVoidAsync("console.log", "[Auth] Token refresh successful");
-        }
-        catch { /* Ignored: Log failure */ }
+        await _js.TryInvokeVoidAsync("console.log", "[Auth] Token refresh successful");
         
         return true;
     }
@@ -276,8 +248,8 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
     {
         try
         {
-            await _js.InvokeVoidAsync("localStorage.removeItem", "accessToken");
-            await _js.InvokeVoidAsync("localStorage.removeItem", "refreshToken");
+            await _js.TryInvokeVoidAsync("localStorage.removeItem", "accessToken");
+            await _js.TryInvokeVoidAsync("localStorage.removeItem", "refreshToken");
         }
         catch { /* Ignored: Storage cleanup failed */ }
     }
@@ -289,11 +261,11 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
     {
         try
         {
-            var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+            var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
             if (!string.IsNullOrWhiteSpace(access))
                 return true;
 
-            var refresh = await _js.InvokeAsync<string?>("localStorage.getItem", "refreshToken");
+            var (_, refresh) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "refreshToken");
             return !string.IsNullOrWhiteSpace(refresh);
         }
         catch
@@ -311,7 +283,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         try
         {
             // 检查是否有 accessToken
-            var access = await _js.InvokeAsync<string?>("localStorage.getItem", "accessToken");
+            var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
             if (!string.IsNullOrWhiteSpace(access))
                 return true;
 
