@@ -7149,4 +7149,115 @@
     "ja": "対象エンティティ側の外部キー名（例：CustomerId）。",
     "en": "Foreign key field on target entity (e.g., CustomerId)."
   }
+,
+  "ERR_INTERNAL_ERROR": {
+    "zh": "系统内部错误",
+    "ja": "システム内部エラー",
+    "en": "Internal server error"
+  },
+  "ERR_INVALID_ARGUMENT": {
+    "zh": "无效的参数",
+    "ja": "無効な引数",
+    "en": "Invalid argument"
+  },
+  "ERR_INVALID_OPERATION": {
+    "zh": "无效的操作",
+    "ja": "無効な操作",
+    "en": "Invalid operation"
+  },
+  "ERR_NOT_FOUND": {
+    "zh": "资源未找到",
+    "ja": "リソースが見つかりません",
+    "en": "Resource not found"
+  },
+  "ERR_UNAUTHORIZED": {
+    "zh": "未授权访问",
+    "ja": "アクセスが許可されていません",
+    "en": "Unauthorized access"
+  },
+  "ERR_FORBIDDEN": {
+    "zh": "禁止访问",
+    "ja": "アクセス禁止",
+    "en": "Access forbidden"
+  },
+  "ERR_CONCURRENCY_CONFLICT": {
+    "zh": "数据版本冲突，请刷新后重试",
+    "ja": "データ競合が発生しました。更新してから再試行してください",
+    "en": "Data concurrency conflict, please refresh and try again"
+  },
+  "ERR_REQUEST_CANCELLED": {
+    "zh": "请求已取消",
+    "ja": "リクエストがキャンセルされました",
+    "en": "Request cancelled"
+  },
+  "ERR_NOT_IMPLEMENTED": {
+    "zh": "功能未实现",
+    "ja": "機能は未実装です",
+    "en": "Not implemented"
+  },
+  "ERR_SERVICE_UNAVAILABLE": {
+    "zh": "服务暂不可用",
+    "ja": "サービスは一時的に利用できません",
+    "en": "Service unavailable"
+  },
+  "ERR_BUSINESS_RULE_VIOLATION": {
+    "zh": "业务规则校验失败",
+    "ja": "ビジネスルール違反",
+    "en": "Business rule violation"
+  },
+  "ERR_PERSISTENCE_ERROR": {
+    "zh": "数据持久化错误",
+    "ja": "データ永続化エラー",
+    "en": "Data persistence error"
+  },
+  "ERR_DOMAIN_ERROR": {
+    "zh": "领域错误",
+    "ja": "ドメインエラー",
+    "en": "Domain error"
+  },
+  "ERR_AUTH_INVALID_CREDENTIALS": {
+    "zh": "用户名或密码错误",
+    "ja": "ユーザー名またはパスワードが正しくありません",
+    "en": "Invalid username or password"
+  },
+  "ERR_AUTH_USER_NOT_FOUND": {
+    "zh": "用户未找到",
+    "ja": "ユーザーが見つかりません",
+    "en": "User not found"
+  },
+  "ERR_AUTH_TOKEN_INVALID": {
+    "zh": "无效的令牌",
+    "ja": "無効なトークン",
+    "en": "Invalid token"
+  },
+  "ERR_AUTH_LOGIN_EXPIRED": {
+    "zh": "登录已过期，请重新登录",
+    "ja": "ログインの有効期限が切れました。再度ログインしてください",
+    "en": "Login expired, please log in again"
+  },
+  "ERR_SYS_ADMIN_IMMUTABLE": {
+    "zh": "系统管理员账号不可修改",
+    "ja": "システム管理者アカウントは変更できません",
+    "en": "System admin account is immutable"
+  },
+  "ERR_SYS_ROLE_IMMUTABLE": {
+    "zh": "系统角色不可修改",
+    "ja": "システムロールは変更できません",
+    "en": "System role is immutable"
+  },
+  "ERR_TEMPLATE_ROUTE_MISMATCH": {
+    "zh": "模板中的实体类型必须匹配实体路由",
+    "ja": "テンプレートの EntityType はエンティティルートと一致する必要があります",
+    "en": "Template EntityType must match entity route"
+  },
+  "ERR_CODE_CONFLICT": {
+    "zh": "编码已存在",
+    "ja": "コードが既に存在します",
+    "en": "Code conflict"
+  },
+  "ERR_DATA_LOAD_FAILED": {
+    "zh": "数据加载失败",
+    "ja": "データの読み込みに失敗しました",
+    "en": "Data load failed"
+  }
 }
