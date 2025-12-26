@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Base;
@@ -9,7 +11,12 @@ namespace BobCrm.Api.Core.DomainCommon.Validation;
 public class ValidationPipeline : IValidationPipeline
 {
     private readonly IServiceProvider _sp;
-    public ValidationPipeline(IServiceProvider sp) => _sp = sp;
+    private readonly ILogger<ValidationPipeline> _logger;
+    public ValidationPipeline(IServiceProvider sp, ILogger<ValidationPipeline>? logger = null)
+    {
+        _sp = sp;
+        _logger = logger ?? NullLogger<ValidationPipeline>.Instance;
+    }
 
     public async Task<IResult?> ValidateAsync<T>(T model, HttpContext http, CancellationToken ct = default)
     {
@@ -76,7 +83,10 @@ public class ValidationPipeline : IValidationPipeline
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to load FieldDefinitions for validation localization, will fall back to raw field keys.");
+        }
 
         string LabelFor(string field)
             => (!string.IsNullOrWhiteSpace(field) && map.TryGetValue(field, out var v)) ? v : field;

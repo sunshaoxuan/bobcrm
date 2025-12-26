@@ -892,7 +892,10 @@ public static class DatabaseInitializer
 
             }
 
-            catch { }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to create PostgreSQL trigram indexes, continuing without them.");
+            }
 
         }
 
@@ -958,7 +961,15 @@ public static class DatabaseInitializer
 
                     {
 
-                        try { await terminateCmd.ExecuteNonQueryAsync(); } catch { }
+                        try { await terminateCmd.ExecuteNonQueryAsync(); }
+                        catch (Exception ex)
+                        {
+                            var loggerFactory = db.GetService<ILoggerFactory>();
+                            var logger = loggerFactory != null
+                                ? loggerFactory.CreateLogger(nameof(DatabaseInitializer))
+                                : NullLogger.Instance;
+                            logger.LogDebug(ex, "Failed to terminate active PostgreSQL connections for database {DatabaseName}.", dbName);
+                        }
 
                     }
 
