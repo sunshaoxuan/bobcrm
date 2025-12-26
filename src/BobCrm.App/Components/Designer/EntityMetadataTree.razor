@@ -7,7 +7,7 @@
 
 @inject AuthService Auth
 @inject I18nService I18n
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject EntityDefinitionService EntityDefinitionService
 
 @if (loading)
@@ -148,12 +148,12 @@ else
             treeNodes = BuildTreeNodes(entityDef);
             loadedEntity = EntityType;
 
-            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {treeNodes.Count} groups for {EntityType}");
+            await JS.TryInvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {treeNodes.Count} groups for {EntityType}");
         }
         catch (Exception ex)
         {
             error = $"Error: {ex.Message}";
-            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[EntityMetadataTree] {ex.Message}");
         }
         finally
         {
@@ -248,7 +248,7 @@ else
 
             if (referenced == null)
             {
-                await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] No definition for ref {meta.ReferencedEntityRoute ?? meta.ReferencedEntityId?.ToString()}");
+                await JS.TryInvokeVoidAsync("console.warn", $"[EntityMetadataTree] No definition for ref {meta.ReferencedEntityRoute ?? meta.ReferencedEntityId?.ToString()}");
                 meta.ChildrenLoaded = true;
                 return;
             }
@@ -256,12 +256,12 @@ else
             var children = BuildTreeNodes(referenced).SelectMany(g => g.Children ?? new List<EntityFieldTreeNode>()).ToList();
             meta.Children = children;
             meta.ChildrenLoaded = true;
-            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {children.Count} children for {meta.PropertyName}");
+            await JS.TryInvokeVoidAsync("console.log", $"[EntityMetadataTree] Loaded {children.Count} children for {meta.PropertyName}");
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Lazy load failed: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[EntityMetadataTree] Lazy load failed: {ex.Message}");
             meta.ChildrenLoaded = true;
         }
     }
@@ -285,11 +285,11 @@ else
             };
 
             await OnFieldDragStarted.InvokeAsync(field);
-            await JS.InvokeVoidAsync("console.log", $"[EntityMetadataTree] Dragging field: {meta.PropertyName}");
+            await JS.TryInvokeVoidAsync("console.log", $"[EntityMetadataTree] Dragging field: {meta.PropertyName}");
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error", $"[EntityMetadataTree] Drag start error: {ex.Message}");
+            await JS.TryInvokeVoidAsync("console.error", $"[EntityMetadataTree] Drag start error: {ex.Message}");
         }
     }
 
@@ -382,7 +382,7 @@ else
             return await ApiResponseHelper.ReadDataAsync<EntityDefinitionDto>(response);
         }
 
-        await JS.InvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {candidate}: {response.StatusCode}");
+        await JS.TryInvokeVoidAsync("console.warn", $"[EntityMetadataTree] Metadata load failed for {candidate}: {response.StatusCode}");
         return null;
     }
 

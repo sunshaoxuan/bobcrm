@@ -2,7 +2,7 @@
 @layout BobCrm.App.Components.Layout.EmptyLayout
 @rendermode RenderMode.InteractiveServer
 
-@inject IJSRuntime JS
+@inject IJsInteropService JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
 @inject BobCrm.App.Services.AuthService Auth
@@ -132,8 +132,8 @@
             try
             {
                 // Resolve effective API base (localStorage -> cookie -> current/default)
-                var lsBase = await JS.InvokeAsync<string?>("localStorage.getItem", "apiBase");
-                var cookieBase = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                var (_, lsBase) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "apiBase");
+                var (_, cookieBase) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
                 if (!string.IsNullOrWhiteSpace(lsBase))
                 {
                     apiBase = lsBase;
@@ -151,30 +151,32 @@
                 defaultApiBase = apiBase;
                 placeholderText = string.Format(I18n.T("PH_DEFAULT_VALUE"), defaultApiBase);
                 // Persist apiBase for I18nService/named clients
-                try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
-                try { await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
+                await JS.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365);
+                await JS.TryInvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
 
                 // Load language (cookie or default)
-                var savedLang = await JS.InvokeAsync<string?>("bobcrm.getCookie", "lang");
+                var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : lang;
                 await I18n.LoadAsync(langToLoad);
-                try { await JS.InvokeVoidAsync("bobcrm.setLang", langToLoad); } catch { }
+                await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
                 
                 // Load current admin info from backend (if already configured)
                 try
                 {
                     // Compute effective API base: current input/state -> cookie -> default/origin
-                    var cb = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
-                    var effectiveBase = apiBase ?? (!string.IsNullOrWhiteSpace(cb) ? cb! : null) ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
+                    var (_, cb) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                    var (_, origin) = await JS.TryInvokeAsync<string>("bobcrm.getOrigin");
+                    var effectiveBase = apiBase ?? (!string.IsNullOrWhiteSpace(cb) ? cb! : null) ?? defaultApiBase ?? origin ?? "http://localhost:5200";
 
                     async Task<bool> TryFetchAdminAsync(string baseUrl)
                     {
                         try
                         {
-                            await JS.InvokeVoidAsync("console.log", $"[Setup] Fetching admin info from (browser): {baseUrl}");
+                            await JS.TryInvokeVoidAsync("console.log", $"[Setup] Fetching admin info from (browser): {baseUrl}");
                             var url = (baseUrl ?? string.Empty).TrimEnd('/') + "/api/setup/admin";
-                            var adminInfo = await JS.InvokeAsync<SetupAdminInfo?>("bobcrm.fetchJson", url);
-                            if (adminInfo is null) return false;
+                            var (ok, adminInfo) = await JS.TryInvokeAsync<SetupAdminInfo?>("bobcrm.fetchJson", url);
+                            if (!ok || adminInfo is null) return false;
+                            
                             var u = adminInfo.username;
                             var m = adminInfo.email;
                             if (!string.IsNullOrWhiteSpace(u))
@@ -182,8 +184,8 @@
                                 adminUser = u!;
                                 if (!string.IsNullOrWhiteSpace(m)) adminEmail = m!;
                                 apiBase = baseUrl; defaultApiBase = baseUrl;
-                                try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", baseUrl, 365); } catch { }
-                                await JS.InvokeVoidAsync("console.log", $"[Setup] Loaded admin from database: username='{adminUser}', email='{adminEmail}'");
+                                await JS.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", baseUrl, 365);
+                                await JS.TryInvokeVoidAsync("console.log", $"[Setup] Loaded admin from database: username='{adminUser}', email='{adminEmail}'");
                                 StateHasChanged();
                                 return true;
                             }
@@ -198,40 +200,52 @@
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Setup] Failed to load admin info from API: {ex.Message}");
-                    await JS.InvokeVoidAsync("console.log", $"[Setup] Could not load admin from API (API may not be running): {ex.Message}");
+                    await JS.TryInvokeVoidAsync("console.log", $"[Setup] Could not load admin from API (API may not be running): {ex.Message}");
                 }
                 
                 // load languages list from API (works without auth) using effective base
                 try
                 {
-                    var cookieBase2 = await JS.InvokeAsync<string?>("bobcrm.getCookie", "apiBase");
-                    var base2 = apiBase ?? (!string.IsNullOrWhiteSpace(cookieBase2) ? cookieBase2! : null) ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin");
-                    await JS.InvokeVoidAsync("console.log", $"[Setup] Loading languages from: {base2}");
+                    var (_, cookieBase2) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
+                    var (_, origin2) = await JS.TryInvokeAsync<string>("bobcrm.getOrigin");
+                    var base2 = apiBase ?? (!string.IsNullOrWhiteSpace(cookieBase2) ? cookieBase2! : null) ?? defaultApiBase ?? origin2 ?? "http://localhost:5200";
+                    await JS.TryInvokeVoidAsync("console.log", $"[Setup] Loading languages from: {base2}");
                     async Task<bool> TryFetchAsync(string b)
                     {
                         try
                         {
                             using var tmp = new HttpClient { BaseAddress = new Uri((b ?? string.Empty).TrimEnd('/') + "/", UriKind.Absolute) };
-                            try { tmp.DefaultRequestHeaders.Remove("X-Lang"); tmp.DefaultRequestHeaders.Add("X-Lang", (lang ?? "ja").ToLowerInvariant()); } catch { }
+                            tmp.DefaultRequestHeaders.Remove("X-Lang");
+                            tmp.DefaultRequestHeaders.Add("X-Lang", (lang ?? "ja").ToLowerInvariant());
                             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                             var r = await tmp.GetAsync("/api/i18n/languages", cts.Token);
                             if (!r.IsSuccessStatusCode) return false;
                             var json = await r.Content.ReadFromJsonAsync<List<SetupLangItem>>();
                             if (json is null || json.Count == 0) return false;
                             langs = json; apiBase = b; defaultApiBase = b;
-                            try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", b, 365); } catch { }
+                            await JS.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", b, 365);
                             return true;
                         }
-                        catch { return false; }
+                        catch (Exception ex)
+                        {
+                            await JS.TryInvokeVoidAsync("console.warn", $"[Setup] Failed to load languages from {b}: {ex.Message}");
+                            return false;
+                        }
                     }
 
                     // Single attempt; no automatic port fallback
                     await TryFetchAsync(base2);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    await JS.TryInvokeVoidAsync("console.warn", $"[Setup] Load languages failed: {ex.Message}");
+                }
                 StateHasChanged();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                await JS.TryInvokeVoidAsync("console.warn", $"[Setup] First render init failed: {ex.Message}");
+            }
         }
     }
 
@@ -241,7 +255,7 @@
         try
         {
             // Debug: Log method entry - multiple ways to ensure we see it
-            await JS.InvokeVoidAsync("console.log", "[Setup] SaveAsync method called!", apiBase, adminUser, adminEmail);
+            await JS.TryInvokeVoidAsync("console.log", "[Setup] SaveAsync method called!", apiBase, adminUser, adminEmail);
             System.Diagnostics.Debug.WriteLine($"[Setup] SaveAsync called. apiBase={apiBase}, adminUser={adminUser}, adminEmail={adminEmail}");
             
             saving = true;
@@ -292,18 +306,28 @@
             System.Diagnostics.Debug.WriteLine("[Setup] Validation passed, starting save process...");
 
             // Persist base and language locally first (even if backend save fails)
-            try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("localStorage.setItem", "apiBase", apiBase); } catch { }
-            try { if (!string.IsNullOrWhiteSpace(apiBase)) await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365); } catch { }
-            try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
+            if (!string.IsNullOrWhiteSpace(apiBase)) await JS.TryInvokeVoidAsync("localStorage.setItem", "apiBase", apiBase);
+            if (!string.IsNullOrWhiteSpace(apiBase)) await JS.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", apiBase, 365);
+            await JS.TryInvokeVoidAsync("localStorage.setItem", "lang", lang);
 
             // reload i18n immediately so UI switches language before navigation
-            try { await I18n.LoadAsync(lang); await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+            try
+            {
+                await I18n.LoadAsync(lang);
+                await JS.TryInvokeVoidAsync("bobcrm.setLang", lang);
+            }
+            catch (Exception ex)
+            {
+                await JS.TryInvokeVoidAsync("console.warn", $"[Setup] I18n reload failed: {ex.Message}");
+            }
 
             // call backend to save admin; await to ensure it's actually saved
             bool ok = false; string? err = null;
             try
             {
-                using (var http = new HttpClient { BaseAddress = new Uri((apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin")).TrimEnd('/') + "/", UriKind.Absolute) })
+                var (_, origin) = await JS.TryInvokeAsync<string>("bobcrm.getOrigin");
+                var effectiveBase = apiBase ?? defaultApiBase ?? origin ?? "http://localhost:5200";
+                using (var http = new HttpClient { BaseAddress = new Uri(effectiveBase.TrimEnd('/') + "/", UriKind.Absolute) })
                 {
                     // Set language header
                     var langHeader = lang.ToLowerInvariant();
@@ -314,25 +338,25 @@
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     var requestUrl = http.BaseAddress + "api/setup/admin";
                     System.Diagnostics.Debug.WriteLine($"[Setup] Sending POST request to: {requestUrl}");
-                    await JS.InvokeVoidAsync("console.log", $"[Setup] Sending POST request to: {requestUrl}, username: {adminUser}, email: {adminEmail}");
+                    await JS.TryInvokeVoidAsync("console.log", $"[Setup] Sending POST request to: {requestUrl}, username: {adminUser}, email: {adminEmail}");
                     
                     var resp = await http.PostAsJsonAsync("/api/setup/admin", new { username = adminUser, email = adminEmail, password = adminPassword }, cts.Token);
                     ok = resp.IsSuccessStatusCode;
                     System.Diagnostics.Debug.WriteLine($"[Setup] Response status: {(int)resp.StatusCode} {resp.StatusCode}, Success: {ok}");
-                    await JS.InvokeVoidAsync("console.log", $"[Setup] Response: {(int)resp.StatusCode} {resp.StatusCode}, Success: {ok}");
+                    await JS.TryInvokeVoidAsync("console.log", $"[Setup] Response: {(int)resp.StatusCode} {resp.StatusCode}, Success: {ok}");
                     
                     if (!ok)
                     {
                         var errorContent = await resp.Content.ReadAsStringAsync();
                         err = $"HTTP {(int)resp.StatusCode} {resp.StatusCode}: {errorContent}";
                         System.Diagnostics.Debug.WriteLine($"[Setup] Error response: {err}");
-                        await JS.InvokeVoidAsync("console.error", $"[Setup] Error: {err}");
+                        await JS.TryInvokeVoidAsync("console.error", $"[Setup] Error: {err}");
                     }
                     else
                     {
                         var successContent = await resp.Content.ReadAsStringAsync();
                         System.Diagnostics.Debug.WriteLine($"[Setup] Success response: {successContent}");
-                        await JS.InvokeVoidAsync("console.log", $"[Setup] Success: {successContent}");
+                        await JS.TryInvokeVoidAsync("console.log", $"[Setup] Success: {successContent}");
                         ok = true; // Explicitly mark as saved
                     }
                 }
@@ -374,8 +398,8 @@
                 {
                     System.Diagnostics.Debug.WriteLine($"[Setup] Message.Error failed: {msgEx.Message}");
                     // Fallback: try to show alert
-                    try { await JS.InvokeVoidAsync("alert", fullErrorMsg); } catch { }
-                    try { await JS.InvokeVoidAsync("console.error", errorMsg); } catch { }
+                    await JS.TryInvokeVoidAsync("alert", fullErrorMsg);
+                    await JS.TryInvokeVoidAsync("console.error", errorMsg);
                 }
                 StateHasChanged();
                 return;
@@ -386,8 +410,9 @@
             // Admin info saved to database; no extra persistence needed
             
             // mark configured and navigate to home
-            try { await JS.InvokeVoidAsync("bobcrm.setCookie", "apiBase", (apiBase ?? defaultApiBase ?? await JS.InvokeAsync<string>("bobcrm.getOrigin")), 365); } catch { }
-            try { await JS.InvokeVoidAsync("localStorage.setItem", "configured", "true"); } catch { }
+            var (_, originFinal) = await JS.TryInvokeAsync<string>("bobcrm.getOrigin");
+            await JS.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", (apiBase ?? defaultApiBase ?? originFinal), 365);
+            await JS.TryInvokeVoidAsync("localStorage.setItem", "configured", "true");
             try
             {
                 Message.Success(I18n.T("MSG_SETTINGS_SAVED_REDIRECTING"));
@@ -410,8 +435,8 @@
             }
             catch
             {
-                try { await JS.InvokeVoidAsync("console.error", errorMsg); } catch { }
-                try { await JS.InvokeVoidAsync("alert", errorMsg); } catch { }
+                await JS.TryInvokeVoidAsync("console.error", errorMsg);
+                await JS.TryInvokeVoidAsync("alert", errorMsg);
             }
         }
         finally
@@ -432,8 +457,10 @@
         try
         {
             var confirmMsg = I18n.T("MSG_RESET_CONFIRM") ?? "Reset setup? This removes the current admin account and requires reconfiguration.";
-            var confirm = await JS.InvokeAsync<bool>("confirm", confirmMsg);
-            if (!confirm)
+            var (isOk, confirm) = await JS.TryInvokeAsync<bool>("confirm", confirmMsg);
+            // If confirm returned value, it means the prompt was shown and user made choice. 
+            // If TryInvoke failed (isOk=false), confirm defaults to false.
+            if (!isOk || !confirm)
             {
                 resetting = false;
                 StateHasChanged();
@@ -479,7 +506,7 @@
     {
         var value = e?.Value?.ToString() ?? "ja";
         lang = value;
-        try { await JS.InvokeVoidAsync("localStorage.setItem", "lang", lang); } catch { }
+        await JS.TryInvokeVoidAsync("localStorage.setItem", "lang", lang);
 
         // If the API base is typed but not saved yet, try to fetch dictionary directly
         try
@@ -491,17 +518,17 @@
                 if (resp.IsSuccessStatusCode)
                 {
                     var json = await resp.Content.ReadAsStringAsync();
-                    await JS.InvokeVoidAsync("localStorage.setItem", $"i18n:{lang}:v1", json);
+                    await JS.TryInvokeVoidAsync("localStorage.setItem", $"i18n:{lang}:v1", json);
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            await JS.TryInvokeVoidAsync("console.warn", $"[Setup] Preload i18n cache failed: {ex.Message}");
+        }
 
         await I18n.LoadAsync(lang);
-        try { await JS.InvokeVoidAsync("bobcrm.setLang", lang); } catch { }
+        await JS.TryInvokeVoidAsync("bobcrm.setLang", lang);
         StateHasChanged();
     }
 }
-
-
-
