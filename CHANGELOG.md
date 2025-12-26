@@ -9,6 +9,19 @@
 
 ## [未发布] - 进行中
 
+### Security
+- **JWT 配置校验**：非 Development 环境强制要求 `Jwt:Key` 配置，避免误用默认密钥。
+- **CORS 配置校验**：非 Development 环境强制要求 `Cors:AllowedOrigins`（支持数组或 `;` 分隔字符串）。
+
+### Changed
+- **全局异常处理**：统一使用 `app.UseExceptionHandler()` 触发已注册的 `GlobalExceptionHandler`（移除空的中间件占位）。
+- **API 端点分层**：将部分 Controller/Endpoint 逻辑下沉到 AppService/Service，提升可测试性与一致性。
+
+### Fixed
+- **EF Core 兼容映射**：修复 `FunctionNode` 旧字段（`TemplateId` / `TemplateBindingId`）被忽略导致的 shadow column（如 `TemplateBindingId1`）与 SQLite 运行时错误。
+- **菜单模板交集 API**：`GET /api/templates/menu-bindings` 支持 `usageType` 查询参数，并在 `viewState` 为空时按用途回落到默认视图状态。
+- **模板选项回填**：`FunctionTreeBuilder` 支持旧 `TemplateBinding` 兼容回填 `TemplateOptions`，避免历史数据下返回空选项。
+
 ---
 
 ## [0.9.5] - 2025-12-25

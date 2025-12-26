@@ -1,6 +1,6 @@
 # 文档索引（按类型组织）
 
-- 文件按 **类型/职责** 存放：`design/`（架构与产品设计）、`guides/`（手册/指南）、`reference/`（接口/规范）、`history/`（差距与修复记录）、`plans/`（计划）、`process/`（流程）、`examples/`（示例）、`test-cases/`（测试用例库）。
+- 文件按 **类型/职责** 存放：`design/`（架构与产品设计）、`guides/`（手册/指南）、`reference/`（接口/规范）、`history/`（差距与修复记录）、`plans/`（计划）、`process/`（流程）、`examples/`（示例）、`test-cases/`（测试用例库）、`prompts/`（AI审查Prompt）。
 - 命名仍遵循 `分类-编号-标题.md` 规则，便于快速检索。
 - 若需历史版本，可通过 Git 查看对应文件的变更记录。
 
@@ -74,11 +74,15 @@
 - [REVIEW-08-v0.7.0-项目审计](reviews/REVIEW-08-v0.7.0-项目审计.md)
 - [REVIEW-09-代码评审与改进清单-2025-11](reviews/REVIEW-09-代码评审与改进清单-2025-11.md)
 - [REVIEW-10-多语言功能代码评审-2025-11](reviews/REVIEW-10-多语言功能代码评审-2025-11.md)
+- [REVIEW-12-Comprehensive-Code-Review-2025-12](reviews/REVIEW-12-Comprehensive-Code-Review-2025-12.md)
+- [REVIEW-13-Code-Quality-Review-2025-12](reviews/REVIEW-13-Code-Quality-Review-2025-12.md)
+- [REVIEW-14-代码质量评审-2025-12](reviews/REVIEW-14-代码质量评审-2025-12.md)
 
 ## 6. 开发计划（plans/）
 > 详细的版本开发计划，包含任务拆解、验收标准和实施细节
 
 - [PLAN-01-v0.7.0-菜单导航完善](plans/PLAN-01-v0.7.0-菜单导航完善.md)
+- [PLAN-18-代码质量改进计划-2025-12](plans/PLAN-18-代码质量改进计划-2025-12.md)
 
 ## 7. 流程与规范（process/）
 > 可重复使用的流程模板和规范
@@ -95,5 +99,14 @@
 > 按领域组织的手工/端到端测试用例库（命名规则见 `docs/process/STD-02-文档编写规范.md` 2.4）。
 
 - 入口：`test-cases/README.md`
+
+## 10. AI 审查 Prompts（prompts/）
+
+> AI 驱动代码审查的 Prompt 和输出模板
+
+- 入口：`prompts/README.md`
+- [PROMPT-01-全面代码审查](prompts/PROMPT-01-全面代码审查.md) - 完整的代码审查执行指令
+- [TEMPLATE-01-代码审查报告模板](prompts/TEMPLATE-01-代码审查报告模板.md) - 审查报告输出格式
+- [TEMPLATE-02-改进计划模板](prompts/TEMPLATE-02-改进计划模板.md) - 改进计划输出格式
 
 > **提示**：如需新增文档，请先确认所属类型，再放入对应目录，并在本索引补充条目。

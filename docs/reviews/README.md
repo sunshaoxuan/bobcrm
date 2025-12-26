@@ -16,3 +16,6 @@
 | [REVIEW-08-v0.7.0-项目审计](REVIEW-08-v0.7.0-项目审计.md) | v0.7.0 | 项目偏差审计与修复建议 |
 | [REVIEW-09-代码评审与改进清单-2025-11](REVIEW-09-代码评审与改进清单-2025-11.md) | 2025-11 | AggVO 系统代码审查与改进建议 |
 | [REVIEW-10-多语言功能代码评审-2025-11](REVIEW-10-多语言功能代码评审-2025-11.md) | 2025-11 | 多语言功能代码评审与重构建议 |
+| [REVIEW-12-Comprehensive-Code-Review-2025-12](REVIEW-12-Comprehensive-Code-Review-2025-12.md) | 2025-12 | 全面代码审查记录 |
+| [REVIEW-13-Code-Quality-Review-2025-12](REVIEW-13-Code-Quality-Review-2025-12.md) | 2025-12 | 代码质量评审记录 |
+| [REVIEW-14-代码质量评审-2025-12](REVIEW-14-代码质量评审-2025-12.md) | 2025-12 | 代码质量评审总结与结论 |
