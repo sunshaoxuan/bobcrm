@@ -39,4 +39,7 @@ public static class ErrorCodes
     public const string TemplateRouteMismatch = "TEMPLATE_ROUTE_MISMATCH";
     public const string CodeConflict = "CODE_CONFLICT";
     public const string DataLoadFailed = "DATA_LOAD_FAILED";
+
+    // Module: Entity definition
+    public const string FieldProtectedBySource = "FIELD_PROTECTED_BY_SOURCE";
 }

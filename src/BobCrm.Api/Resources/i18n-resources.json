@@ -7259,5 +7259,10 @@
     "zh": "数据加载失败",
     "ja": "データの読み込みに失敗しました",
     "en": "Data load failed"
+  },
+  "ERR_FIELD_PROTECTED_BY_SOURCE": {
+    "zh": "字段受来源保护，不允许删除：{0}",
+    "ja": "ソースにより保護されたフィールドは削除できません: {0}",
+    "en": "Field is protected by source and cannot be deleted: {0}"
   }
 }

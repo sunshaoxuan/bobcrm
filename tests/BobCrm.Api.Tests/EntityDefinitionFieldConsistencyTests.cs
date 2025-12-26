@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.Requests.Entity;
+using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -199,6 +201,28 @@ public class EntityDefinitionFieldConsistencyTests : IClassFixture<TestWebAppFac
     }
 
     [Fact]
+    public async Task UpdateEntityDefinition_DeleteProtectedFields_ReturnsErrFieldProtectedBySource()
+    {
+        var (entityId, systemFieldId, interfaceFieldId, customFieldId) = await SeedEntityWithSourceFieldsAsync();
+        var client = await CreateAuthenticatedClientAsync();
+
+        var dto = new UpdateEntityDefinitionDto
+        {
+            Fields = new List<UpdateFieldMetadataDto>
+            {
+                new() { Id = customFieldId }
+            }
+        };
+
+        var resp = await client.PutAsJsonAsync($"/api/entity-definitions/{entityId}", dto);
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        var err = await resp.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.NotNull(err);
+        Assert.Equal(ErrorCodes.FieldProtectedBySource, err!.Code);
+    }
+
+    [Fact]
     public async Task CreateAndUpdateEntityDefinition_EnumField_PersistsEnumConfig()
     {
         var enumId = await SeedEnumDefinitionAsync();
@@ -274,4 +298,3 @@ public class EntityDefinitionFieldConsistencyTests : IClassFixture<TestWebAppFac
         }
     }
 }
-

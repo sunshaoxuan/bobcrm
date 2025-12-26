@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BobCrm.Api.Abstractions;
 using BobCrm.Api.Base.Models;
+using BobCrm.Api.Core.DomainCommon;
 using BobCrm.Api.Contracts.DTOs;
 using BobCrm.Api.Contracts.Requests.Entity;
 using BobCrm.Api.Contracts.Responses.Entity;
@@ -235,13 +236,21 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
             var incomingFieldIds = dto.Fields.Where(f => f.Id.HasValue).Select(f => f.Id!.Value).ToHashSet();
 
             var fieldsToRemove = definition.Fields.Where(f => !incomingFieldIds.Contains(f.Id) && !f.IsDeleted).ToList();
+            var protectedToRemove = fieldsToRemove
+                .Where(f =>
+                    string.Equals(f.Source, FieldSource.System, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(f.Source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
+                .Select(f => f.PropertyName)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .ToList();
+            if (protectedToRemove.Count > 0)
+            {
+                var msg = string.Format(_loc.T("ERR_FIELD_PROTECTED_BY_SOURCE", uiLang), string.Join(", ", protectedToRemove));
+                throw new ServiceException(msg, ErrorCodes.FieldProtectedBySource);
+            }
+
             foreach (var field in fieldsToRemove)
             {
-                if (field.Source == FieldSource.System)
-                {
-                    continue;
-                }
-
                 field.IsDeleted = true;
                 field.UpdatedAt = DateTime.UtcNow;
             }
