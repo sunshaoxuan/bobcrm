@@ -12,6 +12,8 @@
 ### Security
 - **JWT 配置校验**：非 Development 环境强制要求 `Jwt:Key` 配置，避免误用默认密钥。
 - **CORS 配置校验**：非 Development 环境强制要求 `Cors:AllowedOrigins`（支持数组或 `;` 分隔字符串）。
+- **部署验证**：新增 `GUIDE-01-部署指南`（含 JWT Issuer/Audience 一致性检查）与 `.github/workflows/verify-deployment.yml`，自动验证“缺配置必启动失败”和“配置齐全 /health=200”。
+
 
 ### Changed
 - **全局异常处理**：统一使用 `app.UseExceptionHandler()` 触发已注册的 `GlobalExceptionHandler`（移除空的中间件占位）。

@@ -44,6 +44,30 @@
   - `Cors__AllowedOrigins__0=https://bobcrm.yourcompany.com`
   - `Cors__AllowedOrigins__1=https://admin.yourcompany.com`
 
+#### 3. JWT Issuer/Audience 一致性验证 (Critical)
+- **风险**: 若 API 配置了 `Jwt:Issuer` / `Jwt:Audience`，但生成 Token 的客户端（或 IdentityServer）未设置相同值，会导致 Token 签名有效但校验失败（401 Unauthorized）。
+- **验证方法**:
+  1. 解码客户端生成的 Token（可使用 jwt.io 或本地工具）。
+  2. 检查 `iss` claim 是否等于 API 配置的 `Jwt:Issuer`。
+  3. 检查 `aud` claim 是否包含 API 配置的 `Jwt:Audience`。
+- **自检命令（Python）**:
+  ```bash
+  # TOKEN=xxxx.yyyy.zzzz
+  python3 - <<'PY'
+import os, json, base64
+token = os.environ.get("TOKEN", "")
+parts = token.split(".")
+if len(parts) < 2:
+    raise SystemExit("TOKEN is missing or invalid (expected header.payload.signature).")
+payload = parts[1] + "==="
+payload = payload.replace("-", "+").replace("_", "/")
+data = json.loads(base64.b64decode(payload))
+print("iss =", data.get("iss"))
+print("aud =", data.get("aud"))
+PY
+  ```
+  - 期望：`iss == BobCrm.Api` 且 `aud` 包含 `BobCrm.Client`（数组或字符串）。
+
 ## 数据库配置
 系统支持两种数据库模式：
 - **PostgreSQL（推荐生产使用）**：设置 `Db:Provider=postgres`，并提供 `ConnectionStrings:Default`。
@@ -106,7 +130,15 @@ services:
 ### 1. 验证“缺失配置导致启动失败”
 *目的：确保安全门禁生效（即必须报错退出，而不是以弱安全模式启动）。*
 
-**PowerShell / Bash:**
+**方式 A：直接运行（推荐 CI 使用）**
+```bash
+ASPNETCORE_ENVIRONMENT=Production \
+  ASPNETCORE_URLS=http://127.0.0.1:5200 \
+  dotnet run -c Release --project src/BobCrm.Api/BobCrm.Api.csproj
+```
+**预期**：进程应立即退出，并提示缺失的 `Jwt:Key` 或 `Cors:AllowedOrigins`。
+
+**方式 B：容器镜像（如你已自行构建并发布镜像）**
 ```bash
 # 故意不传 Jwt__Key 和 Cors，预期应立即 Crash
 docker run --rm -e ASPNETCORE_ENVIRONMENT=Production your-repo/bobcrm-api:latest
@@ -116,6 +148,19 @@ docker run --rm -e ASPNETCORE_ENVIRONMENT=Production your-repo/bobcrm-api:latest
 > (或者 `Cors:AllowedOrigins must be configured`)
 
 ### 2. 验证“正确配置能正常启动”
+**方式 A：直接运行（推荐 CI 使用）**
+```bash
+ASPNETCORE_ENVIRONMENT=Production \
+  ASPNETCORE_URLS=http://127.0.0.1:5200 \
+  ConnectionStrings__Default="Data Source=/tmp/bobcrm.db" \
+  Jwt__Key=TestKeyForVerificationOnly1234567890 \
+  Jwt__Issuer=BobCrm.Api \
+  Jwt__Audience=BobCrm.Client \
+  Cors__AllowedOrigins__0=http://localhost \
+  dotnet run -c Release --project src/BobCrm.Api/BobCrm.Api.csproj
+```
+
+**方式 B：容器镜像（如你已自行构建并发布镜像）**
 ```bash
 docker run --rm -d --name bobcrm-check \
   -e ASPNETCORE_ENVIRONMENT=Production \

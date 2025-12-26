@@ -1,0 +1,77 @@
+name: Deployment Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  verify-deployment-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: 1. Verify Crash on Missing Config (Expected Failure)
+        run: |
+          set -euo pipefail
+
+          dotnet build -c Release src/BobCrm.Api/BobCrm.Api.csproj
+
+          set +e
+          ASPNETCORE_ENVIRONMENT=Production \
+            ASPNETCORE_URLS=http://127.0.0.1:5200 \
+            dotnet run --no-build -c Release --project src/BobCrm.Api/BobCrm.Api.csproj > output.log 2>&1
+          EXIT_CODE=$?
+          set -e
+
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "FAILURE: App started successfully but should have crashed."
+            cat output.log
+            exit 1
+          fi
+
+          if grep -q "Jwt:Key is required in non-development environments" output.log || grep -q "Cors:AllowedOrigins must be configured in non-development environments" output.log; then
+            echo "SUCCESS: App crashed as expected due to missing config."
+          else
+            echo "FAILURE: App crashed for an unexpected reason."
+            cat output.log
+            exit 1
+          fi
+
+      - name: 2. Verify Healthy Start with Correct Config
+        run: |
+          set -euo pipefail
+
+          ASPNETCORE_ENVIRONMENT=Production \
+            ASPNETCORE_URLS=http://127.0.0.1:5200 \
+            ConnectionStrings__Default="Data Source=/tmp/bobcrm-ci.db" \
+            Jwt__Key=TestKeyForVerificationOnly1234567890 \
+            Jwt__Issuer=BobCrm.Api \
+            Jwt__Audience=BobCrm.Client \
+            Cors__AllowedOrigins__0=http://localhost \
+            dotnet run --no-build -c Release --project src/BobCrm.Api/BobCrm.Api.csproj > app.log 2>&1 &
+
+          APP_PID=$!
+          echo "Started app PID=$APP_PID"
+
+          for i in {1..30}; do
+            HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" http://127.0.0.1:5200/health || true)
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "SUCCESS: App started and health check passed."
+              kill "$APP_PID" || true
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "FAILURE: Health check did not return 200 within timeout."
+          cat app.log || true
+          kill "$APP_PID" || true
+          exit 1
