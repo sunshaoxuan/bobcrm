@@ -86,7 +86,12 @@ builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AppDbContext>();
 
 // JWT
-var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException("Jwt:Key is required in non-development environments.");
+}
+var key = Encoding.UTF8.GetBytes(jwtKey ?? "dev-secret-change-in-prod-1234567890");
 builder.Services.AddAuthentication(o =>
 {
     o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -199,6 +204,9 @@ builder.Services.AddHealthChecks()
     .AddCheck<SmtpConnectivityHealthCheck>("smtp", tags: new[] { "ready" })
     .AddCheck<S3ConnectivityHealthCheck>("s3", tags: new[] { "ready" });
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddScoped<IEmailSender, DbSmtpEmailSender>();
 builder.Services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
@@ -273,7 +281,33 @@ builder.Services.AddScoped<EnumDefinitionService>();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true) // Allow any origin in Dev
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            // Prefer array config: Cors:AllowedOrigins: [ "https://a", "https://b" ]
+            // Fallback to semicolon-separated string for compatibility: "https://a;https://b"
+            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                                 ?? builder.Configuration["Cors:AllowedOrigins"]?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                 ?? Array.Empty<string>();
+
+            if (allowedOrigins.Length == 0)
+            {
+                throw new InvalidOperationException("Cors:AllowedOrigins must be configured in non-development environments.");
+            }
+
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+    });
 });
 
 // S3/MinIO file storage
@@ -288,7 +322,8 @@ app.Logger.LogInformation("Application starting at {Time}, log file: {LogFile}",
 app.Logger.LogInformation("============================================");
 
 // 全局异常处理（放在最前面）
-app.UseGlobalExceptionHandler();
+// 全局异常处理（放在最前面）
+app.UseExceptionHandler(); // 使用 .NET 8 内置异常处理中间件，它会自动调用已注册的 IExceptionHandler
 app.UseResponseCompression();
 
 if (app.Environment.IsDevelopment())
