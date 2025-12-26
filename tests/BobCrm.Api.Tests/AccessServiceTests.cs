@@ -32,7 +32,7 @@ public class AccessServiceTests
         var multilingual = new MultilingualFieldService(context, NullLogger<MultilingualFieldService>.Instance);
         var functionService = new FunctionService(context, multilingual);
         var roleService = new RoleService(context);
-        var accessService = new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService);
+        var accessService = new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService, TimeProvider.System);
         return (accessService, functionService, roleService);
     }
 

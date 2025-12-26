@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Server;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 // 开发期输出详细的电路错误，便于定位渲染异常导致的断链

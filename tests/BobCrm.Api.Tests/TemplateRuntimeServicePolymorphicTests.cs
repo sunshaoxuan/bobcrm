@@ -140,7 +140,7 @@ public class TemplateRuntimeServicePolymorphicTests : IDisposable
         var multilingual = new MultilingualFieldService(context, multilingualLogger);
         var functionService = new FunctionService(context, multilingual);
         var roleService = new RoleService(context);
-        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService);
+        return new AccessService(context, CreateUserManager(context), CreateRoleManager(context), multilingual, functionService, roleService, TimeProvider.System);
     }
 
     private static UserManager<IdentityUser> CreateUserManager(AppDbContext context)

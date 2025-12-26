@@ -8,21 +8,23 @@ public class AuthService
 {
     private readonly IHttpClientFactory _httpFactory;
     private readonly IJSRuntime _js;
+    private readonly TimeProvider _timeProvider;
     
     // 单飞刷新机制：确保同一时间只有一个刷新请求
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private Task<bool>? _refreshTask;
-    private DateTime _lastRefreshTime = DateTime.MinValue;
+    private DateTimeOffset _lastRefreshTime = DateTimeOffset.MinValue;
 
     /// <summary>
     /// 当认证失败且无法刷新时触发（用于全局导航到登录页）
     /// </summary>
     public event Action? OnUnauthorized;
 
-    public AuthService(IHttpClientFactory httpFactory, IJSRuntime js)
+    public AuthService(IHttpClientFactory httpFactory, IJSRuntime js, TimeProvider timeProvider)
     {
         _httpFactory = httpFactory;
         _js = js;
+        _timeProvider = timeProvider;
     }
 
     private async Task<HttpClient> CreateBaseClientAsync()
@@ -175,7 +177,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         try
         {
             // 双重检查：进入临界区后，如果最近1秒内已成功刷新过，直接返回成功
-            if ((DateTime.UtcNow - _lastRefreshTime).TotalSeconds < 1)
+            if ((_timeProvider.GetUtcNow() - _lastRefreshTime).TotalSeconds < 1)
             {
                 try
                 {
@@ -256,7 +258,7 @@ try { await _js.InvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365
         
         await _js.InvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
         await _js.InvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
-        _lastRefreshTime = DateTime.UtcNow;
+        _lastRefreshTime = _timeProvider.GetUtcNow();
         
         try
         {

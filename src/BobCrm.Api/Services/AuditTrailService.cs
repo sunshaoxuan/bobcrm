@@ -11,11 +11,13 @@ public class AuditTrailService
 
     private readonly AppDbContext _db;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TimeProvider _timeProvider;
 
-    public AuditTrailService(AppDbContext db, IHttpContextAccessor httpContextAccessor)
+    public AuditTrailService(AppDbContext db, IHttpContextAccessor httpContextAccessor, TimeProvider timeProvider)
     {
         _db = db;
         _httpContextAccessor = httpContextAccessor;
+        _timeProvider = timeProvider;
     }
 
     public async Task RecordAsync(
@@ -41,7 +43,7 @@ public class AuditTrailService
             IpAddress = ipAddress,
             Target = target,
             ContextJson = payload == null ? null : JsonSerializer.Serialize(payload, PayloadSerializer),
-            OccurredAt = DateTime.UtcNow
+            OccurredAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _db.AuditLogs.Add(entry);

@@ -21,6 +21,7 @@ public class AccessService
     private readonly MultilingualFieldService _multilingual;
     private readonly FunctionService _functionService;
     private readonly RoleService _roleService;
+    private readonly TimeProvider _timeProvider;
 
     public AccessService(
         AppDbContext db, 
@@ -28,7 +29,8 @@ public class AccessService
         RoleManager<IdentityRole> roleManager, 
         MultilingualFieldService multilingual,
         FunctionService functionService,
-        RoleService roleService)
+        RoleService roleService,
+        TimeProvider timeProvider)
     {
         _db = db;
         _userManager = userManager;
@@ -36,6 +38,7 @@ public class AccessService
         _multilingual = multilingual;
         _functionService = functionService;
         _roleService = roleService;
+        _timeProvider = timeProvider;
     }
 
     public async Task EnsureFunctionAccessAsync(string userId, string? functionCode, CancellationToken ct = default)
@@ -59,7 +62,7 @@ public class AccessService
         }
 
         var normalizedCode = functionCode.Trim();
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         return await _db.RoleAssignments
             .Where(a => a.UserId == userId &&
@@ -75,7 +78,7 @@ public class AccessService
 
     public async Task<DataScopeEvaluationResult> EvaluateDataScopeAsync(string userId, string entityName, CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var normalizedEntity = entityName.Trim().ToLowerInvariant();
 
         var scopeBindings = await (

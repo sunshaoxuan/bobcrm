@@ -60,7 +60,7 @@ public class EntityPublishingAndDDLTests : IDisposable
         var multilingual = new MultilingualFieldService(_db, multilingualLogger);
         _functionService = new FunctionService(_db, multilingual);
         var roleService = new RoleService(_db);
-        _accessService = new AccessService(_db, CreateUserManager(_db), CreateRoleManager(_db), multilingual, _functionService, roleService);
+        _accessService = new AccessService(_db, CreateUserManager(_db), CreateRoleManager(_db), multilingual, _functionService, roleService, TimeProvider.System);
 
         var menuRegistrarLogger = new Mock<ILogger<EntityMenuRegistrar>>();
         _menuRegistrar = new EntityMenuRegistrar(_db, menuRegistrarLogger.Object);

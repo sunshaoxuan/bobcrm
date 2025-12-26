@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject BobCrm.App.Services.I18nService I18n
+@inject BobCrm.App.Services.AuthService Auth
 @inject IWebHostEnvironment Env
 @using System.Linq
 @using BobCrm.App.Services
@@ -100,7 +101,7 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                 // Check backend whether admin exists; avoid localStorage
                 try
                 {
-                    var http = await new BobCrm.App.Services.AuthService(HttpFactory, JS).CreateClientWithLangAsync();
+                    var http = await Auth.CreateClientWithLangAsync();
                     var resp = await http.GetAsync("/api/setup/admin");
                     if (resp.IsSuccessStatusCode)
                     {

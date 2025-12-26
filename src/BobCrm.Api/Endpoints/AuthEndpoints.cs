@@ -98,6 +98,7 @@ public static class AuthEndpoints
             SignInManager<IdentityUser> sm,
             IRefreshTokenStore rts,
             IConfiguration cfg,
+            TimeProvider timeProvider,
             LoginRequest dto,
             ILocalization loc,
             HttpContext http,
@@ -136,7 +137,7 @@ public static class AuthEndpoints
             }
 
             var key = System.Text.Encoding.UTF8.GetBytes(cfg["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
-            var tokens = await IssueTokensAsync(cfg, user, rts, key);
+            var tokens = await IssueTokensAsync(cfg, user, rts, key, timeProvider);
             
             var roles = await um.GetRolesAsync(user);
             var role = roles.FirstOrDefault() ?? "User";
@@ -171,6 +172,7 @@ public static class AuthEndpoints
             IConfiguration cfg,
             IRefreshTokenStore rts,
             UserManager<IdentityUser> um,
+            TimeProvider timeProvider,
             ILogger<Program> logger,
             HttpContext http,
             ILocalization loc,
@@ -198,7 +200,7 @@ public static class AuthEndpoints
             await rts.RevokeAsync(dto.RefreshToken);
             
             var key = System.Text.Encoding.UTF8.GetBytes(cfg["Jwt:Key"] ?? "dev-secret-change-in-prod-1234567890");
-            var tokens = await IssueTokensAsync(cfg, user, rts, key);
+            var tokens = await IssueTokensAsync(cfg, user, rts, key, timeProvider);
             
             logger.LogInformation("[Auth] Token refreshed successfully for user {UserName} from {Ip}", user.UserName, clientIp);
             var payload = new RefreshTokenResponse
@@ -354,7 +356,8 @@ public static class AuthEndpoints
         IConfiguration cfg,
         IdentityUser user,
         IRefreshTokenStore rts,
-        byte[] key)
+        byte[] key,
+        TimeProvider timeProvider)
     {
         var issuer = cfg["Jwt:Issuer"];
         var audience = cfg["Jwt:Audience"];
@@ -366,9 +369,10 @@ public static class AuthEndpoints
             new Claim(ClaimTypes.Email, user.Email ?? "")
         };
         var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
-        var jwt = new JwtSecurityToken(issuer, audience, claims, expires: DateTime.UtcNow.AddMinutes(accessMinutes), signingCredentials: creds);
+        var now = timeProvider.GetUtcNow();
+        var jwt = new JwtSecurityToken(issuer, audience, claims, expires: now.AddMinutes(accessMinutes).UtcDateTime, signingCredentials: creds);
         var access = new JwtSecurityTokenHandler().WriteToken(jwt);
-        var refresh = await rts.CreateAsync(user.Id, DateTime.UtcNow.AddDays(int.TryParse(cfg["Jwt:RefreshDays"], out var d) ? d : 7));
+        var refresh = await rts.CreateAsync(user.Id, now.AddDays(int.TryParse(cfg["Jwt:RefreshDays"], out var d) ? d : 7).UtcDateTime);
         return (access, refresh);
     }
 }

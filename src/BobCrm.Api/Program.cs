@@ -23,6 +23,7 @@ using BobCrm.Api.Services.Settings;
 using BobCrm.Api.Services.HealthChecks;
 using BobCrm.Api.Middleware;
 using BobCrm.Api.Services.BackgroundJobs;
+using BobCrm.Api.Extensions;
 using Serilog;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -36,6 +37,7 @@ var filteredArgs = resetDatabaseOnly
 
 var builder = WebApplication.CreateBuilder(filteredArgs);
 builder.Services.AddSingleton(new SystemRuntimeInfo(DateTime.UtcNow));
+builder.Services.AddSingleton(TimeProvider.System);
 
 // 配置日志到文件 - 存储在项目根目录的logs文件夹
 var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
@@ -56,24 +58,7 @@ builder.Logging.AddSerilog();
 builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter("System", LogLevel.Warning);
 
-// DbContext (SQLite default; PostgreSQL via config)
-var dbProvider = builder.Configuration["Db:Provider"] ?? "sqlite";
-var conn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=./data/app.db";
-builder.Services.AddDbContext<AppDbContext>(opt =>
-{
-    if (dbProvider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
-    {
-        opt.UseNpgsql(conn, npg =>
-        {
-            npg.MigrationsHistoryTable("__EFMigrationsHistory", "public");
-        });
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-    }
-    else
-    {
-        opt.UseSqlite(conn);
-    }
-});
+builder.Services.AddBobCrmDatabase(builder.Configuration);
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
@@ -85,31 +70,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AppDbContext>();
 
-// JWT
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (!builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(jwtKey))
-{
-    throw new InvalidOperationException("Jwt:Key is required in non-development environments.");
-}
-var key = Encoding.UTF8.GetBytes(jwtKey ?? "dev-secret-change-in-prod-1234567890");
-builder.Services.AddAuthentication(o =>
-{
-    o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(o =>
-{
-    o.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        ClockSkew = TimeSpan.FromMinutes(1)
-    };
-});
-builder.Services.AddAuthorization();
+builder.Services.AddBobCrmAuthentication(builder.Configuration, builder.Environment);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -282,38 +243,7 @@ builder.Services.AddScoped<ILayoutQueries, LayoutQueries>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<EnumDefinitionService>();
 
-// CORS (dev friendly; tighten in production)
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.SetIsOriginAllowed(_ => true) // Allow any origin in Dev
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        }
-        else
-        {
-            // Prefer array config: Cors:AllowedOrigins: [ "https://a", "https://b" ]
-            // Fallback to semicolon-separated string for compatibility: "https://a;https://b"
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                                 ?? builder.Configuration["Cors:AllowedOrigins"]?.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                 ?? Array.Empty<string>();
-
-            if (allowedOrigins.Length == 0)
-            {
-                throw new InvalidOperationException("Cors:AllowedOrigins must be configured in non-development environments.");
-            }
-
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        }
-    });
-});
+builder.Services.AddBobCrmCors(builder.Configuration, builder.Environment);
 
 // S3/MinIO file storage
 builder.Services.Configure<BobCrm.Api.Services.Storage.S3Options>(builder.Configuration.GetSection("S3"));
