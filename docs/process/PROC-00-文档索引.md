@@ -28,6 +28,7 @@
 - [UI-04-实体定义画面改版说明（归档，指向 ARCH-20/21）](design/UI-04-实体定义画面改版说明.md)
 
 ## 2. 指南与手册（guides/）
+- [GUIDE-01-部署指南](guides/GUIDE-01-部署指南.md)
 - [GUIDE-11-实体定义与动态实体操作指南](guides/GUIDE-11-实体定义与动态实体操作指南.md)
 - [GUIDE-10-Roslyn环境配置](guides/GUIDE-10-Roslyn环境配置.md)
 - [GUIDE-05-动态枚举系统使用指南](guides/GUIDE-05-动态枚举系统使用指南.md)

@@ -58,6 +58,7 @@ dotnet test
 
 ## 贡献
 - PR 检查清单：`docs/process/PROC-01-PR检查清单.md`
+- 部署指南：`docs/guides/GUIDE-01-部署指南.md`
 - 文档同步规范：`docs/process/PROC-02-文档同步规范.md`
 
 ## 变更日志
