@@ -45,10 +45,93 @@
   - `Cors__AllowedOrigins__1=https://admin.yourcompany.com`
 
 ## 数据库配置
-确保 `ConnectionStrings:Default` 指向有效的 PostgreSQL 数据库。
+系统支持两种数据库模式：
+- **PostgreSQL（推荐生产使用）**：设置 `Db:Provider=postgres`，并提供 `ConnectionStrings:Default`。
+- **SQLite（默认）**：若不显式设置 `Db:Provider`，将使用 SQLite；连接串缺省时默认 `Data Source=./data/app.db`。生产环境使用 SQLite 时请确保挂载持久化卷并保证容器内 `./data` 可写。
 
-## 启动检查
-建议通过以下方式确认部署配置已生效：
-- 明确设置环境：`ASPNETCORE_ENVIRONMENT=Production`（或 Staging 等非 Development 值）。
-- 若缺少 `Jwt:Key` / `Cors:AllowedOrigins`，进程应直接以异常退出，并提示缺失的配置项。
-- 在前端域名下访问 API（或通过反向代理），确认跨域请求符合预期（仅允许白名单 Origin）。
+
+## 生产环境变量清单 (必填)
+
+在部署到 Staging/Production 环境时，请务必设置以下环境变量。
+
+| 环境变量名 | 示例值 / 说明 | 必需 |
+|---|---|---|
+| `ASPNETCORE_ENVIRONMENT` | `Production` | 是 |
+| `ASPNETCORE_URLS` | `http://+:5200` | 否（建议容器显式设置） |
+| `Db__Provider` | `postgres` / `sqlite` | 否（默认 `sqlite`；用 Postgres 时必填） |
+| `ConnectionStrings__Default` | `Host=pg-host;Database=bobcrm;Username=u;Password=p` | 用 Postgres 时必填 |
+| `Jwt__Key` | `YourStrongSecretKey32CharsMin!!` | 是 |
+| `Jwt__Issuer` | `BobCrm.Api` | 是（当前验证开启 `ValidateIssuer`） |
+| `Jwt__Audience` | `BobCrm.Client` | 是（当前验证开启 `ValidateAudience`） |
+| `Cors__AllowedOrigins__0` | `https://crm.yourdomain.com` | 是 |
+| `S3__ServiceUrl` | `http://minio-host:9000` | 否 (如需 S3) |
+| `S3__AccessKey` | `minioadmin` | 否 |
+| `S3__SecretKey` | `minioadmin` | 否 |
+
+> **注意**: 环境变量层级使用双下划线 `__` 分隔（兼容 Linux/Docker）。
+
+## 部署文件参考
+
+项目根目录包含以下参考文件：
+
+- **`docker-compose.yml`**: 仅包含依赖服务（PostgreSQL + MinIO），不含应用本身。在生产环境部署应用容器时，需自行编写应用的 docker-compose 定义或 K8s yaml。
+- **`appsettings.json`**: 基础配置模板。生产环境推荐**避免**直接修改此文件，而是通过环境变量或挂载 `appsettings.Production.json` 覆盖。
+
+### 生产环境 docker-compose 示例 (应用层)
+
+```yaml
+version: "3.8"
+services:
+  bobcrm-api:
+    image: your-repo/bobcrm-api:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5200
+      - ConnectionStrings__Default=Host=pg;Database=bobcrm;Username=postgres;Password=postgres
+      - Jwt__Key=ThisIsAVeryStrongKeyForProductionUse123!
+      - Jwt__Issuer=BobCrm.Api
+      - Jwt__Audience=BobCrm.Client
+      - Cors__AllowedOrigins__0=https://your-frontend-domain.com
+      - Db__Provider=postgres
+    ports:
+      - "5200:5200"
+    depends_on:
+      - postgres
+```
+
+## 部署前自检 ("Dry Run")
+
+建议在正式部署前，使用以下命令在本地或 CI/CD 流水线中模拟生产环境启动检查。
+
+### 1. 验证“缺失配置导致启动失败”
+*目的：确保安全门禁生效（即必须报错退出，而不是以弱安全模式启动）。*
+
+**PowerShell / Bash:**
+```bash
+# 故意不传 Jwt__Key 和 Cors，预期应立即 Crash
+docker run --rm -e ASPNETCORE_ENVIRONMENT=Production your-repo/bobcrm-api:latest
+```
+**预期输出包含:**
+> `Unhandled exception. System.InvalidOperationException: Jwt:Key is required in non-development environments.`
+> (或者 `Cors:AllowedOrigins must be configured`)
+
+### 2. 验证“正确配置能正常启动”
+```bash
+docker run --rm -d --name bobcrm-check \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ASPNETCORE_URLS=http://+:5200 \
+  -e Jwt__Key=TestKeyForVerificationOnly1234567890 \
+  -e Jwt__Issuer=BobCrm.Api \
+  -e Jwt__Audience=BobCrm.Client \
+  -e Cors__AllowedOrigins__0=http://localhost \
+  -p 5200:5200 \
+  your-repo/bobcrm-api:latest
+
+# 等待几秒后检查日志
+docker logs bobcrm-check
+```
+**预期输出**：无 `Jwt:Key is required...` / `Cors:AllowedOrigins must be configured...` 异常，并能看到应用启动日志。
+
+## 常用运维命令
+- **查看健康状态**: `curl http://localhost:5200/health` (返回 Healthy)
+- **查看详细存活状态**: `curl http://localhost:5200/health/live`
