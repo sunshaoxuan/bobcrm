@@ -38,10 +38,13 @@ public class DynamicEntityDataTests : TestContext
 
         Services.AddSingleton<IHttpClientFactory>(httpClientFactory);
         Services.AddAntDesign();
-        Services.AddScoped(sp => new AuthService(httpClientFactory, sp.GetRequiredService<IJSRuntime>()));
+        Services.AddSingleton(TimeProvider.System);
+        Services.AddScoped<IJsInteropService, JsInteropService>();
+        Services.AddScoped(sp => new AuthService(httpClientFactory, sp.GetRequiredService<IJsInteropService>(), sp.GetRequiredService<TimeProvider>()));
         Services.AddScoped(sp => new EntityDefinitionService(sp.GetRequiredService<AuthService>()));
         Services.AddScoped(sp => new DynamicEntityService(sp.GetRequiredService<AuthService>()));
-        Services.AddScoped(sp => new I18nService(httpClientFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJSRuntime>()));
+        Services.AddScoped(sp => new I18nService(httpClientFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJsInteropService>()));
+        Services.AddScoped<ToastService>();
         Services.AddScoped<NavigationManager, FakeNavigationManager>();
     }
 

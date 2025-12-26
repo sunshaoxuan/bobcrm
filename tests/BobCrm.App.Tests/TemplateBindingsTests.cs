@@ -24,11 +24,14 @@ public class TemplateBindingsTests : TestContext
         var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost") };
         var httpFactory = new SimpleHttpClientFactory(httpClient);
 
-        Services.AddSingleton<IHttpClientFactory>(httpFactory);
-        Services.AddScoped(sp => new AuthService(httpFactory, sp.GetRequiredService<IJSRuntime>()));
-        Services.AddScoped(sp => new I18nService(httpFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJSRuntime>()));
         Services.AddLogging();
         Services.AddAntDesign();
+        Services.AddSingleton<IHttpClientFactory>(httpFactory);
+        Services.AddSingleton(TimeProvider.System);
+        Services.AddScoped<IJsInteropService, JsInteropService>();
+        Services.AddScoped<ToastService>();
+        Services.AddScoped(sp => new AuthService(httpFactory, sp.GetRequiredService<IJsInteropService>(), sp.GetRequiredService<TimeProvider>()));
+        Services.AddScoped(sp => new I18nService(httpFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJsInteropService>()));
     }
 
     [Fact]
