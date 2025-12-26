@@ -23,19 +23,19 @@ public static class FieldActionEndpoints
         // RDP file download
         group.MapPost("/rdp/download", (RdpDownloadRequest request, ILocalization loc, HttpContext http) => DownloadRdp(request, loc, http))
             .WithName("DownloadRdp")
-            .WithSummary("Generate and download RDP file");
+            .WithSummary("生成并下载 RDP 文件");
 
         // File path validation
         group.MapPost("/file/validate", (FileValidationRequest request, ILocalization loc, HttpContext http) => ValidateFilePath(request, loc, http))
             .WithName("ValidateFilePath")
-            .WithSummary("Validate whether a file path exists")
+            .WithSummary("验证文件路径是否存在")
             .Produces<SuccessResponse<FilePathValidationResponseDto>>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
         // Mailto link generation
         group.MapPost("/mailto/generate", (MailtoRequest request, ILocalization loc, HttpContext http) => GenerateMailtoLink(request, loc, http))
             .WithName("GenerateMailtoLink")
-            .WithSummary("Generate mailto link")
+            .WithSummary("生成邮件链接")
             .Produces<SuccessResponse<MailtoLinkResponseDto>>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
     }

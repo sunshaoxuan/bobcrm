@@ -28,7 +28,8 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<List<DataSetDto>>(dataSets));
         })
         .WithName("GetAllDataSets")
-        .WithSummary("Get all data sets")
+        .WithSummary("获取所有数据集")
+        .WithDescription("获取系统重定义的所有数据集列表，支持权限过滤")
         .Produces<SuccessResponse<List<DataSetDto>>>(StatusCodes.Status200OK);
 
         // Get data set by id
@@ -48,7 +49,8 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("GetDataSetById")
-        .WithSummary("Get data set by id")
+        .WithSummary("获取数据集详情")
+        .WithDescription("根据ID获取数据集的详细配置信息的查询定义")
         .Produces<SuccessResponse<DataSetDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -69,7 +71,7 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("GetDataSetByCode")
-        .WithSummary("Get data set by code")
+        .WithSummary("根据编码获取数据集")
         .Produces<SuccessResponse<DataSetDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -80,7 +82,7 @@ public static class DataSetEndpoints
             return Results.Created($"/api/datasets/{dataSet.Id}", new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("CreateDataSet")
-        .WithSummary("Create data set")
+        .WithSummary("创建数据集")
         .Produces<SuccessResponse<DataSetDto>>(StatusCodes.Status201Created)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -95,7 +97,7 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<DataSetDto>(dataSet));
         })
         .WithName("UpdateDataSet")
-        .WithSummary("Update data set")
+        .WithSummary("更新数据集")
         .Produces<SuccessResponse<DataSetDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -106,7 +108,7 @@ public static class DataSetEndpoints
             return Results.Ok(ApiResponseExtensions.SuccessResponse());
         })
         .WithName("DeleteDataSet")
-        .WithSummary("Delete data set")
+        .WithSummary("删除数据集")
         .Produces<SuccessResponse>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -121,7 +123,7 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<DataSetExecutionResponse>(result));
         })
         .WithName("ExecuteDataSet")
-        .WithSummary("Execute data set query")
+        .WithSummary("执行数据集查询")
         .Produces<SuccessResponse<DataSetExecutionResponse>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -132,7 +134,7 @@ public static class DataSetEndpoints
             return Results.Ok(new SuccessResponse<List<DataSourceFieldMetadata>>(fields));
         })
         .WithName("GetDataSetFields")
-        .WithSummary("Get data set field metadata")
+        .WithSummary("获取数据集字段元数据")
         .Produces<SuccessResponse<List<DataSourceFieldMetadata>>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 

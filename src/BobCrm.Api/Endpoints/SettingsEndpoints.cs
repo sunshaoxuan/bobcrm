@@ -39,7 +39,7 @@ public static class SettingsEndpoints
                 !string.IsNullOrWhiteSpace(system.SmtpPasswordEncrypted))));
         })
         .WithName("GetSystemSettings")
-        .WithSummary("Get system settings")
+        .WithSummary("获取系统设置")
         .Produces<SuccessResponse<SystemSettingsDto>>(StatusCodes.Status200OK);
 
         systemGroup.MapPut("/", async (UpdateSystemSettingsRequest request, SettingsService svc) =>
@@ -63,7 +63,7 @@ public static class SettingsEndpoints
                 !string.IsNullOrWhiteSpace(updated.SmtpPasswordEncrypted))));
         })
         .WithName("UpdateSystemSettings")
-        .WithSummary("Update system settings")
+        .WithSummary("更新系统设置")
         .Produces<SuccessResponse<SystemSettingsDto>>(StatusCodes.Status200OK);
 
         systemGroup.MapPost("/smtp/test", async (
@@ -93,7 +93,7 @@ public static class SettingsEndpoints
             }
         })
         .WithName("SendSmtpTestEmail")
-        .WithSummary("Send a test email using current SMTP settings")
+        .WithSummary("使用当前SMTP设置发送测试邮件")
         .Produces<SuccessResponse>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -112,7 +112,7 @@ public static class SettingsEndpoints
             return Results.Ok(new SuccessResponse<UserSettingsSnapshotDto>(snapshot));
         })
         .WithName("GetUserSettings")
-        .WithSummary("Get user settings with defaults")
+        .WithSummary("获取用户设置（含默认值）")
         .Produces<SuccessResponse<UserSettingsSnapshotDto>>(StatusCodes.Status200OK);
 
         userGroup.MapPut("/", async (UpdateUserSettingsRequest request, ClaimsPrincipal user, SettingsService svc) =>
@@ -127,7 +127,7 @@ public static class SettingsEndpoints
             return Results.Ok(new SuccessResponse<UserSettingsSnapshotDto>(snapshot));
         })
         .WithName("UpdateUserSettings")
-        .WithSummary("Update user-specific settings")
+        .WithSummary("更新用户个性化设置")
         .Produces<SuccessResponse<UserSettingsSnapshotDto>>(StatusCodes.Status200OK);
 
         return app;

@@ -42,8 +42,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
         })
         .WithName("GetEntityAggregate")
-        .WithSummary("Get entity aggregate")
-        .WithDescription("Get entity definition and all sub entities")
+        .WithSummary("获取实体聚合信息")
+        .WithDescription("获取实体定义及其所有子实体")
         .Produces<SuccessResponse<EntityAggregateDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -75,8 +75,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(new SuccessResponse<EntityAggregateDto>(dto));
         })
         .WithName("SaveEntityAggregate")
-        .WithSummary("Save entity aggregate")
-        .WithDescription("Save entity definition and sub entities, generate code and metadata")
+        .WithSummary("保存实体聚合信息")
+        .WithDescription("保存实体定义及子实体，生成代码和元数据")
         .Produces<SuccessResponse<EntityAggregateDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
         .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError);
@@ -115,8 +115,8 @@ public static class EntityAggregateEndpoints
             }
         })
         .WithName("ValidateEntityAggregate")
-        .WithSummary("Validate entity aggregate")
-        .WithDescription("Validate entity definition and sub entities without saving")
+        .WithSummary("验证实体聚合信息")
+        .WithDescription("验证实体定义及子实体（不保存）")
         .Produces<SuccessResponse<EntityAggregateValidationResponseDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
         .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError);
@@ -131,8 +131,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(ApiResponseExtensions.SuccessResponse());
         })
         .WithName("DeleteSubEntity")
-        .WithSummary("Delete sub entity")
-        .WithDescription("Delete the specified sub entity and its fields")
+        .WithSummary("删除子实体")
+        .WithDescription("删除指定子实体及其字段")
         .Produces<SuccessResponse>(StatusCodes.Status200OK);
 
         // Generate metadata preview
@@ -153,8 +153,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(new SuccessResponse<JsonElement>(doc.RootElement.Clone()));
         })
         .WithName("PreviewAggregateMetadata")
-        .WithSummary("Preview aggregate metadata")
-        .WithDescription("Generate and preview aggregate JSON metadata")
+        .WithSummary("预览聚合元数据")
+        .WithDescription("生成并预览聚合 JSON 元数据")
         .Produces<SuccessResponse<JsonElement>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -187,8 +187,8 @@ public static class EntityAggregateEndpoints
             return Results.Ok(new SuccessResponse<Dictionary<string, string>>(codePreview));
         })
         .WithName("PreviewGeneratedCode")
-        .WithSummary("Preview generated code")
-        .WithDescription("Preview generated C# code for sub entities")
+        .WithSummary("预览生成代码")
+        .WithDescription("预览子实体的生成 C# 代码")
         .Produces<SuccessResponse<Dictionary<string, string>>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 

@@ -29,7 +29,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<List<FieldPermission>>(permissions));
         })
         .WithName("GetPermissionsByRole")
-        .WithSummary("Get all field permissions for a role")
+        .WithSummary("获取角色的所有字段权限")
         .Produces<SuccessResponse<List<FieldPermission>>>(StatusCodes.Status200OK);
 
         // Get field permissions by role and entity
@@ -42,7 +42,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<List<FieldPermission>>(permissions));
         })
         .WithName("GetPermissionsByRoleAndEntity")
-        .WithSummary("Get field permissions of a role for an entity")
+        .WithSummary("获取角色在指定实体的字段权限")
         .Produces<SuccessResponse<List<FieldPermission>>>(StatusCodes.Status200OK);
 
         // Get current user's field permission
@@ -57,7 +57,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<FieldPermission?>(permission));
         })
         .WithName("GetUserFieldPermission")
-        .WithSummary("Get current user's permission for a field")
+        .WithSummary("获取当前用户在指定字段的权限")
         .Produces<SuccessResponse<FieldPermission?>>(StatusCodes.Status200OK);
 
         // Create or update a field permission
@@ -82,7 +82,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<FieldPermission>(permission));
         })
         .WithName("UpsertFieldPermission")
-        .WithSummary("Create or update a field permission")
+        .WithSummary("创建或更新字段权限")
         .Produces<SuccessResponse<FieldPermission>>(StatusCodes.Status200OK);
 
         // Bulk upsert field permissions
@@ -101,7 +101,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSIONS_BULK_UPSERT", lang)));
         })
         .WithName("BulkUpsertFieldPermissions")
-        .WithSummary("Bulk set field permissions for a role")
+        .WithSummary("批量设置角色字段权限")
         .Produces<SuccessResponse>(StatusCodes.Status200OK);
 
         // Delete a field permission
@@ -116,7 +116,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSION_DELETED", lang)));
         })
         .WithName("DeleteFieldPermission")
-        .WithSummary("Delete a field permission")
+        .WithSummary("删除字段权限")
         .Produces<SuccessResponse>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -132,7 +132,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse(loc.T("MSG_FIELD_PERMISSIONS_DELETED_ALL", lang)));
         })
         .WithName("DeletePermissionsByRole")
-        .WithSummary("Delete all field permissions for a role")
+        .WithSummary("删除角色的所有字段权限")
         .Produces<SuccessResponse>(StatusCodes.Status200OK);
 
         // Check if current user can read field
@@ -147,7 +147,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<FieldPermissionCheckDto>(new FieldPermissionCheckDto { Allowed = canRead }));
         })
         .WithName("CanUserReadField")
-        .WithSummary("Check if current user can read the field")
+        .WithSummary("检查当前用户是否可读该字段")
         .Produces<SuccessResponse<FieldPermissionCheckDto>>(StatusCodes.Status200OK);
 
         // Check if current user can write field
@@ -162,7 +162,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<FieldPermissionCheckDto>(new FieldPermissionCheckDto { Allowed = canWrite }));
         })
         .WithName("CanUserWriteField")
-        .WithSummary("Check if current user can write the field")
+        .WithSummary("检查当前用户是否可写该字段")
         .Produces<SuccessResponse<FieldPermissionCheckDto>>(StatusCodes.Status200OK);
 
         // Get readable fields for current user
@@ -176,7 +176,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<List<string>>(fields));
         })
         .WithName("GetReadableFields")
-        .WithSummary("Get all readable fields for current user")
+        .WithSummary("获取当前用户可读的所有字段")
         .Produces<SuccessResponse<List<string>>>(StatusCodes.Status200OK);
 
         // Get writable fields for current user
@@ -190,7 +190,7 @@ public static class FieldPermissionEndpoints
             return Results.Ok(new SuccessResponse<List<string>>(fields));
         })
         .WithName("GetWritableFields")
-        .WithSummary("Get all writable fields for current user")
+        .WithSummary("获取当前用户可写的所有字段")
         .Produces<SuccessResponse<List<string>>>(StatusCodes.Status200OK);
 
         return app;

@@ -15,6 +15,8 @@
 - **部署验证**：新增 `GUIDE-01-部署指南`（含 JWT Issuer/Audience 一致性检查）与 `.github/workflows/verify-deployment.yml`，自动验证“缺配置必启动失败”和“配置齐全 /health=200”。
 - **统一时间源**：引入 `.NET 8 TimeProvider` 替换 `DateTime.UtcNow`，提升时间相关业务（Token/审计）的可测试性。
 - **启动配置重构**：重构 `Program.cs`，将数据库、认证、CORS 配置抽取为独立扩展方法，并补齐非 Dev 环境配置校验与单测覆盖。
+- **Swagger 中文化**：统一所有 API 端点的 Swagger 文档为中文，并分离用户面文案。
+- **I18n 强制检查**：CI 流水线集成 I18n 完整性检查，确保所有资源键值均包含 zh/ja/en 翻译。
 
 
 

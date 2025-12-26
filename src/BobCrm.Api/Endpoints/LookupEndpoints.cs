@@ -37,7 +37,7 @@ public static class LookupEndpoints
             return Results.Ok(new SuccessResponse<Dictionary<string, string>>(map));
         })
         .WithName("ResolveLookups")
-        .WithSummary("Resolve foreign keys to friendly names")
+        .WithSummary("解析外键为友好名称")
         .Produces<SuccessResponse<Dictionary<string, string>>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
 

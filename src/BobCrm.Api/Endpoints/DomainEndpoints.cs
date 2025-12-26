@@ -44,8 +44,8 @@ public static class DomainEndpoints
             return Results.Ok(new SuccessResponse<List<EntityDomainDto>>(domains));
         })
         .WithName("GetEntityDomains")
-        .WithSummary("Get entity domain list")
-        .WithDescription("Return available entity domains with multilingual names.")
+        .WithSummary("获取实体领域列表")
+        .WithDescription("返回包含多语言名称的可用实体领域。")
         .Produces<SuccessResponse<List<EntityDomainDto>>>(StatusCodes.Status200OK);
 
         group.MapGet("/{id:guid}", async (
@@ -79,7 +79,7 @@ public static class DomainEndpoints
             }));
         })
         .WithName("GetEntityDomainById")
-        .WithSummary("Get entity domain by id")
+        .WithSummary("获取实体领域详情")
         .Produces<SuccessResponse<EntityDomainDto>>(StatusCodes.Status200OK)
         .Produces<ErrorResponse>(StatusCodes.Status404NotFound);
 

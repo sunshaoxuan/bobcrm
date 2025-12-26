@@ -17,6 +17,7 @@
 ## Code Quality (PLAN-18) - P2
 - [x] P2-001: TimeProvider 引入（commit: `90bd1b7`）
 - [x] P2-002: Program.cs 启动配置拆分与校验（commit: `90bd1b7`）
+- [x] P2-003: Swagger 文档中文化 + I18n 完整性检查（commit: TBD）
 
 ---
 

@@ -18,6 +18,9 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Verify I18n Completeness
+        run: pwsh scripts/check-i18n-completeness.ps1
+
       - name: 1. Verify Crash on Missing Config (Expected Failure)
         run: |
           set -euo pipefail
