@@ -21,5 +21,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Verify Warning Baseline (No New Warnings)
+        run: pwsh scripts/check-warning-baseline.ps1
+
       - name: Test
         run: dotnet test --configuration Release

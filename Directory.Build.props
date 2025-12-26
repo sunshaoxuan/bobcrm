@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Strict mode only in CI to avoid disrupting local development workflows. -->
+    <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

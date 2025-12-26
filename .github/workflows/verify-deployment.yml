@@ -23,6 +23,9 @@ jobs:
       
       - name: Verify JS Interop Policy
         run: pwsh scripts/check-js-interop.ps1
+      
+      - name: Verify Warning Baseline (API)
+        run: pwsh scripts/check-warning-baseline.ps1 -Target src/BobCrm.Api/BobCrm.Api.csproj
 
       - name: 1. Verify Crash on Missing Config (Expected Failure)
         run: |

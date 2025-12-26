@@ -1,0 +1,199 @@
+{
+  "generatedAtUtc": "2025-12-26T14:37:12.2692687Z",
+  "target": "BobCrm.sln",
+  "configuration": "Release",
+  "warnings": [
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 36,
+      "Column": 22
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 38,
+      "Column": 13
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 38,
+      "Column": 32
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 39,
+      "Column": 13
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 108,
+      "Column": 26
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 110,
+      "Column": 17
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 110,
+      "Column": 32
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 111,
+      "Column": 17
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 112,
+      "Column": 13
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 128,
+      "Column": 22
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 130,
+      "Column": 13
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 130,
+      "Column": 28
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 131,
+      "Column": 13
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 132,
+      "Column": 9
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 152,
+      "Column": 22
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 153,
+      "Column": 32
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 153,
+      "Column": 47
+    },
+    {
+      "Code": "BL0006",
+      "File": "src/BobCrm.Tests/Components/Widgets/ButtonWidgetTests.cs",
+      "Line": 154,
+      "Column": 32
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Endpoints/AccessEndpoints.cs",
+      "Line": 97,
+      "Column": 21
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Endpoints/AccessEndpoints.cs",
+      "Line": 125,
+      "Column": 21
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionService.cs",
+      "Line": 102,
+      "Column": 13
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionService.cs",
+      "Line": 103,
+      "Column": 13
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionTreeBuilder.cs",
+      "Line": 140,
+      "Column": 61
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionTreeBuilder.cs",
+      "Line": 141,
+      "Column": 26
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionTreeBuilder.cs",
+      "Line": 203,
+      "Column": 60
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionTreeBuilder.cs",
+      "Line": 205,
+      "Column": 44
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/FunctionTreeBuilder.cs",
+      "Line": 319,
+      "Column": 67
+    },
+    {
+      "Code": "CS0618",
+      "File": "src/BobCrm.Api/Services/TemplateRuntimeService.cs",
+      "Line": 88,
+      "Column": 13
+    },
+    {
+      "Code": "CS0618",
+      "File": "tests/BobCrm.Api.Tests/DatabaseInitializerTests.cs",
+      "Line": 277,
+      "Column": 21
+    },
+    {
+      "Code": "CS0618",
+      "File": "tests/BobCrm.Api.Tests/DatabaseInitializerTests.cs",
+      "Line": 278,
+      "Column": 21
+    },
+    {
+      "Code": "CS0618",
+      "File": "tests/BobCrm.Api.Tests/FunctionTreeBuilderTests.cs",
+      "Line": 71,
+      "Column": 13
+    },
+    {
+      "Code": "CS0618",
+      "File": "tests/BobCrm.Api.Tests/FunctionTreeBuilderTests.cs",
+      "Line": 73,
+      "Column": 13
+    }
+  ]
+}
