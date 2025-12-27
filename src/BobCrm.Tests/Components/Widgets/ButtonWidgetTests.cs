@@ -1,11 +1,12 @@
-using System.Linq;
 using AntDesign;
 using BobCrm.App.Models.Widgets;
+using Bunit;
+using Bunit.TestDoubles;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.RenderTree;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using RuntimeRenderContext = BobCrm.App.Models.Widgets.DraggableWidget.RuntimeRenderContext;
 
@@ -14,8 +15,15 @@ namespace BobCrm.Tests.Components.Widgets;
 /// <summary>
 /// ButtonWidget 单元测试
 /// </summary>
-public class ButtonWidgetTests
+public class ButtonWidgetTests : TestContext
 {
+    public ButtonWidgetTests()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddLogging();
+        Services.AddAntDesign();
+    }
+
     [Fact]
     public void ButtonWidget_RenderRuntime_Should_Use_AntDesign_Button_Component()
     {
@@ -26,18 +34,13 @@ public class ButtonWidgetTests
             Variant = "primary"
         };
 
-        var builder = new RenderTreeBuilder();
-        var context = CreateContext(builder, widget, RuntimeWidgetRenderMode.Edit);
-
         // Act
-        widget.RenderRuntime(context);
+        var cut = RenderComponent<ButtonWidgetHost>(parameters => parameters
+            .Add(p => p.Widget, widget)
+            .Add(p => p.Mode, RuntimeWidgetRenderMode.Edit));
 
         // Assert
-        var frames = builder.GetFrames().Array;
-        frames.Should().Contain(frame =>
-            frame.FrameType == RenderTreeFrameType.Component &&
-            frame.ComponentType == typeof(Button),
-            "ButtonWidget should render AntDesign.Button component");
+        cut.FindComponent<Button>().Should().NotBeNull();
     }
 
     [Fact]
@@ -51,14 +54,16 @@ public class ButtonWidgetTests
             ActionPayload = "https://example.com"
         };
 
-        var builder = new RenderTreeBuilder();
-        var context = CreateContext(builder, widget, RuntimeWidgetRenderMode.Edit);
-
         // Act
-        widget.RenderRuntime(context);
+        var cut = RenderComponent<ButtonWidgetHost>(parameters => parameters
+            .Add(p => p.Widget, widget)
+            .Add(p => p.Mode, RuntimeWidgetRenderMode.Edit));
 
         // Assert
-        HasAttribute(builder, "OnClick").Should().BeTrue("ButtonWidget with OpenUrl action should have OnClick callback");
+        var button = cut.FindComponent<Button>().Instance;
+        GetEventCallbackHasDelegate(button, "OnClick")
+            .Should()
+            .BeTrue("ButtonWidget with OpenUrl action should have OnClick callback");
     }
 
     [Fact]
@@ -72,14 +77,16 @@ public class ButtonWidgetTests
             ActionPayload = "file123"
         };
 
-        var builder = new RenderTreeBuilder();
-        var context = CreateContext(builder, widget, RuntimeWidgetRenderMode.Edit);
-
         // Act
-        widget.RenderRuntime(context);
+        var cut = RenderComponent<ButtonWidgetHost>(parameters => parameters
+            .Add(p => p.Widget, widget)
+            .Add(p => p.Mode, RuntimeWidgetRenderMode.Edit));
 
         // Assert
-        HasAttribute(builder, "OnClick").Should().BeTrue("ButtonWidget with Download action should have OnClick callback");
+        var button = cut.FindComponent<Button>().Instance;
+        GetEventCallbackHasDelegate(button, "OnClick")
+            .Should()
+            .BeTrue("ButtonWidget with Download action should have OnClick callback");
     }
 
     [Fact]
@@ -98,18 +105,15 @@ public class ButtonWidgetTests
         foreach (var (variant, expectedType) in testCases)
         {
             var widget = new ButtonWidget { Variant = variant };
-            var builder = new RenderTreeBuilder();
-            var context = CreateContext(builder, widget, RuntimeWidgetRenderMode.Edit);
 
             // Act
-            widget.RenderRuntime(context);
+            var cut = RenderComponent<ButtonWidgetHost>(parameters => parameters
+                .Add(p => p.Widget, widget)
+                .Add(p => p.Mode, RuntimeWidgetRenderMode.Edit));
 
             // Assert
-            var frames = builder.GetFrames().Array;
-            var typeAttribute = frames.FirstOrDefault(f =>
-                f.FrameType == RenderTreeFrameType.Attribute &&
-                f.AttributeName == "Type");
-            typeAttribute.AttributeValue.Should().Be(expectedType, $"Variant '{variant}' should map to ButtonType.{expectedType}");
+            var button = cut.FindComponent<Button>().Instance;
+            GetPropertyValue(button, "Type").Should().Be(expectedType, $"Variant '{variant}' should map to ButtonType.{expectedType}");
         }
     }
 
@@ -118,18 +122,15 @@ public class ButtonWidgetTests
     {
         // Arrange
         var widget = new ButtonWidget { Label = "Disabled" };
-        var builder = new RenderTreeBuilder();
-        var context = CreateContext(builder, widget, RuntimeWidgetRenderMode.Browse);
 
         // Act
-        widget.RenderRuntime(context);
+        var cut = RenderComponent<ButtonWidgetHost>(parameters => parameters
+            .Add(p => p.Widget, widget)
+            .Add(p => p.Mode, RuntimeWidgetRenderMode.Browse));
 
         // Assert
-        var frames = builder.GetFrames().Array;
-        var disabledAttribute = frames.FirstOrDefault(f =>
-            f.FrameType == RenderTreeFrameType.Attribute &&
-            f.AttributeName == "Disabled");
-        disabledAttribute.AttributeValue.Should().Be(true, "Button in Browse mode should be disabled");
+        var button = cut.FindComponent<Button>().Instance;
+        GetPropertyValue(button, "Disabled").Should().Be(true, "Button in Browse mode should be disabled");
     }
 
     private static RuntimeRenderContext CreateContext(RenderTreeBuilder builder, ButtonWidget widget, RuntimeWidgetRenderMode mode)
@@ -147,14 +148,38 @@ public class ButtonWidgetTests
         };
     }
 
-    private static bool HasAttribute(RenderTreeBuilder builder, string attributeName)
+    private static object? GetPropertyValue(object obj, string propertyName)
     {
-        var frames = builder.GetFrames().Array;
-        return frames.Any(f => f.FrameType == RenderTreeFrameType.Attribute &&
-                               f.AttributeName == attributeName);
+        return obj.GetType().GetProperty(propertyName)?.GetValue(obj);
+    }
+
+    private static bool GetEventCallbackHasDelegate(object obj, string propertyName)
+    {
+        var callback = GetPropertyValue(obj, propertyName);
+        if (callback == null)
+        {
+            return false;
+        }
+
+        var hasDelegate = callback.GetType().GetProperty("HasDelegate")?.GetValue(callback);
+        return hasDelegate is true;
     }
 
     private sealed class DummyComponent : ComponentBase
     {
+    }
+
+    private sealed class ButtonWidgetHost : ComponentBase
+    {
+        [Parameter, EditorRequired]
+        public ButtonWidget Widget { get; set; } = null!;
+
+        [Parameter]
+        public RuntimeWidgetRenderMode Mode { get; set; } = RuntimeWidgetRenderMode.Edit;
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            Widget.RenderRuntime(CreateContext(builder, Widget, Mode));
+        }
     }
 }
