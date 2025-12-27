@@ -95,6 +95,7 @@ foreach ($line in ($output -split "`r?`n")) {
 $warningKeys = $warnings |
     ForEach-Object { Get-WarningKey -Code $_.Code -File $_.File -Line $_.Line -Column $_.Column } |
     Sort-Object -Unique
+if (-not $warningKeys) { $warningKeys = @() }
 
 if ($UpdateBaseline) {
     $unique = @{}
@@ -105,6 +106,7 @@ if ($UpdateBaseline) {
         }
     }
     $uniqueWarnings = $unique.Values | Sort-Object Code, File, Line, Column
+    if (-not $uniqueWarnings) { $uniqueWarnings = @() }
 
     $payload = [pscustomobject]@{
         generatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
@@ -126,16 +128,16 @@ if (-not (Test-Path $baselineFile)) {
 }
 
 $baseline = Get-Content $baselineFile -Raw -Encoding utf8 | ConvertFrom-Json
-if (-not $baseline.warnings) {
-    throw "Baseline file is invalid: missing 'warnings' array."
-}
+$baselineWarnings = $baseline.warnings
+if ($null -eq $baselineWarnings) { $baselineWarnings = @() }
 
 $baselineKeys = @()
-foreach ($w in $baseline.warnings) {
+foreach ($w in $baselineWarnings) {
     if (-not $w.Code -or -not $w.File -or -not $w.Line -or -not $w.Column) { continue }
     $baselineKeys += Get-WarningKey -Code $w.Code -File $w.File -Line ([int]$w.Line) -Column ([int]$w.Column)
 }
 $baselineKeys = $baselineKeys | Sort-Object -Unique
+if (-not $baselineKeys) { $baselineKeys = @() }
 
 $newKeys = Compare-Object -ReferenceObject $baselineKeys -DifferenceObject $warningKeys -PassThru |
     Where-Object { $_ -in $warningKeys }
