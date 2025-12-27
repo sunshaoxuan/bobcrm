@@ -1,3 +1,4 @@
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -29,16 +30,14 @@ public class FunctionNodeConfiguration : IEntityTypeConfiguration<FunctionNode>
             .OnDelete(DeleteBehavior.SetNull);
 
         // Legacy template link (deprecated but still mapped for backward compatibility / existing schema)
-#pragma warning disable CS0618
-        builder.HasOne(x => x.Template)
+        builder.HasOne(typeof(FormTemplate), nameof(FunctionNode.Template))
             .WithMany()
-            .HasForeignKey(x => x.TemplateId)
+            .HasForeignKey("TemplateId")
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasOne(x => x.TemplateBinding)
+        builder.HasOne(typeof(TemplateBinding), nameof(FunctionNode.TemplateBinding))
             .WithMany()
-            .HasForeignKey(x => x.TemplateBindingId)
+            .HasForeignKey("TemplateBindingId")
             .OnDelete(DeleteBehavior.SetNull);
-#pragma warning restore CS0618
     }
 }

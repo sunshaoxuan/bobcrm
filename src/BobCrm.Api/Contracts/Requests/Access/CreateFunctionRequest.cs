@@ -16,5 +16,6 @@ public record CreateFunctionRequest
     public string? Icon { get; init; }
     public bool IsMenu { get; init; } = true;
     public int SortOrder { get; init; } = 100;
+    public int? TemplateStateBindingId { get; init; }
     public int? TemplateId { get; init; }
 }

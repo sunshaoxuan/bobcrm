@@ -32,7 +32,8 @@ public static class AccessEndpoints
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
-                .Include(f => f.Template)
+                .Include(f => f.TemplateStateBinding)
+                .ThenInclude(b => b!.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
@@ -49,7 +50,8 @@ public static class AccessEndpoints
             var targetLang = string.IsNullOrWhiteSpace(lang) ? null : LangHelper.GetLang(http, lang);
             var nodes = await db.FunctionNodes
                 .AsNoTracking()
-                .Include(f => f.Template)
+                .Include(f => f.TemplateStateBinding)
+                .ThenInclude(b => b!.Template)
                 .OrderBy(f => f.SortOrder)
                 .ToListAsync(ct);
             var tree = await treeBuilder.BuildAsync(nodes, lang: targetLang, ct: ct);
@@ -94,8 +96,7 @@ public static class AccessEndpoints
                     node.DisplayName,
                     node.ParentId,
                     node.Route,
-                    node.TemplateId,
-                    TemplateName = node.Template?.Name
+                    node.TemplateStateBindingId
                 }, ct);
                 return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
         }).RequireFunction("SYS.SET.MENU");
@@ -122,8 +123,7 @@ public static class AccessEndpoints
                     node.ParentId,
                     node.SortOrder,
                     node.Route,
-                    node.TemplateId,
-                    TemplateName = node.Template?.Name
+                    node.TemplateStateBindingId
                 }, ct);
                 return Results.Ok(new SuccessResponse<FunctionNodeDto>(await ToDtoAsync(node, treeBuilder, targetLang, ct)));
         }).RequireFunction("SYS.SET.MENU");

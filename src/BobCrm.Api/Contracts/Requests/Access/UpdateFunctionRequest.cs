@@ -17,6 +17,7 @@ public record UpdateFunctionRequest
     public string? Icon { get; init; }
     public bool? IsMenu { get; init; }
     public int? SortOrder { get; init; }
+    public int? TemplateStateBindingId { get; init; }
     public int? TemplateId { get; init; }
     public bool ClearTemplate { get; init; }
 }

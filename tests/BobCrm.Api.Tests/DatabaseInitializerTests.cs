@@ -269,13 +269,23 @@ public class DatabaseInitializerTests : IClassFixture<TestWebAppFactory>
                 db.TemplateBindings.Add(binding);
                 await db.SaveChangesAsync();
 
+                var stateBinding = new TemplateStateBinding
+                {
+                    EntityType = workflowRoute,
+                    TemplateId = template.Id,
+                    ViewState = "DetailView",
+                    IsDefault = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.TemplateStateBindings.Add(stateBinding);
+                await db.SaveChangesAsync();
+
                 var menuNode = new FunctionNode
                 {
                     Code = $"CRM.CORE.{workflowRoute.ToUpperInvariant()}",
                     Name = "Workflow Menu",
                     Route = $"/{workflowRoute}",
-                    TemplateId = template.Id,
-                    TemplateBindingId = binding.Id,
+                    TemplateStateBindingId = stateBinding.Id,
                     DisplayName = new Dictionary<string, string?>
                     {
                         ["zh"] = "临时菜单",

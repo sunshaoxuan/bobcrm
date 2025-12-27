@@ -57,34 +57,13 @@ public class FunctionService
         }
 
         int? stateBindingId = null;
-        int? legacyTemplateBindingId = null;
-        int? legacyTemplateId = null;
-
-        if (request.TemplateId.HasValue)
+        var requestedBindingId = request.TemplateStateBindingId ?? request.TemplateId;
+        if (requestedBindingId.HasValue)
         {
-            // Prefer TemplateStateBinding (new model)
-            var stateBinding = await _db.TemplateStateBindings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
-
-            if (stateBinding != null)
+            stateBindingId = await ResolveTemplateStateBindingIdAsync(requestedBindingId.Value, ct);
+            if (!stateBindingId.HasValue)
             {
-                stateBindingId = stateBinding.Id;
-            }
-            else
-            {
-                // Backward compatibility: TemplateId in request may still be a legacy TemplateBinding Id
-                var legacyBinding = await _db.TemplateBindings
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
-
-                if (legacyBinding == null)
-                {
-                    throw new InvalidOperationException("Template binding not found.");
-                }
-
-                legacyTemplateBindingId = legacyBinding.Id;
-                legacyTemplateId = legacyBinding.TemplateId;
+                throw new InvalidOperationException("Template binding not found.");
             }
         }
 
@@ -98,9 +77,7 @@ public class FunctionService
             Icon = request.Icon?.Trim(),
             IsMenu = request.IsMenu,
             SortOrder = request.SortOrder,
-            TemplateStateBindingId = stateBindingId,
-            TemplateBindingId = legacyTemplateBindingId,
-            TemplateId = legacyTemplateId
+            TemplateStateBindingId = stateBindingId
         };
 
         _db.FunctionNodes.Add(node);
@@ -179,14 +156,18 @@ public class FunctionService
             node.TemplateStateBindingId = null;
             node.TemplateStateBinding = null;
         }
-        else if (request.TemplateId.HasValue)
+        else
         {
-             var stateBinding = await _db.TemplateStateBindings
-                .FirstOrDefaultAsync(b => b.Id == request.TemplateId.Value, ct);
-
-            if (stateBinding != null)
+            var requestedBindingId = request.TemplateStateBindingId ?? request.TemplateId;
+            if (requestedBindingId.HasValue)
             {
-                node.TemplateStateBindingId = stateBinding.Id;
+                var stateBindingId = await ResolveTemplateStateBindingIdAsync(requestedBindingId.Value, ct);
+                if (!stateBindingId.HasValue)
+                {
+                    throw new InvalidOperationException("Template binding not found.");
+                }
+
+                node.TemplateStateBindingId = stateBindingId.Value;
             }
         }
 
@@ -202,6 +183,58 @@ public class FunctionService
         await _db.SaveChangesAsync(ct);
         return node;
     }
+
+    private async Task<int?> ResolveTemplateStateBindingIdAsync(int requestedId, CancellationToken ct)
+    {
+        var stateBinding = await _db.TemplateStateBindings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == requestedId, ct);
+        if (stateBinding != null)
+        {
+            return stateBinding.Id;
+        }
+
+        var legacyBinding = await _db.TemplateBindings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == requestedId, ct);
+        if (legacyBinding != null)
+        {
+            var viewState = MapUsageToViewState(legacyBinding.UsageType);
+            var mapped = await _db.TemplateStateBindings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    b => b.EntityType == legacyBinding.EntityType &&
+                         b.ViewState == viewState &&
+                         b.TemplateId == legacyBinding.TemplateId,
+                    ct)
+                ?? await _db.TemplateStateBindings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.TemplateId == legacyBinding.TemplateId, ct);
+
+            return mapped?.Id;
+        }
+
+        var template = await _db.FormTemplates
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == requestedId, ct);
+        if (template != null)
+        {
+            var mapped = await _db.TemplateStateBindings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.TemplateId == template.Id, ct);
+            return mapped?.Id;
+        }
+
+        return null;
+    }
+
+    private static string MapUsageToViewState(FormTemplateUsageType usageType) => usageType switch
+    {
+        FormTemplateUsageType.List => "List",
+        FormTemplateUsageType.Edit => "DetailEdit",
+        FormTemplateUsageType.Combined => "Create",
+        _ => "DetailView"
+    };
 
     public async Task<List<FunctionNodeDto>> GetMyFunctionsAsync(string userId, string? lang = null, CancellationToken ct = default)
     {
@@ -431,13 +464,6 @@ public class FunctionService
         {
             AttachStateBinding(listNode, listBinding);
         }
-#pragma warning disable CS0618
-        if (legacyByUsage.TryGetValue(FormTemplateUsageType.List, out var legacyListBinding))
-        {
-            listNode.TemplateBindingId = legacyListBinding.Id;
-            listNode.TemplateId = legacyListBinding.TemplateId;
-        }
-#pragma warning restore CS0618
         result["List"] = listNode;
 
         if (bindings.TryGetValue("DetailView", out _))
@@ -455,13 +481,6 @@ public class FunctionService
             {
                 AttachStateBinding(detailNode, detailBinding);
             }
-#pragma warning disable CS0618
-            if (legacyByUsage.TryGetValue(FormTemplateUsageType.Detail, out var legacyDetailBinding))
-            {
-                detailNode.TemplateBindingId = legacyDetailBinding.Id;
-                detailNode.TemplateId = legacyDetailBinding.TemplateId;
-            }
-#pragma warning restore CS0618
             result["DetailView"] = detailNode;
         }
 
@@ -480,13 +499,6 @@ public class FunctionService
             {
                 AttachStateBinding(editNode, editBinding);
             }
-#pragma warning disable CS0618
-            if (legacyByUsage.TryGetValue(FormTemplateUsageType.Edit, out var legacyEditBinding))
-            {
-                editNode.TemplateBindingId = legacyEditBinding.Id;
-                editNode.TemplateId = legacyEditBinding.TemplateId;
-            }
-#pragma warning restore CS0618
             result["DetailEdit"] = editNode;
         }
 
@@ -505,13 +517,6 @@ public class FunctionService
             {
                 AttachStateBinding(createNode, createBinding);
             }
-#pragma warning disable CS0618
-            if (legacyByUsage.TryGetValue(FormTemplateUsageType.Combined, out var legacyCreateBinding))
-            {
-                createNode.TemplateBindingId = legacyCreateBinding.Id;
-                createNode.TemplateId = legacyCreateBinding.TemplateId;
-            }
-#pragma warning restore CS0618
             result["Create"] = createNode;
         }
 

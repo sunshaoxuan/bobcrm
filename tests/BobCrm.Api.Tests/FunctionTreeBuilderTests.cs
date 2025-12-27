@@ -31,19 +31,19 @@ public class FunctionTreeBuilderTests
             UsageType = FormTemplateUsageType.List,
             IsSystemDefault = true
         };
-        var binding = new TemplateBinding
+        var stateBinding = new TemplateStateBinding
         {
             Id = 10,
             EntityType = "product",
-            UsageType = FormTemplateUsageType.List,
             TemplateId = template.Id,
             Template = template,
-            IsSystem = true,
-            RequiredFunctionCode = "CRM.CORE.PRODUCT"
+            ViewState = "List",
+            IsDefault = true,
+            RequiredPermission = "CRM.CORE.PRODUCT"
         };
 
         db.FormTemplates.Add(template);
-        db.TemplateBindings.Add(binding);
+        db.TemplateStateBindings.Add(stateBinding);
         db.LocalizationResources.Add(new LocalizationResource
         {
             Key = "MENU_CRM_CORE_PRODUCT",
@@ -68,9 +68,8 @@ public class FunctionTreeBuilderTests
             Name = "Product List",
             SortOrder = 10,
             DisplayNameKey = "MENU_CRM_CORE_PRODUCT",
-            TemplateId = template.Id,
-            Template = template,
-            TemplateBindingId = binding.Id
+            TemplateStateBindingId = stateBinding.Id,
+            TemplateStateBinding = stateBinding
         };
 
         db.FunctionNodes.AddRange(root, child);
@@ -81,7 +80,8 @@ public class FunctionTreeBuilderTests
         var builder = new FunctionTreeBuilder(db, multilingual);
         var nodes = await db.FunctionNodes
             .AsNoTracking()
-            .Include(n => n.Template)
+            .Include(n => n.TemplateStateBinding)
+            .ThenInclude(b => b!.Template)
             .OrderBy(n => n.SortOrder)
             .ToListAsync();
 
@@ -95,7 +95,7 @@ public class FunctionTreeBuilderTests
         childDto.DisplayNameTranslations.Should().NotBeNull();
         childDto.DisplayNameTranslations!["en"].Should().Be("Products");
         childDto.TemplateOptions.Should().ContainSingle(option =>
-            option.BindingId == binding.Id &&
+            option.BindingId == stateBinding.Id &&
             option.IsDefault &&
             option.TemplateName == template.Name);
     }

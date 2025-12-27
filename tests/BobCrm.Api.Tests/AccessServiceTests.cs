@@ -447,7 +447,7 @@ public class AccessServiceTests
         {
             Code = "CRM.CUSTOMER.DETAIL",
             Name = "Customer Detail",
-            TemplateId = stateBinding.Id
+            TemplateStateBindingId = stateBinding.Id
         });
 
         node.TemplateStateBindingId.Should().Be(stateBinding.Id);
@@ -463,7 +463,7 @@ public class AccessServiceTests
         {
             Code = "CRM.INVALID",
             Name = "Invalid",
-            TemplateId = 999
+            TemplateStateBindingId = 999
         });
 
         await act.Should().ThrowAsync<InvalidOperationException>()

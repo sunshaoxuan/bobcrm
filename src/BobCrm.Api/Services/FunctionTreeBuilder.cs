@@ -136,112 +136,21 @@ public class FunctionTreeBuilder
             return new Dictionary<Guid, TemplateMetadata>();
         }
 
-        var legacyBindingIds = nodes
-            .Where(n => n.TemplateStateBindingId == null && n.TemplateBindingId.HasValue)
-            .Select(n => n.TemplateBindingId!.Value)
-            .Distinct()
-            .ToList();
-
         var bindings = await _db.TemplateStateBindings
             .AsNoTracking()
             .Include(b => b.Template)
-            .Where(b => b.MatchFieldValue != null && codeSet.Contains(b.MatchFieldValue))
+            .Where(b => b.RequiredPermission != null && codeSet.Contains(b.RequiredPermission))
             .ToListAsync(ct);
 
         var bindingMap = bindings
-            .GroupBy(b => b.MatchFieldValue!, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(b => b.RequiredPermission!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-        List<TemplateBinding> legacyBindingsByIdList = new();
-        if (legacyBindingIds.Count > 0)
-        {
-            legacyBindingsByIdList = await _db.TemplateBindings
-                .AsNoTracking()
-                .Include(b => b.Template)
-                .Where(b => legacyBindingIds.Contains(b.Id))
-                .ToListAsync(ct);
-        }
-
-        var legacyBindingsById = legacyBindingsByIdList.ToDictionary(b => b.Id);
-        var legacyKeys = legacyBindingsByIdList
-            .Select(b => (EntityType: b.EntityType, UsageType: b.UsageType))
-            .Distinct()
-            .ToList();
-
-        var legacyOptionsByKey = new Dictionary<(string entityType, FormTemplateUsageType usageType), List<TemplateBinding>>();
-        if (legacyKeys.Count > 0)
-        {
-            var legacyEntityTypes = legacyKeys
-                .Select(k => k.EntityType)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var legacyUsageTypes = legacyKeys
-                .Select(k => k.UsageType)
-                .Distinct()
-                .ToList();
-
-            var legacyCandidates = await _db.TemplateBindings
-                .AsNoTracking()
-                .Include(b => b.Template)
-                .Where(b => legacyEntityTypes.Contains(b.EntityType) && legacyUsageTypes.Contains(b.UsageType))
-                .ToListAsync(ct);
-
-            legacyOptionsByKey = legacyCandidates
-                .Where(b => legacyKeys.Any(k =>
-                    string.Equals(k.EntityType, b.EntityType, StringComparison.OrdinalIgnoreCase) &&
-                    k.UsageType == b.UsageType))
-                .GroupBy(b => (b.EntityType.ToLowerInvariant(), b.UsageType))
-                .ToDictionary(g => g.Key, g => g.ToList());
-        }
 
         var result = new Dictionary<Guid, TemplateMetadata>();
         foreach (var node in nodes)
         {
             if (!bindingMap.TryGetValue(node.Code, out var bindingList))
             {
-                if (node.TemplateStateBindingId == null && node.TemplateBindingId.HasValue)
-                {
-                    var defaultBindingId = node.TemplateBindingId.Value;
-                    if (!legacyBindingsById.TryGetValue(defaultBindingId, out var defaultBinding))
-                    {
-                        continue;
-                    }
-
-                    var key = (defaultBinding.EntityType.ToLowerInvariant(), defaultBinding.UsageType);
-                    if (!legacyOptionsByKey.TryGetValue(key, out var legacyOptionList))
-                    {
-                        legacyOptionList = new List<TemplateBinding> { defaultBinding };
-                    }
-
-                    var legacyOptions = legacyOptionList
-                        .Select(binding => new FunctionTemplateOptionDto
-                        {
-                            BindingId = binding.Id,
-                            TemplateId = binding.TemplateId,
-                            TemplateName = binding.Template?.Name ?? string.Empty,
-                            EntityType = binding.EntityType,
-                            UsageType = binding.UsageType,
-                            IsSystem = binding.IsSystem,
-                            IsDefault = binding.Id == defaultBindingId
-                        })
-                        .OrderByDescending(o => o.IsDefault)
-                        .ThenBy(o => o.TemplateName, StringComparer.OrdinalIgnoreCase)
-                        .ToList();
-
-                    var legacyBindingDtos = legacyOptionList
-                        .Select(b => new FunctionNodeTemplateBindingDto(
-                            b.Id,
-                            b.EntityType,
-                            b.UsageType,
-                            b.TemplateId,
-                            b.Template?.Name ?? string.Empty,
-                            b.Id == defaultBindingId))
-                        .ToList();
-
-                    result[node.Id] = new TemplateMetadata(legacyOptions, legacyBindingDtos);
-                }
-
                 continue;
             }
 
@@ -302,7 +211,11 @@ public class FunctionTreeBuilder
         var (displayName, translations) = ResolveDisplayName(node, localizedNames, lang);
         templateMetadata.TryGetValue(node.Id, out var metadata);
         var defaultOption = metadata?.Options.FirstOrDefault(o => o.IsDefault);
-        var templateName = node.TemplateStateBinding?.Template?.Name ?? defaultOption?.TemplateName;
+        var selectedBinding = node.TemplateStateBindingId.HasValue
+            ? metadata?.Bindings.FirstOrDefault(b => b.BindingId == node.TemplateStateBindingId.Value)
+            : null;
+        var templateName = selectedBinding?.TemplateName ?? defaultOption?.TemplateName;
+        var templateId = selectedBinding?.TemplateId ?? defaultOption?.TemplateId;
 
         return new FunctionNodeDto
         {
@@ -316,7 +229,7 @@ public class FunctionTreeBuilder
             Icon = node.Icon,
             IsMenu = node.IsMenu,
             SortOrder = node.SortOrder,
-            TemplateId = node.TemplateStateBinding?.TemplateId ?? node.TemplateId,
+            TemplateId = templateId,
             TemplateName = templateName,
             Children = new List<FunctionNodeDto>(),
             TemplateOptions = metadata?.Options ?? new List<FunctionTemplateOptionDto>(),
