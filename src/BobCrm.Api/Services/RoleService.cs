@@ -160,7 +160,16 @@ public class RoleService
             throw new KeyNotFoundException("Role not found.");
 
         // Update function permissions
-        _db.RoleFunctionPermissions.RemoveRange(role.Functions);
+        if (role.Functions?.Count > 0)
+        {
+            _db.RoleFunctionPermissions.RemoveRange(role.Functions);
+            role.Functions.Clear();
+        }
+        else
+        {
+            role.Functions = new List<RoleFunctionPermission>();
+        }
+
         var templateSelections = request.FunctionPermissions?
             .Where(fp => fp.FunctionId != Guid.Empty)
             .GroupBy(fp => fp.FunctionId)
@@ -179,31 +188,46 @@ public class RoleService
 
         if (finalFunctionIds.Count > 0)
         {
-            role.Functions = finalFunctionIds.Select(fid => new RoleFunctionPermission
+            foreach (var functionId in finalFunctionIds)
             {
-                RoleId = roleId,
-                FunctionId = fid,
-                TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(fid, out var bindingId)
-                    ? bindingId
-                    : null
-            }).ToList();
-        }
-        else
-        {
-            role.Functions = new List<RoleFunctionPermission>();
+                var permission = new RoleFunctionPermission
+                {
+                    RoleId = roleId,
+                    FunctionId = functionId,
+                    TemplateBindingId = templateSelections != null && templateSelections.TryGetValue(functionId, out var bindingId)
+                        ? bindingId
+                        : null
+                };
+                _db.RoleFunctionPermissions.Add(permission);
+                role.Functions.Add(permission);
+            }
         }
 
         // Update data scopes
-        _db.RoleDataScopes.RemoveRange(role.DataScopes);
+        if (role.DataScopes?.Count > 0)
+        {
+            _db.RoleDataScopes.RemoveRange(role.DataScopes);
+            role.DataScopes.Clear();
+        }
+        else
+        {
+            role.DataScopes = new List<RoleDataScope>();
+        }
+
         if (request.DataScopes?.Count > 0)
         {
-            role.DataScopes = request.DataScopes.Select(ds => new RoleDataScope
+            foreach (var ds in request.DataScopes)
             {
-                Role = role,
-                EntityName = ds.EntityName,
-                ScopeType = ds.ScopeType,
-                FilterExpression = ds.FilterExpression
-            }).ToList();
+                var scope = new RoleDataScope
+                {
+                    RoleId = roleId,
+                    EntityName = ds.EntityName,
+                    ScopeType = ds.ScopeType,
+                    FilterExpression = ds.FilterExpression
+                };
+                _db.RoleDataScopes.Add(scope);
+                role.DataScopes.Add(scope);
+            }
         }
 
         await _db.SaveChangesAsync(ct);
