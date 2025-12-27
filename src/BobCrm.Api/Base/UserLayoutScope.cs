@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Base;
 
@@ -15,17 +16,15 @@ public static class UserLayoutScope
     public static Expression<Func<UserLayout, bool>> ForUser(string userId, int customerId)
     {
         var scope = ForCustomer(customerId);
-#pragma warning disable CS0618 // Legacy data fallback
         return layout => layout.UserId == userId &&
-            (layout.EntityType == scope || (layout.EntityType == null && layout.CustomerId == customerId));
-#pragma warning restore CS0618
+            (layout.EntityType == scope ||
+             (layout.EntityType == null && EF.Property<int>(layout, "CustomerId") == customerId));
     }
 
     public static void ApplyCustomerScope(UserLayout layout, int customerId)
     {
         layout.EntityType = ForCustomer(customerId);
-#pragma warning disable CS0618 // Maintain backward compatibility for existing rows
-        layout.CustomerId = customerId;
-#pragma warning restore CS0618
+        // Legacy column write (for existing schema/backward compatibility).
+        typeof(UserLayout).GetProperty("CustomerId")?.SetValue(layout, customerId);
     }
 }

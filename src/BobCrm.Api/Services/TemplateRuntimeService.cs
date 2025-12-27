@@ -85,11 +85,22 @@ public class TemplateRuntimeService
         _logger.LogDebug("Runtime context for {EntityType}/{Usage} built with template {TemplateId}", entityType, usage, binding.TemplateId);
 
         return new TemplateRuntimeResponse(
-            bindingToUse.ToDto(),
+            ToBindingDto(bindingToUse),
             bindingToUse.Template!.ToDescriptor(),
             scopeResult.HasFullAccess,
             appliedScopes);
     }
+
+    private static TemplateBindingDto ToBindingDto(TemplateBinding binding) =>
+        new(
+            binding.Id,
+            binding.EntityType,
+            binding.UsageType,
+            binding.TemplateId,
+            binding.IsSystem,
+            binding.RequiredFunctionCode,
+            binding.UpdatedBy,
+            binding.UpdatedAt);
 
     private static IReadOnlyList<string> DescribeScopes(DataScopeEvaluationResult result)
     {

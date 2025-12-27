@@ -256,9 +256,7 @@ public static class TemplateEndpoints
             var binding = await bindingService.GetBindingAsync(entityType, resolvedUsage, ct);
             return binding is null
                 ? Results.NotFound(new ErrorResponse(loc.T("ERR_TEMPLATE_BINDING_NOT_FOUND", lang), "TEMPLATE_BINDING_NOT_FOUND"))
-#pragma warning disable CS0618
-                : Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
-#pragma warning restore CS0618
+                : Results.Ok(new SuccessResponse<TemplateBindingDto>(ToTemplateBindingDto(binding)));
         })
         .WithName("GetTemplateBinding")
         .WithSummary("获取实体模板绑定")
@@ -290,9 +288,7 @@ public static class TemplateEndpoints
                 request.RequiredFunctionCode,
                 ct);
 
-#pragma warning disable CS0618
-            return Results.Ok(new SuccessResponse<TemplateBindingDto>(binding.ToDto()));
-#pragma warning restore CS0618
+            return Results.Ok(new SuccessResponse<TemplateBindingDto>(ToTemplateBindingDto(binding)));
         })
         .WithName("UpsertTemplateBinding")
         .WithSummary("更新模板绑定")
@@ -328,6 +324,17 @@ public static class TemplateEndpoints
 
         return app;
     }
+
+    private static TemplateBindingDto ToTemplateBindingDto(TemplateBinding binding) =>
+        new(
+            binding.Id,
+            binding.EntityType,
+            binding.UsageType,
+            binding.TemplateId,
+            binding.IsSystem,
+            binding.RequiredFunctionCode,
+            binding.UpdatedBy,
+            binding.UpdatedAt);
 
 
 
