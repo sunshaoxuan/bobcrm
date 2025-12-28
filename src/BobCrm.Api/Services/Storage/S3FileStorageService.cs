@@ -25,6 +25,12 @@ public class S3FileStorageService : IFileStorageService
         _s3 = new AmazonS3Client(creds, config);
     }
 
+    public S3FileStorageService(IOptions<S3Options> options, IAmazonS3 s3)
+    {
+        _options = options.Value;
+        _s3 = s3;
+    }
+
     public async Task<string> UploadAsync(IFormFile file, string? objectKeyPrefix = null, CancellationToken ct = default)
     {
         if (file.Length == 0) throw new ArgumentException("Empty file");
@@ -49,6 +55,19 @@ public class S3FileStorageService : IFileStorageService
 
     public Task DeleteAsync(string objectKey, CancellationToken ct = default)
         => _s3.DeleteObjectAsync(_options.BucketName, objectKey, ct);
+
+    public string GetPresignedDownloadUrl(string objectKey, TimeSpan? expiresIn = null)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = _options.BucketName,
+            Key = objectKey,
+            Expires = DateTime.UtcNow.Add(expiresIn ?? TimeSpan.FromMinutes(15)),
+            Verb = HttpVerb.GET
+        };
+
+        return _s3.GetPreSignedURL(request);
+    }
 
     private static string BuildObjectKey(string fileName, string? prefix)
     {
