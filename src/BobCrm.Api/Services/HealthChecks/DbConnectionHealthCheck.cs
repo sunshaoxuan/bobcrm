@@ -22,10 +22,16 @@ public sealed class DbConnectionHealthCheck : IHealthCheck
             return HealthCheckResult.Healthy("InMemory provider");
         }
 
-        var canConnect = await _db.Database.CanConnectAsync(cancellationToken);
-        return canConnect
-            ? HealthCheckResult.Healthy()
-            : HealthCheckResult.Unhealthy("Cannot connect to database");
+        try
+        {
+            var canConnect = await _db.Database.CanConnectAsync(cancellationToken);
+            return canConnect
+                ? HealthCheckResult.Healthy()
+                : HealthCheckResult.Unhealthy("Cannot connect to database");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("Cannot connect to database", ex);
+        }
     }
 }
-
