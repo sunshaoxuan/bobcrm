@@ -925,7 +925,6 @@ public class EntityPublishingService : IEntityPublishingService
         foreach (var field in lookupFields)
         {
             if (field.ForeignKeyAction == ForeignKeyAction.SetNull &&
-                field.IsRequiredExplicitlySet &&
                 field.IsRequired)
             {
                 result.IsValid = false;
