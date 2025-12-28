@@ -26,6 +26,7 @@
 - **JS Interop 重构**：全量迁移至 `IJsInteropService`，统一异常处理与日志记录；移除 `BobCrm.App` 中直接的 `IJSRuntime` 注入；新增 CI 门禁检查。
 - **后端错误码标准化**：引入 `ErrorCodes` 常量表，消除 Magic String；`ApiErrors` 与 `GlobalExceptionHandler` 统一映射至标准错误码（如 `VALIDATION_FAILED`），并补全三语 I18n 资源。
 - **测试覆盖率**：新增 `EntityPublishingServiceTests` 覆盖发布前校验、回滚、并发与撤回流程。
+- **测试覆盖率**：新增 `DataSetServiceTests`、`AuditLogServiceTests`、`SettingsServiceTests` 覆盖数据集执行、审计日志检索、系统/用户设置合并逻辑。
 
 ### Fixed
 - **EF Core 兼容映射**：修复 `FunctionNode` 旧字段（`TemplateId` / `TemplateBindingId`）被忽略导致的 shadow column（如 `TemplateBindingId1`）与 SQLite 运行时错误。
