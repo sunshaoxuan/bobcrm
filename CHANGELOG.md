@@ -27,11 +27,13 @@
 - **后端错误码标准化**：引入 `ErrorCodes` 常量表，消除 Magic String；`ApiErrors` 与 `GlobalExceptionHandler` 统一映射至标准错误码（如 `VALIDATION_FAILED`），并补全三语 I18n 资源。
 - **测试覆盖率**：新增 `EntityPublishingServiceTests` 覆盖发布前校验、回滚、并发与撤回流程。
 - **测试覆盖率**：新增 `DataSetServiceTests`、`AuditLogServiceTests`、`SettingsServiceTests` 覆盖数据集执行、审计日志检索、系统/用户设置合并逻辑。
+- **文件存储能力**：`IFileStorageService` 增加预签名下载 URL 支持，便于前端直连下载（并补齐单测）。
 
 ### Fixed
 - **EF Core 兼容映射**：修复 `FunctionNode` 旧字段（`TemplateId` / `TemplateBindingId`）被忽略导致的 shadow column（如 `TemplateBindingId1`）与 SQLite 运行时错误。
 - **菜单模板交集 API**：`GET /api/templates/menu-bindings` 支持 `usageType` 查询参数，并在 `viewState` 为空时按用途回落到默认视图状态。
 - **模板选项回填**：`FunctionTreeBuilder` 支持旧 `TemplateBinding` 兼容回填 `TemplateOptions`，避免历史数据下返回空选项。
+- **健康检查**：`DbConnectionHealthCheck` 在连接异常时返回 Unhealthy（避免抛异常导致探活接口 500）。
 
 ---
 
