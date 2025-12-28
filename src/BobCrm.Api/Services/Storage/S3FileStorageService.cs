@@ -7,11 +7,18 @@ using Microsoft.Extensions.Options;
 
 namespace BobCrm.Api.Services.Storage;
 
+/// <summary>
+/// S3/MinIO 文件存储实现。
+/// </summary>
 public class S3FileStorageService : IFileStorageService
 {
     private readonly IAmazonS3 _s3;
     private readonly S3Options _options;
 
+    /// <summary>
+    /// 使用配置创建 S3/MinIO 存储服务（内部创建 <see cref="IAmazonS3"/> 客户端）。
+    /// </summary>
+    /// <param name="options">S3 连接与存储配置。</param>
     public S3FileStorageService(IOptions<S3Options> options)
     {
         _options = options.Value;
@@ -25,12 +32,18 @@ public class S3FileStorageService : IFileStorageService
         _s3 = new AmazonS3Client(creds, config);
     }
 
+    /// <summary>
+    /// 使用配置与外部提供的 <see cref="IAmazonS3"/> 客户端创建服务（便于测试与 DI）。
+    /// </summary>
+    /// <param name="options">S3 连接与存储配置。</param>
+    /// <param name="s3">S3 客户端。</param>
     public S3FileStorageService(IOptions<S3Options> options, IAmazonS3 s3)
     {
         _options = options.Value;
         _s3 = s3;
     }
 
+    /// <inheritdoc />
     public async Task<string> UploadAsync(IFormFile file, string? objectKeyPrefix = null, CancellationToken ct = default)
     {
         if (file.Length == 0) throw new ArgumentException("Empty file");
@@ -47,15 +60,18 @@ public class S3FileStorageService : IFileStorageService
         return key;
     }
 
+    /// <inheritdoc />
     public async Task<(Stream Stream, string ContentType)> GetAsync(string objectKey, CancellationToken ct = default)
     {
         var resp = await _s3.GetObjectAsync(_options.BucketName, objectKey, ct);
         return (resp.ResponseStream, resp.Headers.ContentType ?? "application/octet-stream");
     }
 
+    /// <inheritdoc />
     public Task DeleteAsync(string objectKey, CancellationToken ct = default)
         => _s3.DeleteObjectAsync(_options.BucketName, objectKey, ct);
 
+    /// <inheritdoc />
     public string GetPresignedDownloadUrl(string objectKey, TimeSpan? expiresIn = null)
     {
         var request = new GetPreSignedUrlRequest
