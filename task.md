@@ -28,5 +28,14 @@
 
 ---
 
+## Test Coverage (PLAN-28)
+- [ ] PLAN-28: 覆盖率深度测试（目标：BobCrm.Api 行覆盖率 ≥ 90%）
+  - [x] Phase 1: 动态实体运行时（补齐 CRUD 端点深度用例）
+  - [x] Phase 2: 模板与 UI 系统（补齐模板 CRUD/复制/应用用例）
+  - [x] Phase 3: 系统与认证（补齐登录/刷新令牌/SystemEndpoints 边界用例）
+  - [ ] 生成覆盖率报告并补齐剩余盲区（直至 ≥ 90%）
+
+---
+
 ## 历史归档 (v0.9.x Completed)
 > 详情见 `history/task-v0.9.x-archive.md`

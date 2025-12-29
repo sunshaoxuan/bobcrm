@@ -159,6 +159,7 @@ $RECYCLE.BIN/
 # Coverage reports
 coverage/
 coverage-report/
+coverage-results/
 *.coverage
 *.coveragexml
 
