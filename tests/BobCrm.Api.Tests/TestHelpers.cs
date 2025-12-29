@@ -3,11 +3,22 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using BobCrm.Api.Infrastructure;
 
 namespace BobCrm.Api.Tests;
 
 public static class TestHelpers
 {
+    public static AppDbContext CreateInMemoryDbContext(string dbName)
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: dbName)
+            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        
+        return new AppDbContext(options);
+    }
     public static async Task<JsonElement> ReadAsJsonAsync(this HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync();

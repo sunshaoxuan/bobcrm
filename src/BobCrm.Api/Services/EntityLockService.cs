@@ -76,14 +76,9 @@ public class EntityLockService : IEntityLockService
 
         foreach (var child in childEntities)
         {
-            if (await LockEntityAsync(child.Id, $"{reason} (child of {rootEntityId})"))
-            {
-                lockedCount++;
-            }
-
-            // 递归锁定孙实体
-            var grandchildCount = await LockEntityHierarchyAsync(child.Id, reason);
-            lockedCount += grandchildCount;
+            // 递归锁定子实体（递归入口会处理锁定逻辑）
+            var childCount = await LockEntityHierarchyAsync(child.Id, $"{reason} (child of {rootEntityId})");
+            lockedCount += childCount;
         }
 
         return lockedCount;
