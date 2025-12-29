@@ -96,6 +96,55 @@ public class DynamicEntityEndpointsCrudTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Delete_WhenFound_ShouldReturn200()
+    {
+        var fake = new CapturingReflectionPersistenceService { DeleteResult = true };
+        using var factory = CreateFactory(fake);
+        var fullTypeName = await DynamicEntityEndpointsTests_SeedDefinitionAsync(factory.Services);
+
+        var client = await CreateAuthenticatedClientAsync(factory);
+        var response = await client.DeleteAsync($"/api/dynamic-entities/{fullTypeName}/1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Count_ShouldCallCountAsync_AndReturnCount()
+    {
+        var fake = new CapturingReflectionPersistenceService { CountResult = 123 };
+        using var factory = CreateFactory(fake);
+        var fullTypeName = await DynamicEntityEndpointsTests_SeedDefinitionAsync(factory.Services);
+
+        var client = await CreateAuthenticatedClientAsync(factory);
+        var response = await client.PostAsJsonAsync($"/api/dynamic-entities/{fullTypeName}/count", new { filters = Array.Empty<object>() });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var data = await response.ReadDataAsJsonAsync();
+        Assert.Equal(123, data.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task RawQuery_ShouldReturnRows()
+    {
+        var fake = new CapturingReflectionPersistenceService
+        {
+            RawQueryResult =
+            [
+                new Dictionary<string, object?> { ["Id"] = 1, ["Name"] = "A" },
+                new Dictionary<string, object?> { ["Id"] = 2, ["Name"] = "B" }
+            ]
+        };
+        using var factory = CreateFactory(fake);
+
+        var client = await CreateAuthenticatedClientAsync(factory);
+        var response = await client.PostAsJsonAsync("/api/dynamic-entities/raw/T/query", new { filters = Array.Empty<object>(), orderBy = "Id", orderByDescending = false });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.ReadDataAsJsonAsync();
+        Assert.Equal(2, payload.GetProperty("count").GetInt32());
+    }
+
     private static WebApplicationFactory<Program> CreateFactory(IReflectionPersistenceService persistence)
     {
         return new TestWebAppFactory().WithWebHostBuilder(builder =>
@@ -142,6 +191,8 @@ public class DynamicEntityEndpointsCrudTests
         public object CreateResult { get; set; } = new LocalDynamicEntity { Id = 1, Code = "C001" };
         public object? UpdateResult { get; set; } = new LocalDynamicEntity { Id = 1, Code = "C002" };
         public bool DeleteResult { get; set; } = true;
+        public int CountResult { get; set; }
+        public List<Dictionary<string, object?>> RawQueryResult { get; set; } = new();
 
         public Task<List<object>> QueryAsync(string fullTypeName, QueryOptions? options = null) =>
             Task.FromResult(new List<object>());
@@ -165,10 +216,10 @@ public class DynamicEntityEndpointsCrudTests
             Task.FromResult(DeleteResult);
 
         public Task<int> CountAsync(string fullTypeName, List<FilterCondition>? filters = null) =>
-            Task.FromResult(0);
+            Task.FromResult(CountResult);
 
         public Task<List<Dictionary<string, object?>>> QueryRawAsync(string tableName, QueryOptions? options = null) =>
-            Task.FromResult(new List<Dictionary<string, object?>>());
+            Task.FromResult(RawQueryResult);
     }
 
     private sealed class LocalDynamicEntity

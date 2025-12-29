@@ -2,6 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using BobCrm.Api.Base;
+using BobCrm.Api.Base.Models;
+using BobCrm.Api.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace BobCrm.Api.Tests;
@@ -98,5 +102,49 @@ public class TemplateEndpointsCrudTests : IClassFixture<TestWebAppFactory>
         // Delete original (not default, not in use)
         var del = await client.DeleteAsync($"/api/templates/{templateId}");
         Assert.Equal(HttpStatusCode.OK, del.StatusCode);
+    }
+
+    [Fact]
+    public async Task Apply_SystemTemplate_ShouldCreateUserCopyAndSetDefault()
+    {
+        var entityType = $"customer_{Guid.NewGuid():N}";
+
+        int systemTemplateId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var systemTemplate = new FormTemplate
+            {
+                Name = "SYS-T",
+                EntityType = entityType,
+                UserId = "system",
+                IsUserDefault = false,
+                IsSystemDefault = true,
+                UsageType = FormTemplateUsageType.Detail,
+                LayoutJson = "{\"widgets\":[]}",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.FormTemplates.Add(systemTemplate);
+            await db.SaveChangesAsync();
+            systemTemplateId = systemTemplate.Id;
+        }
+
+        var client = await GetAuthenticatedClientAsync();
+        var apply = await client.PutAsync($"/api/templates/{systemTemplateId}/apply", content: null);
+        if (apply.StatusCode != HttpStatusCode.OK)
+        {
+            var body = await apply.Content.ReadAsStringAsync();
+            Assert.Fail($"Expected 200 OK but got {(int)apply.StatusCode} {apply.StatusCode}. Body: {body}");
+        }
+
+        var applied = (await apply.ReadDataAsJsonAsync()).GetProperty("template");
+        Assert.True(applied.GetProperty("isUserDefault").GetBoolean());
+        Assert.False(applied.GetProperty("isSystemDefault").GetBoolean());
+
+        var effective = await client.GetAsync($"/api/templates/effective/{entityType}");
+        Assert.Equal(HttpStatusCode.OK, effective.StatusCode);
+        var eff = await effective.ReadDataAsJsonAsync();
+        Assert.Equal(applied.GetProperty("id").GetInt32(), eff.GetProperty("id").GetInt32());
     }
 }

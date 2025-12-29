@@ -5,6 +5,7 @@ using System.Text.Json;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -35,7 +36,7 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
         await EnsureAdminHasSystemPermissionsAsync(_factory.Services);
         var client = await GetAuthenticatedClientAsync();
         var resp = await client.GetAsync("/api/system/info");
-        Assert.True(resp.StatusCode == HttpStatusCode.OK || resp.StatusCode == HttpStatusCode.Forbidden);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
     [Fact]
@@ -45,12 +46,9 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
         var client = await GetAuthenticatedClientAsync();
 
         var resp = await client.GetAsync("/api/system/audit-logs?page=0&pageSize=10");
-        Assert.True(resp.StatusCode == HttpStatusCode.BadRequest || resp.StatusCode == HttpStatusCode.Forbidden);
-        if (resp.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var root = await resp.ReadAsJsonAsync();
-            Assert.Equal("INVALID_PAGINATION", GetErrorCode(root));
-        }
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var root = await resp.ReadAsJsonAsync();
+        Assert.Equal("INVALID_PAGINATION", GetErrorCode(root));
     }
 
     [Fact]
@@ -63,11 +61,7 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
 
         var client = await GetAuthenticatedClientAsync();
         var resp = await client.GetAsync("/api/system/audit-logs/modules?limit=10");
-        Assert.True(resp.StatusCode == HttpStatusCode.OK || resp.StatusCode == HttpStatusCode.Forbidden);
-        if (resp.StatusCode != HttpStatusCode.OK)
-        {
-            return;
-        }
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         var modules = await resp.Content.ReadFromJsonAsync<string[]>();
         Assert.NotNull(modules);
@@ -84,12 +78,9 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
         await EnsureAdminHasSystemPermissionsAsync(_factory.Services);
         var client = await GetAuthenticatedClientAsync();
         var resp = await client.GetAsync("/api/system/jobs?page=1&pageSize=999");
-        Assert.True(resp.StatusCode == HttpStatusCode.BadRequest || resp.StatusCode == HttpStatusCode.Forbidden);
-        if (resp.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var root = await resp.ReadAsJsonAsync();
-            Assert.Equal("INVALID_PAGINATION", GetErrorCode(root));
-        }
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var root = await resp.ReadAsJsonAsync();
+        Assert.Equal("INVALID_PAGINATION", GetErrorCode(root));
     }
 
     [Fact]
@@ -98,7 +89,7 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
         await EnsureAdminHasSystemPermissionsAsync(_factory.Services);
         var client = await GetAuthenticatedClientAsync();
         var resp = await client.GetAsync("/api/system/jobs?page=1&pageSize=20");
-        Assert.True(resp.StatusCode == HttpStatusCode.OK || resp.StatusCode == HttpStatusCode.Forbidden);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
     [Fact]
@@ -126,6 +117,45 @@ public class SystemEndpointsTests : IClassFixture<TestWebAppFactory>
         using var scope = services.CreateScope();
         var access = scope.ServiceProvider.GetRequiredService<AccessService>();
         await access.SeedSystemAdministratorAsync();
+
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var required = new[] { "SYS.ADMIN", "SYS.AUDIT", "SYS.JOBS", "SYS.I18N" };
+        var existing = await db.FunctionNodes
+            .Where(x => required.Contains(x.Code))
+            .ToListAsync();
+
+        foreach (var code in required)
+        {
+            if (existing.All(x => x.Code != code))
+            {
+                db.FunctionNodes.Add(new FunctionNode
+                {
+                    Code = code,
+                    Name = code,
+                    DisplayName = new Dictionary<string, string?> { ["zh"] = code }
+                });
+            }
+        }
+        await db.SaveChangesAsync();
+
+        var adminRole = await db.RoleProfiles
+            .Include(r => r.Functions)
+            .FirstAsync(r => r.IsSystem);
+
+        var functionMap = await db.FunctionNodes
+            .Where(x => required.Contains(x.Code))
+            .ToDictionaryAsync(x => x.Code, x => x.Id);
+
+        var existingIds = adminRole.Functions.Select(x => x.FunctionId).ToHashSet();
+        foreach (var id in functionMap.Values)
+        {
+            if (!existingIds.Contains(id))
+            {
+                adminRole.Functions.Add(new RoleFunctionPermission { RoleId = adminRole.Id, FunctionId = id });
+            }
+        }
+        await db.SaveChangesAsync();
     }
 
     private static string? GetErrorCode(JsonElement root)

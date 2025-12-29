@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace BobCrm.Api.Tests;
@@ -74,6 +76,51 @@ public class AuthEndpointsTests : IClassFixture<TestWebAppFactory>
         var client = _factory.CreateClient();
         var resp = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = "invalid" });
 
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+        var root = await resp.ReadAsJsonAsync();
+        Assert.Equal("AUTH_FAILED", GetErrorCode(root));
+    }
+
+    [Fact]
+    public async Task Refresh_WhenUserMissing_ShouldReturn401()
+    {
+        var client = _factory.CreateClient();
+        var username = $"user_{Guid.NewGuid():N}";
+        var email = $"{username}@local";
+        var password = "User@12345";
+
+        var reg = await client.PostAsJsonAsync("/api/auth/register", new { username, password, email });
+        reg.EnsureSuccessStatusCode();
+
+        string userId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var user = await um.FindByNameAsync(username);
+            Assert.NotNull(user);
+            userId = user!.Id;
+
+            var code = await um.GenerateEmailConfirmationTokenAsync(user);
+            var act = await client.GetAsync($"/api/auth/activate?userId={Uri.EscapeDataString(user.Id)}&code={Uri.EscapeDataString(code)}");
+            act.EnsureSuccessStatusCode();
+        }
+
+        var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
+        login.EnsureSuccessStatusCode();
+
+        var payload = (await login.ReadAsJsonAsync()).UnwrapData();
+        var refreshToken = payload.GetProperty("refreshToken").GetString()!;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<BobCrm.Api.Infrastructure.AppDbContext>();
+            var user = await db.Users.FindAsync(userId);
+            Assert.NotNull(user);
+            db.Users.Remove(user!);
+            await db.SaveChangesAsync();
+        }
+
+        var resp = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
         var root = await resp.ReadAsJsonAsync();
         Assert.Equal("AUTH_FAILED", GetErrorCode(root));
