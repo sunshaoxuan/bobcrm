@@ -391,7 +391,10 @@ public class TemplateService : ITemplateService
         // 设置为用户默认模板
         template.IsUserDefault = true;
         template.UpdatedAt = DateTime.UtcNow;
-        _repo.Update(template);
+        if (template.Id > 0)
+        {
+            _repo.Update(template);
+        }
 
         await _uow.SaveChangesAsync();
 
