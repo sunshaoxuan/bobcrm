@@ -277,8 +277,9 @@ public class EntityDefinitionAppServiceExtendedTests : IDisposable
 
         // Assert
         var saved = await ctx.EntityDefinitions.FindAsync(entity.Id);
+        saved!.DisplayName.Should().NotBeNull();
         saved!.DisplayName.Should().ContainKey("zh");
-        saved.DisplayName["zh"].Should().Be("中文名称");
+        saved.DisplayName!["zh"].Should().Be("中文名称");
         saved.DisplayName["en"].Should().Be("English Name");
         saved.DisplayName["ja"].Should().Be("日本語名");
     }

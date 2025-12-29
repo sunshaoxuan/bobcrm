@@ -7,6 +7,5 @@ public class FilterCondition
 {
     public string Field { get; set; } = string.Empty;
     public string Operator { get; set; } = "equals"; // equals, contains, greaterThan, lessThan
-    public object Value { get; set; } = string.Empty;
+    public object? Value { get; set; } = string.Empty;
 }
-
