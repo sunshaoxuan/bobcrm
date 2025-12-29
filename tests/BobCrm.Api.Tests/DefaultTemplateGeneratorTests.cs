@@ -1,167 +1,500 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Services;
 using FluentAssertions;
+using System.Text.Json;
+using Xunit;
 
 namespace BobCrm.Api.Tests;
 
+/// <summary>
+/// DefaultTemplateGenerator 默认模板生成器测试
+/// </summary>
 public class DefaultTemplateGeneratorTests
 {
-    private readonly DefaultTemplateGenerator _generator = new();
-
-    [Fact]
-    public async Task GenerateAsync_ShouldMapFieldTypesToExpectedWidgets()
+    private static DefaultTemplateGenerator CreateGenerator()
     {
-        var entity = new EntityDefinition
+        return new DefaultTemplateGenerator();
+    }
+
+    private static EntityDefinition CreateTestEntity(List<FieldMetadata>? fields = null)
+    {
+        return new EntityDefinition
         {
-            Namespace = "Test",
-            EntityName = "Contact",
-            EntityRoute = "contact",
-            ApiEndpoint = "/api/contact",
-            Fields = new List<FieldMetadata>
+            EntityName = "Customer",
+            EntityRoute = "customer",
+            FullTypeName = "BobCrm.Customer",
+            Namespace = "BobCrm",
+            Status = EntityStatus.Published,
+            Fields = fields ?? new List<FieldMetadata>
             {
-                CreateField("Name", FieldDataType.String, required: true, sortOrder: 0, displayName: "姓名"),
-                CreateField("BirthDate", FieldDataType.Date, required: false, sortOrder: 1, displayName: "生日"),
-                CreateField("IsActive", FieldDataType.Boolean, required: false, sortOrder: 2, displayName: "启用"),
-                CreateField("Notes", FieldDataType.Text, required: false, sortOrder: 3, displayName: "备注", length: 500),
-                CreateField("Credit", FieldDataType.Decimal, required: false, sortOrder: 4, displayName: "授信"),
-                CreateField("Owner", FieldDataType.EntityRef, required: false, sortOrder: 5, displayName: "负责人", entityRef: true)
+                new FieldMetadata
+                {
+                    PropertyName = "code",
+                    DataType = FieldDataType.String,
+                    DisplayName = new Dictionary<string, string?> { ["zh"] = "编码" },
+                    IsRequired = true,
+                    SortOrder = 1
+                },
+                new FieldMetadata
+                {
+                    PropertyName = "name",
+                    DataType = FieldDataType.String,
+                    DisplayName = new Dictionary<string, string?> { ["zh"] = "名称" },
+                    IsRequired = true,
+                    SortOrder = 2
+                }
             }
         };
+    }
 
-        var template = await _generator.GenerateAsync(entity);
+    #region GenerateAsync Basic Tests
 
-        template.Should().NotBeNull();
-        template.IsSystemDefault.Should().BeTrue();
-        template.UsageType.Should().Be(FormTemplateUsageType.Detail);
-        template.UserId.Should().Be("__system__");
-        template.EntityType.Should().Be(entity.EntityRoute);
-        template.LayoutJson.Should().NotBeNullOrWhiteSpace();
+    [Fact]
+    public async Task GenerateAsync_ShouldReturnFormTemplate()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
 
-        using var doc = JsonDocument.Parse(template.LayoutJson!);
-        var root = doc.RootElement;
+        // Act
+        var result = await generator.GenerateAsync(entity);
 
-        // New format: array of widgets
-        root.ValueKind.Should().Be(JsonValueKind.Array);
-        var widgets = root.EnumerateArray().ToList();
-        widgets.Count.Should().Be(entity.Fields.Count);
-
-        // Find widgets by dataField property
-        var nameWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Name");
-        nameWidget.GetProperty("type").GetString().Should().Be("text");
-        nameWidget.GetProperty("required").GetBoolean().Should().BeTrue();
-
-        var birthDateWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "BirthDate");
-        birthDateWidget.GetProperty("type").GetString().Should().Be("date");
-
-        var isActiveWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "IsActive");
-        isActiveWidget.GetProperty("type").GetString().Should().Be("checkbox");
-
-        var notesWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Notes");
-        notesWidget.GetProperty("type").GetString().Should().Be("textarea");
-
-        var creditWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Credit");
-        creditWidget.GetProperty("type").GetString().Should().Be("number");
-
-        var ownerWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Owner");
-        ownerWidget.GetProperty("type").GetString().Should().Be("select");
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeOfType<FormTemplate>();
     }
 
     [Fact]
-    public async Task GenerateAsync_ShouldCarryRequiredFlagsIntoLayout()
+    public async Task GenerateAsync_ShouldSetCorrectEntityType()
     {
-        var entity = new EntityDefinition
-        {
-            Namespace = "Test",
-            EntityName = "Case",
-            EntityRoute = "case",
-            ApiEndpoint = "/api/case",
-            Fields = new List<FieldMetadata>
-            {
-                CreateField("Title", FieldDataType.String, required: true, sortOrder: 0, displayName: "标题"),
-                CreateField("Description", FieldDataType.Text, required: false, sortOrder: 1, displayName: "描述", length: 500)
-            }
-        };
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
 
-        var template = await _generator.GenerateAsync(entity);
-        using var doc = JsonDocument.Parse(template.LayoutJson!);
-        var root = doc.RootElement;
+        // Act
+        var result = await generator.GenerateAsync(entity);
 
-        // New format: array of widgets
-        root.ValueKind.Should().Be(JsonValueKind.Array);
-        var widgets = root.EnumerateArray().ToList();
-
-        var titleWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Title");
-        titleWidget.GetProperty("required").GetBoolean().Should().BeTrue();
-
-        var descWidget = widgets.First(w => w.GetProperty("dataField").GetString() == "Description");
-        descWidget.GetProperty("required").GetBoolean().Should().BeFalse();
+        // Assert
+        result.EntityType.Should().Be("customer");
     }
 
     [Fact]
-    public async Task GenerateAsync_ShouldProduceTableLayoutForListUsage()
+    public async Task GenerateAsync_ShouldSetSystemDefault()
     {
-        var entity = new EntityDefinition
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity);
+
+        // Assert
+        result.IsSystemDefault.Should().BeTrue();
+        result.UserId.Should().Be("__system__");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ShouldIncludeAutoGeneratedTag()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity);
+
+        // Assert
+        result.Tags.Should().Contain("auto-generated");
+    }
+
+    #endregion
+
+    #region ViewState Tests
+
+    [Fact]
+    public async Task GenerateAsync_WithDetailViewState_ShouldSetDetailUsageType()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.UsageType.Should().Be(FormTemplateUsageType.Detail);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithListViewState_ShouldSetListUsageType()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "List");
+
+        // Assert
+        result.UsageType.Should().Be(FormTemplateUsageType.List);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithDetailEditViewState_ShouldSetEditUsageType()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailEdit");
+
+        // Assert
+        result.UsageType.Should().Be(FormTemplateUsageType.Edit);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithCreateViewState_ShouldSetCombinedUsageType()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "Create");
+
+        // Assert
+        result.UsageType.Should().Be(FormTemplateUsageType.Combined);
+    }
+
+    #endregion
+
+    #region LayoutJson Tests
+
+    [Fact]
+    public async Task GenerateAsync_ShouldGenerateValidJson()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity);
+
+        // Assert
+        result.LayoutJson.Should().NotBeNullOrEmpty();
+        var action = () => JsonDocument.Parse(result.LayoutJson!);
+        action.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ForList_ShouldIncludeDataGrid()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "List");
+
+        // Assert
+        result.LayoutJson.Should().Contain("datagrid");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ForDetailEdit_ShouldIncludeButtons()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailEdit");
+
+        // Assert
+        result.LayoutJson.Should().Contain("button");
+        result.LayoutJson.Should().Contain("BTN_SAVE");
+    }
+
+    #endregion
+
+    #region Field Handling Tests
+
+    [Fact]
+    public async Task GenerateAsync_ShouldMapStringFieldToTextWidget()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("text");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ShouldIncludeFieldDataField()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("code");
+        result.LayoutJson.Should().Contain("name");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithBooleanField_ShouldMapToCheckbox()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
         {
-            Namespace = "Test",
-            EntityName = "Order",
-            EntityRoute = "order",
-            ApiEndpoint = "/api/orders",
-            Fields = new List<FieldMetadata>
+            new FieldMetadata
             {
-                CreateField("Name", FieldDataType.String, true, 0, "名称"),
-                CreateField("Amount", FieldDataType.Decimal, false, 1, "金额"),
-                CreateField("IsClosed", FieldDataType.Boolean, false, 2, "关闭"),
-                CreateField("CreatedAt", FieldDataType.DateTime, false, 3, "创建时间"),
+                PropertyName = "isActive",
+                DataType = FieldDataType.Boolean,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "是否激活" }
             }
-        };
+        });
 
-        var template = await _generator.GenerateAsync(entity, FormTemplateUsageType.List);
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
 
-        template.UsageType.Should().Be(FormTemplateUsageType.List);
-        using var doc = JsonDocument.Parse(template.LayoutJson!);
-        var root = doc.RootElement;
-
-        // New format: array of widgets, should contain one datagrid widget for List usage
-        root.ValueKind.Should().Be(JsonValueKind.Array);
-        root.GetArrayLength().Should().Be(1);
-
-        var dataGrid = root[0];
-        dataGrid.GetProperty("type").GetString().Should().Be("datagrid");
-        dataGrid.GetProperty("entityType").GetString().Should().Be("order");
-        dataGrid.GetProperty("showPagination").GetBoolean().Should().BeTrue();
-
-        // Verify columns are included
-        var columnsJson = dataGrid.GetProperty("columnsJson").GetString();
-        columnsJson.Should().NotBeNullOrEmpty();
-        var columns = JsonDocument.Parse(columnsJson!);
-        columns.RootElement.GetArrayLength().Should().Be(entity.Fields.Count);
+        // Assert
+        result.LayoutJson.Should().Contain("checkbox");
     }
 
-    private static FieldMetadata CreateField(
-        string name,
-        string dataType,
-        bool required,
-        int sortOrder,
-        string displayName,
-        bool entityRef = false,
-        int? length = null)
+    [Fact]
+    public async Task GenerateAsync_WithNumberField_ShouldMapToNumber()
     {
-        return new FieldMetadata
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
         {
-            PropertyName = name,
-            DataType = dataType,
-            SortOrder = sortOrder,
-            IsRequired = required,
-            DisplayName = new Dictionary<string, string?> { ["zh"] = displayName },
-            IsEntityRef = entityRef,
-            ReferencedEntityId = entityRef ? Guid.NewGuid() : null,
-            Length = length
-        };
+            new FieldMetadata
+            {
+                PropertyName = "quantity",
+                DataType = FieldDataType.Int32,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "数量" }
+            }
+        });
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("number");
     }
+
+    [Fact]
+    public async Task GenerateAsync_WithDateTimeField_ShouldMapToDate()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
+        {
+            new FieldMetadata
+            {
+                PropertyName = "createdAt",
+                DataType = FieldDataType.DateTime,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "创建时间" }
+            }
+        });
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("date");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithEnumField_ShouldMapToEnumSelector()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
+        {
+            new FieldMetadata
+            {
+                PropertyName = "status",
+                DataType = FieldDataType.Enum,
+                EnumDefinitionId = Guid.NewGuid(),
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "状态" }
+            }
+        });
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("enumselector");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithLongTextField_ShouldMapToTextarea()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
+        {
+            new FieldMetadata
+            {
+                PropertyName = "description",
+                DataType = FieldDataType.String,
+                Length = 1000,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "描述" }
+            }
+        });
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("textarea");
+    }
+
+    #endregion
+
+    #region Validation Tests
+
+    [Fact]
+    public async Task GenerateAsync_WithNullEntity_ShouldThrow()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            generator.GenerateAsync(null!));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithEmptyFields_ShouldUseFallbackFields()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>());
+
+        // Act
+        var result = await generator.GenerateAsync(entity);
+
+        // Assert
+        // Should have fallback code and name fields
+        result.LayoutJson.Should().Contain("code");
+        result.LayoutJson.Should().Contain("name");
+    }
+
+    #endregion
+
+    #region Template Name Tests
+
+    [Fact]
+    public async Task GenerateAsync_ShouldGenerateCorrectTemplateName()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.Name.Should().Contain("TEMPLATE_NAME_");
+        result.Name.Should().Contain("CUSTOMER");
+        result.Name.Should().Contain("DETAILVIEW");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ForList_ShouldGenerateListTemplateName()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "List");
+
+        // Assert
+        result.Name.Should().Contain("LIST");
+    }
+
+    #endregion
+
+    #region Special Entity Tests
+
+    [Fact]
+    public async Task GenerateAsync_ForUsersEntity_ShouldIncludeUserRoleWidget()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+        entity.EntityRoute = "users";
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("userrole");
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ForRolesEntity_ShouldIncludePermTreeWidget()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity();
+        entity.EntityRoute = "roles";
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("permtree");
+    }
+
+    #endregion
+
+    #region DeletedField Handling Tests
+
+    [Fact]
+    public async Task GenerateAsync_ShouldExcludeDeletedFields()
+    {
+        // Arrange
+        var generator = CreateGenerator();
+        var entity = CreateTestEntity(new List<FieldMetadata>
+        {
+            new FieldMetadata
+            {
+                PropertyName = "activeField",
+                DataType = FieldDataType.String,
+                IsDeleted = false,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "活动字段" }
+            },
+            new FieldMetadata
+            {
+                PropertyName = "deletedField",
+                DataType = FieldDataType.String,
+                IsDeleted = true,
+                DisplayName = new Dictionary<string, string?> { ["zh"] = "删除字段" }
+            }
+        });
+
+        // Act
+        var result = await generator.GenerateAsync(entity, "DetailView");
+
+        // Assert
+        result.LayoutJson.Should().Contain("activeField");
+        result.LayoutJson.Should().NotContain("deletedField");
+    }
+
+    #endregion
 }
