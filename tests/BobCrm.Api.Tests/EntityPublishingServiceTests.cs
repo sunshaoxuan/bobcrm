@@ -221,6 +221,142 @@ public class EntityPublishingServiceTests
         stored.IsEnabled.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task PublishEntityChangesAsync_WhenTemplateGenerationFails_ShouldRollbackStatusInRelationalDb()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var db = new AppDbContext(options);
+        await db.Database.EnsureCreatedAsync();
+
+        var entity = NewDraftEntity("Order", "order");
+        entity.Status = EntityStatus.Modified;
+        entity.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = entity.Id,
+            PropertyName = "Name",
+            DataType = FieldDataType.String,
+            SortOrder = 1
+        });
+        entity.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = entity.Id,
+            PropertyName = "Description",
+            DataType = FieldDataType.String,
+            SortOrder = 2
+        });
+        db.EntityDefinitions.Add(entity);
+        await db.SaveChangesAsync();
+
+        var ddl = new StubDdlExecutionService(db)
+        {
+            TableExists = true,
+            AlwaysSucceed = true,
+            Columns =
+            [
+                new TableColumnInfo { ColumnName = "id", DataType = "integer" },
+                new TableColumnInfo { ColumnName = "name", DataType = "text" }
+            ]
+        };
+
+        var defaultTemplateService = new Mock<IDefaultTemplateService>(MockBehavior.Strict);
+        defaultTemplateService
+            .Setup(x => x.EnsureTemplatesAsync(It.IsAny<EntityDefinition>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("template failed"));
+        defaultTemplateService
+            .Setup(x => x.GetDefaultTemplateAsync(It.IsAny<EntityDefinition>(), It.IsAny<FormTemplateUsageType>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotSupportedException("not needed by this test"));
+
+        var service = CreateService(db, ddl, defaultTemplateService: defaultTemplateService.Object);
+
+        var result = await service.PublishEntityChangesAsync(entity.Id, "tester");
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("template failed");
+
+        var stored = await db.EntityDefinitions.AsNoTracking().SingleAsync(e => e.Id == entity.Id);
+        stored.Status.Should().Be(EntityStatus.Modified);
+    }
+
+    [Fact]
+    public async Task PublishNewEntityAsync_WhenLookupDependenciesFormCycle_ShouldFailWithCyclicDependencyError()
+    {
+        await using var db = CreateInMemoryContext();
+        var ddl = new StubDdlExecutionService(db);
+        var service = CreateService(db, ddl);
+
+        var entityA = NewDraftEntity("A", "a");
+        entityA.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = entityA.Id,
+            PropertyName = "BId",
+            DataType = FieldDataType.Guid,
+            LookupEntityName = "B",
+            ForeignKeyAction = ForeignKeyAction.Restrict
+        });
+
+        var entityB = NewDraftEntity("B", "b");
+        entityB.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = entityB.Id,
+            PropertyName = "AId",
+            DataType = FieldDataType.Guid,
+            LookupEntityName = "A",
+            ForeignKeyAction = ForeignKeyAction.Restrict
+        });
+
+        db.EntityDefinitions.AddRange(entityA, entityB);
+        await db.SaveChangesAsync();
+
+        var result = await service.PublishNewEntityAsync(entityA.Id, "tester");
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Cyclic publish dependency detected");
+        ddl.ExecuteCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PublishEntityChangesAsync_WhenLockedAndHasDestructiveChanges_ShouldRejectBeforeDDL()
+    {
+        await using var db = CreateInMemoryContext();
+        var ddl = new StubDdlExecutionService(db)
+        {
+            TableExists = true,
+            AlwaysSucceed = true,
+            Columns =
+            [
+                new TableColumnInfo { ColumnName = "id", DataType = "integer" },
+                new TableColumnInfo { ColumnName = "name", DataType = "text" },
+                new TableColumnInfo { ColumnName = "obsolete", DataType = "text" }
+            ]
+        };
+        var service = CreateService(db, ddl);
+
+        var entity = NewDraftEntity("Order", "order");
+        entity.Status = EntityStatus.Modified;
+        entity.IsLocked = true;
+        entity.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = entity.Id,
+            PropertyName = "Name",
+            DataType = FieldDataType.String,
+            SortOrder = 1
+        });
+        db.EntityDefinitions.Add(entity);
+        await db.SaveChangesAsync();
+
+        var result = await service.PublishEntityChangesAsync(entity.Id, "tester");
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Entity is locked");
+        ddl.ExecuteCount.Should().Be(0);
+    }
+
     private static EntityPublishingService CreateService(
         AppDbContext db,
         DDLExecutionService ddl,
@@ -301,6 +437,7 @@ public class EntityPublishingServiceTests
         public bool TableExists { get; set; }
         public bool AlwaysSucceed { get; set; } = true;
         public int ExecuteCount { get; private set; }
+        public List<TableColumnInfo> Columns { get; set; } = new();
 
         public StubDdlExecutionService(AppDbContext db)
             : base(db, NullLogger<DDLExecutionService>.Instance)
@@ -308,6 +445,9 @@ public class EntityPublishingServiceTests
         }
 
         public override Task<bool> TableExistsAsync(string tableName) => Task.FromResult(TableExists);
+
+        public override Task<List<TableColumnInfo>> GetTableColumnsAsync(string tableName)
+            => Task.FromResult(Columns);
 
         public override async Task<DDLScript> ExecuteDDLAsync(Guid entityDefinitionId, string scriptType, string sqlScript, string? createdBy = null)
         {

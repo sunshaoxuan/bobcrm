@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
@@ -10,10 +12,12 @@ namespace BobCrm.Api.Tests;
 /// </summary>
 public class SetupEndpointsTests : IClassFixture<TestWebAppFactory>
 {
+    private readonly TestWebAppFactory _factory;
     private readonly HttpClient _client;
 
     public SetupEndpointsTests(TestWebAppFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -70,6 +74,79 @@ public class SetupEndpointsTests : IClassFixture<TestWebAppFactory>
     }
 
     #endregion
+
+    [Fact]
+    public async Task SetupAdmin_WhenPasswordTooWeak_ShouldReturnBadRequestWithCode()
+    {
+        using var factory = new TestWebAppFactory();
+        var client = factory.CreateClient();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var admin = await um.FindByNameAsync("admin");
+            admin.Should().NotBeNull();
+            await um.DeleteAsync(admin!);
+        }
+
+        var response = await client.PostAsJsonAsync("/api/setup/admin", new
+        {
+            username = "admin",
+            email = "admin@local",
+            password = "123"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var root = await response.ReadAsJsonAsync();
+        root.GetProperty("code").GetString().Should().Be("SETUP_CREATE_FAILED");
+    }
+
+    [Fact]
+    public async Task SetupAdmin_WhenExistingAdminCustomizedAndDefaultPasswordInvalid_ShouldReturn403()
+    {
+        using var factory = new TestWebAppFactory();
+        var client = factory.CreateClient();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var um = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var admin = await um.FindByNameAsync("admin");
+            admin.Should().NotBeNull();
+
+            admin!.Email = "custom@local";
+            await um.UpdateAsync(admin);
+
+            await um.RemovePasswordAsync(admin);
+            await um.AddPasswordAsync(admin, "NewAdmin@12345");
+        }
+
+        var response = await client.PostAsJsonAsync("/api/setup/admin", new
+        {
+            username = "newadmin",
+            email = "newadmin@local",
+            password = "NewAdmin@12345"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var root = await response.ReadAsJsonAsync();
+        root.GetProperty("code").GetString().Should().Be("FORBIDDEN");
+    }
+
+    [Fact]
+    public async Task SetupAdmin_WhenDefaultAdmin_ShouldUpdateSuccessfully()
+    {
+        using var factory = new TestWebAppFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/setup/admin", new
+        {
+            username = "admin2",
+            email = "admin2@local",
+            password = "Admin2@12345"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 
     #region AllowAnonymous Tests
 

@@ -1,8 +1,11 @@
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Contracts;
 using BobCrm.Api.Contracts.DTOs;
+using BobCrm.Api.Contracts.Requests.Entity;
 using BobCrm.Api.Contracts.Responses.Entity;
+using BobCrm.Api.Infrastructure;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -37,6 +40,36 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         return client;
     }
+
+    private static CreateEntityDefinitionDto CreateValidEntityDefinitionDto(string namespaceName, string entityName)
+        => new CreateEntityDefinitionDto
+        {
+            Namespace = namespaceName,
+            EntityName = entityName,
+            DisplayName = new MultilingualText
+            {
+                ["zh"] = "测试实体",
+                ["en"] = "Test Entity",
+                ["ja"] = "テスト"
+            },
+            Description = new MultilingualText
+            {
+                ["zh"] = "测试描述",
+                ["en"] = "Description"
+            },
+            Fields =
+            [
+                new CreateFieldMetadataDto
+                {
+                    PropertyName = "Code",
+                    DisplayName = new MultilingualText { ["zh"] = "编码", ["en"] = "Code" },
+                    DataType = "String",
+                    IsRequired = true,
+                    Length = 64,
+                    SortOrder = 1
+                }
+            ]
+        };
 
     #region GetAvailableEntities (Public) Tests
 
@@ -79,6 +112,26 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
     }
 
     [Fact]
+    public async Task GetEntityDefinitionByRoute_WithEntityPrefix_ShouldResolveCustomerDefinition()
+    {
+        var response = await _client.GetAsync("/api/entities/entity_customer/definition?lang=zh");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var data = await response.ReadDataAsJsonAsync();
+        data.GetProperty("entityRoute").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task GetEntityDefinitionByRoute_WithPlural_ShouldResolveCustomerDefinition()
+    {
+        var response = await _client.GetAsync("/api/entities/customers/definition?lang=zh");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var data = await response.ReadDataAsJsonAsync();
+        data.GetProperty("entityRoute").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public async Task GetEntityDefinitionByRoute_WithInvalidRoute_ShouldReturn404()
     {
         // Act
@@ -96,6 +149,19 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetEntityDefinitionByRoute_WithoutLang_ShouldReturnTranslationsMode()
+    {
+        var response = await _client.GetAsync("/api/entities/customer/definition");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var data = await response.ReadDataAsJsonAsync();
+        data.TryGetProperty("displayName", out _).Should().BeFalse();
+        data.TryGetProperty("displayNameTranslations", out var translations).Should().BeTrue();
+        translations.ValueKind.Should().Be(JsonValueKind.Object);
     }
 
     #endregion
@@ -122,9 +188,32 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var content = await response.Content.ReadAsStringAsync();
-        // Should return isValid: false (not 404)
-        content.Should().Contain("\"isValid\"");
+        var data = await response.ReadDataAsJsonAsync();
+        data.GetProperty("isValid").GetBoolean().Should().BeFalse();
+    }
+
+    #endregion
+
+    #region GetAllEntities (Admin) Tests
+
+    [Fact]
+    public async Task GetAllEntities_WithoutAuth_ShouldReturn401()
+    {
+        var response = await _client.GetAsync("/api/entities/all");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetAllEntities_WithAuth_ShouldReturnList()
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client.GetAsync("/api/entities/all");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var data = await response.ReadDataAsJsonAsync();
+        data.ValueKind.Should().Be(JsonValueKind.Array);
     }
 
     #endregion
@@ -257,45 +346,17 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
     {
         // Arrange
         var client = await GetAuthenticatedClientAsync();
-        var uniqueName = $"TestEntity_{Guid.NewGuid():N}".Substring(0, 30);
-        var request = new
-        {
-            entityName = uniqueName,
-            @namespace = "Test",
-            displayName = new Dictionary<string, string> { ["zh"] = "测试实体", ["en"] = "Test Entity" },
-            description = new Dictionary<string, string> { ["zh"] = "测试描述" },
-            fields = new[]
-            {
-                new
-                {
-                    propertyName = "code",
-                    dataType = "String",
-                    displayName = new Dictionary<string, string> { ["zh"] = "编码" },
-                    isRequired = true,
-                    length = 50
-                },
-                new
-                {
-                    propertyName = "name",
-                    dataType = "String",
-                    displayName = new Dictionary<string, string> { ["zh"] = "名称" },
-                    isRequired = true,
-                    length = 100
-                }
-            }
-        };
+        var uniqueName = $"TestEntity_{Guid.NewGuid():N}";
+        var request = CreateValidEntityDefinitionDto("BobCrm.Test", uniqueName);
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/entity-definitions", request);
+        var response = await client.PostAsJsonAsync("/api/entity-definitions", request, JsonOptions);
 
         // Assert
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.OK, HttpStatusCode.BadRequest);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            content.Should().Contain("entityName");
-        }
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var dto = await response.ReadDataAsync<EntityDefinitionDto>(JsonOptions);
+        dto.Should().NotBeNull();
+        dto!.EntityName.Should().Be(uniqueName);
     }
 
     [Fact]
@@ -342,6 +403,50 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
     #region DeleteEntityDefinition Tests
 
     [Fact]
+    public async Task DeleteEntityDefinition_WithDraftEntity_ShouldDeleteAndReturn200()
+    {
+        var client = await GetAuthenticatedClientAsync();
+        var uniqueName = $"DeleteMe_{Guid.NewGuid():N}";
+        var create = await client.PostAsJsonAsync("/api/entity-definitions", CreateValidEntityDefinitionDto("BobCrm.Test", uniqueName), JsonOptions);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await create.ReadDataAsync<EntityDefinitionDto>(JsonOptions);
+        created.Should().NotBeNull();
+
+        var delete = await client.DeleteAsync($"/api/entity-definitions/{created!.Id}");
+        delete.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var get = await client.GetAsync($"/api/entity-definitions/{created!.Id}");
+        get.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteEntityDefinition_WhenPublished_ShouldReturn400()
+    {
+        var client = await GetAuthenticatedClientAsync();
+        var uniqueName = $"Published_{Guid.NewGuid():N}";
+        var create = await client.PostAsJsonAsync("/api/entity-definitions", CreateValidEntityDefinitionDto("BobCrm.Test", uniqueName), JsonOptions);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await create.ReadDataAsync<EntityDefinitionDto>(JsonOptions);
+        created.Should().NotBeNull();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var entity = await db.EntityDefinitions.FindAsync(created!.Id);
+            entity.Should().NotBeNull();
+            entity!.Status = EntityStatus.Published;
+            await db.SaveChangesAsync();
+        }
+
+        var delete = await client.DeleteAsync($"/api/entity-definitions/{created!.Id}");
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var root = await delete.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("ENTITY_PUBLISHED");
+    }
+
+    [Fact]
     public async Task DeleteEntityDefinition_WithoutAuth_ShouldReturn401()
     {
         // Act
@@ -363,6 +468,94 @@ public class EntityDefinitionEndpointsCrudTests : IClassFixture<TestWebAppFactor
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
+    #region Code Generation & Compilation Tests
+
+    [Fact]
+    public async Task GenerateEntityCode_ForDraftEntity_ShouldReturnBadRequest()
+    {
+        var client = await GetAuthenticatedClientAsync();
+        var uniqueName = $"Draft_{Guid.NewGuid():N}";
+        var create = await client.PostAsJsonAsync("/api/entity-definitions", CreateValidEntityDefinitionDto("BobCrm.Test", uniqueName), JsonOptions);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await create.ReadDataAsync<EntityDefinitionDto>(JsonOptions);
+        created.Should().NotBeNull();
+
+        var response = await client.GetAsync($"/api/entity-definitions/{created!.Id}/generate-code");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var root = await response.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("CODE_GENERATION_FAILED");
+    }
+
+    [Fact]
+    public async Task CompileEntity_WithInvalidNamespace_ShouldReturnBadRequest()
+    {
+        var client = await GetAuthenticatedClientAsync();
+        var uniqueName = $"BadNs_{Guid.NewGuid():N}";
+        var create = await client.PostAsJsonAsync("/api/entity-definitions", CreateValidEntityDefinitionDto("BobCrm.Test Invalid", uniqueName), JsonOptions);
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await create.ReadDataAsync<EntityDefinitionDto>(JsonOptions);
+        created.Should().NotBeNull();
+
+        var response = await client.PostAsync($"/api/entity-definitions/{created!.Id}/compile", content: null);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var root = await response.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("COMPILE_FAILED");
+    }
+
+    [Fact]
+    public async Task CompileBatchEntities_WithEmptyList_ShouldReturnBadRequest()
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync("/api/entity-definitions/compile-batch", new { entityIds = Array.Empty<Guid>() }, JsonOptions);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var root = await response.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("COMPILE_FAILED");
+    }
+
+    [Fact]
+    public async Task ValidateEntityCode_WithInvalidId_ShouldReturnBadRequest()
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client.GetAsync($"/api/entity-definitions/{Guid.NewGuid()}/validate-code");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var root = await response.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("VALIDATION_FAILED");
+    }
+
+    [Fact]
+    public async Task GetEntityTypeInfo_WhenNotLoaded_ShouldReturn404()
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client.GetAsync("/api/entity-definitions/type-info/Not.Loaded.Type");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var root = await response.ReadAsJsonAsync();
+        root.TryGetProperty("code", out var code).Should().BeTrue();
+        code.GetString().Should().Be("TYPE_NOT_LOADED");
+    }
+
+    [Fact]
+    public async Task UnloadEntity_ShouldReturn200()
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client.DeleteAsync("/api/entity-definitions/loaded-entities/Not.Loaded.Type");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion

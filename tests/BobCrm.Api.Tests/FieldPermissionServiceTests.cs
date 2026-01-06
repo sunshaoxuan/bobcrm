@@ -128,6 +128,108 @@ public class FieldPermissionServiceTests
         (await service.CanUserWriteFieldAsync(userId, "customer", "Name")).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task DeletePermissionAsync_WhenMissing_ShouldThrowKeyNotFound()
+    {
+        await using var db = CreateContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = CreateService(db, cache);
+
+        var act = async () => await service.DeletePermissionAsync(permissionId: 999);
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("*not found*");
+    }
+
+    [Fact]
+    public async Task DeletePermissionsByRoleAsync_ShouldRemoveAllRolePermissions()
+    {
+        await using var db = CreateContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = CreateService(db, cache);
+
+        var roleId = Guid.NewGuid();
+        db.FieldPermissions.AddRange(
+            new FieldPermission { RoleId = roleId, EntityType = "customer", FieldName = "Name", CanRead = true, CanWrite = false },
+            new FieldPermission { RoleId = roleId, EntityType = "customer", FieldName = "Email", CanRead = true, CanWrite = true });
+        await db.SaveChangesAsync();
+
+        await service.DeletePermissionsByRoleAsync(roleId);
+
+        (await db.FieldPermissions.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DeletePermissionsByRoleAsync_WhenEntityTypeNotSpecified_ShouldClearAffectedUsersRoleCaches()
+    {
+        await using var db = CreateContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = CreateService(db, cache);
+
+        var roleId = Guid.NewGuid();
+        db.RoleAssignments.AddRange(
+            new RoleAssignment { UserId = "u1", RoleId = roleId, OrganizationId = null },
+            new RoleAssignment { UserId = "u2", RoleId = roleId, OrganizationId = null });
+        db.FieldPermissions.AddRange(
+            new FieldPermission { RoleId = roleId, EntityType = "customer", FieldName = "Name", CanRead = true, CanWrite = true },
+            new FieldPermission { RoleId = roleId, EntityType = "customer", FieldName = "Email", CanRead = true, CanWrite = false });
+        await db.SaveChangesAsync();
+
+        (await service.GetReadableFieldsAsync("u1", "customer")).Should().NotBeEmpty();
+        (await service.GetReadableFieldsAsync("u2", "customer")).Should().NotBeEmpty();
+
+        cache.TryGetValue("UserRoles:u1", out _).Should().BeTrue();
+        cache.TryGetValue("UserRoles:u2", out _).Should().BeTrue();
+
+        await service.DeletePermissionsByRoleAsync(roleId);
+
+        cache.TryGetValue("UserRoles:u1", out _).Should().BeFalse();
+        cache.TryGetValue("UserRoles:u2", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetUserFieldPermissionAsync_WhenRoleAssignmentExpired_ShouldIgnoreRole()
+    {
+        await using var db = CreateContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = CreateService(db, cache);
+
+        var userId = "u1";
+        var roleId = Guid.NewGuid();
+
+        db.RoleAssignments.Add(new RoleAssignment
+        {
+            UserId = userId,
+            RoleId = roleId,
+            OrganizationId = null,
+            ValidTo = DateTime.UtcNow.AddMinutes(-1)
+        });
+        db.FieldPermissions.Add(new FieldPermission
+        {
+            RoleId = roleId,
+            EntityType = "customer",
+            FieldName = "Secret",
+            CanRead = false,
+            CanWrite = false
+        });
+        await db.SaveChangesAsync();
+
+        var permission = await service.GetUserFieldPermissionAsync(userId, "customer", "Secret");
+        permission.Should().NotBeNull();
+        permission!.CanRead.Should().BeTrue();
+        permission.CanWrite.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetReadableFieldsAsync_WhenNoRoles_ShouldReturnEmptyList()
+    {
+        await using var db = CreateContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = CreateService(db, cache);
+
+        var fields = await service.GetReadableFieldsAsync("u1", "customer");
+        fields.Should().BeEmpty();
+    }
+
     private static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

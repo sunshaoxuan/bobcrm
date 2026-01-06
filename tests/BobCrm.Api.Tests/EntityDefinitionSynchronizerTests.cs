@@ -1,5 +1,8 @@
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Services;
+using BobCrm.Application.Templates;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -164,17 +167,140 @@ public class EntityDefinitionSynchronizerTests : IDisposable
         synchronizer.Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task SyncSystemEntitiesAsync_WhenExistingEntityMissingBasics_ShouldFillAndFixFields()
+    {
+        var customerType = typeof(BobCrm.Api.Base.Customer).FullName!;
+        var customerId = Guid.NewGuid();
+
+        await _db.EntityDefinitions.AddAsync(new EntityDefinition
+        {
+            Id = customerId,
+            FullTypeName = customerType,
+            Namespace = "",
+            EntityName = "",
+            EntityRoute = "",
+            ApiEndpoint = "",
+            DisplayName = null,
+            Description = null,
+            Source = EntitySource.Custom,
+            Fields =
+            [
+                new FieldMetadata
+                {
+                    EntityDefinitionId = customerId,
+                    PropertyName = "Code",
+                    Source = FieldSource.Custom,
+                    DataType = "",
+                    SortOrder = 0,
+                    DisplayName = null,
+                    Length = null
+                }
+            ],
+            Interfaces = new List<EntityInterface>()
+        });
+        await _db.SaveChangesAsync();
+
+        await _synchronizer.SyncSystemEntitiesAsync();
+
+        var updated = await _db.EntityDefinitions.Include(e => e.Fields)
+            .FirstAsync(e => e.FullTypeName == customerType);
+
+        updated.Source.Should().Be(EntitySource.System);
+        updated.Namespace.Should().NotBeNullOrWhiteSpace();
+        updated.EntityName.Should().NotBeNullOrWhiteSpace();
+        updated.EntityRoute.Should().Be("customer");
+        updated.ApiEndpoint.Should().Be("/api/customers");
+        updated.DisplayName.Should().NotBeNull();
+
+        updated.Fields.Should().Contain(f => f.PropertyName == "Id");
+        updated.Fields.Should().Contain(f => f.PropertyName == "Name");
+        updated.Fields.Should().Contain(f => f.PropertyName == "Version");
+        updated.Fields.Should().Contain(f => f.PropertyName == "ExtData");
+
+        var codeField = updated.Fields.First(f => f.PropertyName == "Code");
+        codeField.Source.Should().Be(FieldSource.System);
+        codeField.SortOrder.Should().BeGreaterThan(0);
+        codeField.DataType.Should().NotBeNullOrWhiteSpace();
+        codeField.DisplayName.Should().NotBeNull();
+        codeField.Length.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ResetSystemEntityAsync_ShouldRestoreDefaultDefinition()
+    {
+        await _synchronizer.SyncSystemEntitiesAsync();
+
+        var customerType = typeof(BobCrm.Api.Base.Customer).FullName!;
+        var customer = await _db.EntityDefinitions
+            .Include(e => e.Fields)
+            .Include(e => e.Interfaces)
+            .FirstAsync(e => e.FullTypeName == customerType);
+
+        customer.Namespace = "Broken.Namespace";
+        customer.EntityRoute = "broken_route";
+        customer.Fields.Add(new FieldMetadata
+        {
+            EntityDefinitionId = customer.Id,
+            PropertyName = "CustomField",
+            DataType = "String",
+            Source = FieldSource.Custom,
+            SortOrder = 999
+        });
+        await _db.SaveChangesAsync();
+
+        await _synchronizer.ResetSystemEntityAsync(customerType);
+
+        var reset = await _db.EntityDefinitions
+            .Include(e => e.Fields)
+            .Include(e => e.Interfaces)
+            .FirstAsync(e => e.FullTypeName == customerType);
+
+        reset.EntityRoute.Should().Be("customer");
+        reset.Namespace.Should().Be("BobCrm.Api.Base");
+        reset.Source.Should().Be(EntitySource.System);
+
+        reset.Fields.Should().NotContain(f => f.PropertyName == "CustomField");
+        reset.Fields.Should().Contain(f => f.PropertyName == "Id");
+        reset.Fields.Should().Contain(f => f.PropertyName == "Code");
+        reset.Interfaces.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task SyncSystemEntitiesAsync_WithTemplateService_ShouldUpsertTemplateStateBindings()
+    {
+        var templateService = new Mock<IDefaultTemplateService>();
+        templateService
+            .Setup(s => s.EnsureTemplatesAsync(It.IsAny<EntityDefinition>(), It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((EntityDefinition entityDef, string? _, bool _, CancellationToken _) =>
+            {
+                var result = new DefaultTemplateGenerationResult();
+                result.Templates["List"] = new FormTemplate { Id = 99, Name = "List", EntityType = entityDef.EntityRoute, UserId = "system", LayoutJson = "{}" };
+                return result;
+            });
+
+        var bindingLogger = new Mock<ILogger<TemplateBindingService>>();
+        var bindingService = new TemplateBindingService(_db, bindingLogger.Object);
+        var synchronizer = new EntityDefinitionSynchronizer(_db, _mockLogger.Object, templateService.Object, bindingService);
+
+        _db.TemplateStateBindings.Add(new TemplateStateBinding
+        {
+            EntityType = "customer",
+            ViewState = "List",
+            TemplateId = 1,
+            IsDefault = true,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await _db.SaveChangesAsync();
+
+        await synchronizer.SyncSystemEntitiesAsync();
+
+        var binding = await _db.TemplateStateBindings.FirstAsync(b => b.EntityType == "customer" && b.ViewState == "List" && b.IsDefault);
+        binding.TemplateId.Should().Be(99);
+    }
+
     public void Dispose()
     {
         _db?.Dispose();
     }
-}
-
-/// <summary>
-/// 实体来源常量
-/// </summary>
-public static class EntitySource
-{
-    public const string System = "System";
-    public const string Custom = "Custom";
 }
