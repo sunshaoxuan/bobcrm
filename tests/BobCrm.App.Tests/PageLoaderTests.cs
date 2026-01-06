@@ -5,9 +5,12 @@ using AntDesign;
 using BobCrm.App.Components.Pages;
 using BobCrm.App.Models;
 using BobCrm.App.Services;
+using BobCrm.App.Services.Runtime;
 using BobCrm.App.Services.Widgets.Rendering;
+using BobCrm.App.ViewModels;
 using Bunit;
 using Bunit.TestDoubles;
+using BobCrm.Api.Abstractions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -40,8 +43,12 @@ public class PageLoaderTests : TestContext
         Services.AddScoped<IJsInteropService, JsInteropService>();
         Services.AddScoped(sp => new AuthService(httpFactory, sp.GetRequiredService<IJsInteropService>(), sp.GetRequiredService<TimeProvider>()));
         Services.AddScoped(sp => new I18nService(httpFactory, sp.GetRequiredService<AuthService>(), sp.GetRequiredService<IJsInteropService>()));
+        Services.AddScoped<II18nService>(sp => sp.GetRequiredService<I18nService>());
         Services.AddScoped(sp => new FieldService(httpFactory, sp.GetRequiredService<AuthService>()));
         Services.AddScoped<FieldActionService>();
+        Services.AddSingleton<LegacyLayoutParser>();
+        Services.AddScoped<RuntimeLabelService>();
+        Services.AddTransient<PageLoaderViewModel>();
 
         _runtimeResponse = new TemplateRuntimeResponse(
             new TemplateBindingDto(
