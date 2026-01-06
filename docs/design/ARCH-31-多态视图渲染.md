@@ -1,52 +1,106 @@
-# DEV-SPEC: v0.9.x-TASK-02 多态视图渲染 (Polymorphic View Rendering)
+# ARCH-31: 多态视图渲染实施计划 (Polymorphic View Rendering)
 
-## 1. 任务综述
-本规范定义了 OneCRM v0.9.0 里程碑中“多态视图”的技术实施细节。目标是实现根据实体的特定字段值（如 `Status`）动态选择不同的显示模板（DetailView/DetailEdit）。
-
-## 2. 核心指令 (Context)
-- **必须参考设计**: `docs/design/ARCH-22-标准实体模板化与权限联动设计.md`
-- **必须参考计划**: `docs/plans/PLAN-13-v0.9.0-闭环开发计划.md` (Phase 2)
-- **核心逻辑**: 当请求一个实体的明细页时，系统应检查是否有匹配该实体当前数据状态的绑定规则。
-
-## 3. 技术要求 (Requirements)
-
-### A. 领域模型扩展 (Domain Model)
-- **目标文件**: `src/BobCrm.Api/Base/Models/TemplateStateBinding.cs`
-- **修改内容**:
-  - 新增 `MatchFieldName` (string): 用于判断条件的字段名（如 "Status"）。
-  - 新增 `MatchFieldValue` (string): 匹配的目标值（如 "Draft"）。
-  - 新增 `Priority` (int): 匹配优先级（值越大越优先，默认绑定优先级最低）。
-- **约束**: 
-  - 维持向后兼容：当 `MatchFieldName` 为空时，视为该状态的通用/默认绑定。
-  - 更新唯一索引逻辑：支持同一 `EntityType` + `ViewState` 下的多条规则。
-
-### B. 运行时匹配逻辑 (Runtime Matching)
-- **目标文件**: `src/BobCrm.Api/Services/TemplateRuntimeService.cs` (或对应服务)
-- **修改内容**:
-  - 升级 `GetTemplateAsync` 接口，支持传入 `entityId` 或 `JObject` 数据。
-  - **算法逻辑**:
-    1. 获取该 `EntityType` + `ViewState` 下的所有绑定记录。
-    2. 如果提供了数据，则遍历规则，按 `Priority` 降序检查 `MatchFieldName` 是否匹配 `MatchFieldValue`。
-    3. 返回匹配成功的第一个 `TemplateId`；若无匹配，则返回 `IsDefault=true` 的默认绑定。
-
-### C. 前端 PageLoader 适配
-- **目标文件**: `src/BobCrm.App/Services/PageLoader.cs` (或组件逻辑)
-- **修改内容**:
-  - 在加载数据后，根据返回的实体状态，动态向后端请求最新的视图模板，支持页面由“普通详情”无缝切换为“审批专用模板”等。
-
-## 4. 质量门禁 (Quality Gates) - **强制性要求**
-
-> [!IMPORTANT]
-> **单元测试覆盖率必须 > 90%**
-> 1. **规则引擎测试**: 编写测试用例验证多种优先级下的匹配结果是否符合预期。
-> 2. **回滚处理**: 确保数据缺失或字段不存在时，系统能优雅回退到默认模板。
-
-## 5. 验收标准 (Acceptance Criteria)
-1. 定义一个实体的两个详情模板：T1 (状态=Draft), T2 (默认)。
-2. 当实体数据为 Draft 时，页面自动载入 T1。
-3. 当手动修改数据状态后，页面刷新能正确加载 T2。
-4. 单元测试全覆盖。
+> **状态**: 此前为 DEV-SPEC-v0.9.x-TASK-02
+> **类型**: 实施计划 (Implementation Plan)
+> **目标**: 根据实体状态动态加载不同视图模板
 
 ---
-**审批人 (Architect):** Antigravity
-**发布日期:** 2025-12-22
+
+## 1. 概述
+
+本计划详细说明"多态视图渲染"的实施步骤。该功能允许系统根据实体的特定字段值（如 `Status`）动态选择不同的显示模板（DetailView/DetailEdit）。
+
+**核心场景**：
+- **场景A (草稿态)**: 当 `Order` 状态为 `Draft` 时，显示"包含大量编辑控件"的草稿模板。
+- **场景B (审批态)**: 当 `Order` 状态为 `InReview` 时，自动切换为"只读+审批按钮"的审批模板。
+
+## 2. 架构设计
+
+### 2.1 数据库架构 (Schema)
+
+新增 `TemplateStateBinding` 表，用于定义状态到模板的映射规则。
+
+```markdown
+| Column          | Type    | Description                          |
+|-----------------|---------|--------------------------------------|
+| Id              | Guid    | PK                                   |
+| EntityType      | String  | 目标实体类型 (如 "Order")             |
+| ViewState       | String  | 视图状态 (如 "Detail", "Edit")        |
+| MatchFieldName  | String? | 匹配字段名 (如 "Status"，空表示默认)   |
+| MatchFieldValue | String? | 匹配值 (如 "Draft"，空表示默认)        |
+| TemplateId      | Guid    | 关联的模板 ID                        |
+| Priority        | Int     | 优先级 (值越大越优先)                 |
+| IsDefault       | Bool    | 是否为该 ViewState 的默认兜底模板      |
+```
+
+### 2.2 运行时逻辑 (Runtime Logic)
+
+`TemplateRuntimeService.GetTemplateAsync` 将被改造为规则引擎：
+
+**输入**: `EntityType`, `ViewState` (如 "Detail"), `EntityData` (JObject, 可选)
+**输出**: `FormTemplate`
+
+**流程**:
+1.  **加载规则**: 查询该 `EntityType` + `ViewState` 下的所有绑定。
+2.  **规则匹配 (如果有 EntityData)**:
+    - 按 `Priority` 降序遍历。
+    - 检查 `EntityData[MatchFieldName] == MatchFieldValue`。
+    - 命中第一个匹配项，返回对应模板。
+3.  **默认回退**:
+    - 若无 EntityData 或未命中任何规则。
+    - 返回 `IsDefault=true` 的模板。
+    - 若无 Default，返回系统内置模板。
+
+---
+
+## 3. 详细实施步骤 (Implementation Steps)
+
+### Phase 1: 领域模型与存储 (预计 2h)
+
+1.  **创建实体**: `src/BobCrm.Api/Base/Models/TemplateStateBinding.cs`
+2.  **迁移脚本**: 使用 EF Core 生成 Migration。
+3.  **DTO定义**:
+    - `TemplateStateBindingDto`: 用于管理端 CRUD。
+    - `CreateTemplateStateBindingRequest`: 创建请求。
+
+### Phase 2: 后端服务与规则引擎 (预计 4h)
+
+1.  **服务层 (`TemplateStateBindingService`)**:
+    - 实现 CRUD 逻辑。
+    - 验证逻辑：确保同一 ViewState 下只有一个 `Default`。
+2.  **运行时改造 (`TemplateRuntimeService`)**:
+    - 修改 `GetTemplateAsync` 签名，增加 `object? entityData` 参数。
+    - 实现上述 2.2 节的匹配算法。
+3.  **API端点升级 (`TemplateEndpoints`)**:
+    - `/api/templates/runtime/{entityType}/{viewState}` 接受 `entityId` 参数。
+    - 后端先根据 `entityId` 加载数据，再调用匹配算法。
+
+### Phase 3: 前端适配 (预计 4h)
+
+1.  **PageLoader参数传递**:
+    - 修改 `PageLoader.razor.cs`。
+    - 在 load 数据的同时（或之后），重新请求模板元数据。
+    - **优化**: 后端 `/api/entities/{type}/{id}` 响应中直接带上 `RecommendedTemplateId`，避免二次请求。
+
+2.  **视图动态切换**:
+    - 当数据保存并导致状态变更时（Draft -> Submitted），前端需检测到模板变更信号，并重新渲染 UI。
+
+---
+
+## 4. 验收标准 (Acceptance Criteria)
+
+1.  **配置验证**:
+    - 对 `Order` 实体配置两条规则：
+        - Rule 1: Status="Draft" -> Template A (Priority 10)
+        - Rule 2: Default -> Template B (Priority 0)
+2.  **运行时验证**:
+    - 打开 Draft 状态的 Order -> 显示 Template A。
+    - 修改 Status 为 "Paid" 并保存 -> 页面自动刷新为 Template B。
+3.  **单元测试**:
+    - 覆盖规则匹配逻辑，包括空值、大小写敏感性、优先级排序。
+
+---
+
+## 5. 参考文档
+
+- `ARCH-22-标准实体模板化与权限联动设计.md`

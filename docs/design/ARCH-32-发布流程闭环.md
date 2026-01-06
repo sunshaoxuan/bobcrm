@@ -1,51 +1,93 @@
-# DEV-SPEC: v0.9.x-TASK-03 发布流程闭环 (Publishing Process Closure)
+# ARCH-32: 发布流程闭环实施计划 (Publishing Process Closure)
 
-## 1. 任务综述
-本规范定义了 OneCRM v0.9.0 里程碑中“发布流程闭环”的技术实施细节。目标是解决聚合对象 (AggVO) 的级联发布、全局权限拦截以及发布撤回的“最后一公里”问题。
-
-## 2. 核心指令 (Context)
-- **必须参考设计**: `docs/design/ARCH-01-实体元数据定义与生命周期设计.md`
-- **必须参考计划**: `docs/plans/PLAN-13-v0.9.0-闭环开发计划.md` (Phase 3)
-- **核心逻辑**: 发布主实体时，其引用的子实体（Lookup/AggVO）必须处于同步发布状态。
-
-## 3. 技术要求 (Requirements)
-
-### A. AggVO 级联发布 (Cascade Publishing)
-- **目标文件**: `src/BobCrm.Api/Services/EntityPublishingService.cs`
-- **修改内容**:
-  - 增强 `PublishNewEntityAsync` 和 `PublishEntityChangesAsync`。
-  - **自动识别**: 遍历实体的 `Fields`，识别所有依赖的 `LookupEntityName`。
-  - **前置处理**: 如果依赖实体处于 `Draft` 或 `Withdrawn` 状态，尝试自动对其执行发布操作。
-  - **策略控制**: 当实体作为“子实体”被级联发布时，记录 `Source=System`，并跳过 `EnsureTemplatesAsync`（由主实体负责或使用默认布局）。
-
-### B. 全局权限拦截器 (Permission Interceptor)
-- **目标文件**: `src/BobCrm.App/Components/Layout/MainLayout.razor` (或独立的 `PermissionService`)
-- **修改内容**:
-  - 实现在前端路由切换时的权限预检。
-  - **逻辑**: 如果当前请求的是通过模板渲染的页面，则必须校验 `TemplateBinding` 或 `FormTemplate` 上的 `RequiredFunctionCode`。
-  - **兜底**: 若无权限，重定向至 `403-Forbidden` 页面，而非仅仅在组件内隐藏。
-
-### C. 发布撤回功能 (Withdrawal Functional)
-- **目标文件**: `src/BobCrm.Api/Controllers/EntityDefinitionController.cs` & `EntityPublishingService.cs`
-- **修改内容**:
-  - 实现 `WithdrawAsync(Guid entityId)` 接口。
-  - **逻辑**: 
-    1. 将实体状态置为 `Withdrawn`。
-    2. **物理/逻辑处理**: 根据配置决定是物理 `DROP TABLE` 为空表，还是仅在元数据层标记 `IsDeleted`。
-    3. **引用检查**: 如果该实体被其他已发布的实体引用，则禁止撤回。
-
-## 4. 质量门禁 (Quality Gates) - **强制性要求**
-
-> [!IMPORTANT]
-> **级联一致性测试**: 
-> 1. 模拟“主实体(Draft) -> 子实体(Draft)”的场景，验证一次点击发布两个实体。
-> 2. 验证“主实体已发布，子实体被撤回”时的系统稳定性（前端应优雅提示或回退）。
-
-## 5. 验收标准 (Acceptance Criteria)
-1. 发布一个包含 Lookup 字段的新实体，其引用的实体若为 Draft，会被同步发布。
-2. 修改 `RequiredFunctionCode` 后，未授权用户通过 URL 访问该实体明细页会被拦截。
-3. 实现“撤回”操作，状态同步更新，且受保护引用无法撤回。
+> **状态**: 此前为 DEV-SPEC-v0.9.x-TASK-03
+> **类型**: 实施计划 (Implementation Plan)
+> **目标**: 完善实体发布生命周期的"最后一公里"（级联发布、撤回、权限拦截）
 
 ---
-**审批人 (Architect):** Antigravity
-**发布日期:** 2025-12-23
+
+## 1. 概述
+
+本计划旨在解决实体发布流程中的三个关键痛点：
+1.  **依赖地狱**: 发布主实体时，引用的子实体（如 Lookup）未发布导致报错。
+2.  **权限漏洞**: 实体发布后，缺少前端路由级别的权限强制检查。
+3.  **后悔药**: 缺少将已发布实体"撤回"到草稿状态的机制。
+
+---
+
+## 2. 详细实施步骤 (Implementation Steps)
+
+### Phase A: 级联发布机制 (Cascade Publishing)
+
+**目标**: 当发布实体 A 时，自动检测其引用的实体 B/C，若它们处于非发布状态，则一并发布。
+
+**实施细则**:
+1.  **依赖分析算法 (`EntityDependencyService`)**:
+    - 输入: `EntityDefinition` (待发布)
+    - 逻辑: 遍历 `Fields`，找出所有 `IsEntityRef=true` 的字段。
+    - 递归收集: 获取这些 Field 指向的 `ReferencedEntityId`。
+2.  **增强发布服务 (`EntityPublishingService`)**:
+    - 在 `PublishEntityAsync` 入口处，调用依赖分析。
+    - 过滤出状态为 `Draft` 或 `Withdrawn` 的依赖实体。
+    - **递归发布**:
+        - 针对每个依赖实体，调用 `PublishEntityAsync`。
+        - 标记参数 `isCascade=true` (用于跳过非必要的模板生成步骤，仅发布元数据)。
+3.  **安全检查**:
+    - 检测循环依赖（A引用B，B引用A）。若检测到，视为同一批次发布。
+
+### Phase B: 全局权限拦截器 (Permission Interceptor)
+
+**目标**: 防止用户通过直接输入 URL 访问无权限的实体页面。
+
+**实施细则**:
+1.  **元数据扩展**:
+    - 确保 `FormTemplate` 或 `EntityDefinition` 包含 `RequiredFunctionCode` 字段（如 `sales.orders.view`）。
+2.  **前端拦截 (`MainLayout.razor` / `PermissionService`)**:
+    - 监听 `NavigationManager.LocationChanged` 事件。
+    - **逻辑**:
+        - 解析目标 URL（如 `/app/orders/list`）。
+        - 匹配对应的 `FunctionNode`。
+        - 检查当前用户是否拥有该 FunctionCode。
+    - **处置**:
+        - 若无权限，立即重定向至 `/403` 或显示 `AntDesign.Message.Error("无权访问")`。
+        - 并取消页面组件的加载（使用 `ErrorBoundary` 或布局层控制）。
+
+### Phase C: 发布撤回功能 (Withdrawal)
+
+**目标**: 允许将 `Published` 实体回退到 `Withdrawn` (类似 Draft) 状态。
+
+**实施细则**:
+1.  **API 端点**: `POST /api/entities/{id}/withdraw`
+2.  **业务逻辑**:
+    - **引用检查**: 检查是否有*其他已发布实体*引用了当前实体。若有，**禁止撤回**并报错（"被 Customer 实体引用，无法撤回"）。
+    - **状态更新**: 将 EntityStatus 更新为 `Withdrawn`。
+    - **Schema 处理**: 
+        - 策略 A (软撤回): 仅标记元数据，数据库 Table 保留（推荐，防数据丢失）。
+        - 策略 B (硬撤回): `DROP TABLE` (仅限无数据的纯新实体)。
+        - **本次实施采用策略 A**。
+3.  **前端适配**:
+    - 在实体定义详情页，为"已发布"实体增加"撤回"按钮（需二次确认）。
+
+---
+
+## 3. 验收标准 (Acceptance Criteria)
+
+1.  **级联发布测试**:
+    - 场景: 创建 Entity A (引用 B), Entity B (Draft).
+    - 操作: 点击发布 A.
+    - 预期: A 和 B 均变为 `Published` 状态。
+2.  **权限拦截测试**:
+    - 场景: 用户无 `sales.orders` 权限。
+    - 操作: 浏览器地址栏输入 `/app/sales/orders`.
+    - 预期: 跳转 403 页面。
+3.  **撤回测试**:
+    - 场景: 撤回已被引用的实体。
+    - 预期: 报错提示引用关系。
+    - 场景: 撤回无引用实体。
+    - 预期: 状态变为 Withdrawn，前端显示"重新发布"按钮。
+
+---
+
+## 4. 参考文档
+
+- `ARCH-01-实体元数据定义与生命周期设计.md`
