@@ -636,6 +636,7 @@
 - 查询列表（新增 `meta.fields`）
   - POST `/api/dynamic-entities/{fullTypeName}/query`
   - Query: `lang`（可选；仅显式 `?lang=xx` 才单语，未传 `lang` 忽略 `Accept-Language`）、`includeMeta`（可选；默认返回 `meta.fields`，`includeMeta=false` 时忽略 `meta`）
+  - 说明：当显式传入 `lang` 时，服务端会尝试为部分字段生成 `__display`（例如枚举字段映射为目标语言显示值）。
   - Resp（多语模式，未传 `lang`，节选）：
     ```json
     {
