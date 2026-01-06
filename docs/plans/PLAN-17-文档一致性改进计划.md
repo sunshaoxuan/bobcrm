@@ -1,4 +1,4 @@
-# PLAN-19: 文档一致性改进计划
+# PLAN-17: 文档一致性改进计划
 
 **创建日期**: 2025-12-27
 **基于审查**: `c:\workspace\bobcrm\docs\reviews\REVIEW-16-文档一致性评审-2025-12.md`

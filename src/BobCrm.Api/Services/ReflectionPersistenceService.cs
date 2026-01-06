@@ -41,12 +41,12 @@ public class ReflectionPersistenceService
 
         // 获取DbSet<T>
         var dbSet = GetDbSet(entityType);
-        var query = (IQueryable<object>)dbSet;
+        var query = (IQueryable)dbSet;
 
         // 自动过滤逻辑删除的记录（系统级安全机制）
         if (HasProperty(entityType, "IsDeleted"))
         {
-            query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
+            query = ApplySoftDeleteFilter(query, entityType);
         }
 
         // 应用过滤条件
@@ -64,15 +64,16 @@ public class ReflectionPersistenceService
         // 应用分页
         if (options?.Skip.HasValue == true && options.Skip.Value > 0)
         {
-            query = query.Skip(options.Skip.Value);
+            query = ApplySkip(query, entityType, options.Skip.Value);
         }
 
         if (options?.Take.HasValue == true && options.Take.Value > 0)
         {
-            query = query.Take(options.Take.Value);
+            query = ApplyTake(query, entityType, options.Take.Value);
         }
 
-        var results = await query.ToListAsync();
+        var list = await ToListAsync(query, entityType);
+        var results = list.Cast<object>().ToList();
 
         _logger.LogInformation("[Persistence] Found {Count} records", results.Count);
 
@@ -91,16 +92,18 @@ public class ReflectionPersistenceService
         _logger.LogInformation("[Persistence] Getting {EntityType} with ID {Id}", fullTypeName, id);
 
         var dbSet = GetDbSet(entityType);
-        var query = (IQueryable<object>)dbSet;
+        var query = (IQueryable)dbSet;
 
         // 自动过滤逻辑删除的记录
         if (HasProperty(entityType, "IsDeleted"))
         {
-            query = query.Where(e => EF.Property<bool>(e, "IsDeleted") == false);
+            query = ApplySoftDeleteFilter(query, entityType);
         }
 
-        // 查询指定ID的记录
-        var result = await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+        // 查询指定ID的记录（动态表达式，避免 EF 翻译失败）
+        var predicate = BuildEqualsPredicate(entityType, "Id", id);
+        var filtered = ApplyWhere(query, entityType, predicate);
+        var result = await FirstOrDefaultAsync(filtered, entityType);
 
         return result;
     }
@@ -219,14 +222,134 @@ public class ReflectionPersistenceService
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
         var dbSet = GetDbSet(entityType);
-        var query = (IQueryable<object>)dbSet;
+        var query = (IQueryable)dbSet;
+
+        if (HasProperty(entityType, "IsDeleted"))
+        {
+            query = ApplySoftDeleteFilter(query, entityType);
+        }
 
         if (filters != null && filters.Any())
         {
             query = ApplyFilters(query, entityType, filters);
         }
 
-        return await query.CountAsync();
+        return await CountAsync(query, entityType);
+    }
+
+    private static IQueryable ApplySoftDeleteFilter(IQueryable query, Type entityType)
+    {
+        var prop = entityType.GetProperty("IsDeleted", BindingFlags.Public | BindingFlags.Instance);
+        if (prop == null)
+        {
+            return query;
+        }
+
+        var parameter = System.Linq.Expressions.Expression.Parameter(entityType, "e");
+        var left = System.Linq.Expressions.Expression.Property(parameter, prop);
+        var right = System.Linq.Expressions.Expression.Constant(false, prop.PropertyType);
+        var body = System.Linq.Expressions.Expression.Equal(left, right);
+        var lambda = System.Linq.Expressions.Expression.Lambda(body, parameter);
+        return ApplyWhere(query, entityType, lambda);
+    }
+
+    private static IQueryable ApplySkip(IQueryable query, Type entityType, int count)
+    {
+        var method = typeof(Queryable).GetMethods()
+            .Single(m =>
+                m.Name == nameof(Queryable.Skip) &&
+                m.GetParameters().Length == 2 &&
+                m.GetParameters()[1].ParameterType == typeof(int))
+            .MakeGenericMethod(entityType);
+        return (IQueryable)method.Invoke(null, new object[] { query, count })!;
+    }
+
+    private static IQueryable ApplyTake(IQueryable query, Type entityType, int count)
+    {
+        var method = typeof(Queryable).GetMethods()
+            .Single(m =>
+                m.Name == nameof(Queryable.Take) &&
+                m.GetParameters().Length == 2 &&
+                m.GetParameters()[1].ParameterType == typeof(int))
+            .MakeGenericMethod(entityType);
+        return (IQueryable)method.Invoke(null, new object[] { query, count })!;
+    }
+
+    private static IQueryable ApplyWhere(IQueryable query, Type entityType, System.Linq.Expressions.LambdaExpression predicate)
+    {
+        var method = typeof(Queryable).GetMethods()
+            .Where(m => m.Name == nameof(Queryable.Where) && m.GetParameters().Length == 2)
+            .Single(m =>
+            {
+                var secondParam = m.GetParameters()[1].ParameterType;
+                if (!secondParam.IsGenericType || secondParam.GetGenericTypeDefinition().Name != "Expression`1")
+                {
+                    return false;
+                }
+
+                var funcType = secondParam.GetGenericArguments().Single();
+                if (!funcType.IsGenericType)
+                {
+                    return false;
+                }
+
+                // 只选 Where<T>(..., Expression<Func<T, bool>>) 这一支，避免 Where<T>(..., Expression<Func<T, int, bool>>)
+                return funcType.GetGenericArguments().Length == 2;
+            })
+            .MakeGenericMethod(entityType);
+        return (IQueryable)method.Invoke(null, new object[] { query, predicate })!;
+    }
+
+    private static async Task<object?> FirstOrDefaultAsync(IQueryable query, Type entityType, CancellationToken ct = default)
+    {
+        var method = typeof(EntityFrameworkQueryableExtensions).GetMethods()
+            .Where(m => m.Name == nameof(EntityFrameworkQueryableExtensions.FirstOrDefaultAsync))
+            .Single(m => m.IsGenericMethodDefinition && m.GetParameters().Length == 2)
+            .MakeGenericMethod(entityType);
+
+        var task = (Task)method.Invoke(null, new object[] { query, ct })!;
+        await task.ConfigureAwait(false);
+        return task.GetType().GetProperty("Result")!.GetValue(task);
+    }
+
+    private static async Task<System.Collections.IList> ToListAsync(IQueryable query, Type entityType, CancellationToken ct = default)
+    {
+        var method = typeof(EntityFrameworkQueryableExtensions).GetMethods()
+            .Where(m => m.Name == nameof(EntityFrameworkQueryableExtensions.ToListAsync))
+            .Single(m => m.IsGenericMethodDefinition && m.GetParameters().Length == 2)
+            .MakeGenericMethod(entityType);
+
+        var task = (Task)method.Invoke(null, new object[] { query, ct })!;
+        await task.ConfigureAwait(false);
+        return (System.Collections.IList)task.GetType().GetProperty("Result")!.GetValue(task)!;
+    }
+
+    private static async Task<int> CountAsync(IQueryable query, Type entityType, CancellationToken ct = default)
+    {
+        var method = typeof(EntityFrameworkQueryableExtensions).GetMethods()
+            .Where(m => m.Name == nameof(EntityFrameworkQueryableExtensions.CountAsync))
+            .Single(m => m.IsGenericMethodDefinition && m.GetParameters().Length == 2)
+            .MakeGenericMethod(entityType);
+
+        var task = (Task)method.Invoke(null, new object[] { query, ct })!;
+        await task.ConfigureAwait(false);
+        return (int)task.GetType().GetProperty("Result")!.GetValue(task)!;
+    }
+
+    private System.Linq.Expressions.LambdaExpression BuildEqualsPredicate(Type entityType, string propertyName, object value)
+    {
+        var property = entityType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (property == null)
+        {
+            throw new InvalidOperationException($"Property {propertyName} not found on {entityType.Name}");
+        }
+
+        var parameter = System.Linq.Expressions.Expression.Parameter(entityType, "e");
+        var left = System.Linq.Expressions.Expression.Property(parameter, property);
+        var constantValue = ConvertValue(value, property.PropertyType);
+        var right = System.Linq.Expressions.Expression.Constant(constantValue, property.PropertyType);
+        var body = System.Linq.Expressions.Expression.Equal(left, right);
+        return System.Linq.Expressions.Expression.Lambda(body, parameter);
     }
 
     /// <summary>
@@ -345,8 +468,8 @@ public class ReflectionPersistenceService
     /// <summary>
     /// 应用过滤条件
     /// </summary>
-    private IQueryable<object> ApplyFilters(
-        IQueryable<object> query,
+    private IQueryable ApplyFilters(
+        IQueryable query,
         Type entityType,
         List<FilterCondition> filters)
     {
@@ -359,19 +482,50 @@ public class ReflectionPersistenceService
                 continue;
             }
 
-            // 简化实现：只支持相等过滤
-            query = query.Where(e =>
-                property.GetValue(e) != null && property.GetValue(e)!.Equals(filter.Value));
+            try
+            {
+                query = ApplyFilter(query, entityType, property, filter);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Persistence] Failed to apply filter on {Field}", filter.Field);
+                throw;
+            }
         }
 
         return query;
     }
 
+    private IQueryable ApplyFilter(IQueryable query, Type entityType, PropertyInfo property, FilterCondition filter)
+    {
+        var parameter = System.Linq.Expressions.Expression.Parameter(entityType, "e");
+        var member = System.Linq.Expressions.Expression.Property(parameter, property);
+
+        var constantValue = ConvertValue(filter.Value!, property.PropertyType);
+        var constant = System.Linq.Expressions.Expression.Constant(constantValue, property.PropertyType);
+
+        System.Linq.Expressions.Expression body = (filter.Operator ?? FilterOperator.Equals) switch
+        {
+            FilterOperator.Equals => System.Linq.Expressions.Expression.Equal(member, constant),
+            FilterOperator.Contains when property.PropertyType == typeof(string) =>
+                System.Linq.Expressions.Expression.AndAlso(
+                    System.Linq.Expressions.Expression.NotEqual(member, System.Linq.Expressions.Expression.Constant(null, typeof(string))),
+                    System.Linq.Expressions.Expression.Call(member, nameof(string.Contains), Type.EmptyTypes,
+                        System.Linq.Expressions.Expression.Convert(constant, typeof(string)))),
+            FilterOperator.GreaterThan => System.Linq.Expressions.Expression.GreaterThan(member, constant),
+            FilterOperator.LessThan => System.Linq.Expressions.Expression.LessThan(member, constant),
+            _ => throw new NotSupportedException($"Unsupported filter operator: {filter.Operator}")
+        };
+
+        var lambda = System.Linq.Expressions.Expression.Lambda(body, parameter);
+        return ApplyWhere(query, entityType, lambda);
+    }
+
     /// <summary>
     /// 应用排序
     /// </summary>
-    private IQueryable<object> ApplyOrderBy(
-        IQueryable<object> query,
+    private IQueryable ApplyOrderBy(
+        IQueryable query,
         Type entityType,
         string orderBy,
         bool descending)
@@ -395,7 +549,7 @@ public class ReflectionPersistenceService
 
         var orderedQuery = orderByMethod.Invoke(null, new object[] { query, lambda });
 
-        return (IQueryable<object>)orderedQuery!;
+        return (IQueryable)orderedQuery!;
     }
 
     /// <summary>

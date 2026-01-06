@@ -434,7 +434,7 @@ group.MapGet("/functions", async (...))
 
 ### 1. 文档更新 ✅
 - [x] 更新 `docs/history/ARCH-30/README.md` - 标记Task 2.4完成
-- [x] 更新 `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md` - 更新进度
+- [x] 更新 `docs/plans/PLAN-09-系统级多语API架构优化-工作计划.md` - 更新进度
 
 ### 2. Git提交 ✅
 - [x] 提交代码变更（如未提交）

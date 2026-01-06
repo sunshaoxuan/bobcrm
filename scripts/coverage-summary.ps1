@@ -18,10 +18,33 @@ function Get-LatestCoberturaPath([string] $root)
         Select-Object -First 1 -ExpandProperty FullName
 }
 
+function Is-IncludedFile([string] $file)
+{
+    if ([string]::IsNullOrWhiteSpace($file))
+    {
+        return $false
+    }
+
+    $normalized = $file.Trim().Replace("/", "\\")
+    if ($normalized -notmatch "(^|\\)BobCrm\.Api\\")
+    {
+        return $false
+    }
+
+    if ($normalized.EndsWith("\Program.cs", [System.StringComparison]::OrdinalIgnoreCase)) { return $false }
+    if ($normalized -match "\\Migrations\\") { return $false }
+    if ($normalized -match "\\obj\\") { return $false }
+    if ($normalized -match "\\bin\\") { return $false }
+    if ($normalized -match "\\.g\\.cs$") { return $false }
+    if ($normalized -match "ModelSnapshot\\.cs$") { return $false }
+
+    return $true
+}
+
 if ($RunTests)
 {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $outputDir = Join-Path (Get-Location) (Join-Path $ResultsDirectory ("plan28-xplat-" + $timestamp))
+    $outputDir = Join-Path (Get-Location) (Join-Path $ResultsDirectory ("plan18-xplat-" + $timestamp))
     New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
     dotnet test tests/BobCrm.Api.Tests/BobCrm.Api.Tests.csproj -c Release --collect:"XPlat Code Coverage" --results-directory $outputDir
@@ -38,42 +61,14 @@ if (-not $cobertura)
     Write-Error "No coverage.cobertura.xml found under '$ResultsDirectory' or 'tests/BobCrm.Api.Tests/TestResults'."
 }
 
-[xml] $xml = Get-Content $cobertura
+[xml] $xml = Get-Content -Raw $cobertura
 
-$isIncludedFile = {
-    param([string] $file)
-
-    if ([string]::IsNullOrWhiteSpace($file))
-    {
-        return $false
-    }
-
-    if ($file -notlike "BobCrm.Api\\*")
-    {
-        return $false
-    }
-
-    if ($file -like "*\\Program.cs") { return $false }
-    if ($file -match "\\\\Migrations\\\\") { return $false }
-    if ($file -match "\\\\obj\\\\") { return $false }
-    if ($file -match "\\\\bin\\\\") { return $false }
-    if ($file -match "\\.g\\.cs$") { return $false }
-    if ($file -match "ModelSnapshot\\.cs$") { return $false }
-
-    return $true
-}
-
-$classRows = foreach ($pkg in $xml.coverage.packages.package)
+$classRows = foreach ($pkg in @($xml.coverage.packages.package))
 {
-    if ($pkg.name -notlike "BobCrm.Api*")
-    {
-        continue
-    }
-
-    foreach ($cls in $pkg.classes.class)
+    foreach ($cls in @($pkg.classes.class))
     {
         $file = [string]$cls.filename
-        if (-not (& $isIncludedFile $file))
+        if (-not (Is-IncludedFile $file))
         {
             continue
         }
@@ -93,7 +88,8 @@ $classRows = foreach ($pkg in $xml.coverage.packages.package)
     }
 }
 
-if (-not $classRows -or $classRows.Count -eq 0)
+$classRows = @($classRows)
+if ($classRows.Count -eq 0)
 {
     Write-Output "No BobCrm.Api classes found (after exclusions). Coverage file: $cobertura"
     exit 0
@@ -127,4 +123,3 @@ $fileRows |
     Sort-Object Uncovered -Descending |
     Select-Object -First $Top |
     Format-Table Uncovered, Covered, Valid, LineRate, File -AutoSize
-

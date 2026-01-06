@@ -78,13 +78,13 @@
 
 | # | 冲突编号 | 原文件 | 调整后 | 处理方式 | 进度 |
 |---|----------|--------|--------|----------|------|
-| 1 | `ARCH-24` | `docs/design/ARCH-24-紧凑型顶部菜单导航-实施计划.md` | `docs/plans/PLAN-11-紧凑型顶部菜单导航-实施计划.md` | 类型归类调整（实施计划归入 PLAN） | 已完成 |
-| 2 | `ARCH-30` | `docs/design/ARCH-30-工作计划.md` | `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md` | 类型归类调整（工作计划归入 PLAN） | 已完成 |
+| 1 | `ARCH-24` | `docs/design/ARCH-24-紧凑型顶部菜单导航-实施计划.md` | `docs/plans/PLAN-08-紧凑型顶部菜单导航-实施计划.md` | 类型归类调整（实施计划归入 PLAN） | 已完成 |
+| 2 | `ARCH-30` | `docs/design/ARCH-30-工作计划.md` | `docs/plans/PLAN-09-系统级多语API架构优化-工作计划.md` | 类型归类调整（工作计划归入 PLAN） | 已完成 |
 | 3 | `UI-05` | `docs/design/UI-05-数据网格组件重构-开发提示.md` | `docs/guides/GUIDE-12-DataGrid组件重构-开发提示.md` | 类型归类调整（开发提示归入 GUIDE） | 已完成 |
 | 4 | `UI-05` | `docs/design/UI-05-阶段3范围调整分析.md` | `docs/design/UI-06-阶段3范围调整分析.md` | 重新编号 | 已完成 |
 | 5 | `PLAN-01` | `docs/plans/PLAN-01-附录-模板系统详细设计.md` | `docs/design/ARCH-27-模板系统详细设计.md` | 类型归类调整（详细设计归入 ARCH） | 已完成 |
-| 6 | `PLAN-03` | `docs/plans/PLAN-03-v0.7.0-表单设计器恢复计划.md` | `docs/plans/PLAN-13-v0.7.0-表单设计器恢复计划.md` | 重新编号 | 已完成 |
-| 7 | `PLAN-06` | `docs/plans/PLAN-06-v0.7.0-模板运行链路修复.md` | `docs/plans/PLAN-14-v0.7.0-模板运行链路修复.md` | 重新编号 | 已完成 |
+| 6 | `PLAN-03` | `docs/plans/PLAN-03-v0.7.0-表单设计器恢复计划.md` | `docs/plans/PLAN-10-v0.7.0-表单设计器恢复计划.md` | 重新编号 | 已完成 |
+| 7 | `PLAN-06` | `docs/plans/PLAN-06-v0.7.0-模板运行链路修复.md` | `docs/plans/PLAN-11-v0.7.0-模板运行链路修复.md` | 重新编号 | 已完成 |
 | 8 | `REVIEW-01/02` | `docs/history/REVIEW-01-代码评审与改进清单-2025-11.md`、`docs/history/REVIEW-02-多语言功能代码评审-2025-11.md` | `docs/reviews/REVIEW-09-代码评审与改进清单-2025-11.md`、`docs/reviews/REVIEW-10-多语言功能代码评审-2025-11.md` | 类型归类调整（评审归入 reviews）+ 重新编号 | 已完成 |
 
 ### 3.5 非标准目录结构 - P2

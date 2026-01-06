@@ -306,6 +306,7 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                 {
                     var newField = new FieldMetadata
                     {
+                        EntityDefinitionId = definition.Id,
                         PropertyName = fieldDto.PropertyName ?? string.Empty,
                         DisplayName = fieldDto.DisplayName,
                         DataType = fieldDto.DataType ?? FieldDataType.String,

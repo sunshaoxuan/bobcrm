@@ -111,7 +111,7 @@ Performance impact:
 
 ### 改进3: 工作计划文档完善 ⭐⭐⭐⭐⭐
 
-**位置**: `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md`
+**位置**: `docs/plans/PLAN-09-系统级多语API架构优化-工作计划.md`
 
 #### 3.1 整体进度更新（第14-23行）
 

@@ -5,7 +5,7 @@
 
 ## 2. 核心指令 (Context)
 - **必须参考设计**: `docs/design/ARCH-01-实体元数据定义与生命周期设计.md`
-- **必须参考计划**: `docs/plans/PLAN-15-v0.9.0-闭环开发计划.md` (Phase 3)
+- **必须参考计划**: `docs/plans/PLAN-13-v0.9.0-闭环开发计划.md` (Phase 3)
 - **核心逻辑**: 发布主实体时，其引用的子实体（Lookup/AggVO）必须处于同步发布状态。
 
 ## 3. 技术要求 (Requirements)

@@ -5,7 +5,7 @@
 
 ## 2. 核心指令 (Context)
 - **必须参考设计**: `docs/design/ARCH-01-实体自定义与发布系统设计文档.md`
-- **必须参考计划**: `docs/plans/PLAN-15-v0.9.0-闭环开发计划.md`
+- **必须参考计划**: `docs/plans/PLAN-13-v0.9.0-闭环开发计划.md`
 - **严禁事项**: 逻辑层（Api/Models）严禁出现 `PostgreSQL` 或 `SQL` 等物理词汇，必须使用抽象术语。
 
 ## 3. 技术要求 (Requirements)

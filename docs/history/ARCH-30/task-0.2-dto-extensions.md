@@ -863,7 +863,7 @@ string T(string key, string? lang = null);
    ```
 
 2. **更新工作计划文档**:
-   - 在 `docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md` 中标记 Task 0.2 为完成
+   - 在 `docs/plans/PLAN-09-系统级多语API架构优化-工作计划.md` 中标记 Task 0.2 为完成
 
 3. **准备开始 Task 0.3**:
    - 报告完成情况

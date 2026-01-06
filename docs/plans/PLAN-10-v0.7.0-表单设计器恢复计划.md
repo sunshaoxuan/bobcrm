@@ -1,4 +1,4 @@
-# PLAN-13: 表单设计器恢复与实现计划（v0.7.0）
+# PLAN-10: 表单设计器恢复与实现计划（v0.7.0）
 
 ## 目标
 恢复并完整实现 `src/BobCrm.App/Components/Pages/FormDesigner.razor`（当前为空），以闭环 v0.7.0 的“模板系统链路”（Template System Loop），提供可视化界面编辑 `FormTemplate` 布局。

@@ -1,6 +1,6 @@
 # Development Prompts for v0.9.5 Release & v1.0 Preparation
 
-Based on the completion of v0.9.5 and `PLAN-17`, here are the recommended prompts for the next steps.
+Based on the completion of v0.9.5 and `PLAN-15`, here are the recommended prompts for the next steps.
 
 ## Prompt 1: Release v0.9.5
 
@@ -33,19 +33,19 @@ Finalize the v0.9.5 release.
 
 ---
 
-## Prompt 2: API Contract Governance (PLAN-17)
+## Prompt 2: API Contract Governance (PLAN-15)
 
 **Context**: Prerequisite for v1.0.0 stability. Standardizing API responses.
 
-**Objective**: Execute Batch 1 & 2 of PLAN-17.
+**Objective**: Execute Batch 1 & 2 of PLAN-15.
 
 **Prompt**:
 ```markdown
 # Context
-We are preparing for v1.0.0. Following `PLAN-17`, we need to standardize all API responses to ensure strict OpenAPI compliance and strong typing.
+We are preparing for v1.0.0. Following `PLAN-15`, we need to standardize all API responses to ensure strict OpenAPI compliance and strong typing.
 
 # Objective
-Implement `PLAN-17: API Response Contract Governance` (Batch 1 & 2).
+Implement `PLAN-15: API Response Contract Governance` (Batch 1 & 2).
 
 # Tasks
 1.  **Infrastructure (Batch 1)**:
@@ -59,6 +59,6 @@ Implement `PLAN-17: API Response Contract Governance` (Batch 1 & 2).
         -   `UserRolesUpdateResponse`
 
 # Constraints
--   Strictly follow `docs/plans/PLAN-17-API响应契约治理实施方案.md`.
+-   Strictly follow `docs/plans/PLAN-15-API响应契约治理实施方案.md`.
 -   Run `dotnet build` frequently to catch breaking changes.
 ```

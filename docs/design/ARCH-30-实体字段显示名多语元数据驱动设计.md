@@ -2362,7 +2362,7 @@ git commit -m "[type]: [message]
 
 ### 10.4 工作计划跟踪（WORK-PLAN.md）
 
-**建议创建独立的工作计划文档**：`docs/plans/PLAN-12-系统级多语API架构优化-工作计划.md`
+**建议创建独立的工作计划文档**：`docs/plans/PLAN-09-系统级多语API架构优化-工作计划.md`
 
 内容包括：
 ```markdown
