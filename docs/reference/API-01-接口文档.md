@@ -635,7 +635,7 @@
 
 - 查询列表（新增 `meta.fields`）
   - POST `/api/dynamic-entities/{fullTypeName}/query`
-  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语，未传 `lang` 忽略 `Accept-Language`）
+  - Query: `lang`（可选；仅显式 `?lang=xx` 才单语，未传 `lang` 忽略 `Accept-Language`）、`includeMeta`（可选；默认返回 `meta.fields`，`includeMeta=false` 时忽略 `meta`）
   - Resp（多语模式，未传 `lang`，节选）：
     ```json
     {
@@ -654,6 +654,10 @@
   - Resp（单语模式，`?lang=zh`，节选）：
     ```json
     { "meta": { "fields": [ { "propertyName": "Code", "displayNameKey": "LBL_FIELD_CODE", "displayName": "编码" } ] } }
+    ```
+  - Resp（`includeMeta=false`，节选）：
+    ```json
+    { "data": [], "total": 0, "page": 1, "pageSize": 100 }
     ```
 
 - 根据 ID 获取（向后兼容：默认不返回 `meta`）

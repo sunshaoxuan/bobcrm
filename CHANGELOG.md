@@ -21,6 +21,8 @@
 
 
 ### Changed
+- **动态实体查询改造**：`POST /api/dynamic-entities/{fullTypeName}/query` 支持 `includeMeta=false` 忽略 `meta.fields`（保持默认行为向后兼容）。
+- **字段元数据缓存失效**：实体定义 Create/Update 后主动触发 `IFieldMetadataCache.Invalidate(...)`，降低字段元数据缓存陈旧风险。
 - **全局异常处理**：统一使用 `app.UseExceptionHandler()` 触发已注册的 `GlobalExceptionHandler`（移除空的中间件占位）。
 - **API 端点分层**：将部分 Controller/Endpoint 逻辑下沉到 AppService/Service，提升可测试性与一致性。
 - **JS Interop 重构**：全量迁移至 `IJsInteropService`，统一异常处理与日志记录；移除 `BobCrm.App` 中直接的 `IJSRuntime` 注入；新增 CI 门禁检查。

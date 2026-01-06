@@ -77,6 +77,10 @@ docker compose up -d
 # 运行测试
 dotnet test
 
+# CI 门禁对齐（建议）
+pwsh scripts/check-warning-baseline.ps1
+dotnet test -c Release
+
 # 运行测试并生成覆盖率报告
 dotnet test --collect:"XPlat Code Coverage"
 ```
@@ -189,6 +193,16 @@ dotnet test --filter "FullyQualifiedName~AdminTests"
 - ✅ 数据库健康检查
 - ✅ 数据库重建（仅开发环境）
 - ✅ 管理员权限控制
+
+#### 8. 动态实体测试 (DynamicEntityEndpointsTests.cs)
+
+```bash
+dotnet test --filter "FullyQualifiedName~DynamicEntityEndpointsTests"
+```
+
+测试内容：
+- ✅ 查询列表/按 ID 获取（含 `lang` 与 `includeMeta` 行为）
+- ✅ 元数据返回模式（单语/多语）
 
 ---
 
