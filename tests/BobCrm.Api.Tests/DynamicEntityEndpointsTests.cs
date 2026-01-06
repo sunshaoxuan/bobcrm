@@ -75,6 +75,39 @@ public class DynamicEntityEndpointsTests
     }
 
     [Fact]
+    public async Task QueryDynamicEntities_WithLang_IncludesDisplayForEnumField()
+    {
+        using var factory = CreateFactoryWithFakePersistence();
+        var fullTypeName = await SeedEntityDefinitionAsync(factory.Services);
+
+        var client = await CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/dynamic-entities/{fullTypeName}/query?lang=zh",
+            new { filters = Array.Empty<object>(), orderBy = "Id", orderByDescending = false, skip = 0, take = 10 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var root = await response.ReadAsJsonAsync();
+        var dto = root.GetProperty("data");
+        var rows = dto.GetProperty("data");
+        Assert.True(rows.GetArrayLength() > 0);
+
+        var first = rows[0];
+        Assert.True(first.TryGetProperty("__display", out var display));
+        string? statusLabel = null;
+        foreach (var prop in display.EnumerateObject())
+        {
+            if (string.Equals(prop.Name, "status", StringComparison.OrdinalIgnoreCase))
+            {
+                statusLabel = prop.Value.GetString();
+                break;
+            }
+        }
+        Assert.Equal("草稿", statusLabel);
+    }
+
+    [Fact]
     public async Task QueryDynamicEntities_IncludeMetaFalse_OmitsMeta()
     {
         using var factory = CreateFactoryWithFakePersistence();
@@ -180,6 +213,32 @@ public class DynamicEntityEndpointsTests
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var enumDef = new EnumDefinition
+        {
+            Id = Guid.NewGuid(),
+            Code = $"order_status_{Guid.NewGuid():N}",
+            DisplayName = new Dictionary<string, string?> { ["zh"] = "订单状态", ["en"] = "Order Status", ["ja"] = "注文ステータス" }
+        };
+        enumDef.Options.Add(new EnumOption
+        {
+            Id = Guid.NewGuid(),
+            EnumDefinitionId = enumDef.Id,
+            Value = "DRAFT",
+            DisplayName = new Dictionary<string, string?> { ["zh"] = "草稿", ["en"] = "Draft", ["ja"] = "下書き" },
+            SortOrder = 1,
+            IsEnabled = true
+        });
+        enumDef.Options.Add(new EnumOption
+        {
+            Id = Guid.NewGuid(),
+            EnumDefinitionId = enumDef.Id,
+            Value = "SUBMITTED",
+            DisplayName = new Dictionary<string, string?> { ["zh"] = "已提交", ["en"] = "Submitted", ["ja"] = "提出済み" },
+            SortOrder = 2,
+            IsEnabled = true
+        });
+        db.EnumDefinitions.Add(enumDef);
+
         var entityName = $"DynamicTest_{Guid.NewGuid():N}";
         var fullTypeName = $"BobCrm.Test.{entityName}";
 
@@ -230,6 +289,26 @@ public class DynamicEntityEndpointsTests
             Source = FieldSource.Custom
         });
 
+        definition.Fields.Add(new FieldMetadata
+        {
+            Id = Guid.NewGuid(),
+            EntityDefinitionId = definition.Id,
+            PropertyName = "Status",
+            DisplayNameKey = null,
+            DisplayName = new Dictionary<string, string?>
+            {
+                ["zh"] = "状态",
+                ["en"] = "Status",
+                ["ja"] = "状態"
+            },
+            DataType = FieldDataType.Enum,
+            IsRequired = false,
+            SortOrder = 3,
+            Source = FieldSource.Custom,
+            EnumDefinitionId = enumDef.Id,
+            IsMultiSelect = false
+        });
+
         db.EntityDefinitions.Add(definition);
         await db.SaveChangesAsync();
 
@@ -248,7 +327,8 @@ public class DynamicEntityEndpointsTests
         {
             Id = 1,
             Code = "C001",
-            CustomField = "自定义值"
+            CustomField = "自定义值",
+            Status = "DRAFT"
         };
 
         public Task<List<object>> QueryAsync(string fullTypeName, QueryOptions? options = null)
@@ -292,5 +372,6 @@ public class DynamicEntityEndpointsTests
         public int Id { get; set; }
         public string Code { get; set; } = string.Empty;
         public string? CustomField { get; set; }
+        public string? Status { get; set; }
     }
 }
