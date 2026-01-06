@@ -193,6 +193,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
 builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 builder.Services.AddScoped<IReflectionPersistenceService, ReflectionPersistenceService>();
 builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();
+builder.Services.AddScoped<DynamicEntityDisplayEnricher>();
 
 // Advanced Features Services (高级功能：AggVO、数据迁移评估、实体锁定) - 使用接口注册遵循DIP原则
 builder.Services.AddScoped<BobCrm.Api.Services.CodeGeneration.IAggVOCodeGenerator, BobCrm.Api.Services.CodeGeneration.AggVOCodeGenerator>();

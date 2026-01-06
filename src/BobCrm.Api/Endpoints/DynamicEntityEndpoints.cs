@@ -33,6 +33,7 @@ public static class DynamicEntityEndpoints
             [FromBody] QueryRequest request,
             IReflectionPersistenceService persistenceService,
             IFieldMetadataCache fieldMetadataCache,
+            DynamicEntityDisplayEnricher displayEnricher,
             ILocalization loc,
             HttpContext http,
             CancellationToken ct,
@@ -61,12 +62,18 @@ public static class DynamicEntityEndpoints
                 fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
             }
 
+            var data = results;
+            if (!string.IsNullOrWhiteSpace(targetLang))
+            {
+                data = await displayEnricher.EnrichListAsync(fullTypeName, results, loc, targetLang, ct);
+            }
+
             var dto = new DynamicEntityQueryResultDto
             {
                 Meta = includeMetaValue
                     ? new DynamicEntityMetaDto { Fields = fields! }
                     : null,
-                Data = results,
+                Data = data,
                 Total = count,
                 Page = request.Skip.HasValue && request.Take.HasValue
                     ? (request.Skip.Value / request.Take.Value) + 1
@@ -90,6 +97,7 @@ public static class DynamicEntityEndpoints
             [FromQuery] bool? includeMeta,
             IReflectionPersistenceService persistenceService,
             IFieldMetadataCache fieldMetadataCache,
+            DynamicEntityDisplayEnricher displayEnricher,
             ILocalization loc,
             HttpContext http,
             CancellationToken ct,
@@ -106,12 +114,18 @@ public static class DynamicEntityEndpoints
                     string.Format(loc.T("ERR_DYNAMIC_ENTITY_NOT_FOUND", uiLang), id),
                     "DYNAMIC_ENTITY_NOT_FOUND"));
 
+            var data = entity;
+            if (!string.IsNullOrWhiteSpace(targetLang))
+            {
+                data = await displayEnricher.EnrichSingleAsync(fullTypeName, entity, loc, targetLang, ct);
+            }
+
             var result = new DynamicEntityGetResultDto
             {
                 Meta = includeMeta == true
                     ? new DynamicEntityMetaDto { Fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct) }
                     : null,
-                Data = entity
+                Data = data
             };
 
             return Results.Ok(new SuccessResponse<DynamicEntityGetResultDto>(result));

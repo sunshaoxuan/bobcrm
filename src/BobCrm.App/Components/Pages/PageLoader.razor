@@ -213,7 +213,9 @@ else if (entityData != null)
             fieldLabels = await LoadFieldLabels();
 
             // 1. Load entity data
-            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
+            var lang = I18n.CurrentLang?.Trim();
+            var langQuery = string.IsNullOrWhiteSpace(lang) ? string.Empty : $"?lang={Uri.EscapeDataString(lang)}";
+            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}{langQuery}");
             if (!dataResp.IsSuccessStatusCode)
             {
                 error = string.Format(I18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
