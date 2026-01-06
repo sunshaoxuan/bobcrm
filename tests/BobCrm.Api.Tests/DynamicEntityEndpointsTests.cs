@@ -75,6 +75,25 @@ public class DynamicEntityEndpointsTests
     }
 
     [Fact]
+    public async Task QueryDynamicEntities_IncludeMetaFalse_OmitsMeta()
+    {
+        using var factory = CreateFactoryWithFakePersistence();
+        var fullTypeName = await SeedEntityDefinitionAsync(factory.Services);
+
+        var client = await CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/dynamic-entities/{fullTypeName}/query?includeMeta=false",
+            new { filters = Array.Empty<object>(), orderBy = "Id", orderByDescending = false, skip = 0, take = 10 });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var root = await response.ReadAsJsonAsync();
+        var payload = root.GetProperty("data");
+        Assert.False(payload.TryGetProperty("meta", out _));
+    }
+
+    [Fact]
     public async Task GetDynamicEntityById_Default_ReturnsRawEntityObject()
     {
         using var factory = CreateFactoryWithFakePersistence();

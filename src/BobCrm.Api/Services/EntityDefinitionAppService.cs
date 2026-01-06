@@ -15,17 +15,20 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
 {
     private readonly AppDbContext _db;
     private readonly ILocalization _loc;
+    private readonly IFieldMetadataCache _fieldMetadataCache;
     private readonly ILogger<EntityDefinitionAppService> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public EntityDefinitionAppService(
         AppDbContext db,
         ILocalization loc,
+        IFieldMetadataCache fieldMetadataCache,
         ILogger<EntityDefinitionAppService> logger,
         IHttpContextAccessor httpContextAccessor)
     {
         _db = db;
         _loc = loc;
+        _fieldMetadataCache = fieldMetadataCache;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
     }
@@ -116,6 +119,12 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
 
         _db.EntityDefinitions.Add(definition);
         await _db.SaveChangesAsync(ct);
+
+        var createdType = ResolveFullTypeNameForCache(definition);
+        if (!string.IsNullOrWhiteSpace(createdType))
+        {
+            _fieldMetadataCache.Invalidate(createdType);
+        }
 
         _logger.LogInformation("[EntityDefinition] Entity created successfully: {Id}", definition.Id);
         return BuildResponseDto(definition);
@@ -338,10 +347,38 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
             SyncInterfaces(definition, dto.Interfaces);
         }
 
+        var beforeType = ResolveFullTypeNameForCache(definition);
+
         await _db.SaveChangesAsync(ct);
+
+        var afterType = ResolveFullTypeNameForCache(definition);
+        if (!string.IsNullOrWhiteSpace(beforeType) && !string.Equals(beforeType, afterType, StringComparison.Ordinal))
+        {
+            _fieldMetadataCache.Invalidate(beforeType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(afterType))
+        {
+            _fieldMetadataCache.Invalidate(afterType);
+        }
 
         _logger.LogInformation("[EntityDefinition] Entity updated successfully: {Id}", id);
         return BuildResponseDto(definition);
+    }
+
+    private static string ResolveFullTypeNameForCache(EntityDefinition definition)
+    {
+        if (!string.IsNullOrWhiteSpace(definition.FullTypeName))
+        {
+            return definition.FullTypeName.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(definition.Namespace) || string.IsNullOrWhiteSpace(definition.EntityName))
+        {
+            return string.Empty;
+        }
+
+        return $"{definition.Namespace.Trim()}.{definition.EntityName.Trim()}";
     }
 
     private string ResolveLang(string? lang)

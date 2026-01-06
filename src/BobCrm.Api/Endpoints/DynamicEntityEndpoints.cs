@@ -6,6 +6,7 @@ using BobCrm.Api.Contracts.Responses.DynamicEntity;
 using BobCrm.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ContractFieldMetadataDto = BobCrm.Api.Contracts.Responses.Entity.FieldMetadataDto;
 
 namespace BobCrm.Api.Endpoints;
 
@@ -28,6 +29,7 @@ public static class DynamicEntityEndpoints
         group.MapPost("/{fullTypeName}/query", async (
             string fullTypeName,
             [FromQuery] string? lang,
+            [FromQuery] bool? includeMeta,
             [FromBody] QueryRequest request,
             IReflectionPersistenceService persistenceService,
             IFieldMetadataCache fieldMetadataCache,
@@ -52,14 +54,18 @@ public static class DynamicEntityEndpoints
             var results = await persistenceService.QueryAsync(fullTypeName, options);
             var count = await persistenceService.CountAsync(fullTypeName, request.Filters);
 
-            var fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
+            var includeMetaValue = includeMeta != false;
+            IReadOnlyList<ContractFieldMetadataDto>? fields = null;
+            if (includeMetaValue)
+            {
+                fields = await fieldMetadataCache.GetFieldsAsync(fullTypeName, loc, targetLang, ct);
+            }
 
             var dto = new DynamicEntityQueryResultDto
             {
-                Meta = new DynamicEntityMetaDto
-                {
-                    Fields = fields
-                },
+                Meta = includeMetaValue
+                    ? new DynamicEntityMetaDto { Fields = fields! }
+                    : null,
                 Data = results,
                 Total = count,
                 Page = request.Skip.HasValue && request.Take.HasValue

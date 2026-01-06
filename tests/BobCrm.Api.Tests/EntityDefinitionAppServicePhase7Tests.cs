@@ -24,7 +24,7 @@ public class EntityDefinitionAppServicePhase7Tests
         return new AppDbContext(options);
     }
 
-    private static EntityDefinitionAppService CreateService(AppDbContext context)
+    private static EntityDefinitionAppService CreateService(AppDbContext context, Mock<IFieldMetadataCache>? cache = null)
     {
         var loc = new Mock<ILocalization>();
         loc.Setup(l => l.T(It.IsAny<string>(), It.IsAny<string>()))
@@ -36,6 +36,7 @@ public class EntityDefinitionAppServicePhase7Tests
         return new EntityDefinitionAppService(
             context,
             loc.Object,
+            (cache ?? new Mock<IFieldMetadataCache>(MockBehavior.Loose)).Object,
             NullLogger<EntityDefinitionAppService>.Instance,
             http.Object);
     }
@@ -82,6 +83,27 @@ public class EntityDefinitionAppServicePhase7Tests
 
         updated.Status.Should().Be(EntityStatus.Modified);
         (await db.EntityDefinitions.AsNoTracking().SingleAsync(e => e.Id == entity.Id)).Status.Should().Be(EntityStatus.Modified);
+    }
+
+    [Fact]
+    public async Task UpdateEntityDefinitionAsync_ShouldInvalidateFieldMetadataCache()
+    {
+        await using var db = CreateContext();
+
+        var entity = SeedDefinition(Guid.NewGuid(), EntityStatus.Draft);
+        db.EntityDefinitions.Add(entity);
+        await db.SaveChangesAsync();
+
+        var cache = new Mock<IFieldMetadataCache>(MockBehavior.Strict);
+        cache.Setup(x => x.Invalidate("BobCrm.Test.Order"));
+
+        var svc = CreateService(db, cache);
+        await svc.UpdateEntityDefinitionAsync(entity.Id, "u1", "zh", new UpdateEntityDefinitionDto
+        {
+            DisplayName = Ml("订单", "Order", "注文")
+        });
+
+        cache.Verify(x => x.Invalidate("BobCrm.Test.Order"), Times.Once);
     }
 
     [Fact]

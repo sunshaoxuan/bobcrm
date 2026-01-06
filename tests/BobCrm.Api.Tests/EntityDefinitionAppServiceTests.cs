@@ -40,6 +40,7 @@ public class EntityDefinitionAppServiceTests
         return new EntityDefinitionAppService(
             context,
             mockLoc.Object,
+            Mock.Of<IFieldMetadataCache>(),
             NullLogger<EntityDefinitionAppService>.Instance,
             mockHttpContextAccessor.Object);
     }

@@ -36,6 +36,7 @@ public class EntityDefinitionAppServiceFinalSprintTests
         return new EntityDefinitionAppService(
             context,
             mockLoc.Object,
+            Mock.Of<IFieldMetadataCache>(),
             NullLogger<EntityDefinitionAppService>.Instance,
             mockHttpContextAccessor.Object);
     }
@@ -201,4 +202,3 @@ public class EntityDefinitionAppServiceFinalSprintTests
         stored.Interfaces.Should().BeEmpty();
     }
 }
-
