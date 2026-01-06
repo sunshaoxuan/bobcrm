@@ -2,6 +2,8 @@ using AntDesign;
 using BobCrm.App.Components;
 using BobCrm.App.Services;
 using BobCrm.App.Services.Multilingual;
+using BobCrm.App.Services.Runtime;
+using BobCrm.App.ViewModels;
 using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +53,9 @@ builder.Services.AddScoped<BobCrm.App.Services.DynamicEntityService>();
 builder.Services.AddScoped<BobCrm.App.Services.EnumDefinitionService>();
 builder.Services.AddScoped<BobCrm.App.Services.AuditLogService>();
 builder.Services.AddScoped<BobCrm.App.Services.BackgroundJobService>();
+builder.Services.AddSingleton<LegacyLayoutParser>();
+builder.Services.AddScoped<RuntimeLabelService>();
+builder.Services.AddTransient<PageLoaderViewModel>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignWidgetContentRenderer, BobCrm.App.Services.Widgets.Rendering.DesignWidgetContentRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IDesignContainerRenderer, BobCrm.App.Services.Widgets.Rendering.DesignContainerRenderer>();
 builder.Services.AddSingleton<BobCrm.App.Services.Widgets.Rendering.IRuntimeWidgetRenderer, BobCrm.App.Services.Widgets.Rendering.RuntimeWidgetRenderer>();

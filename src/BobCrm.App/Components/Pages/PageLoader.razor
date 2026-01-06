@@ -2,857 +2,99 @@
 @rendermode RenderMode.InteractiveServer
 @implements IDisposable
 
-@using BobCrm.App.Models
-@using BobCrm.App.Models.Widgets
-@using BobCrm.App.Services.Widgets
-@using BobCrm.App.Services.Widgets.Rendering
-@using Microsoft.AspNetCore.Components.Rendering
-@using Microsoft.Extensions.Logging
-@using System.Linq
+@using AntDesign
+@using BobCrm.App.Components.Runtime
+@using BobCrm.App.ViewModels
+@using System.ComponentModel
 
-@inject BobCrm.App.Services.AuthService Auth
-@inject NavigationManager Nav
-@inject IJsInteropService JS
 @inject BobCrm.App.Services.I18nService I18n
-@inject BobCrm.App.Services.FieldActionService FieldActions
-@inject BobCrm.App.Services.TemplateRuntimeClient TemplateRuntime
-@inject BobCrm.App.Services.FieldService FieldService
-@inject IRuntimeWidgetRenderer RuntimeRenderer
-@inject ILogger<PageLoader> Logger
+@inject PageLoaderViewModel ViewModel
 
 <AuthChecker>
-@if (loading)
-{
+    @if (ViewModel.Loading)
+    {
         <div class="runtime-state loading">
             <strong>@I18n.T("LBL_LOADING")</strong>
             <span>@I18n.T("LBL_LOADING")...</span>
         </div>
-}
-else if (error != null)
-{
-    <div class="runtime-state error">
-        <div>@error</div>
-        <Button Type="@ButtonType.Primary" OnClick="ReloadPage">@I18n.T("BTN_RETRY")</Button>
-    </div>
-}
-else if (entityData != null)
-{
-    <div class="runtime-shell">
-        <!-- Browse and Edit Mode -->
-        <div class="runtime-page-header">
-            <div>
-                <h1 class="runtime-heading">@GetEntityDisplayName()</h1>
-                <div class="runtime-subtitle">@I18n.T("COL_CODE"): @GetEntityCode()</div>
-            </div>
-
-            @if (!isEditMode)
-            {
-                <Button Type="@ButtonType.Primary" OnClick="EnterEditModeAsync">
-                    @I18n.T("MODE_EDIT")
-                </Button>
-            }
-            else
-            {
-                <div style="display:flex; gap:8px">
-                    <Button Type="@ButtonType.Primary" OnClick="SaveChanges" Loading="@saving">
-                        @I18n.T("BTN_SAVE")
-                    </Button>
-                    <Button OnClick="CancelEditAsync">
-                        @I18n.T("BTN_CANCEL")
-                    </Button>
-                </div>
-            }
-        </div>
-
-        @if (runtimeContext != null)
+    }
+    else if (ViewModel.Error != null)
     {
-        <div class="runtime-template-banner">
-            <div class="runtime-template-line">
-                <span class="runtime-template-label">@I18n.T("LBL_TEMPLATE")</span>
-                <strong>@runtimeContext.Template.Name</strong>
-                <span class="runtime-template-meta">@runtimeContext.Binding.EntityType.ToUpperInvariant() · @runtimeContext.Template.UsageType</span>
-            </div>
-            @if (appliedScopes.Length > 0)
-            {
-                <div class="runtime-template-line">
-                    <span class="runtime-template-label">@I18n.T("LBL_SCOPE_TYPE")</span>
-                    <div class="runtime-scope-chips">
-                        @foreach (var scope in appliedScopes)
-                        {
-                            <span class="scope-chip">@scope</span>
-                        }
-                    </div>
-                </div>
-            }
+        <div class="runtime-state error">
+            <div>@ViewModel.Error</div>
+            <Button Type="@ButtonType.Primary" OnClick="ReloadPage">@I18n.T("BTN_RETRY")</Button>
         </div>
     }
-
-        @{
-            // Basic fields are special-cased: check if widgets exist so we can render fallbacks.
-            var hasCodeWidget = HasWidgetForField("code");
-            var hasNameWidget = HasWidgetForField("name");
-        }
-
-        @if (isEditMode && !string.IsNullOrWhiteSpace(validationError))
-        {
-            <div style="margin:12px 0;">
-                <Alert Message="@validationError" Type="@AlertType.Error" ShowIcon="true" />
-            </div>
-        }
-
-        @if (isEditMode && (!hasCodeWidget || !hasNameWidget))
+    else if (ViewModel.EntityData != null)
     {
-        <div class="runtime-basic-grid">
-            @if (!hasCodeWidget)
-            {
-                <div class="runtime-field-group">
-                    <label class="runtime-field-label">@I18n.T("COL_CODE")</label>
-                    <input class="runtime-field-input" value="@editCode" @oninput="e => editCode = e.Value?.ToString() ?? string.Empty" />
-                </div>
-            }
-            @if (!hasNameWidget)
-            {
-                <div class="runtime-field-group">
-                    <label class="runtime-field-label">@I18n.T("COL_NAME")</label>
-                    <input class="runtime-field-input" value="@editName" @oninput="e => editName = e.Value?.ToString() ?? string.Empty" />
-                </div>
-            }
+        <div class="runtime-shell">
+            <RuntimeHeader ViewModel="ViewModel"
+                           OnEdit="EnterEditModeAsync"
+                           OnSave="SaveChanges"
+                           OnCancel="CancelEditAsync" />
+
+            <RuntimeCanvas ViewModel="ViewModel"
+                           OnReload="ReloadPage" />
         </div>
     }
-
-        <!-- Render widget layout -->
-        @{
-            var visibleWidgets = layoutWidgets.Where(w => w.Visible).ToList();
-        }
-        <div class="runtime-layout @(isEditMode ? "edit-mode" : "")" data-edit-mode="@isEditMode.ToString().ToLowerInvariant()">
-            @if (!visibleWidgets.Any())
-            {
-                <div class="runtime-empty">
-                    <strong>@I18n.T("MSG_TEMPLATE_EMPTY")</strong>
-                    <div>@I18n.T("MSG_TEMPLATE_EMPTY_HINT")</div>
-                    <div style="margin-top:var(--space-3, 12px);">
-                        <Button OnClick="ReloadPage" Type="@ButtonType.Primary" Ghost="true">@I18n.T("BTN_RETRY")</Button>
-                    </div>
-                </div>
-            }
-            else
-            {
-                @foreach (var widget in visibleWidgets)
-                {
-                    @if (widget.NewLine)
-                    {
-                        <div style="width:100%; height:0; flex-basis:100%"></div>
-                    }
-                    <div class="runtime-widget-shell"
-                         data-field="@widget.DataField"
-                         data-widget-id="@widget.Id"
-                         style="@(WidgetStyleHelper.GetRuntimeWidgetStyle(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse))">
-                        @RenderRuntimeWidget(widget, isEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse)
-                    </div>
-                }
-            }
-        </div>
-    </div>
-}
 </AuthChecker>
 
 @code {
     [Parameter] public string EntityType { get; set; } = string.Empty;
     [Parameter] public int Id { get; set; }
 
-    private bool loading = true;
-    private bool saving = false;
-    private string? error;
-    private string? validationError;
-    private bool isEditMode = false;
-
-    private System.Text.Json.JsonElement? entityData;
-    private List<DraggableWidget> layoutWidgets = new();
-
-    private TemplateRuntimeResponse? runtimeContext;
-    private string[] appliedScopes = Array.Empty<string>();
-
-    private readonly EditValueManager editValueManager = new();
-    private readonly TabStateManager tabStateManager = new();
-    private readonly FormRuntimeContext formContext = new();
-    private Dictionary<string, string> fieldLabels = new(StringComparer.OrdinalIgnoreCase);
-    
-    private string editCode = string.Empty;
-    private string editName = string.Empty;
-    private object? boundData;
-
     protected override void OnInitialized()
     {
         I18n.OnChanged += HandleI18nChanged;
+        ViewModel.PropertyChanged += HandleViewModelChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        await LoadData();
+        await ViewModel.LoadDataAsync(EntityType, Id);
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!loading)  // reload when params change
+        if (!ViewModel.Loading)
         {
-            await LoadData();
+            await ViewModel.LoadDataAsync(EntityType, Id);
         }
     }
 
-    private async Task LoadData()
+    private void HandleI18nChanged() => SafeRequestRender();
+
+    private void HandleViewModelChanged(object? sender, PropertyChangedEventArgs e) => SafeRequestRender();
+
+    private void SafeRequestRender()
     {
         try
         {
-            loading = true;
-            await InvokeAsync(StateHasChanged);
-
-            runtimeContext = null;
-            appliedScopes = Array.Empty<string>();
-            string? layoutJson = null;
-            fieldLabels = await LoadFieldLabels();
-
-            // 1. Load entity data
-            var lang = I18n.CurrentLang?.Trim();
-            var langQuery = string.IsNullOrWhiteSpace(lang) ? string.Empty : $"?lang={Uri.EscapeDataString(lang)}";
-            var dataResp = await Auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}{langQuery}");
-            if (!dataResp.IsSuccessStatusCode)
-            {
-                error = string.Format(I18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
-                loading = false;
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
-
-            var dataDoc = await dataResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-            entityData = dataDoc;
-            boundData = entityData;
-            formContext.Data = boundData;
-
-            // 2. Resolve runtime template with entity data (polymorphic view)
-            var runtime = await TemplateRuntime.GetRuntimeAsync(
-                EntityType,
-                TemplateUsageType.Detail,
-                entityId: Id,
-                entityData: entityData);
-
-            if (runtime != null && !string.IsNullOrWhiteSpace(runtime.Template?.LayoutJson))
-            {
-                runtimeContext = runtime;
-                appliedScopes = runtime.AppliedScopes?
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct(System.StringComparer.OrdinalIgnoreCase)
-                    .ToArray() ?? Array.Empty<string>();
-                layoutJson = runtime.Template.LayoutJson;
-            }
-
-            if (string.IsNullOrWhiteSpace(layoutJson))
-            {
-                // Entity match: load effective template by EntityType (priority: user default > system default > first created)
-                var templateResp = await Auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
-
-                if (templateResp.IsSuccessStatusCode)
-                {
-                    var templateContent = await templateResp.Content.ReadAsStringAsync();
-                    var template = System.Text.Json.JsonSerializer.Deserialize<BobCrm.App.Models.FormTemplate>(
-                        templateContent,
-                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                    if (template != null)
-                    {
-                        layoutJson = template.LayoutJson;
-                    }
-                }
-
-                // Legacy fallback：如果仍然没有 layout，则走老的用户布局接口
-                if (string.IsNullOrWhiteSpace(layoutJson))
-                {
-                    var layoutResp = await Auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
-                    if (layoutResp.IsSuccessStatusCode)
-                    {
-                        var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                        layoutJson = layoutDoc.GetRawText();
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(layoutJson))
-                {
-                    error = I18n.T("PL_LOAD_TEMPLATE_FAILED");
-                }
-            }
-
-            // 3. Parse layout JSON (keep controls even if data binding fails)
-            if (!string.IsNullOrWhiteSpace(layoutJson))
-            {
-                try
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(layoutJson);
-                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
-                    {
-                        // New Unified JSON Format
-                         layoutWidgets = System.Text.Json.JsonSerializer.Deserialize<List<DraggableWidget>>(
-                            layoutJson,
-                            new System.Text.Json.JsonSerializerOptions 
-                            { 
-                                PropertyNameCaseInsensitive = true,
-                                Converters = { new WidgetJsonConverter() }
-                            }) ?? new List<DraggableWidget>();
-                    }
-                    else
-                    {
-                        // Legacy Format
-                        layoutWidgets = ParseLayoutFromJson(doc.RootElement);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // If parse fails, use empty layout; log but do not surface to user
-                    System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to parse layout JSON: {ex.Message}");
-                    layoutWidgets = new List<DraggableWidget>();
-                }
-            }
-            else
-            {
-                layoutWidgets = new List<DraggableWidget>();
-            }
-
-            // 4. Initialize editable values (even if binding failed)
-            if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
-            {
-                editValueManager.Clear();
-                foreach (var field in fieldsElement.EnumerateArray())
-                {
-                    try
-                    {
-                        if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) &&
-                            field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
-                        {
-                            editValueManager.SetValue(keyProp.GetString(), valueProp.GetString());
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Skip bad field binding and continue
-                        System.Diagnostics.Debug.WriteLine($"[PageLoader] Failed to bind field, skipping: {ex.Message}");
-                    }
-                }
-            }
-
-            loading = false;
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-            error = string.Format(I18n.T("PL_LOAD_EXCEPTION"), ex.Message);
-            loading = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private void HandleI18nChanged()
-    {
-        try { _ = InvokeAsync(StateHasChanged); }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
-    }
-
-    private List<DraggableWidget> ParseLayoutFromJson(System.Text.Json.JsonElement root)
-    {
-        var widgets = new List<DraggableWidget>();
-        
-        if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
-        {
-            // Legacy layout: items 集合（无 item_ 前缀）
-            if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                foreach (var item in itemsElement.EnumerateObject())
-                {
-                    if (item.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
-                    {
-                        var widget = ParseWidgetFromJson(item.Value);
-                        if (widget != null)
-                        {
-                            widgets.Add(widget);
-                        }
-                    }
-                }
-            }
-
-            foreach (var prop in root.EnumerateObject())
-            {
-                if (prop.Name.StartsWith("item_") && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
-                {
-                    var widget = ParseWidgetFromJson(prop.Value);
-                    if (widget != null)
-                    {
-                        widgets.Add(widget);
-                    }
-                }
-            }
-        }
-        
-        return widgets.OrderBy(w => {
-            if (w.ExtendedProperties?.TryGetValue("order", out var orderObj) == true)
-            {
-                return Convert.ToInt32(orderObj);
-            }
-            return 0;
-        }).ToList();
-    }
-
-    private DraggableWidget? ParseWidgetFromJson(System.Text.Json.JsonElement element)
-    {
-        if (!element.TryGetProperty("type", out var typeElement))
-            return null;
-
-        var type = typeElement.GetString() ?? "";
-        var label = element.TryGetProperty("label", out var labelElement) ? labelElement.GetString() : "";
-        
-        var widget = WidgetRegistry.Create(type, label ?? "");
-        
-        // 解析基本属性
-        if (element.TryGetProperty("dataField", out var dataFieldElement))
-            widget.DataField = dataFieldElement.GetString();
-        if (element.TryGetProperty("Width", out var widthElement))
-            widget.Width = widthElement.GetInt32();
-        else if (element.TryGetProperty("w", out var wElement) && wElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-            widget.Width = wElement.GetInt32();
-        if (element.TryGetProperty("Height", out var heightElement))
-            widget.Height = heightElement.GetInt32();
-        if (element.TryGetProperty("visible", out var visibleElement))
-            widget.Visible = visibleElement.GetBoolean();
-        if (element.TryGetProperty("newLine", out var newLineElement))
-            widget.NewLine = newLineElement.GetBoolean();
-
-        return widget;
-    }
-
-    private string GetEntityDisplayName()
-    {
-        if (entityData.HasValue && entityData.Value.TryGetProperty("name", out System.Text.Json.JsonElement nameElement))
-        {
-            return nameElement.GetString() ?? "";
-        }
-        return "";
-    }
-
-    private string GetEntityCode()
-    {
-        if (entityData.HasValue && entityData.Value.TryGetProperty("code", out System.Text.Json.JsonElement codeElement))
-        {
-            return codeElement.GetString() ?? "";
-        }
-        return "";
-    }
-
-    private async Task<Dictionary<string, string>> LoadFieldLabels()
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        // 预置基础字段的资源翻译，确保实体定义缺失时仍能落地多语
-        var baseResourceMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "code", I18n.T("COL_CODE") },
-            { "name", I18n.T("COL_NAME") },
-            { "extdata", I18n.T("COL_EXT_DATA") },
-            { "ext_data", I18n.T("COL_EXT_DATA") },
-            { "extendeddata", I18n.T("COL_EXT_DATA") },
-            { "version", I18n.T("COL_VERSION") },
-            { "id", I18n.T("COL_ID") }
-        };
-        foreach (var kv in baseResourceMap)
-        {
-            if (!string.IsNullOrWhiteSpace(kv.Value))
-            {
-                result[kv.Key] = kv.Value!;
-            }
-        }
-
-        try
-        {
-            var defs = await FieldService.GetDefinitionsAsync();
-            foreach (var def in defs.Where(d => !string.IsNullOrWhiteSpace(d.key)))
-            {
-                var label = def.label ?? string.Empty;
-                // 如果 label 看起来是资源 Key，尝试翻译
-                if (!string.IsNullOrWhiteSpace(label) && label.Any(char.IsUpper) && label.Contains('_'))
-                {
-                    var translated = I18n.T(label);
-                    if (!string.Equals(translated, label, StringComparison.OrdinalIgnoreCase))
-                    {
-                        label = translated;
-                    }
-                }
-                if (!string.IsNullOrWhiteSpace(label))
-                {
-                    result[def.key] = label;
-                }
-            }
+            _ = InvokeAsync(StateHasChanged);
         }
         catch
         {
-            // 忽略，使用预置基础字段即可
-        }
-
-        return result;
-    }
-
-    private bool HasWidgetForField(string fieldKey)
-    {
-        if (string.IsNullOrWhiteSpace(fieldKey)) return false;
-        return HasWidgetRecursive(layoutWidgets, fieldKey);
-    }
-
-    private bool HasWidgetRecursive(IEnumerable<DraggableWidget> widgets, string fieldKey)
-    {
-        foreach (var widget in widgets)
-        {
-            if (!string.IsNullOrWhiteSpace(widget.DataField) &&
-                string.Equals(widget.DataField, fieldKey, System.StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (widget.Children != null && widget.Children.Count > 0 && HasWidgetRecursive(widget.Children, fieldKey))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private RenderFragment RenderRuntimeWidget(DraggableWidget widget, RuntimeWidgetRenderMode mode) => builder =>
-    {
-        formContext.RenderMode = mode == RuntimeWidgetRenderMode.Edit
-            ? FormRuntimeContext.Mode.Edit
-            : FormRuntimeContext.Mode.Browse;
-        formContext.Data = mode == RuntimeWidgetRenderMode.Edit
-            ? editValueManager
-            : boundData;
-
-        var label = GetWidgetLabel(widget);
-        var fieldKey = widget.DataField ?? widget.Id;
-         
-        var request = new RuntimeWidgetRenderRequest
-        {
-            Widget = widget,
-            Mode = mode,
-            FormContext = formContext,
-            EventTarget = this,
-            Label = label,
-            ValueGetter = () => mode == RuntimeWidgetRenderMode.Edit ? editValueManager.GetValue(fieldKey) : GetFieldValue(fieldKey),
-            ValueSetter = mode == RuntimeWidgetRenderMode.Edit 
-                ? value => { editValueManager.SetValue(fieldKey, value); return Task.CompletedTask; } 
-                : null,
-            GetWidgetTextStyle = w => w is TextWidget tw ? WidgetStyleHelper.GetTextStyle(tw) : "font-size:12px; color:#666;",
-            GetWidgetBackground = w => WidgetStyleHelper.GetBackgroundColor(w)
-        };
-        RuntimeRenderer.Render(request)(builder);
-    };
-
-    private string GetWidgetLabel(DraggableWidget widget)
-    {
-        var englishLabelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Customer Code", "COL_CODE" },
-            { "Customer Name", "COL_NAME" },
-            { "Extended Data", "COL_EXT_DATA" },
-            { "Version", "COL_VERSION" },
-            { "ID", "COL_ID" }
-        };
-
-        // 1) 设计态/模板 label：如果像资源 Key（大写/下划线），先尝试多语；如果是常见英文标签，尝试映射资源；否则原文
-        if (!string.IsNullOrWhiteSpace(widget.Label))
-        {
-            var label = widget.Label!;
-            var looksLikeKey = label.Any(char.IsUpper) && label.Contains('_');
-            if (looksLikeKey)
-            {
-                var translated = I18n.T(label);
-                if (!string.Equals(translated, label, StringComparison.OrdinalIgnoreCase))
-                    return translated;
-            }
-            // 如果模板 label 是常见英文标签，尝试映射到资源
-            if (englishLabelMap.TryGetValue(label, out var mappedKey))
-            {
-                var translated = I18n.T(mappedKey);
-                if (!string.Equals(translated, mappedKey, StringComparison.OrdinalIgnoreCase))
-                    return translated;
-            }
-
-            // 如果模板 label 等于字段名（常见英文占位），后续还有兜底翻译；否则直接用模板 label
-            if (!string.Equals(label, widget.DataField, StringComparison.OrdinalIgnoreCase))
-            {
-                return label;
-            }
-        }
-
-        // 2) 运行态返回的字段标签（字段定义/数据多语）
-        if (!string.IsNullOrWhiteSpace(widget.DataField) && entityData.HasValue)
-        {
-            if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
-            {
-                foreach (var field in fieldsElement.EnumerateArray())
-                {
-                    if (field.TryGetProperty("key", out var keyProp) &&
-                        string.Equals(keyProp.GetString(), widget.DataField, System.StringComparison.OrdinalIgnoreCase) &&
-                        field.TryGetProperty("label", out var labelProp))
-                    {
-                        var labelText = labelProp.GetString();
-                        if (!string.IsNullOrWhiteSpace(labelText))
-                        {
-                            return labelText!;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3) 实体字段定义的显示名（多语）
-        if (!string.IsNullOrWhiteSpace(widget.DataField) &&
-            fieldLabels.TryGetValue(widget.DataField!, out var defLabel) &&
-            !string.IsNullOrWhiteSpace(defLabel))
-        {
-            return defLabel!;
-        }
-
-        // 4) 兜底：尝试字段名对应的多语键（COL_xxx 或常见英文映射），否则数据字段名，再否则类型
-        if (!string.IsNullOrWhiteSpace(widget.DataField))
-        {
-            var key = widget.DataField!;
-            var normalizedKey = key.Replace("-", "_").Replace(".", "_").ToLowerInvariant();
-
-            // 映射基础字段到资源 Key
-            var baseResourceMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "code", "COL_CODE" },
-                { "name", "COL_NAME" },
-                { "extdata", "COL_EXT_DATA" },
-                { "ext_data", "COL_EXT_DATA" },
-                { "extendeddata", "COL_EXT_DATA" },
-                { "version", "COL_VERSION" },
-                { "id", "COL_ID" }
-            };
-
-            // 先按基础字段映射
-            if (baseResourceMap.TryGetValue(normalizedKey, out var baseKey))
-            {
-                var translatedBase = I18n.T(baseKey);
-                if (!string.Equals(translatedBase, baseKey, StringComparison.OrdinalIgnoreCase))
-                    return translatedBase;
-            }
-
-            // 再按通用 COL_xxx
-            var resourceKey = $"COL_{normalizedKey}".ToUpperInvariant();
-            var translated = I18n.T(resourceKey);
-            if (!string.Equals(translated, resourceKey, StringComparison.OrdinalIgnoreCase))
-            {
-                return translated;
-            }
-
-            // 如果模板 label 是常见英文，尝试翻译
-            if (!string.IsNullOrWhiteSpace(widget.Label) && englishLabelMap.TryGetValue(widget.Label!, out var mappedKey))
-            {
-                var translatedLabel = I18n.T(mappedKey);
-                if (!string.Equals(translatedLabel, mappedKey, StringComparison.OrdinalIgnoreCase))
-                    return translatedLabel;
-            }
-
-            // 尝试直接翻译字段名（如果资源表用字段名作为键）
-            var translatedByName = I18n.T(key);
-            if (!string.Equals(translatedByName, key, StringComparison.OrdinalIgnoreCase))
-            {
-                return translatedByName;
-            }
-            return key;
-        }
-
-        return widget.Type;
-    }
-
-    private string GetFieldValue(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key) || !entityData.HasValue) return string.Empty;
-        
-        if (entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
-        {
-            foreach (var field in fieldsElement.EnumerateArray())
-            {
-                if (field.TryGetProperty("key", out System.Text.Json.JsonElement keyProp) && 
-                    string.Equals(keyProp.GetString(), key, System.StringComparison.OrdinalIgnoreCase) &&
-                    field.TryGetProperty("value", out System.Text.Json.JsonElement valueProp))
-                {
-                    return valueProp.GetString() ?? string.Empty;
-                }
-            }
-        }
-
-        // Fallback: case-insensitive lookup on top-level properties (API 直接投影的字段)
-        try
-        {
-            foreach (var prop in entityData.Value.EnumerateObject())
-            {
-                if (string.Equals(prop.Name, key, System.StringComparison.OrdinalIgnoreCase))
-                {
-                    return prop.Value.ToString();
-                }
-            }
-        }
-        catch
-        {
-            // ignore
-        }
-        return string.Empty;
-    }
-
-    private async Task EnterEditModeAsync()
-    {
-        isEditMode = true;
-        try
-        {
-            // Initialize edit values
-            editCode = GetEntityCode();
-            editName = GetEntityDisplayName();
-            editValueManager.InitializeFromWidgets(layoutWidgets, GetFieldValue);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PageLoader] EnterEditMode failed: {ex.Message}");
-            error = string.Format(I18n.T("PL_LOAD_EXCEPTION"), ex.Message);
-        }
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task CancelEditAsync()
-    {
-        isEditMode = false;
-        editValueManager.Clear();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task ReloadPage()
-    {
-        await LoadData();
-    }
-
-    private async Task SaveChanges()
-    {
-        try
-        {
-            saving = true;
-            validationError = null;
-
-            var isValid = formContext.ValidateAll(key => editValueManager.GetValue(key));
-            if (!isValid)
-            {
-                validationError = I18n.T("MSG_FORM_VALIDATION_FAILED");
-                await ScrollToFirstValidationErrorAsync();
-                return;
-            }
-
-            // Collect only dynamic-field payloads (skip base columns like Code/Name/Id/Version)
-            HashSet<string>? allowedKeys = null;
-            if (entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement))
-            {
-                allowedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var field in fieldsElement.EnumerateArray())
-                {
-                    if (field.TryGetProperty("key", out var keyProp))
-                    {
-                        var key = keyProp.GetString();
-                        if (!string.IsNullOrWhiteSpace(key))
-                        {
-                            allowedKeys.Add(key!);
-                        }
-                    }
-                }
-            }
-
-            var fieldPayloads = editValueManager.CollectFieldPayloads(layoutWidgets, allowedKeys);
-
-            // 补齐模板未覆盖但后端定义为必填的字段：用现有数据回填，避免必填校验失败
-            if (allowedKeys != null && entityData.HasValue && entityData.Value.TryGetProperty("fields", out System.Text.Json.JsonElement fieldsElement2))
-            {
-                var existingKeys = new HashSet<string>(fieldPayloads.Select(f => f.key), StringComparer.OrdinalIgnoreCase);
-                foreach (var field in fieldsElement2.EnumerateArray())
-                {
-                    if (!field.TryGetProperty("key", out var keyProp)) continue;
-                    var key = keyProp.GetString();
-                    if (string.IsNullOrWhiteSpace(key) || existingKeys.Contains(key))
-                        continue;
-
-                    object? valueObj = null;
-                    if (field.TryGetProperty("value", out var valProp))
-                    {
-                        try { valueObj = System.Text.Json.JsonSerializer.Deserialize<object>(valProp.GetRawText()); }
-                        catch { valueObj = valProp.ToString(); }
-                    }
-
-                    fieldPayloads.Add(new FieldPayload { key = key!, value = valueObj });
-                }
-            }
-            
-            // Persist to API
-            var payload = new
-            {
-                code = editCode,
-                name = editName,
-                fields = fieldPayloads
-            };
-            try
-            {
-                var debugJson = System.Text.Json.JsonSerializer.Serialize(payload);
-                Logger.LogDebug("[PageLoader] Save payload: {Payload}", debugJson);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogDebug(ex, "[PageLoader] Failed to serialize save payload for debug logging.");
-            }
-
-            var client = await Auth.CreateClientWithAuthAsync();
-            var resp = await client.PutAsJsonAsync($"/api/{EntityType}s/{Id}", payload);
-            
-            if (resp.IsSuccessStatusCode)
-            {
-                isEditMode = false;
-                await LoadData(); // 重新加载数据
-            }
-            else
-            {
-                var respBody = await resp.Content.ReadAsStringAsync();
-                error = string.Format(I18n.T("PL_SAVE_FAILED"), $"{resp.StatusCode}: {respBody}");
-            }
-        }
-        catch (Exception ex)
-        {
-            error = string.Format(I18n.T("PL_SAVE_FAILED"), ex.Message);
-        }
-        finally
-        {
-            saving = false;
-            await InvokeAsync(StateHasChanged);
+            // ignore: component disposed / render not allowed
         }
     }
 
-    private async Task ScrollToFirstValidationErrorAsync()
-    {
-        try
-        {
-            var firstField = formContext.Errors.Keys.FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(firstField))
-            {
-                return;
-            }
+    private Task EnterEditModeAsync() => ViewModel.EnterEditModeAsync();
 
-            await JS.TryInvokeVoidAsync("bobcrm.scrollToValidationField", firstField);
-        }
-        catch
-        {
-            // ignore
-        }
+    private Task CancelEditAsync()
+    {
+        ViewModel.CancelEdit();
+        return Task.CompletedTask;
     }
+
+    private Task ReloadPage() => ViewModel.LoadDataAsync(EntityType, Id);
+
+    private Task SaveChanges() => ViewModel.SaveChangesAsync();
 
     public void Dispose()
     {
         I18n.OnChanged -= HandleI18nChanged;
+        ViewModel.PropertyChanged -= HandleViewModelChanged;
     }
 }
+

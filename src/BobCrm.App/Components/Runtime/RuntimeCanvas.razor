@@ -1,0 +1,117 @@
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Models.Widgets
+@using BobCrm.App.Services.Widgets
+@using BobCrm.App.Services.Widgets.Rendering
+@using BobCrm.App.ViewModels
+@inject BobCrm.App.Services.I18nService I18n
+@inject IRuntimeWidgetRenderer RuntimeRenderer
+
+@{
+    var hasCodeWidget = ViewModel.HasWidgetForField("code");
+    var hasNameWidget = ViewModel.HasWidgetForField("name");
+}
+
+@if (ViewModel.IsEditMode && !string.IsNullOrWhiteSpace(ViewModel.ValidationError))
+{
+    <div style="margin:12px 0;">
+        <Alert Message="@ViewModel.ValidationError" Type="@AlertType.Error" ShowIcon="true" />
+    </div>
+}
+
+@if (ViewModel.IsEditMode && (!hasCodeWidget || !hasNameWidget))
+{
+    <div class="runtime-basic-grid">
+        @if (!hasCodeWidget)
+        {
+            <div class="runtime-field-group">
+                <label class="runtime-field-label">@I18n.T("COL_CODE")</label>
+                <input class="runtime-field-input"
+                       value="@ViewModel.EditCode"
+                       @oninput="e => ViewModel.EditCode = e.Value?.ToString() ?? string.Empty" />
+            </div>
+        }
+        @if (!hasNameWidget)
+        {
+            <div class="runtime-field-group">
+                <label class="runtime-field-label">@I18n.T("COL_NAME")</label>
+                <input class="runtime-field-input"
+                       value="@ViewModel.EditName"
+                       @oninput="e => ViewModel.EditName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+        }
+    </div>
+}
+
+@{
+    var visibleWidgets = ViewModel.LayoutWidgets.Where(w => w.Visible).ToList();
+}
+<div class="runtime-layout @(ViewModel.IsEditMode ? "edit-mode" : "")" data-edit-mode="@ViewModel.IsEditMode.ToString().ToLowerInvariant()">
+    @if (!visibleWidgets.Any())
+    {
+        <div class="runtime-empty">
+            <strong>@I18n.T("MSG_TEMPLATE_EMPTY")</strong>
+            <div>@I18n.T("MSG_TEMPLATE_EMPTY_HINT")</div>
+            <div style="margin-top:var(--space-3, 12px);">
+                <Button OnClick="OnReload" Type="@ButtonType.Primary" Ghost="true">@I18n.T("BTN_RETRY")</Button>
+            </div>
+        </div>
+    }
+    else
+    {
+        @foreach (var widget in visibleWidgets)
+        {
+            @if (widget.NewLine)
+            {
+                <div style="width:100%; height:0; flex-basis:100%"></div>
+            }
+            <div class="runtime-widget-shell"
+                 data-field="@widget.DataField"
+                 data-widget-id="@widget.Id"
+                 style="@(WidgetStyleHelper.GetRuntimeWidgetStyle(widget, ViewModel.IsEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse))">
+                @RenderRuntimeWidget(widget, ViewModel.IsEditMode ? RuntimeWidgetRenderMode.Edit : RuntimeWidgetRenderMode.Browse)
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public required PageLoaderViewModel ViewModel { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+
+    private RenderFragment RenderRuntimeWidget(DraggableWidget widget, RuntimeWidgetRenderMode mode) => builder =>
+    {
+        ViewModel.FormContext.RenderMode = mode == RuntimeWidgetRenderMode.Edit
+            ? FormRuntimeContext.Mode.Edit
+            : FormRuntimeContext.Mode.Browse;
+        ViewModel.FormContext.Data = mode == RuntimeWidgetRenderMode.Edit
+            ? ViewModel.EditValueManager
+            : ViewModel.BoundData;
+
+        var label = ViewModel.LabelService.ResolveLabel(widget, ViewModel.EntityData);
+        var fieldKey = widget.DataField ?? widget.Id;
+
+        var request = new RuntimeWidgetRenderRequest
+        {
+            Widget = widget,
+            Mode = mode,
+            FormContext = ViewModel.FormContext,
+            EventTarget = this,
+            Label = label,
+            ValueGetter = () => mode == RuntimeWidgetRenderMode.Edit
+                ? ViewModel.EditValueManager.GetValue(fieldKey)
+                : ViewModel.GetFieldValue(fieldKey),
+            ValueSetter = mode == RuntimeWidgetRenderMode.Edit
+                ? value =>
+                {
+                    ViewModel.EditValueManager.SetValue(fieldKey, value);
+                    return Task.CompletedTask;
+                }
+                : null,
+            GetWidgetTextStyle = w => w is TextWidget tw ? WidgetStyleHelper.GetTextStyle(tw) : "font-size:12px; color:#666;",
+            GetWidgetBackground = w => WidgetStyleHelper.GetBackgroundColor(w)
+        };
+
+        RuntimeRenderer.Render(request)(builder);
+    };
+}

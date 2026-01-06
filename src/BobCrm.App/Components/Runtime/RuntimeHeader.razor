@@ -1,0 +1,59 @@
+@using AntDesign
+@using BobCrm.App.ViewModels
+@inject BobCrm.App.Services.I18nService I18n
+
+<div class="runtime-page-header">
+    <div>
+        <h1 class="runtime-heading">@ViewModel.GetEntityDisplayName()</h1>
+        <div class="runtime-subtitle">@I18n.T("COL_CODE"): @ViewModel.GetEntityCode()</div>
+    </div>
+
+    @if (!ViewModel.IsEditMode)
+    {
+        <Button Type="@ButtonType.Primary" OnClick="OnEdit">
+            @I18n.T("MODE_EDIT")
+        </Button>
+    }
+    else
+    {
+        <div style="display:flex; gap:8px">
+            <Button Type="@ButtonType.Primary" OnClick="OnSave" Loading="@ViewModel.Saving">
+                @I18n.T("BTN_SAVE")
+            </Button>
+            <Button OnClick="OnCancel">
+                @I18n.T("BTN_CANCEL")
+            </Button>
+        </div>
+    }
+</div>
+
+@if (ViewModel.RuntimeContext != null)
+{
+    <div class="runtime-template-banner">
+        <div class="runtime-template-line">
+            <span class="runtime-template-label">@I18n.T("LBL_TEMPLATE")</span>
+            <strong>@ViewModel.RuntimeContext.Template.Name</strong>
+            <span class="runtime-template-meta">@ViewModel.RuntimeContext.Binding.EntityType.ToUpperInvariant() · @ViewModel.RuntimeContext.Template.UsageType</span>
+        </div>
+        @if (ViewModel.AppliedScopes.Length > 0)
+        {
+            <div class="runtime-template-line">
+                <span class="runtime-template-label">@I18n.T("LBL_SCOPE_TYPE")</span>
+                <div class="runtime-scope-chips">
+                    @foreach (var scope in ViewModel.AppliedScopes)
+                    {
+                        <span class="scope-chip">@scope</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public required PageLoaderViewModel ViewModel { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}
+
