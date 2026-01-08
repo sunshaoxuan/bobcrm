@@ -228,4 +228,4 @@ testlog_phase*.txt
 .agent/
 
 # Local Rules (User specific)
-bobcrmrules.md
+.agent/rules/
