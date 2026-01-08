@@ -47,6 +47,15 @@ window.bobcrm = {
     const m = document.cookie.match(new RegExp('(?:^|; )' + encodeURIComponent(name) + '=([^;]*)'));
     return m ? decodeURIComponent(m[1]) : null;
   },
+  getLocalStorageItem: function (key) {
+    try { return window.localStorage.getItem(key); } catch (e) { return null; }
+  },
+  setLocalStorageItem: function (key, value) {
+    try { window.localStorage.setItem(key, value === null || value === undefined ? '' : value); } catch (e) { }
+  },
+  removeLocalStorageItem: function (key) {
+    try { window.localStorage.removeItem(key); } catch (e) { }
+  },
   setCookie: function (name, value, days) {
     try {
       let expires = '';
@@ -148,7 +157,7 @@ window.bobcrm = {
       try {
         if (!field) return;
         const escape = (s) => {
-          try { return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/'/g, \"\\\\'\"); } catch (_) { return String(s); }
+          try { return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/'/g, "\\'"); } catch (_) { return String(s); }
         };
         const key = escape(field);
         const el = document.querySelector(`[data-field='${key}']`) || document.querySelector(`[data-field=\"${key}\"]`);

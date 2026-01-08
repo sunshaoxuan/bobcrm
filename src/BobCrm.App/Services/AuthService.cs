@@ -34,7 +34,7 @@ public class AuthService
         // Prefer localStorage apiBase (来自 Setup 保存)，其次 cookie
         try
         {
-            var (_, lsBase) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "apiBase");
+            var (_, lsBase) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "apiBase");
             if (!string.IsNullOrWhiteSpace(lsBase))
             {
                 resolvedBase = NormalizeBase(lsBase!);
@@ -46,7 +46,7 @@ public class AuthService
                 {
                     resolvedBase = NormalizeBase(cookieBase!);
                     // 同步回写，避免再次回退
-                    await _js.TryInvokeVoidAsync("localStorage.setItem", "apiBase", resolvedBase);
+                    await _js.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "apiBase", resolvedBase);
                     await _js.TryInvokeVoidAsync("bobcrm.setCookie", "apiBase", resolvedBase, 365);
                 }
             }
@@ -105,7 +105,7 @@ public class AuthService
     public async Task<HttpClient> CreateClientWithAuthAsync()
     {
         var http = await CreateBaseClientAsync();
-        var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
+        var (_, access) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
         if (!string.IsNullOrWhiteSpace(access))
         {
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", access);
@@ -142,7 +142,7 @@ public class AuthService
             {
                 // 竞态重试：可能刷新已被其他并发请求完成，等待并重试
                 await Task.Delay(200);
-                var (_, newToken) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
+                var (_, newToken) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
                 if (!string.IsNullOrWhiteSpace(newToken))
                 {
                     await _js.TryInvokeVoidAsync("console.log", $"[Auth] Race recovery - retry {methodName}");
@@ -200,23 +200,42 @@ public class AuthService
     {
         await _js.TryInvokeVoidAsync("console.log", "[Auth] Starting token refresh");
 
-        var (_, refresh) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "refreshToken");
+        var (refreshOk, refresh) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "refreshToken");
+        if (!refreshOk)
+        {
+            await _js.TryInvokeVoidAsync("console.warn", "[Auth] Refresh skipped: JS not ready for refreshToken");
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(refresh))
         {
-            await _js.TryInvokeVoidAsync("console.warn", "[Auth] No refresh token found");
-            await ClearTokensAsync();
+            await _js.TryInvokeVoidAsync("console.warn", "[Auth] Refresh skipped: no refresh token found");
             return false;
         }
         
-        var http = await CreateBaseClientAsync();
-        var res = await http.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = refresh });
+        HttpResponseMessage res;
+        try
+        {
+            var http = await CreateBaseClientAsync();
+            res = await http.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = refresh });
+        }
+        catch (Exception ex)
+        {
+            await _js.TryInvokeVoidAsync("console.warn", $"[Auth] Refresh request failed (transient): {ex.Message}");
+            return false;
+        }
         
         if (!res.IsSuccessStatusCode)
         {
-            // 刷新失败，清理本地 token
             await _js.TryInvokeVoidAsync("console.error", $"[Auth] Refresh failed: {res.StatusCode}");
-            await ClearTokensAsync();
-            OnUnauthorized?.Invoke();
+
+            // Only clear tokens when refresh token is confirmed invalid/unauthorized.
+            // For transient/server errors, fail-open and keep local tokens to avoid wiping state during startup.
+            if (res.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.BadRequest)
+            {
+                await ClearTokensAsync();
+                OnUnauthorized?.Invoke();
+            }
             return false;
         }
 
@@ -228,8 +247,8 @@ public class AuthService
             return false;
         }
         
-        await _js.TryInvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
-        await _js.TryInvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+        await _js.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "accessToken", json.accessToken);
+        await _js.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "refreshToken", json.refreshToken);
         _lastRefreshTime = _timeProvider.GetUtcNow();
         
         await _js.TryInvokeVoidAsync("console.log", "[Auth] Token refresh successful");
@@ -244,8 +263,8 @@ public class AuthService
     {
         try
         {
-            await _js.TryInvokeVoidAsync("localStorage.removeItem", "accessToken");
-            await _js.TryInvokeVoidAsync("localStorage.removeItem", "refreshToken");
+            await _js.TryInvokeVoidAsync("bobcrm.removeLocalStorageItem", "accessToken");
+            await _js.TryInvokeVoidAsync("bobcrm.removeLocalStorageItem", "refreshToken");
         }
         catch { /* Ignored: Storage cleanup failed */ }
     }
@@ -257,11 +276,11 @@ public class AuthService
     {
         try
         {
-            var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
+            var (_, access) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
             if (!string.IsNullOrWhiteSpace(access))
                 return true;
 
-            var (_, refresh) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "refreshToken");
+            var (_, refresh) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "refreshToken");
             return !string.IsNullOrWhiteSpace(refresh);
         }
         catch
@@ -279,7 +298,7 @@ public class AuthService
         try
         {
             // 检查是否有 accessToken
-            var (_, access) = await _js.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
+            var (_, access) = await _js.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
             if (!string.IsNullOrWhiteSpace(access))
                 return true;
 

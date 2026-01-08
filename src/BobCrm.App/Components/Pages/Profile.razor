@@ -222,7 +222,7 @@
             var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
             if (resp.IsSuccessStatusCode)
             {
-                var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
+                var userInfo = await ApiResponseHelper.ReadDataAsync<UserInfoDto>(resp);
                 userName = userInfo?.UserName ?? "Unknown";
                 email = userInfo?.Email ?? "未设置";
                 role = userInfo?.Role ?? "User";

@@ -1,14 +1,21 @@
 @page "/files"
+@using BobCrm.Api.Contracts.Responses.File
+@inject BobCrm.App.Services.AuthService Auth
+@inject BobCrm.App.Services.I18nService I18n
 
-<h3>文件上传（MinIO/S3）</h3>
+<PageTitle>@I18n.T("MENU_FILES") · OneCRM</PageTitle>
 
-<InputFile OnChange="OnFileSelected" />
-<button class="ant-btn ant-btn-primary" @onclick="UploadAsync" disabled="@(selectedFile is null)">上传</button>
+<AuthChecker>
+    <h3>文件上传（MinIO/S3）</h3>
 
-@if (!string.IsNullOrEmpty(lastUrl))
-{
-    <p>已上传：<a href="@lastUrl" target="_blank">@lastUrl</a></p>
-}
+    <InputFile OnChange="OnFileSelected" />
+    <button class="ant-btn ant-btn-primary" @onclick="UploadAsync" disabled="@(selectedFile is null)">上传</button>
+
+    @if (!string.IsNullOrEmpty(lastUrl))
+    {
+        <p>已上传：<a href="@lastUrl" target="_blank">@lastUrl</a></p>
+    }
+</AuthChecker>
 
 @code {
     private IBrowserFile? selectedFile;
@@ -30,11 +37,12 @@
         var sc = new StreamContent(stream);
         sc.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedFile.ContentType ?? "application/octet-stream");
         content.Add(sc, "file", selectedFile.Name);
-        var client = HttpFactory.CreateClient("api");
+        var client = await Auth.CreateClientWithAuthAsync();
         var resp = await client.PostAsync("/api/files/upload", content);
         resp.EnsureSuccessStatusCode();
-        var json = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-        lastUrl = json.RootElement.GetProperty("url").GetString();
+
+        var payload = await BobCrm.App.Services.ApiResponseHelper.ReadDataAsync<FileUploadDto>(resp);
+        lastUrl = payload?.Url;
         StateHasChanged();
     }
 }

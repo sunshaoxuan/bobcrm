@@ -22,8 +22,13 @@ public class EnumDefinitionService
     public async Task<List<EnumDefinitionDto>> GetAllAsync()
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.GetFromJsonAsync<List<EnumDefinitionDto>>("/api/enums");
-        return response ?? new List<EnumDefinitionDto>();
+        var resp = await http.GetAsync("/api/enums");
+        if (!resp.IsSuccessStatusCode)
+        {
+            return new List<EnumDefinitionDto>();
+        }
+
+        return await ApiResponseHelper.ReadDataAsync<List<EnumDefinitionDto>>(resp) ?? new List<EnumDefinitionDto>();
     }
 
     /// <summary>
@@ -32,8 +37,13 @@ public class EnumDefinitionService
     public async Task<EnumDefinitionDto?> GetByIdAsync(Guid id)
     {
         var http = await _auth.CreateAuthedClientAsync();
-        var response = await http.GetFromJsonAsync<EnumDefinitionDto>($"/api/enums/{id}");
-        return response;
+        var resp = await http.GetAsync($"/api/enums/{id}");
+        if (!resp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await ApiResponseHelper.ReadDataAsync<EnumDefinitionDto>(resp);
     }
 
     /// <summary>
@@ -44,7 +54,7 @@ public class EnumDefinitionService
         var http = await _auth.CreateAuthedClientAsync();
         var response = await http.PostAsJsonAsync("/api/enums", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        return await ApiResponseHelper.ReadDataAsync<EnumDefinitionDto>(response);
     }
 
     /// <summary>
@@ -55,7 +65,7 @@ public class EnumDefinitionService
         var http = await _auth.CreateAuthedClientAsync();
         var response = await http.PutAsJsonAsync($"/api/enums/{id}", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EnumDefinitionDto>();
+        return await ApiResponseHelper.ReadDataAsync<EnumDefinitionDto>(response);
     }
 
     /// <summary>

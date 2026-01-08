@@ -42,7 +42,7 @@
                     </div>
                     <span class="user-name">@userName</span>
                 </a>
-                <button type="button" class="nav-icon" onclick="logout()" title="@I18n.T("BTN_LOGOUT")">
+                <button type="button" class="nav-icon ant-btn ant-btn-text" @onclick="LogoutAsync" data-testid="logout-button">
                     <Icon Type="@IconType.Outline.Poweroff" />
                 </button>
             </div>
@@ -68,6 +68,13 @@
     private string _contextLabel = string.Empty;
     private readonly List<BreadcrumbItem> _breadcrumbs = [];
     private string _headerSubtitle = "Record workspace";
+    private bool _i18nInitialized = false;
+    private readonly CancellationTokenSource _authPollCts = new();
+    private int _authPollRemaining = 5;
+    private bool _authPollScheduled = false;
+    private int _jsReadyPollRemaining = 10;
+    private bool _jsReadyPollScheduled = false;
+    private const int AuthPollMaxAttempts = 5;
     private static readonly Dictionary<string, string> RouteLabels = new(StringComparer.OrdinalIgnoreCase)
     {
         [""] = "MENU_DASHBOARD",
@@ -111,36 +118,124 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        try
         {
-            try
+            var (jsReady, _) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
+            if (!jsReady)
+            {
+                ScheduleJsReadyPoll();
+                return;
+            }
+
+            if (!_i18nInitialized)
             {
                 var (_, saved) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
                 var langToLoad = !string.IsNullOrWhiteSpace(saved) ? saved! : "ja";
                 await I18n.LoadAsync(langToLoad);
+                _i18nInitialized = true;
+            }
 
-                isAuthenticated = await Auth.EnsureAuthenticatedAsync();
+            var (_, accessToken) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
+            if (string.IsNullOrWhiteSpace(accessToken) && firstRender)
+            {
+                await Task.Delay(200);
+                (_, accessToken) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
+            }
 
-                if (isAuthenticated)
+            var newIsAuthenticated = !string.IsNullOrWhiteSpace(accessToken);
+            var authChanged = newIsAuthenticated != isAuthenticated;
+            isAuthenticated = newIsAuthenticated;
+
+            if (!isAuthenticated)
+            {
+                ScheduleAuthPoll();
+            }
+            else
+            {
+                // Stop polling once authenticated.
+                _authPollRemaining = AuthPollMaxAttempts;
+                _authPollScheduled = false;
+            }
+
+            if (isAuthenticated && string.IsNullOrWhiteSpace(userName))
+            {
+                var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
+                if (resp.IsSuccessStatusCode)
                 {
-                    var resp = await Auth.GetWithRefreshAsync("/api/auth/me");
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var userInfo = await resp.Content.ReadFromJsonAsync<UserInfoDto>();
-                        userName = userInfo?.UserName ?? "User";
-                    }
+                    var userInfo = await ApiResponseHelper.ReadDataAsync<UserInfoDto>(resp);
+                    userName = userInfo?.UserName ?? "User";
                 }
             }
-            catch (Exception ex)
+
+            if (authChanged)
             {
-                await JS.TryInvokeVoidAsync("console.warn", $"[AppHeader] Init failed: {ex.Message}");
-            }
-            finally
-            {
-                await InvokeAsync(StateHasChanged);
-                BuildNavigationMeta();
+                try { await InvokeAsync(StateHasChanged); } catch { /* Ignored */ }
             }
         }
+        catch (Exception ex)
+        {
+            await JS.TryInvokeVoidAsync("console.warn", $"[AppHeader] Init failed: {ex.Message}");
+        }
+
+        BuildNavigationMeta();
+    }
+
+    private void ScheduleJsReadyPoll()
+    {
+        if (_jsReadyPollScheduled || _jsReadyPollRemaining <= 0)
+        {
+            return;
+        }
+
+        _jsReadyPollScheduled = true;
+        _jsReadyPollRemaining--;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200), _authPollCts.Token);
+                await InvokeAsync(() =>
+                {
+                    _jsReadyPollScheduled = false;
+                    StateHasChanged();
+                });
+            }
+            catch (OperationCanceledException) { }
+            catch
+            {
+                // Ignore: next render can schedule again.
+            }
+        });
+    }
+
+    private void ScheduleAuthPoll()
+    {
+        if (_authPollScheduled || _authPollRemaining <= 0)
+        {
+            return;
+        }
+
+        _authPollScheduled = true;
+        _authPollRemaining--;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500), _authPollCts.Token);
+                await InvokeAsync(() =>
+                {
+                    _authPollScheduled = false;
+                    StateHasChanged();
+                });
+            }
+            catch (OperationCanceledException) { }
+            catch
+            {
+                // Ignore: next render can schedule again.
+            }
+        });
     }
 
     private bool IsLightTheme => string.Equals(ThemeState.CurrentTheme, ThemeState.CalmLight, StringComparison.OrdinalIgnoreCase);
@@ -149,6 +244,12 @@
     private void ToggleCollapse() => Layout.ToggleSiderCollapsed();
     private void ToggleOverlay() => Layout.ToggleSiderOverlay();
     private void ToggleRightPanel() => Layout.ToggleRightPanel();
+
+    private async Task LogoutAsync()
+    {
+        await Auth.ClearTokensAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
     private async Task SwitchTheme(string theme)
     {
         await ThemeState.SetThemeAsync(theme);
@@ -164,7 +265,7 @@
 
         Layout.SetNavMode(mode);
         var apiValue = PreferencesService.ToApiNavMode(mode);
-        await JS.TryInvokeVoidAsync("localStorage.setItem", "navMode", apiValue);
+        await JS.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "navMode", apiValue);
         _ = PrefsService.SaveUserSettingsAsync(new UpdateUserSettingsRequest
         {
             NavDisplayMode = apiValue
@@ -242,6 +343,8 @@
     {
         Nav.LocationChanged -= HandleLocationChanged;
         ThemeState.OnChanged -= HandleThemeChanged;
+        _authPollCts.Cancel();
+        _authPollCts.Dispose();
     }
 
     private void HandleThemeChanged()

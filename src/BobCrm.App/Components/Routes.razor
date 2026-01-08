@@ -4,6 +4,7 @@
 @inject BobCrm.App.Services.AuthService Auth
 @inject NavigationManager Nav
 @inject I18nService I18n
+@inject IJsInteropService JS
 
 <div class="@($"app-stage {( _isReady ? "ready" : "loading")}")">
     <BobCrm.App.Components.Shared.ThemeInitializer />
@@ -31,6 +32,10 @@
 @code {
     private bool _isReady;
     private int _i18nRenderVersion;
+    private bool _initialized;
+    private bool _initRetryScheduled;
+    private readonly CancellationTokenSource _failOpenCts = new();
+    private bool _failOpenScheduled;
 
     protected override void OnInitialized()
     {
@@ -38,6 +43,90 @@
         // 订阅全局未授权事件，统一跳转登录页
         Auth.OnUnauthorized += HandleUnauthorized;
         I18n.OnChanged += HandleI18nChanged;
+
+        // Fail-open: never block the entire UI on i18n load.
+        // This is intentionally independent from JS availability; errors are logged via Console in prerender.
+        if (!_isReady && !_failOpenScheduled)
+        {
+            _failOpenScheduled = true;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(3), _failOpenCts.Token);
+                    if (_isReady)
+                    {
+                        return;
+                    }
+
+                    _isReady = true;
+                    Console.WriteLine("[Routes] I18n load timeout (>3s). Fail-open: hide splash and continue.");
+                    try { await InvokeAsync(StateHasChanged); } catch { /* Ignored */ }
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Routes] Fail-open timer error: {ex}");
+                }
+            });
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_initialized || I18n.IsLoaded)
+        {
+            return;
+        }
+
+        // Avoid initializing during prerender; retry when JS is available.
+        var (jsReady, _) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
+        if (!jsReady)
+        {
+            if (!_initRetryScheduled)
+            {
+                _initRetryScheduled = true;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(300);
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    catch { /* Ignored */ }
+                });
+            }
+            return;
+        }
+
+        try
+        {
+            var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+            var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
+
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(3), _failOpenCts.Token);
+            var loadTask = I18n.LoadAsync(langToLoad);
+            var completed = await Task.WhenAny(loadTask, timeoutTask);
+
+            if (completed == timeoutTask)
+            {
+                _isReady = true;
+                await JS.TryInvokeVoidAsync("console.warn", $"[Routes] I18n load did not finish within 3s (lang={langToLoad}). Fail-open: render UI without localization.");
+            }
+            else
+            {
+                await loadTask;
+            }
+
+            _initialized = true;
+        }
+        catch (Exception ex)
+        {
+            _isReady = true;
+            _initialized = true;
+            await JS.TryInvokeVoidAsync("console.error", $"[Routes] Init failed: {ex.Message}");
+            Console.WriteLine($"[Routes] Init failed: {ex}");
+        }
     }
 
     private void HandleUnauthorized()
@@ -79,6 +168,8 @@
     {
         Auth.OnUnauthorized -= HandleUnauthorized;
         I18n.OnChanged -= HandleI18nChanged;
+        _failOpenCts.Cancel();
+        _failOpenCts.Dispose();
     }
 }
 

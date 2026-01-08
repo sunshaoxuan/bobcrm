@@ -202,7 +202,19 @@
             return;
         }
 
-        var target = NormalizeRelative(Nav.ToBaseRelativePath(context.TargetLocation));
+        string target;
+        try
+        {
+            // LocationChangingContext.TargetLocation can be relative (e.g. "/login") in some cases.
+            // Normalize it to an absolute URI first to avoid NavigationManager.ToBaseRelativePath throwing.
+            var absoluteTarget = Nav.ToAbsoluteUri(context.TargetLocation).ToString();
+            target = NormalizeRelative(Nav.ToBaseRelativePath(absoluteTarget));
+        }
+        catch
+        {
+            // Fail-open: do not crash the circuit on unexpected navigation formats.
+            target = NormalizeRelative(context.TargetLocation.TrimStart('/'));
+        }
         if (!TryResolveTemplateRoute(target, out var entityType, out var usageType, out var entityId))
         {
             return;

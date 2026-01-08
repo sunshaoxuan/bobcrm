@@ -188,7 +188,7 @@
                 return;
             }
 
-            _templateResponse = await response.Content.ReadFromJsonAsync<TemplateRuntimeResponse>();
+            _templateResponse = await ApiResponseHelper.ReadDataAsync<TemplateRuntimeResponse>(response);
 
             if (_templateResponse == null)
             {

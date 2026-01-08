@@ -18,6 +18,9 @@ public partial class MultilingualInput : IAsyncDisposable
     [Parameter] public MultilingualTextDto? Value { get; set; }
     [Parameter] public EventCallback<MultilingualTextDto?> ValueChanged { get; set; }
     [Parameter] public string? DefaultLanguage { get; set; }
+    [Parameter] public string[]? Languages { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? InputType { get; set; }
 
     private List<LanguageInfo>? _languages;
     private readonly Dictionary<string, string?> _values = new();
@@ -74,12 +77,58 @@ public partial class MultilingualInput : IAsyncDisposable
             };
         }
 
+        ApplyLanguageFilter();
         InitializeValues();
     }
 
     protected override void OnParametersSet()
     {
+        ApplyLanguageFilter();
         InitializeValues();
+    }
+
+    private void ApplyLanguageFilter()
+    {
+        if (_languages == null)
+        {
+            return;
+        }
+
+        if (Languages == null || Languages.Length == 0)
+        {
+            return;
+        }
+
+        var wanted = Languages
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (wanted.Count == 0)
+        {
+            return;
+        }
+
+        var lookup = _languages.ToDictionary(l => l.Code, l => l, StringComparer.OrdinalIgnoreCase);
+        var filtered = new List<LanguageInfo>(wanted.Count);
+        foreach (var code in wanted)
+        {
+            if (lookup.TryGetValue(code, out var info))
+            {
+                filtered.Add(info);
+            }
+            else
+            {
+                filtered.Add(new LanguageInfo { Code = code, Name = code.ToUpperInvariant() });
+            }
+        }
+
+        _languages = filtered;
+        if (_languages.Count > 0 && !_languages.Any(l => string.Equals(l.Code, _defaultLanguage, StringComparison.OrdinalIgnoreCase)))
+        {
+            _defaultLanguage = _languages[0].Code;
+        }
     }
 
     private void InitializeValues()

@@ -26,7 +26,7 @@ public class RoleService : IRoleService
             return new();
         }
 
-        var roles = await resp.Content.ReadFromJsonAsync<List<RoleProfileDto>>(cancellationToken: ct);
+        var roles = await ApiResponseHelper.ReadDataAsync<List<RoleProfileDto>>(resp);
         return roles ?? new List<RoleProfileDto>();
     }
 
@@ -38,7 +38,7 @@ public class RoleService : IRoleService
             return null;
         }
 
-        return await resp.Content.ReadFromJsonAsync<RoleProfileDto>(cancellationToken: ct);
+        return await ApiResponseHelper.ReadDataAsync<RoleProfileDto>(resp);
     }
 
     public async Task<RoleProfileDto?> CreateRoleAsync(CreateRoleRequestDto request, CancellationToken ct = default)
@@ -50,7 +50,7 @@ public class RoleService : IRoleService
             return null;
         }
 
-        return await resp.Content.ReadFromJsonAsync<RoleProfileDto>(cancellationToken: ct);
+        return await ApiResponseHelper.ReadDataAsync<RoleProfileDto>(resp);
     }
 
     public async Task<bool> UpdateRoleAsync(Guid id, UpdateRoleRequestDto request, CancellationToken ct = default)
@@ -91,7 +91,7 @@ public class RoleService : IRoleService
                 return new FunctionTreeResponse(fallback, serverVersion ?? _cachedFunctionTreeVersion);
             }
 
-            var tree = await resp.Content.ReadFromJsonAsync<List<FunctionMenuNode>>(cancellationToken: ct) ?? new List<FunctionMenuNode>();
+            var tree = await ApiResponseHelper.ReadDataAsync<List<FunctionMenuNode>>(resp) ?? new List<FunctionMenuNode>();
             _cachedFunctionTree = tree;
             _cachedFunctionTreeVersion = serverVersion;
             return new FunctionTreeResponse(CloneTree(tree), _cachedFunctionTreeVersion);
@@ -123,7 +123,7 @@ public class RoleService : IRoleService
                 return _cachedFunctionTreeVersion;
             }
 
-            var payload = await resp.Content.ReadFromJsonAsync<FunctionTreeVersionResponse>(cancellationToken: ct);
+            var payload = await ApiResponseHelper.ReadDataAsync<FunctionTreeVersionResponse>(resp);
             return payload?.Version ?? _cachedFunctionTreeVersion;
         }
         catch

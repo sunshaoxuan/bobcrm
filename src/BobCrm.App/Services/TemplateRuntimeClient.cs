@@ -60,7 +60,7 @@ public class TemplateRuntimeClient
                 return null;
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<TemplateRuntimeResponse>(cancellationToken: cancellationToken);
+            var payload = await ApiResponseHelper.ReadDataAsync<TemplateRuntimeResponse>(response);
             return payload;
         }
         catch (Exception ex)

@@ -145,7 +145,16 @@ public class I18nService : II18nService
 
         {
 
-            var http = await _auth.CreateClientWithLangAsync();
+            var http = _httpFactory.CreateClient("api");
+            try
+            {
+                if (http.DefaultRequestHeaders.Contains("X-Lang"))
+                {
+                    http.DefaultRequestHeaders.Remove("X-Lang");
+                }
+                http.DefaultRequestHeaders.Add("X-Lang", lang);
+            }
+            catch { /* Ignored */ }
 
             using var resp = await http.GetAsync($"/api/i18n/{lang}", ct);
 
@@ -171,9 +180,21 @@ public class I18nService : II18nService
 
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
 
+            var payload = ApiResponseHelper.Unwrap(doc.RootElement);
+            if (payload.ValueKind != JsonValueKind.Object)
+            {
+                if (scheduleRetry)
+                {
+                    ScheduleRetry(lang);
+                }
+
+                await HandleLoadFailureAsync();
+                return;
+            }
+
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var p in doc.RootElement.EnumerateObject())
+            foreach (var p in payload.EnumerateObject())
 
             {
 

@@ -29,7 +29,7 @@
                        @bind="_model.Password"
                        @bind:event="oninput" />
             </div>
-            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="_submitting">@I18n.T("BTN_REGISTER")</Button>
+            <Button Type="ButtonType.Primary" HtmlType="submit" Loading="_submitting">@I18n.T("BTN_REGISTER")</Button>
         </EditForm>
         @if (!string.IsNullOrEmpty(_error))
         {
@@ -45,6 +45,7 @@
     private RegModel _model = new();
     private string? _error;
     private bool _submitting;
+    private bool _initialized;
 
     [Inject] public IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] public MessageService Message { get; set; } = default!;
@@ -53,13 +54,26 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_initialized)
         {
+            return;
+        }
+
+        try
+        {
+            var (jsReady, _) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
+            if (!jsReady)
+            {
+                return;
+            }
+
             var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
             var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
             await I18n.LoadAsync(langToLoad);
             await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
+            _initialized = true;
         }
+        catch { /* Ignore: retry next render */ }
     }
 
     private async Task HandleRegisterAsync()
@@ -69,7 +83,7 @@
         try
         {
             var http = HttpFactory.CreateClient("api");
-            var (langOk, lang) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "lang");
+            var (langOk, lang) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
             if (langOk && !string.IsNullOrWhiteSpace(lang))
             {
                 if (http.DefaultRequestHeaders.Contains("X-Lang"))

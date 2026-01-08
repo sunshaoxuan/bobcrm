@@ -2,28 +2,71 @@
 @inject IJsInteropService JS
 @inject NavigationManager Nav
 
-@ChildContent
+@if (_authorized)
+{
+    @ChildContent
+}
+else
+{
+    <div class="auth-guard" style="padding:24px; color:var(--muted)">
+        Loading...
+    </div>
+}
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    private bool _authorized;
+    private bool _checking;
+    private int _retriesRemaining = 10;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender || _checking)
         {
-            try
+            return;
+        }
+
+        _checking = true;
+        try
+        {
+            var (jsReady, token) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
+            if (!jsReady)
             {
-                var (_, token) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
-                if (string.IsNullOrWhiteSpace(token))
-                {
-                    Nav.NavigateTo("/login", true);
-                }
+                await RetryAsync();
+                return;
             }
-            catch
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                Nav.NavigateTo("/login", true);
+                return;
+            }
+
+            _authorized = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _checking = false;
+        }
+    }
+
+    private async Task RetryAsync()
+    {
+        if (_authorized || _retriesRemaining <= 0)
+        {
+            // Fail-closed: if we can't read token after retries, go to login.
+            if (!_authorized)
             {
                 Nav.NavigateTo("/login", true);
             }
+            return;
         }
+
+        _retriesRemaining--;
+        await Task.Delay(200);
+        await InvokeAsync(StateHasChanged);
     }
 }
 

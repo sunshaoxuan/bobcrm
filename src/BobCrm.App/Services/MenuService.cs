@@ -20,7 +20,7 @@ public class MenuService
             return new List<FunctionMenuNode>();
         }
 
-        var nodes = await resp.Content.ReadFromJsonAsync<List<FunctionMenuNode>>(cancellationToken: ct);
+        var nodes = await ApiResponseHelper.ReadDataAsync<List<FunctionMenuNode>>(resp);
         return nodes ?? new List<FunctionMenuNode>();
     }
 
@@ -33,7 +33,7 @@ public class MenuService
             return null;
         }
 
-        return await resp.Content.ReadFromJsonAsync<FunctionMenuNode>(cancellationToken: ct);
+        return await ApiResponseHelper.ReadDataAsync<FunctionMenuNode>(resp);
     }
 
     public async Task<FunctionMenuNode?> UpdateAsync(Guid id, UpdateMenuNodeRequest request, CancellationToken ct = default)
@@ -45,7 +45,7 @@ public class MenuService
             return null;
         }
 
-        return await resp.Content.ReadFromJsonAsync<FunctionMenuNode>(cancellationToken: ct);
+        return await ApiResponseHelper.ReadDataAsync<FunctionMenuNode>(resp);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
@@ -75,7 +75,7 @@ public class MenuService
             return new List<TemplateSummary>();
         }
 
-        var templates = await resp.Content.ReadFromJsonAsync<List<TemplateSummary>>(cancellationToken: ct);
+        var templates = await ApiResponseHelper.ReadDataAsync<List<TemplateSummary>>(resp);
         return templates ?? new List<TemplateSummary>();
     }
 
@@ -87,7 +87,7 @@ public class MenuService
             return null;
         }
 
-        return await resp.Content.ReadFromJsonAsync<object>(cancellationToken: ct);
+        return await ApiResponseHelper.ReadDataAsync<object>(resp);
     }
 
     public async Task<List<string>> CheckImportConflictsAsync(List<MenuImportNode> functions, CancellationToken ct = default)

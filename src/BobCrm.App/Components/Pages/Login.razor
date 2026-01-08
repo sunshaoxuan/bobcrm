@@ -12,6 +12,7 @@
 @using BobCrm.App.Services
 @using BobCrm.App.Models.Auth
 @using BobCrm.App.Models.Setup
+@using BobCrm.Api.Contracts
 
 <AuthShell HeroTitle='@I18n.T("TXT_AUTH_HERO_TITLE")'
            HeroSubtitle='@I18n.T("TXT_AUTH_HERO_SUBTITLE")'
@@ -43,7 +44,7 @@
                        @bind="model.password"
                        @bind:event="oninput" />
             </div>
-            <Button Type="ButtonType.Primary" HtmlType="ButtonHtmlType.Submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
+            <Button Type="ButtonType.Primary" HtmlType="submit" Loading="loading">@I18n.T("LBL_LOGIN_TITLE")</Button>
         </EditForm>
         @if (!string.IsNullOrEmpty(error))
         {
@@ -76,6 +77,7 @@
     private readonly Random heroRng = new();
     private int sliderIndex = 0;
     private CancellationTokenSource? cts;
+    private bool _initialized;
 
     // Hero points removed per new guideline (two lines only)
 
@@ -91,46 +93,61 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (_initialized)
         {
+            return;
+        }
+
+        try
+        {
+            var (jsReady, _) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
+            if (!jsReady)
+            {
+                return;
+            }
+
+            var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
+            var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
+            await I18n.LoadAsync(langToLoad);
+            await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
+
             try
             {
-                var (_, savedLang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
-                var langToLoad = !string.IsNullOrWhiteSpace(savedLang) ? savedLang! : "ja";
-                await I18n.LoadAsync(langToLoad);
-                await JS.TryInvokeVoidAsync("bobcrm.setLang", langToLoad);
-                
-                // Check backend whether admin exists; avoid localStorage
-                try
+                var http = await Auth.CreateClientWithLangAsync();
+                var resp = await http.GetAsync("/api/setup/admin");
+                if (resp.IsSuccessStatusCode)
                 {
-                    var http = await Auth.CreateClientWithLangAsync();
-                    var resp = await http.GetAsync("/api/setup/admin");
-                    if (resp.IsSuccessStatusCode)
+                    var envelope = await resp.Content.ReadFromJsonAsync<SuccessResponse<SetupAdminInfo>>();
+                    var info = envelope?.Data;
+                    if (info is not null && info.exists == false)
                     {
-                        var info = await resp.Content.ReadFromJsonAsync<SetupAdminInfo>();
-                        if (info is not null && info.exists == false)
-                        { Nav.NavigateTo("/setup"); return; }
+                        Nav.NavigateTo("/setup");
+                        return;
                     }
                 }
-                catch (Exception ex) { Console.WriteLine($"[Login] Admin check failed: {ex.Message}"); }
-                
-                var (_, token) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "accessToken");
-                if (!string.IsNullOrWhiteSpace(token))
-                {
-                    Nav.NavigateTo("/", forceLoad: true);
-                    return;
-                }
-                // Initialize hero slider images
-                try
-                {
-                    InitializeHeroImages();
-                    _ = RunSliderAsync();
-                }
-                catch (Exception ex) { Console.WriteLine($"[Login] Hero slider init failed: {ex.Message}"); }
-
-                StateHasChanged();
             }
-            catch (Exception ex) { Console.WriteLine($"[Login] OnAfterRender error: {ex.Message}"); }
+            catch (Exception ex) { Console.WriteLine($"[Login] Admin check failed: {ex.Message}"); }
+
+            var (_, token) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "accessToken");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                Nav.NavigateTo("/", forceLoad: true);
+                return;
+            }
+
+            try
+            {
+                InitializeHeroImages();
+                _ = RunSliderAsync();
+            }
+            catch (Exception ex) { Console.WriteLine($"[Login] Hero slider init failed: {ex.Message}"); }
+
+            _initialized = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Login] OnAfterRender error: {ex.Message}");
         }
     }
 
@@ -276,14 +293,14 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
             
             var http = HttpFactory.CreateClient("api");
             // allow local override: localStorage -> cookie -> origin
-            var (_, baseUrl) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "apiBase");
+            var (_, baseUrl) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "apiBase");
             if (string.IsNullOrWhiteSpace(baseUrl)) (_, baseUrl) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "apiBase");
             if (string.IsNullOrWhiteSpace(baseUrl)) (_, baseUrl) = await JS.TryInvokeAsync<string?>("bobcrm.getOrigin");
             if (!string.IsNullOrWhiteSpace(baseUrl)) http.BaseAddress = new Uri(baseUrl!, UriKind.Absolute);
             await JS.TryInvokeVoidAsync("console.log", $"[Login] Using API base: {http.BaseAddress}");
             
             // attach X-Lang header
-            var (_, lang) = await JS.TryInvokeAsync<string?>("localStorage.getItem", "lang");
+            var (_, lang) = await JS.TryInvokeAsync<string?>("bobcrm.getLocalStorageItem", "lang");
             if (string.IsNullOrWhiteSpace(lang)) (_, lang) = await JS.TryInvokeAsync<string?>("bobcrm.getCookie", "lang");
             if (!string.IsNullOrWhiteSpace(lang)) 
             { 
@@ -340,12 +357,12 @@ try { InvokeAsync(StateHasChanged); } catch { /* Ignored: UI update failed */ }
                 return;
             }
             await JS.TryInvokeVoidAsync("console.log", "[Login] Storing accessToken...");
-            await JS.TryInvokeVoidAsync("localStorage.setItem", "accessToken", json.accessToken);
+            await JS.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "accessToken", json.accessToken);
             await JS.TryInvokeVoidAsync("console.log", "[Login] Storing refreshToken...");
-            await JS.TryInvokeVoidAsync("localStorage.setItem", "refreshToken", json.refreshToken);
+            await JS.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "refreshToken", json.refreshToken);
             await JS.TryInvokeVoidAsync("console.log", "[Login] Storing user...");
             var userStr = System.Text.Json.JsonSerializer.Serialize(json.user);
-            await JS.TryInvokeVoidAsync("localStorage.setItem", "user", userStr);
+            await JS.TryInvokeVoidAsync("bobcrm.setLocalStorageItem", "user", userStr);
             await JS.TryInvokeVoidAsync("console.log", "[Login] All tokens stored, navigating to /...");
             Nav.NavigateTo("/", forceLoad: true);
         }

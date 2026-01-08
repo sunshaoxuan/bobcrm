@@ -100,11 +100,11 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                var result = await resp.Content.ReadFromJsonAsync<CreateCustomerResult>();
+                var result = await BobCrm.App.Services.ApiResponseHelper.ReadDataAsync<CreateCustomerResult>(resp);
                 if (result != null)
                 {
-                    // Navigate to the newly created customer
-                    Nav.NavigateTo($"/customer/{result.id}");
+                    // Navigate back to the customer list (detail route may not exist).
+                    Nav.NavigateTo("/customers");
                 }
                 else
                 {
