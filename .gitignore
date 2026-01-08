@@ -222,3 +222,6 @@ src/BobCrm.Api/build_*.txt
 src/BobCrm.Api/warnings_*.txt
 src/BobCrm.Api/final_warnings.txt
 testlog_phase*.txt
+
+# Codex/Agent local artifacts
+.agent/
