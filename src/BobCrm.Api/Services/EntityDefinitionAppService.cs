@@ -119,6 +119,11 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
         {
             ApplyInterfaces(definition, dto.Interfaces);
         }
+        else
+        {
+            // 默认启用 Base 接口，确保所有动态实体至少具备自增主键 Id，满足动态 CRUD 与运行时路由需求。
+            ApplyInterfaces(definition, new[] { InterfaceType.Base });
+        }
 
         _db.EntityDefinitions.Add(definition);
         await _db.SaveChangesAsync(ct);

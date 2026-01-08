@@ -20,6 +20,7 @@ public class CSharpCodeGenerator
         sb.AppendLine("using System;");
         sb.AppendLine("using System.ComponentModel.DataAnnotations;");
         sb.AppendLine("using System.ComponentModel.DataAnnotations.Schema;");
+        sb.AppendLine("using BobCrm.Api.Base;");
         sb.AppendLine();
 
         // Namespace

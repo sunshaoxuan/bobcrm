@@ -13,6 +13,7 @@ API_BASE = os.getenv("API_BASE", "http://localhost:5200").rstrip("/")
 E2E_LANG = os.getenv("E2E_LANG", "en").strip() or "en"
 VIDEO_DIR = "tests/e2e/videos"
 SCREENSHOT_DIR = "tests/e2e/screenshots"
+_STANDARD_PRODUCT_CACHE = None
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_admin_exists():
@@ -192,6 +193,162 @@ def auth_admin(page):
     assert token is not None
 
     return page
+
+@pytest.fixture
+def standard_product(auth_admin):
+    """
+    预置一个标准 Product 实体，包含 String, Decimal, Bool 等典型字段。
+    确保它已发布并生成默认模板。
+    """
+    global _STANDARD_PRODUCT_CACHE
+    if _STANDARD_PRODUCT_CACHE is not None:
+        return _STANDARD_PRODUCT_CACHE
+
+    assert api_helper.login_as_admin()
+
+    # 1) Finder: reuse existing Product if present (avoid destructive deletes due to FK constraints)
+    existing = requests.get(
+        f"{API_BASE}/api/entity-definitions",
+        headers={"X-Lang": E2E_LANG.lower(), **api_helper.get_headers()},
+        timeout=30,
+    )
+    assert existing.status_code == 200, existing.text
+    entities = existing.json()["data"] if isinstance(existing.json().get("data"), list) else existing.json().get("data", [])
+
+    entity_id = None
+    for e in entities:
+        if str(e.get("fullTypeName", "")).lower() == "bobcrm.base.custom.product":
+            entity_id = e.get("id")
+            break
+
+    # 2) Definer: Create Entity 'Product' (Name, Price, IsActive) if missing
+    payload = {
+        "namespace": "BobCrm.Base.Custom",
+        "entityName": "Product",
+        # 重要：后端当前 ResolveLabel 取 DisplayName.Values 的第一个非空值（不按语言），
+        # 因此这里把 en 放在最前面以保证 E2E 断言稳定。
+        "displayName": {"en": "Product", "zh": "产品", "ja": "製品"},
+        "structureType": "Single",
+        "fields": [
+            {
+                "propertyName": "Name",
+                "displayName": {"en": "Name", "zh": "名称", "ja": "名称"},
+                "dataType": "String",
+                "length": 100,
+                "isRequired": True,
+                "sortOrder": 10,
+            },
+            {
+                "propertyName": "Price",
+                "displayName": {"en": "Price", "zh": "价格", "ja": "価格"},
+                "dataType": "Decimal",
+                "precision": 18,
+                "scale": 2,
+                "isRequired": False,
+                "sortOrder": 20,
+            },
+            {
+                "propertyName": "IsActive",
+                "displayName": {"en": "IsActive", "zh": "启用", "ja": "有効"},
+                "dataType": "Boolean",
+                "isRequired": False,
+                "sortOrder": 30,
+            },
+        ],
+    }
+
+    if entity_id is None:
+        resp = api_helper.post("/api/entity-definitions", payload)
+        assert resp.status_code in (200, 201), resp.text
+        entity_id = resp.json()["data"]["id"]
+
+    # 4) Compiler: ensure /api/products exists
+    detail = requests.get(
+        f"{API_BASE}/api/entity-definitions/{entity_id}",
+        headers={"X-Lang": E2E_LANG.lower(), **api_helper.get_headers()},
+        timeout=30,
+    )
+    assert detail.status_code == 200, detail.text
+    dto = detail.json()["data"]
+
+    # Required fields must exist for Batch2
+    existing_fields = {str(f.get("propertyName", "")).lower() for f in dto.get("fields", [])}
+    for required in ("name", "price", "isactive"):
+        assert required in existing_fields, f"Product entity missing field: {required}"
+
+    # Ensure physical table exists; dev restart may leave metadata but drop tables.
+    def _has_id_column() -> bool:
+        q = ("SELECT 1 FROM information_schema.columns "
+             "WHERE table_schema='public' AND (table_name='Products' OR table_name='products') "
+             "AND (column_name='Id' OR column_name='id') LIMIT 1;")
+        return bool(db_helper.execute_scalar(q))
+
+    if not db_helper.table_exists("Products") or not _has_id_column():
+        # Hard cleanup: detach FunctionNodes -> delete templates/bindings -> delete entity -> recreate & publish.
+        db_helper.execute_query("""
+        UPDATE "FunctionNodes"
+        SET "TemplateStateBindingId" = NULL
+        WHERE "TemplateStateBindingId" IN (
+            SELECT "Id" FROM "TemplateStateBindings" WHERE "EntityType" = 'product'
+        );
+        """.strip())
+        db_helper.execute_query("""
+        DELETE FROM "TemplateBindings" WHERE "EntityType" = 'product';
+        DELETE FROM "TemplateStateBindings" WHERE "EntityType" = 'product';
+        DELETE FROM "FormTemplates" WHERE "EntityType" = 'product';
+        """.strip())
+        db_helper.execute_query("""
+        DELETE FROM "FieldMetadatas"
+        WHERE "EntityDefinitionId" IN (SELECT "Id" FROM "EntityDefinitions" WHERE "EntityName" = 'Product');
+        DELETE FROM "EntityDefinitions" WHERE "EntityName" = 'Product';
+        """.strip())
+        db_helper.execute_query('DROP TABLE IF EXISTS "Products" CASCADE')
+        db_helper.execute_query("DROP TABLE IF EXISTS products CASCADE")
+
+        resp = api_helper.post("/api/entity-definitions", payload)
+        assert resp.status_code in (200, 201), resp.text
+        entity_id = resp.json()["data"]["id"]
+
+        pub = api_helper.post(f"/api/entity-definitions/{entity_id}/publish", {})
+        assert pub.status_code == 200, pub.text
+
+        # reload dto after recreate
+        detail = requests.get(
+            f"{API_BASE}/api/entity-definitions/{entity_id}",
+            headers={"X-Lang": E2E_LANG.lower(), **api_helper.get_headers()},
+            timeout=30,
+        )
+        assert detail.status_code == 200, detail.text
+        dto = detail.json()["data"]
+
+    compile_resp = requests.post(
+        f"{API_BASE}/api/entity-definitions/{entity_id}/compile",
+        headers=api_helper.get_headers(),
+        timeout=180,
+    )
+    assert compile_resp.status_code == 200, compile_resp.text
+
+    # Wait physical table (CREATE TABLE can take a moment)
+    for _ in range(40):
+        if db_helper.table_exists("Products"):
+            break
+        time.sleep(0.5)
+    assert db_helper.table_exists("Products"), "Table not created: Products"
+
+    # 5) Ensure default templates exist for this entity
+    regen = requests.post(
+        f"{API_BASE}/api/admin/templates/product/regenerate",
+        headers={"X-Lang": E2E_LANG.lower(), **api_helper.get_headers()},
+        timeout=60,
+    )
+    assert regen.status_code == 200, regen.text
+
+    _STANDARD_PRODUCT_CACHE = {
+        "entity_id": entity_id,
+        "entity_route": dto.get("entityRoute", "product"),
+        "full_type_name": dto.get("fullTypeName", "BobCrm.Base.Custom.Product"),
+    }
+    return _STANDARD_PRODUCT_CACHE
 
 def take_screenshot(page, name):
     """Helper to take specific screenshots."""

@@ -408,27 +408,35 @@ public class TemplateService : ITemplateService
         _logger.LogDebug("[TemplateService] Getting effective template for entity {EntityType}, user {UserId}",
             entityType, userId);
 
-        // 1. 优先查找用户默认模板
-        var userDefault = await Task.FromResult(_repo.Query(t =>
-            t.UserId == userId &&
-            t.EntityType == entityType &&
-            t.IsUserDefault).FirstOrDefault());
+        static int UsageRank(FormTemplateUsageType usage) =>
+            usage switch
+            {
+                // PageLoader 默认需要“详情”模板；其次是编辑/创建；列表模板最后。
+                FormTemplateUsageType.Detail => 0,
+                FormTemplateUsageType.Edit => 1,
+                FormTemplateUsageType.Combined => 2,
+                FormTemplateUsageType.List => 9,
+                _ => 9
+            };
 
-        if (userDefault != null)
+        // PageLoader 使用：按 UsageType 优先级选择模板，并在相同 UsageType 下优先用户默认。
+        // 注意：同一实体可同时存在 List/Detail 的用户默认模板，因此不能简单“只要有用户默认就返回”。
+        var best = await Task.FromResult(_repo.Query(t =>
+                t.EntityType == entityType &&
+                (t.UserId == userId || t.IsSystemDefault))
+            .ToList()
+            .OrderBy(t => UsageRank(t.UsageType))
+            .ThenByDescending(t => t.IsUserDefault)
+            .ThenByDescending(t => t.IsSystemDefault)
+            .ThenByDescending(t => t.UpdatedAt)
+            .FirstOrDefault());
+
+        if (best != null)
         {
-            _logger.LogDebug("[TemplateService] Found user default template {TemplateId}", userDefault.Id);
-            return userDefault;
-        }
-
-        // 2. 查找系统默认模板
-        var systemDefault = await Task.FromResult(_repo.Query(t =>
-            t.EntityType == entityType &&
-            t.IsSystemDefault).FirstOrDefault());
-
-        if (systemDefault != null)
-        {
-            _logger.LogDebug("[TemplateService] Found system default template {TemplateId}", systemDefault.Id);
-            return systemDefault;
+            _logger.LogDebug(
+                "[TemplateService] Picked effective template {TemplateId} (Usage={Usage}, IsUserDefault={IsUserDefault}, IsSystemDefault={IsSystemDefault})",
+                best.Id, best.UsageType, best.IsUserDefault, best.IsSystemDefault);
+            return best;
         }
 
         // 3. 查找该实体类型的第一个模板（任意用户）

@@ -66,12 +66,16 @@ public class DynamicEntityService
 
         _logger.LogInformation("[DynamicEntity] Compiling entity: {EntityName}", entity.EntityName);
 
-        // 生成代码
-        var code = _codeGenerator.GenerateEntityClass(entity);
+        // 生成代码（实体 + 接口定义）
+        var sources = new Dictionary<string, string>
+        {
+            [$"{entity.EntityName}.cs"] = _codeGenerator.GenerateEntityClass(entity),
+            ["_Interfaces.cs"] = _codeGenerator.GenerateInterfaces()
+        };
 
         // 编译
         var assemblyName = $"DynamicEntity_{entity.EntityName}_{Guid.NewGuid():N}";
-        var result = _compiler.Compile(code, assemblyName);
+        var result = _compiler.CompileMultiple(sources, assemblyName);
 
         if (result.Success && result.Assembly != null)
         {

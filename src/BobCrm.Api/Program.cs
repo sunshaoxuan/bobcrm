@@ -400,6 +400,7 @@ app.MapDomainEndpoints();
 app.MapEntityDefinitionEndpoints();
 app.MapEntityAggregateEndpoints();
 app.MapDynamicEntityEndpoints();
+app.MapDynamicEntityRouteEndpoints();
 app.MapLookupEndpoints();
 app.MapFieldActionEndpoints();
 app.MapSystemEndpoints();

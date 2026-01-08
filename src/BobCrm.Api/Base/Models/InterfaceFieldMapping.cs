@@ -16,7 +16,11 @@ public static class InterfaceFieldMapping
         {
             InterfaceType.Base => new List<InterfaceFieldDefinition>
             {
-                new() { PropertyName = "Id", DataType = FieldDataType.Guid, IsRequired = true, IsPrimaryKey = true }
+                // NOTE: 与 PostgreSQLDDLGenerator.GenerateInterfaceColumns + CSharpCodeGenerator.GenerateInterfaces 保持一致
+                new() { PropertyName = "Id", DataType = FieldDataType.Integer, IsRequired = true, IsPrimaryKey = true },
+                new() { PropertyName = "IsDeleted", DataType = FieldDataType.Boolean, IsRequired = true, DefaultValue = "false" },
+                new() { PropertyName = "DeletedAt", DataType = FieldDataType.DateTime, IsRequired = false },
+                new() { PropertyName = "DeletedBy", DataType = FieldDataType.String, Length = 100, IsRequired = false }
             },
             InterfaceType.Archive => new List<InterfaceFieldDefinition>
             {

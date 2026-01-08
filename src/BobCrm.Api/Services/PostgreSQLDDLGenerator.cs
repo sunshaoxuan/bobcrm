@@ -28,7 +28,9 @@ public class PostgreSQLDDLGenerator
         columns.AddRange(interfaceColumns.Select(col => $"    {col}"));
 
         // 然后添加自定义字段
-        foreach (var field in entity.Fields.OrderBy(f => f.SortOrder))
+        foreach (var field in entity.Fields
+                     .Where(f => !string.Equals(f.Source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(f => f.SortOrder))
         {
             var columnDef = GenerateColumnDefinition(field);
             columns.Add($"    {columnDef}");
