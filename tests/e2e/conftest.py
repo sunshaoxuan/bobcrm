@@ -46,6 +46,37 @@ def ensure_admin_exists():
 
     pytest.fail(f"Failed to initialize E2E admin/templates after retries: {last_error}")
 
+@pytest.fixture
+def clean_platform():
+    """
+    清理 Batch 1 测试产生的动态实体元数据和物理表。
+    不要清理 System Admin 用户。
+    """
+    # 1. 物理表清理 (Hard Drop)
+    # DefaultTableName = EntityName + "s"（系统当前实现），同时兼容指令中的表名写法
+    entity_names = ["TypeTester", "Constrainer", "EvoEntity", "ParentEnt", "ChildEnt"]
+    target_tables = set(entity_names + [f"{n}s" for n in entity_names])
+
+    for tbl in sorted(target_tables):
+        db_helper.execute_query(f'DROP TABLE IF EXISTS "{tbl}" CASCADE')
+        db_helper.execute_query(f'DROP TABLE IF EXISTS {tbl.lower()} CASCADE')
+
+    # 2. 元数据清理 (Metadata)
+    # 注意顺序：先删 Field，再删 Entity
+    cleanup_sql = """
+    DELETE FROM "FieldMetadatas" 
+    WHERE "EntityDefinitionId" IN (
+        SELECT "Id" FROM "EntityDefinitions" 
+        WHERE "EntityName" IN ('TypeTester', 'Constrainer', 'EvoEntity', 'ParentEnt', 'ChildEnt')
+    );
+    DELETE FROM "EntityDefinitions" 
+    WHERE "EntityName" IN ('TypeTester', 'Constrainer', 'EvoEntity', 'ParentEnt', 'ChildEnt');
+    """.strip()
+    db_helper.execute_query(cleanup_sql)
+
+    yield
+    # Post-check (Optional)
+
 @pytest.fixture(scope="session")
 def browser_context_args(browser_context_args):
     return {
