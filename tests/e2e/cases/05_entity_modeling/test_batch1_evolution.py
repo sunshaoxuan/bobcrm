@@ -84,6 +84,101 @@ def _wait_entity_status(entity_id: str, expected: str, timeout_s: float = 20.0):
         time.sleep(0.5)
     raise AssertionError(f"Expected entity {entity_id} status={expected}, got {status}")
 
+def _get_entity_fields_snapshot(entity_id: str) -> list[dict]:
+    rows = db_helper.execute_rows(
+        f"""
+SELECT
+  "Id"::text,
+  "PropertyName",
+  COALESCE("DataType",''),
+  COALESCE("Length"::text,''),
+  COALESCE("Precision"::text,''),
+  COALESCE("Scale"::text,''),
+  COALESCE("IsRequired"::text,'false'),
+  COALESCE("IsEntityRef"::text,'false'),
+  COALESCE("ReferencedEntityId"::text,''),
+  COALESCE("LookupEntityName",''),
+  COALESCE("LookupDisplayField",''),
+  COALESCE("ForeignKeyAction"::text,''),
+  COALESCE("SortOrder"::text,'0'),
+  COALESCE("DefaultValue",''),
+  COALESCE("ValidationRules",''),
+  COALESCE("EnumDefinitionId"::text,''),
+  COALESCE("IsMultiSelect"::text,'false')
+FROM "FieldMetadatas"
+WHERE "EntityDefinitionId" = '{entity_id}' AND NOT "IsDeleted"
+ORDER BY "SortOrder", "PropertyName";
+        """.strip()
+    )
+
+    fields = []
+    for r in rows:
+        (
+            fid,
+            prop,
+            dtype,
+            length,
+            precision,
+            scale,
+            is_required,
+            is_entity_ref,
+            ref_id,
+            lookup_entity,
+            lookup_display,
+            fk_action,
+            sort_order,
+            default_value,
+            validation_rules,
+            enum_id,
+            is_multi,
+        ) = (r + [""] * 17)[:17]
+
+        f = {
+            "id": fid,
+            "propertyName": prop,
+            "dataType": dtype or None,
+            "length": int(length) if length else None,
+            "precision": int(precision) if precision else None,
+            "scale": int(scale) if scale else None,
+            "isRequired": (is_required.lower() == "true") if is_required else None,
+            "isEntityRef": (is_entity_ref.lower() == "true") if is_entity_ref else None,
+            "referencedEntityId": ref_id if ref_id else None,
+            "lookupEntityName": lookup_entity if lookup_entity else None,
+            "lookupDisplayField": lookup_display if lookup_display else None,
+            "foreignKeyAction": int(fk_action) if fk_action else None,
+            "sortOrder": int(sort_order) if sort_order else None,
+            "defaultValue": default_value if default_value else None,
+            "validationRules": validation_rules if validation_rules else None,
+            "enumDefinitionId": enum_id if enum_id else None,
+            "isMultiSelect": (is_multi.lower() == "true") if is_multi else None,
+        }
+        fields.append(f)
+    return fields
+
+def _update_entity_definition_with_retry(entity_id: str, patch_func, max_attempts: int = 8) -> requests.Response:
+    last = None
+    for attempt in range(1, max_attempts + 1):
+        snapshot = _get_entity_fields_snapshot(entity_id)
+        payload = {"fields": patch_func(snapshot)}
+        resp = api_helper.put(f"/api/entity-definitions/{entity_id}", payload)
+        last = resp
+        if resp.status_code != 409:
+            return resp
+        # 409 代表后台仍有发布/锁定写入，使用“获取最新快照再改”的策略重试
+        time.sleep(0.6 * attempt)
+    return last  # type: ignore[return-value]
+
+def _patch_update_with_retry(entity_id: str, build_payload_func, max_attempts: int = 8) -> requests.Response:
+    last = None
+    for attempt in range(1, max_attempts + 1):
+        payload = build_payload_func()
+        resp = api_helper.put(f"/api/entity-definitions/{entity_id}", payload)
+        last = resp
+        if resp.status_code != 409:
+            return resp
+        time.sleep(0.6 * attempt)
+    return last  # type: ignore[return-value]
+
 
 def test_batch1_003_schema_evolution(auth_admin, page: Page, clean_platform):
     page = auth_admin
@@ -112,14 +207,25 @@ def test_batch1_003_schema_evolution(auth_admin, page: Page, clean_platform):
     assert ins.status_code in (200, 201), ins.text
 
     # V2: lengthen ColA -> 100, add ColB default 'New'
-    # 发布流程可能仍在落库，更新操作对 409 并发冲突做重试
-    update_payload = {
-        "fields": [
-            {"id": col_a_id, "propertyName": "ColA", "length": 100},
-            {"propertyName": "ColB", "displayName": {"zh": "列B", "en": "ColB", "ja": "列B"}, "dataType": "String", "length": 50, "defaultValue": "New", "isRequired": False, "sortOrder": 20},
-        ]
-    }
-    upd = _put_with_retry(f"/api/entity-definitions/{entity_id}", update_payload)
+    def _build_patch_payload():
+        # Get-Modify-Update Loop：每次更新前都从 DB 拿最新的字段 Id，避免并发窗口导致的“更新已被替换/删除的旧记录”。
+        latest_col_a_id = _get_field_id(entity_id, "ColA")
+        return {
+            "fields": [
+                {"id": latest_col_a_id, "propertyName": "ColA", "length": 100},
+                {
+                    "propertyName": "ColB",
+                    "displayName": {"zh": "列B", "en": "ColB", "ja": "列B"},
+                    "dataType": "String",
+                    "length": 50,
+                    "defaultValue": "New",
+                    "isRequired": False,
+                    "sortOrder": 20,
+                },
+            ]
+        }
+
+    upd = _patch_update_with_retry(entity_id, _build_patch_payload)
     assert upd.status_code == 200, upd.text
 
     _publish_changes(entity_id)

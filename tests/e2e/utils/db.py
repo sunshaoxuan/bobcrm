@@ -35,6 +35,32 @@ class DbHelper:
             print(f"DB Error: {e.stderr}")
             return None
 
+    def execute_rows(self, query, separator="|"):
+        """
+        Executes a query and returns rows parsed by a field separator.
+
+        Uses psql -t -A -F to produce machine-friendly output:
+        -t: tuples only
+        -A: unaligned
+        -F: field separator
+        """
+        cmd = [
+            "docker", "exec", "-i", self.container_name,
+            "psql", "-U", self.user, "-d", self.db_name,
+            "-t", "-A", "-F", separator,
+            "-c", query
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            out = result.stdout.strip() if result.stdout else ""
+            if not out:
+                return []
+            lines = [ln for ln in out.splitlines() if ln.strip() != ""]
+            return [ln.split(separator) for ln in lines]
+        except subprocess.CalledProcessError as e:
+            print(f"DB Error: {e.stderr}")
+            return []
+
     def table_exists(self, table_name):
         """
         Checks whether a table exists in the public schema.
