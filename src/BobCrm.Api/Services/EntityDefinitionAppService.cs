@@ -71,8 +71,11 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
         {
             Namespace = dto.Namespace,
             EntityName = dto.EntityName,
+            FullTypeName = $"{dto.Namespace}.{dto.EntityName}",
+            EntityRoute = dto.EntityName.Trim().ToLowerInvariant(),
             DisplayName = dto.DisplayName,
             Description = dto.Description?.Any(kvp => !string.IsNullOrWhiteSpace(kvp.Value)) == true ? dto.Description : null,
+            ApiEndpoint = $"/api/{dto.EntityName.Trim().ToLowerInvariant()}s",
             StructureType = string.IsNullOrWhiteSpace(dto.StructureType) ? EntityStructureType.Single : dto.StructureType,
             Status = EntityStatus.Draft,
             CreatedBy = uid,

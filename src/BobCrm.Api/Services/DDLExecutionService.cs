@@ -1,5 +1,7 @@
 using System.Data;
 using System.Data.Common;
+using System.Linq;
+using System.Text;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -180,7 +182,7 @@ public class DDLExecutionService
                 SELECT FROM information_schema.tables
                 WHERE table_schema = 'public'
                 AND table_name = {0}
-            );";
+            ) AS ""Value""";
 
         var exists = await _db.Database
             .SqlQueryRaw<bool>(sql, tableName.ToLower())
@@ -204,7 +206,7 @@ public class DDLExecutionService
             FROM information_schema.columns
             WHERE table_schema = 'public'
             AND table_name = {0}
-            ORDER BY ordinal_position;";
+            ORDER BY ordinal_position";
 
         return await _db.Database
             .SqlQueryRaw<TableColumnInfo>(sql, tableName.ToLower())
@@ -214,19 +216,109 @@ public class DDLExecutionService
     private async Task ExecuteSqlScriptAsync(string sqlScript)
     {
         var connection = _db.Database.GetDbConnection();
-        await using var command = connection.CreateCommand();
-        command.CommandText = sqlScript;
-
-        var activeTransaction = _db.Database.CurrentTransaction?.GetDbTransaction();
-        if (activeTransaction != null)
-        {
-            command.Transaction = activeTransaction;
-        }
 
         if (connection.State != ConnectionState.Open)
         {
             await connection.OpenAsync();
         }
-        await command.ExecuteNonQueryAsync();
+
+        // Npgsql prepared/extended protocol disallows multi-statement SQL in a single command.
+        // Our generated DDL often includes multiple statements (CREATE TABLE + COMMENT ...),
+        // so execute them sequentially.
+        var statements = SplitSqlStatements(sqlScript).ToList();
+        _logger.LogInformation("[DDL] Split into {Count} statement(s).", statements.Count);
+        for (var index = 0; index < statements.Count; index++)
+        {
+            var statement = statements[index];
+            await using var command = connection.CreateCommand();
+            command.CommandText = statement;
+
+            var activeTransaction = _db.Database.CurrentTransaction?.GetDbTransaction();
+            if (activeTransaction != null)
+            {
+                command.Transaction = activeTransaction;
+            }
+
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    private static IEnumerable<string> SplitSqlStatements(string sqlScript)
+    {
+        if (string.IsNullOrWhiteSpace(sqlScript))
+        {
+            yield break;
+        }
+
+        var sb = new StringBuilder();
+        var inSingleQuote = false;
+        var inDoubleQuote = false;
+        var inDollarQuote = false;
+
+        for (var i = 0; i < sqlScript.Length; i++)
+        {
+            var ch = sqlScript[i];
+            var next = i + 1 < sqlScript.Length ? sqlScript[i + 1] : '\0';
+
+            if (!inSingleQuote && !inDoubleQuote)
+            {
+                if (!inDollarQuote && ch == '$' && next == '$')
+                {
+                    inDollarQuote = true;
+                    sb.Append("$$");
+                    i++;
+                    continue;
+                }
+
+                if (inDollarQuote && ch == '$' && next == '$')
+                {
+                    inDollarQuote = false;
+                    sb.Append("$$");
+                    i++;
+                    continue;
+                }
+            }
+
+            if (!inDollarQuote)
+            {
+                if (!inDoubleQuote && ch == '\'' && !IsEscaped(sqlScript, i))
+                {
+                    inSingleQuote = !inSingleQuote;
+                }
+                else if (!inSingleQuote && ch == '"' && !IsEscaped(sqlScript, i))
+                {
+                    inDoubleQuote = !inDoubleQuote;
+                }
+            }
+
+            if (!inSingleQuote && !inDoubleQuote && !inDollarQuote && ch == ';')
+            {
+                var statement = sb.ToString().Trim();
+                sb.Clear();
+                if (!string.IsNullOrWhiteSpace(statement))
+                {
+                    yield return statement;
+                }
+                continue;
+            }
+
+            sb.Append(ch);
+        }
+
+        var tail = sb.ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(tail))
+        {
+            yield return tail;
+        }
+    }
+
+    private static bool IsEscaped(string input, int index)
+    {
+        var backslashes = 0;
+        for (var i = index - 1; i >= 0 && input[i] == '\\'; i--)
+        {
+            backslashes++;
+        }
+        return backslashes % 2 == 1;
     }
 }

@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using BobCrm.Api.Infrastructure;
+using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Services;
@@ -12,6 +14,7 @@ namespace BobCrm.Api.Services;
 public class ReflectionPersistenceService
     : IReflectionPersistenceService
 {
+    private static readonly Regex IdentifierRegex = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
     private readonly AppDbContext _db;
     private readonly DynamicEntityService _dynamicEntityService;
     private readonly ILogger<ReflectionPersistenceService> _logger;
@@ -38,6 +41,13 @@ public class ReflectionPersistenceService
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
         _logger.LogInformation("[Persistence] Querying {EntityType}", fullTypeName);
+
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            var rows = await QueryDynamicTableAsync(entityDefinition, options);
+            return rows.Cast<object>().ToList();
+        }
 
         // 获取DbSet<T>
         var dbSet = GetDbSet(entityType);
@@ -91,6 +101,12 @@ public class ReflectionPersistenceService
 
         _logger.LogInformation("[Persistence] Getting {EntityType} with ID {Id}", fullTypeName, id);
 
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            return await GetDynamicByIdAsync(entityDefinition, id);
+        }
+
         var dbSet = GetDbSet(entityType);
         var query = (IQueryable)dbSet;
 
@@ -118,6 +134,12 @@ public class ReflectionPersistenceService
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
         _logger.LogInformation("[Persistence] Creating {EntityType}", fullTypeName);
+
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            return await CreateDynamicAsync(entityDefinition, data);
+        }
 
         // 创建实体实例
         var entity = Activator.CreateInstance(entityType);
@@ -153,6 +175,12 @@ public class ReflectionPersistenceService
 
         _logger.LogInformation("[Persistence] Updating {EntityType} with ID {Id}", fullTypeName, id);
 
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            return await UpdateDynamicAsync(entityDefinition, id, data);
+        }
+
         // 查找实体
         var entity = await GetByIdAsync(fullTypeName, id);
         if (entity == null)
@@ -178,6 +206,12 @@ public class ReflectionPersistenceService
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
         _logger.LogInformation("[Persistence] Soft deleting {EntityType} with ID {Id}", fullTypeName, id);
+
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            return await DeleteDynamicAsync(entityDefinition, id, deletedBy);
+        }
 
         // 查找实体
         var entity = await GetByIdAsync(fullTypeName, id);
@@ -221,6 +255,12 @@ public class ReflectionPersistenceService
         if (entityType == null)
             throw new InvalidOperationException($"Entity type {fullTypeName} not loaded");
 
+        if (!IsEntityTypeInEfModel(entityType))
+        {
+            var entityDefinition = await GetEntityDefinitionAsync(fullTypeName);
+            return await CountDynamicAsync(entityDefinition, filters);
+        }
+
         var dbSet = GetDbSet(entityType);
         var query = (IQueryable)dbSet;
 
@@ -235,6 +275,535 @@ public class ReflectionPersistenceService
         }
 
         return await CountAsync(query, entityType);
+    }
+
+    private bool IsEntityTypeInEfModel(Type entityType)
+    {
+        return _db.Model.FindEntityType(entityType) != null;
+    }
+
+    private async Task<EntityDefinition> GetEntityDefinitionAsync(string fullTypeName, CancellationToken ct = default)
+    {
+        var entity = await _db.EntityDefinitions
+            .Include(e => e.Fields)
+            .Include(e => e.Interfaces)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.FullTypeName == fullTypeName, ct);
+
+        if (entity == null)
+        {
+            throw new InvalidOperationException($"Entity definition {fullTypeName} not found");
+        }
+
+        return entity;
+    }
+
+    private static string QuoteIdentifier(string identifier)
+    {
+        if (!IdentifierRegex.IsMatch(identifier))
+        {
+            throw new InvalidOperationException($"Invalid identifier: {identifier}");
+        }
+
+        return $"\"{identifier}\"";
+    }
+
+    private static Dictionary<string, Type> BuildColumnTypeMap(EntityDefinition entity)
+    {
+        var map = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        foreach (var field in entity.Fields)
+        {
+            map[field.PropertyName] = field.DataType switch
+            {
+                FieldDataType.String or FieldDataType.Text => typeof(string),
+                FieldDataType.Int32 => typeof(int),
+                FieldDataType.Int64 => typeof(long),
+                FieldDataType.Decimal => typeof(decimal),
+                FieldDataType.Boolean => typeof(bool),
+                FieldDataType.DateTime => typeof(DateTime),
+                FieldDataType.Date => typeof(DateOnly),
+                FieldDataType.Guid => typeof(Guid),
+                _ => typeof(string)
+            };
+        }
+
+        foreach (var entityInterface in entity.Interfaces.Where(i => i.IsEnabled))
+        {
+            switch (entityInterface.InterfaceType)
+            {
+                case EntityInterfaceType.Base:
+                    map.TryAdd("Id", typeof(int));
+                    map.TryAdd("IsDeleted", typeof(bool));
+                    map.TryAdd("DeletedAt", typeof(DateTime));
+                    map.TryAdd("DeletedBy", typeof(string));
+                    break;
+                case EntityInterfaceType.Archive:
+                    map.TryAdd("Code", typeof(string));
+                    map.TryAdd("Name", typeof(string));
+                    break;
+                case EntityInterfaceType.Audit:
+                    map.TryAdd("CreatedAt", typeof(DateTime));
+                    map.TryAdd("CreatedBy", typeof(string));
+                    map.TryAdd("UpdatedAt", typeof(DateTime));
+                    map.TryAdd("UpdatedBy", typeof(string));
+                    map.TryAdd("Version", typeof(int));
+                    break;
+                case EntityInterfaceType.Version:
+                    map.TryAdd("Version", typeof(int));
+                    break;
+                case EntityInterfaceType.TimeVersion:
+                    map.TryAdd("ValidFrom", typeof(DateTime));
+                    map.TryAdd("ValidTo", typeof(DateTime));
+                    map.TryAdd("VersionNo", typeof(int));
+                    break;
+                case EntityInterfaceType.Organization:
+                    map.TryAdd("OrganizationId", typeof(Guid));
+                    break;
+            }
+        }
+
+        return map;
+    }
+
+    private async Task<List<Dictionary<string, object?>>> QueryDynamicTableAsync(
+        EntityDefinition entity,
+        QueryOptions? options,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+
+        var sql = $"SELECT * FROM {tableName}";
+        var whereClauses = new List<string>();
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+
+        if (columnTypeMap.ContainsKey("IsDeleted"))
+        {
+            whereClauses.Add($"{QuoteIdentifier("IsDeleted")} = FALSE");
+        }
+
+        if (options?.Filters != null)
+        {
+            foreach (var filter in options.Filters)
+            {
+                if (string.IsNullOrWhiteSpace(filter.Field) || !columnTypeMap.TryGetValue(filter.Field, out var clrType))
+                {
+                    continue;
+                }
+
+                var column = QuoteIdentifier(filter.Field);
+                var op = filter.Operator ?? FilterOperator.Equals;
+
+                if (filter.Value == null)
+                {
+                    whereClauses.Add(op == FilterOperator.Equals
+                        ? $"{column} IS NULL"
+                        : $"{column} IS NOT NULL");
+                    continue;
+                }
+
+                var paramName = $"@p{command.Parameters.Count}";
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = paramName;
+
+                object? convertedValue = ConvertValue(filter.Value, clrType);
+                if (op == FilterOperator.Contains)
+                {
+                    convertedValue = $"%{convertedValue}%";
+                }
+
+                parameter.Value = convertedValue ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+
+                var clause = op switch
+                {
+                    FilterOperator.Equals => $"{column} = {paramName}",
+                    FilterOperator.Contains => $"{column} ILIKE {paramName}",
+                    FilterOperator.GreaterThan => $"{column} > {paramName}",
+                    FilterOperator.LessThan => $"{column} < {paramName}",
+                    _ => $"{column} = {paramName}"
+                };
+
+                whereClauses.Add(clause);
+            }
+        }
+
+        if (whereClauses.Any())
+        {
+            sql += " WHERE " + string.Join(" AND ", whereClauses);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options?.OrderBy) && columnTypeMap.ContainsKey(options.OrderBy))
+        {
+            sql += $" ORDER BY {QuoteIdentifier(options.OrderBy)} {(options.OrderByDescending ? "DESC" : "ASC")}";
+        }
+
+        if (options?.Take is > 0)
+        {
+            var takeParam = command.CreateParameter();
+            takeParam.ParameterName = "@take";
+            takeParam.Value = options.Take.Value;
+            command.Parameters.Add(takeParam);
+            sql += " LIMIT @take";
+        }
+
+        if (options?.Skip is > 0)
+        {
+            var skipParam = command.CreateParameter();
+            skipParam.ParameterName = "@skip";
+            skipParam.Value = options.Skip.Value;
+            command.Parameters.Add(skipParam);
+            sql += " OFFSET @skip";
+        }
+
+        command.CommandText = sql;
+        await _db.Database.OpenConnectionAsync(ct);
+
+        try
+        {
+            var results = new List<Dictionary<string, object?>>();
+            using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var row = new Dictionary<string, object?>(StringComparer.Ordinal);
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                }
+
+                results.Add(row);
+            }
+
+            return results;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<int> CountDynamicAsync(
+        EntityDefinition entity,
+        List<FilterCondition>? filters,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+
+        var sql = $"SELECT COUNT(*) FROM {tableName}";
+        var whereClauses = new List<string>();
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+
+        if (columnTypeMap.ContainsKey("IsDeleted"))
+        {
+            whereClauses.Add($"{QuoteIdentifier("IsDeleted")} = FALSE");
+        }
+
+        if (filters != null)
+        {
+            foreach (var filter in filters)
+            {
+                if (string.IsNullOrWhiteSpace(filter.Field) || !columnTypeMap.TryGetValue(filter.Field, out var clrType))
+                {
+                    continue;
+                }
+
+                var column = QuoteIdentifier(filter.Field);
+                var op = filter.Operator ?? FilterOperator.Equals;
+
+                if (filter.Value == null)
+                {
+                    whereClauses.Add(op == FilterOperator.Equals
+                        ? $"{column} IS NULL"
+                        : $"{column} IS NOT NULL");
+                    continue;
+                }
+
+                var paramName = $"@p{command.Parameters.Count}";
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = paramName;
+
+                object? convertedValue = ConvertValue(filter.Value, clrType);
+                if (op == FilterOperator.Contains)
+                {
+                    convertedValue = $"%{convertedValue}%";
+                }
+
+                parameter.Value = convertedValue ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+
+                var clause = op switch
+                {
+                    FilterOperator.Equals => $"{column} = {paramName}",
+                    FilterOperator.Contains => $"{column} ILIKE {paramName}",
+                    FilterOperator.GreaterThan => $"{column} > {paramName}",
+                    FilterOperator.LessThan => $"{column} < {paramName}",
+                    _ => $"{column} = {paramName}"
+                };
+
+                whereClauses.Add(clause);
+            }
+        }
+
+        if (whereClauses.Any())
+        {
+            sql += " WHERE " + string.Join(" AND ", whereClauses);
+        }
+
+        command.CommandText = sql;
+        await _db.Database.OpenConnectionAsync(ct);
+
+        try
+        {
+            var result = await command.ExecuteScalarAsync(ct);
+            return result == null ? 0 : Convert.ToInt32(result);
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<Dictionary<string, object?>?> GetDynamicByIdAsync(
+        EntityDefinition entity,
+        int id,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        if (!columnTypeMap.ContainsKey("Id"))
+        {
+            throw new InvalidOperationException($"Entity {entity.FullTypeName} does not support Id-based operations");
+        }
+
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+        var idColumn = QuoteIdentifier("Id");
+
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = $"SELECT * FROM {tableName} WHERE {idColumn} = @id";
+
+        var idParam = command.CreateParameter();
+        idParam.ParameterName = "@id";
+        idParam.Value = id;
+        command.Parameters.Add(idParam);
+
+        await _db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            using var reader = await command.ExecuteReaderAsync(ct);
+            if (!await reader.ReadAsync(ct))
+            {
+                return null;
+            }
+
+            var row = new Dictionary<string, object?>(StringComparer.Ordinal);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+
+            return row;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<Dictionary<string, object?>> CreateDynamicAsync(
+        EntityDefinition entity,
+        Dictionary<string, object> data,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+
+        var columns = new List<string>();
+        var values = new List<string>();
+
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+        foreach (var (key, rawValue) in data)
+        {
+            if (!columnTypeMap.TryGetValue(key, out var clrType))
+            {
+                _logger.LogWarning("[Persistence] Property {PropertyName} not found or not writable", key);
+                continue;
+            }
+
+            columns.Add(QuoteIdentifier(key));
+            var paramName = $"@p{command.Parameters.Count}";
+            values.Add(paramName);
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = paramName;
+            parameter.Value = ConvertValue(rawValue, clrType) ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
+
+        if (columns.Count == 0)
+        {
+            command.CommandText = $"INSERT INTO {tableName} DEFAULT VALUES RETURNING *";
+        }
+        else
+        {
+            command.CommandText = $"INSERT INTO {tableName} ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)}) RETURNING *";
+        }
+
+        await _db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            using var reader = await command.ExecuteReaderAsync(ct);
+            await reader.ReadAsync(ct);
+
+            var row = new Dictionary<string, object?>(StringComparer.Ordinal);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+
+            return row;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<Dictionary<string, object?>?> UpdateDynamicAsync(
+        EntityDefinition entity,
+        int id,
+        Dictionary<string, object> data,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        if (!columnTypeMap.ContainsKey("Id"))
+        {
+            throw new InvalidOperationException($"Entity {entity.FullTypeName} does not support Id-based operations");
+        }
+
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+        var idColumn = QuoteIdentifier("Id");
+
+        var setClauses = new List<string>();
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+
+        foreach (var (key, rawValue) in data)
+        {
+            if (key == "Id")
+            {
+                continue;
+            }
+
+            if (!columnTypeMap.TryGetValue(key, out var clrType))
+            {
+                _logger.LogWarning("[Persistence] Property {PropertyName} not found or not writable", key);
+                continue;
+            }
+
+            var paramName = $"@p{command.Parameters.Count}";
+            setClauses.Add($"{QuoteIdentifier(key)} = {paramName}");
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = paramName;
+            parameter.Value = ConvertValue(rawValue, clrType) ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
+
+        if (setClauses.Count == 0)
+        {
+            return await GetDynamicByIdAsync(entity, id, ct);
+        }
+
+        var idParam = command.CreateParameter();
+        idParam.ParameterName = "@id";
+        idParam.Value = id;
+        command.Parameters.Add(idParam);
+
+        command.CommandText = $"UPDATE {tableName} SET {string.Join(", ", setClauses)} WHERE {idColumn} = @id RETURNING *";
+
+        await _db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            using var reader = await command.ExecuteReaderAsync(ct);
+            if (!await reader.ReadAsync(ct))
+            {
+                return null;
+            }
+
+            var row = new Dictionary<string, object?>(StringComparer.Ordinal);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+
+            return row;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<bool> DeleteDynamicAsync(
+        EntityDefinition entity,
+        int id,
+        string? deletedBy,
+        CancellationToken ct = default)
+    {
+        var columnTypeMap = BuildColumnTypeMap(entity);
+        if (!columnTypeMap.ContainsKey("Id"))
+        {
+            throw new InvalidOperationException($"Entity {entity.FullTypeName} does not support Id-based operations");
+        }
+
+        var tableName = QuoteIdentifier(entity.DefaultTableName);
+        var idColumn = QuoteIdentifier("Id");
+
+        using var command = _db.Database.GetDbConnection().CreateCommand();
+        var idParam = command.CreateParameter();
+        idParam.ParameterName = "@id";
+        idParam.Value = id;
+        command.Parameters.Add(idParam);
+
+        if (columnTypeMap.ContainsKey("IsDeleted"))
+        {
+            var sets = new List<string> { $"{QuoteIdentifier("IsDeleted")} = TRUE" };
+
+            if (columnTypeMap.ContainsKey("DeletedAt"))
+            {
+                sets.Add($"{QuoteIdentifier("DeletedAt")} = @deletedAt");
+                var deletedAtParam = command.CreateParameter();
+                deletedAtParam.ParameterName = "@deletedAt";
+                deletedAtParam.Value = DateTime.UtcNow;
+                command.Parameters.Add(deletedAtParam);
+            }
+
+            if (columnTypeMap.ContainsKey("DeletedBy") && !string.IsNullOrWhiteSpace(deletedBy))
+            {
+                sets.Add($"{QuoteIdentifier("DeletedBy")} = @deletedBy");
+                var deletedByParam = command.CreateParameter();
+                deletedByParam.ParameterName = "@deletedBy";
+                deletedByParam.Value = deletedBy!;
+                command.Parameters.Add(deletedByParam);
+            }
+
+            command.CommandText = $"UPDATE {tableName} SET {string.Join(", ", sets)} WHERE {idColumn} = @id";
+        }
+        else
+        {
+            command.CommandText = $"DELETE FROM {tableName} WHERE {idColumn} = @id";
+        }
+
+        await _db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            var affected = await command.ExecuteNonQueryAsync(ct);
+            return affected > 0;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
     }
 
     private static IQueryable ApplySoftDeleteFilter(IQueryable query, Type entityType)
