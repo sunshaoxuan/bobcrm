@@ -1,11 +1,13 @@
 import pytest
 from playwright.sync_api import Page, expect
+import os
 
-BASE_URL = "http://localhost:3000"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:3000").rstrip("/")
 
 # TC-USER-003 个人资料
 
-def test_user_003_profile(auth_admin, page: Page):
+def test_user_003_profile(auth_admin: Page):
+    page = auth_admin
     page.goto(f"{BASE_URL}/profile")
     
     # Verify username is visible (use .first to avoid strict mode violation with email/role)

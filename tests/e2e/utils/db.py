@@ -36,9 +36,15 @@ class DbHelper:
             return None
 
     def table_exists(self, table_name):
-        # Postgres query for table existence
-        query = f"SELECT to_regclass('public.\"{table_name}\"')"
+        """
+        Checks whether a table exists in the public schema.
+
+        Supports both quoted (PascalCase) and unquoted (lowercase) identifiers.
+        """
+        quoted = f'public."{table_name}"'
+        unquoted = f"public.{table_name}"
+        query = f"SELECT COALESCE(to_regclass('{quoted}'), to_regclass('{unquoted}'))"
         val = self.execute_scalar(query)
-        return val and val.lower() != "null" and val != ""
+        return bool(val and val.lower() != "null")
 
 db_helper = DbHelper()

@@ -5,7 +5,7 @@ from playwright.sync_api import Page, expect
 from utils.db import db_helper
 
 # TC-AUTH-001 系统初始化设置
-BASE_URL = "http://localhost:3000"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:3000").rstrip("/")
 
 def test_auth_001_initial_setup(page: Page):
     # Pre-condition: Clean DB (handled by global setup for this specific test usually, or assume fresh)
@@ -47,10 +47,9 @@ def test_auth_001_initial_setup(page: Page):
     page.click("button.ant-btn-primary")
     
     # Scenario A8: Wait for completion and redirect
-    # If setup was redundant, it might not redirect, but we checked that above.
-    # If successful, should go to login.
+    # If successful, Setup navigates to home (current behavior) or login (legacy behavior).
     try:
-        expect(page).to_have_url(f"{BASE_URL}/login", timeout=10000)
+        expect(page).to_have_url(re.compile(rf"^{re.escape(BASE_URL)}/(login)?$"), timeout=10000)
     except AssertionError:
         # Debug info
         print(f"Failed to redirect. Current URL: {page.url}")

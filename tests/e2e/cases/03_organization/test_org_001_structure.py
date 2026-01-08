@@ -2,8 +2,9 @@ import pytest
 import re
 from playwright.sync_api import Page, expect
 from utils.db import db_helper
+import os
 
-BASE_URL = "http://localhost:3000"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:3000").rstrip("/")
 
 # TC-ORG-001 组织结构
 
@@ -13,7 +14,8 @@ def cleanup_org():
     # PostgreSQL requires quotes for PascalCase table names
     db_helper.execute_query('DELETE FROM "OrganizationNodes" WHERE "Code" IN (\'HQ\', \'TECH\')')
 
-def test_org_001_structure(auth_admin, page: Page, cleanup_org):
+def test_org_001_structure(auth_admin: Page, cleanup_org):
+    page = auth_admin
     page.goto(f"{BASE_URL}/organizations")
     
     # Wait for page to load
@@ -35,28 +37,24 @@ def test_org_001_structure(auth_admin, page: Page, cleanup_org):
     code_input.fill("HQ")
     name_input.fill("总公司")
     
-    # Save button - use regex to match i18n text (保存/Save)
+    # Save button - use role+regex (Playwright CSS selector does not support /regex/ in :has-text).
     # BTN_SAVE translations: zh="保存", ja="保存", en="Save"
-    save_button = page.locator(".org-node-form button:has-text(/保存|Save/)")
-    save_button.click()
+    page.locator(".org-node-form").get_by_role(
+        "button",
+        name=re.compile(r"保存|Save|BTN_SAVE"),
+    ).click()
     
     # Wait for save to complete and tree to update
-    page.wait_for_timeout(1500)  # Wait for API call and UI update
+    # Wait for API call and UI update (LoadTree selects persisted node, enabling "Add Child").
+    page.wait_for_timeout(800)
     # Verify root appears in tree (format: "HQ - 总公司")
     expect(page.locator("button.org-tree-node:has-text('HQ - 总公司')")).to_be_visible(timeout=5000)
     
     # C1: Create Child Organization
-    # Step 1: Select parent node by clicking on tree node (Code - Name format)
-    page.click("button.org-tree-node:has-text('HQ - 总公司')")
-    
-    # Wait for detail panel to show selected node and children panel
-    page.wait_for_selector(".org-card-header", state="visible")
-    page.wait_for_selector(".org-panel-header:has-text('LBL_ORG_CHILDREN')", state="visible", timeout=3000)
-    
-    # Step 2: Click Add Child button in children panel
-    # The button is in the children panel (second org-card), enabled after parent is selected
-    add_child_button = page.locator(".org-card:has(.org-panel-header:has-text('LBL_ORG_CHILDREN')) button:has(.anticon-plus)")
-    add_child_button.click()
+    # Wait for children panel "Add" button to be enabled (parent must be persisted, not Guid.Empty).
+    children_add_button = page.locator(".org-detail-panel .org-card:has(.org-table) button:has(.anticon-plus)")
+    expect(children_add_button).to_be_enabled(timeout=8000)
+    children_add_button.click()
     
     # Step 3: Wait for new row to appear in table
     page.wait_for_selector(".org-table tbody tr", state="visible")
@@ -71,8 +69,10 @@ def test_org_001_structure(auth_admin, page: Page, cleanup_org):
     child_name_input.fill("技术部")
     
     # Step 4: Click Save button in the table row
-    child_save_button = child_row.locator("button:has-text(/保存|Save/)")
-    child_save_button.click()
+    child_row.get_by_role(
+        "button",
+        name=re.compile(r"保存|Save|BTN_SAVE"),
+    ).click()
     
     # Wait for save to complete and UI to update
     page.wait_for_timeout(1500)
