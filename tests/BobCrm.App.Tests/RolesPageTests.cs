@@ -27,7 +27,8 @@ public class RolesPageTests : TestContext
     public RolesPageTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.Setup<string?>("localStorage.getItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "lang").SetResult("ja");
 
         var httpClient = new HttpClient(new PassthroughHandler())
         {

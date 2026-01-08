@@ -82,8 +82,8 @@ public class PageLoaderViewModelTests
         var httpFactory = new SimpleHttpClientFactory(httpClient);
 
         var js = new TestJsInteropService();
-        js.Set("localStorage.getItem", "accessToken", "token");
-        js.Set("bobcrm.getCookie", "lang", "ja");
+        js.Set("bobcrm.getLocalStorageItem", "accessToken", "token");
+        js.Set("bobcrm.getLocalStorageItem", "lang", "ja");
 
         var auth = new AuthService(httpFactory, js, TimeProvider.System);
         var i18n = new FakeI18nService("ja");
@@ -128,4 +128,3 @@ public class PageLoaderViewModelTests
         }
     }
 }
-

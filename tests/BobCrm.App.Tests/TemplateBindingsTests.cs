@@ -19,7 +19,8 @@ public class TemplateBindingsTests : TestContext
     public TemplateBindingsTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.Setup<string?>("localStorage.getItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "lang").SetResult("ja");
 
         var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost") };
         var httpFactory = new SimpleHttpClientFactory(httpClient);

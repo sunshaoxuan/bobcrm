@@ -28,6 +28,8 @@ public class DynamicEntityDataTests : TestContext
     public DynamicEntityDataTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "lang").SetResult("ja");
 
         var httpClient = new HttpClient(_handler)
         {
@@ -54,10 +56,13 @@ public class DynamicEntityDataTests : TestContext
         SetupMetadata();
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}/query", _ => JsonResponse(new
         {
-            Data = Array.Empty<Dictionary<string, object>>(),
-            Total = 0,
-            Page = 1,
-            PageSize = 100
+            Data = new
+            {
+                Data = Array.Empty<Dictionary<string, object>>(),
+                Total = 0,
+                Page = 1,
+                PageSize = 100
+            }
         }));
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}", async request =>
         {
@@ -76,25 +81,27 @@ public class DynamicEntityDataTests : TestContext
         });
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}/query", _ => JsonResponse(new
         {
-            Data = new[]
+            Data = new
             {
-                new Dictionary<string, object>
+                Data = new[]
                 {
-                    ["Id"] = 1,
-                    ["Code"] = "P001",
-                    ["Name"] = "Sample"
-                }
-            },
-            Total = 1,
-            Page = 1,
-            PageSize = 100
+                    new Dictionary<string, object>
+                    {
+                        ["Id"] = 1,
+                        ["Code"] = "P001",
+                        ["Name"] = "Sample"
+                    }
+                },
+                Total = 1,
+                Page = 1,
+                PageSize = 100
+            }
         }));
 
         var cut = RenderComponent<DynamicEntityData>(parameters => parameters.Add(p => p.FullTypeName, FullTypeName));
 
-        cut.WaitForAssertion(() => Assert.Contains("BTN_CREATE", cut.Markup));
-
-        cut.FindAll("button").First(b => b.TextContent.Contains("BTN_CREATE")).Click();
+        cut.WaitForAssertion(() => cut.Find(".test-dynamic-entity-create"));
+        cut.Find(".test-dynamic-entity-create").Click();
 
         var codeInput = cut.Find("#field-Code");
         codeInput.Change("P001");
@@ -114,19 +121,22 @@ public class DynamicEntityDataTests : TestContext
         SetupMetadata();
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}/query", _ => JsonResponse(new
         {
-            Data = new[]
+            Data = new
             {
-                new Dictionary<string, object>
+                Data = new[]
                 {
-                    ["Id"] = 1,
-                    ["Code"] = "P001",
-                    ["Name"] = "Sample",
-                    ["UpdatedAt"] = DateTime.UtcNow
-                }
-            },
-            Total = 1,
-            Page = 1,
-            PageSize = 100
+                    new Dictionary<string, object>
+                    {
+                        ["Id"] = 1,
+                        ["Code"] = "P001",
+                        ["Name"] = "Sample",
+                        ["UpdatedAt"] = DateTime.UtcNow
+                    }
+                },
+                Total = 1,
+                Page = 1,
+                PageSize = 100
+            }
         }));
         _handler.Enqueue(HttpMethod.Get, $"/api/dynamic-entities/{FullTypeName}/1", _ => JsonResponse(new
         {
@@ -149,25 +159,27 @@ public class DynamicEntityDataTests : TestContext
         });
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}/query", _ => JsonResponse(new
         {
-            Data = new[]
+            Data = new
             {
-                new Dictionary<string, object>
+                Data = new[]
                 {
-                    ["Id"] = 1,
-                    ["Code"] = "P001-Updated",
-                    ["Name"] = "Sample"
-                }
-            },
-            Total = 1,
-            Page = 1,
-            PageSize = 100
+                    new Dictionary<string, object>
+                    {
+                        ["Id"] = 1,
+                        ["Code"] = "P001-Updated",
+                        ["Name"] = "Sample"
+                    }
+                },
+                Total = 1,
+                Page = 1,
+                PageSize = 100
+            }
         }));
 
         var cut = RenderComponent<DynamicEntityData>(parameters => parameters.Add(p => p.FullTypeName, FullTypeName));
 
-        cut.WaitForAssertion(() => Assert.Contains("BTN_EDIT", cut.Markup));
-
-        cut.FindAll("button").First(b => b.TextContent.Contains("BTN_EDIT")).Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='dynamic-entity-edit']")));
+        cut.FindAll("[data-testid='dynamic-entity-edit']").First().Click();
 
         var codeInput = cut.Find("#field-Code");
         codeInput.Change("P001-Updated");
@@ -185,10 +197,13 @@ public class DynamicEntityDataTests : TestContext
         SetupMetadata();
         _handler.Enqueue(HttpMethod.Post, $"/api/dynamic-entities/{FullTypeName}/query", _ => JsonResponse(new
         {
-            Data = Array.Empty<Dictionary<string, object>>(),
-            Total = 0,
-            Page = 1,
-            PageSize = 100
+            Data = new
+            {
+                Data = Array.Empty<Dictionary<string, object>>(),
+                Total = 0,
+                Page = 1,
+                PageSize = 100
+            }
         }));
 
         var cut = RenderComponent<DynamicEntityData>(parameters => parameters.Add(p => p.FullTypeName, FullTypeName));

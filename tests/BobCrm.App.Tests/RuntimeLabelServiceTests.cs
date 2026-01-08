@@ -97,8 +97,8 @@ public class RuntimeLabelServiceTests
         var httpFactory = new SimpleHttpClientFactory(httpClient);
 
         var js = new TestJsInteropService();
-        js.Set("localStorage.getItem", "accessToken", "token");
-        js.Set("bobcrm.getCookie", "lang", "ja");
+        js.Set("bobcrm.getLocalStorageItem", "accessToken", "token");
+        js.Set("bobcrm.getLocalStorageItem", "lang", "ja");
 
         var auth = new AuthService(httpFactory, js, TimeProvider.System);
         var fieldService = new FieldService(httpFactory, auth);

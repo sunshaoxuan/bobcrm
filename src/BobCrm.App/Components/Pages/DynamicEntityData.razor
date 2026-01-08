@@ -9,12 +9,12 @@
 <AuthChecker>
     <PageHeader Title="@($"{_entityName} - {I18n.T("LBL_DATA_MANAGEMENT")}")" OnBack="GoBack">
         <PageHeaderExtra>
-            <Space>
-                <SpaceItem>
-                    <Button Type="@ButtonType.Primary" OnClick="ShowCreateModal">
-                        <Icon Type="plus" /> @I18n.T("BTN_CREATE")
-                    </Button>
-                </SpaceItem>
+                <Space>
+                    <SpaceItem>
+                        <Button Class="test-dynamic-entity-create" Type="@ButtonType.Primary" OnClick="ShowCreateModal">
+                            <Icon Type="plus" /> @I18n.T("BTN_CREATE")
+                        </Button>
+                    </SpaceItem>
                 <SpaceItem>
                     <Button OnClick="LoadData">
                         <Icon Type="reload" /> @I18n.T("BTN_REFRESH")
@@ -67,10 +67,10 @@
                                         @foreach (var column in GetDisplayColumns())
                                         {
                                             var value = row.ContainsKey(column) ? row[column] : null;
-                                            <td>@FormatValue(value)</td>
+                                        <td>@FormatValue(value)</td>
                                         }
                                         <td>
-                                            <button type="button" class="link-button" @onclick="() => ShowEditModal(row)">
+                                            <button data-testid="dynamic-entity-edit" type="button" class="link-button" @onclick="() => ShowEditModal(row)">
                                                 @I18n.T("BTN_EDIT")
                                             </button>
                                             <button type="button" class="link-button danger" @onclick="() => HandleDelete(row)">

@@ -10,17 +10,17 @@
 
     @if (!ViewModel.IsEditMode)
     {
-        <Button Type="@ButtonType.Primary" OnClick="OnEdit">
+        <Button Class="test-runtime-mode-edit" Type="@ButtonType.Primary" OnClick="OnEdit">
             @I18n.T("MODE_EDIT")
         </Button>
     }
     else
     {
         <div style="display:flex; gap:8px">
-            <Button Type="@ButtonType.Primary" OnClick="OnSave" Loading="@ViewModel.Saving">
+            <Button Class="test-runtime-save" Type="@ButtonType.Primary" OnClick="OnSave" Loading="@ViewModel.Saving">
                 @I18n.T("BTN_SAVE")
             </Button>
-            <Button OnClick="OnCancel">
+            <Button Class="test-runtime-cancel" OnClick="OnCancel">
                 @I18n.T("BTN_CANCEL")
             </Button>
         </div>
@@ -56,4 +56,3 @@
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 }
-

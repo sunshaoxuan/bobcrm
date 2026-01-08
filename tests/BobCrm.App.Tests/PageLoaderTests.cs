@@ -28,8 +28,8 @@ public class PageLoaderTests : TestContext
     public PageLoaderTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
-        JSInterop.Setup<string?>("localStorage.getItem", "accessToken").SetResult("token");
-        JSInterop.Setup<string?>("bobcrm.getCookie", "lang").SetResult("ja");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "accessToken").SetResult("token");
+        JSInterop.Setup<string?>("bobcrm.getLocalStorageItem", "lang").SetResult("ja");
 
         var httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://localhost") };
         var httpFactory = new SimpleHttpClientFactory(httpClient);
@@ -153,15 +153,15 @@ public class PageLoaderTests : TestContext
             .Add(x => x.EntityType, "order")
             .Add(x => x.Id, 1));
 
-        cut.WaitForAssertion(() => cut.FindAll("button").Any(b => b.TextContent.Contains("MODE_EDIT")));
-        cut.FindAll("button").First(b => b.TextContent.Contains("MODE_EDIT")).Click();
+        cut.WaitForAssertion(() => cut.Find(".test-runtime-mode-edit"));
+        cut.Find(".test-runtime-mode-edit").Click();
 
         cut.WaitForAssertion(() => Assert.True(cut.FindAll(".runtime-basic-grid input.runtime-field-input").Count >= 2));
         var inputs = cut.FindAll(".runtime-basic-grid input.runtime-field-input");
         inputs[0].Input("O002");
         inputs[1].Input("Order-B");
 
-        cut.FindAll("button").First(b => b.TextContent.Contains("BTN_SAVE")).Click();
+        cut.Find(".test-runtime-save").Click();
 
         cut.WaitForAssertion(() =>
         {
