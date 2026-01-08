@@ -142,6 +142,51 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
     {
         var uiLang = ResolveLang(lang);
 
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            try
+            {
+                return await UpdateEntityDefinitionOnceAsync(id, uid, uiLang, dto, ct);
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < 3)
+            {
+                var entrySummary = string.Join(
+                    "; ",
+                    ex.Entries.Select(e =>
+                    {
+                        if (e.Entity is FieldMetadata fm)
+                        {
+                            return $"FieldMetadata({fm.Id}, {fm.PropertyName}, entity={fm.EntityDefinitionId}) state={e.State}";
+                        }
+
+                        var key = string.Join(
+                            ",",
+                            e.Properties.Where(p => p.Metadata.IsPrimaryKey()).Select(p => p.CurrentValue?.ToString() ?? "null"));
+                        return $"{e.Metadata.ClrType.Name}({key}) state={e.State}";
+                    }));
+                _logger.LogWarning(
+                    ex,
+                    "[EntityDefinition] Concurrency conflict on update attempt {Attempt} for {Id}. Entries={Entries}",
+                    attempt,
+                    id,
+                    entrySummary);
+
+                _db.ChangeTracker.Clear();
+                await Task.Delay(200 * attempt, ct);
+            }
+        }
+
+        // 理论上不会执行到这里（最多重试 3 次）；保留为兜底
+        return await UpdateEntityDefinitionOnceAsync(id, uid, uiLang, dto, ct);
+    }
+
+    private async Task<EntityDefinitionDto> UpdateEntityDefinitionOnceAsync(
+        Guid id,
+        string uid,
+        string uiLang,
+        UpdateEntityDefinitionDto dto,
+        CancellationToken ct)
+    {
         var definition = await _db.EntityDefinitions
             .Include(ed => ed.Fields)
             .Include(ed => ed.Interfaces)
@@ -153,6 +198,10 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
         }
 
         _logger.LogInformation("[EntityDefinition] Updating entity: {Id}, IsLocked={IsLocked}", id, definition.IsLocked);
+
+        // 已发布/已修改状态下，字段更新采用“Patch”语义：仅更新/新增显式提供的字段，不再通过“省略字段=删除字段”推断删除。
+        // 这样可以降低并发窗口（避免无意义地更新大量字段），并避免误删系统/接口字段。
+        var treatFieldsAsPatch = !string.Equals(definition.Status, EntityStatus.Draft, StringComparison.OrdinalIgnoreCase);
 
         if (definition.IsLocked)
         {
@@ -168,14 +217,14 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
 
             if (dto.Fields != null)
             {
-                var existingFieldIds = definition.Fields.Select(f => f.Id).ToHashSet();
-                var newFieldIds = dto.Fields.Where(f => f.Id.HasValue).Select(f => f.Id!.Value).ToHashSet();
-                var deletedFieldIds = existingFieldIds.Except(newFieldIds).ToList();
-
-                if (deletedFieldIds.Count > 0)
+                if (!treatFieldsAsPatch)
                 {
-                    _logger.LogWarning("[EntityDefinition] Cannot delete fields when entity is locked: {FieldIds}", string.Join(", ", deletedFieldIds));
-                    throw new ServiceException(_loc.T("ERR_ENTITY_LOCKED_DELETE_FIELD", uiLang), "ENTITY_LOCKED");
+                    var incomingIds = dto.Fields.Where(f => f.Id.HasValue).Select(f => f.Id!.Value).ToHashSet();
+                    var removal = definition.Fields.Where(f => !incomingIds.Contains(f.Id) && !f.IsDeleted).ToList();
+                    if (removal.Count > 0)
+                    {
+                        throw new ServiceException(_loc.T("ERR_ENTITY_LOCKED_DELETE_FIELD", uiLang), "ENTITY_LOCKED");
+                    }
                 }
 
                 foreach (var fieldDto in dto.Fields.Where(f => f.Id.HasValue))
@@ -247,24 +296,27 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
         {
             var incomingFieldIds = dto.Fields.Where(f => f.Id.HasValue).Select(f => f.Id!.Value).ToHashSet();
 
-            var fieldsToRemove = definition.Fields.Where(f => !incomingFieldIds.Contains(f.Id) && !f.IsDeleted).ToList();
-            var protectedToRemove = fieldsToRemove
-                .Where(f =>
-                    string.Equals(f.Source, FieldSource.System, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(f.Source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
-                .Select(f => f.PropertyName)
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .ToList();
-            if (protectedToRemove.Count > 0)
+            if (!treatFieldsAsPatch)
             {
-                var msg = string.Format(_loc.T("ERR_FIELD_PROTECTED_BY_SOURCE", uiLang), string.Join(", ", protectedToRemove));
-                throw new ServiceException(msg, ErrorCodes.FieldProtectedBySource);
-            }
+                var fieldsToRemove = definition.Fields.Where(f => !incomingFieldIds.Contains(f.Id) && !f.IsDeleted).ToList();
+                var protectedToRemove = fieldsToRemove
+                    .Where(f =>
+                        string.Equals(f.Source, FieldSource.System, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(f.Source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
+                    .Select(f => f.PropertyName)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .ToList();
+                if (protectedToRemove.Count > 0)
+                {
+                    var msg = string.Format(_loc.T("ERR_FIELD_PROTECTED_BY_SOURCE", uiLang), string.Join(", ", protectedToRemove));
+                    throw new ServiceException(msg, ErrorCodes.FieldProtectedBySource);
+                }
 
-            foreach (var field in fieldsToRemove)
-            {
-                field.IsDeleted = true;
-                field.UpdatedAt = DateTime.UtcNow;
+                foreach (var field in fieldsToRemove)
+                {
+                    field.IsDeleted = true;
+                    field.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
             foreach (var fieldDto in dto.Fields)
@@ -340,6 +392,9 @@ public class EntityDefinitionAppService : IEntityDefinitionAppService
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
+                    // Update 场景下，FieldMetadata 的主键由客户端生成（Guid），EF 可能会将其误判为“已存在实体”从而标记为 Modified，
+                    // 进而导致 UPDATE 0 行 → DbUpdateConcurrencyException。这里显式 Add 以确保生成 INSERT。
+                    _db.FieldMetadatas.Add(newField);
                     definition.Fields.Add(newField);
                 }
             }

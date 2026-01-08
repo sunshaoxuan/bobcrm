@@ -177,18 +177,25 @@ public class DDLExecutionService
     /// </summary>
     public virtual async Task<bool> TableExistsAsync(string tableName)
     {
+        if (string.IsNullOrWhiteSpace(tableName))
+        {
+            return false;
+        }
+
+        // PostgreSQL folds unquoted identifiers to lower-case, but quoted identifiers preserve case.
+        // Our tables may be created either way, so check both.
+        var qualifiedExact = ToPublicQualifiedName(tableName, quoted: true);
+        var qualifiedLower = ToPublicQualifiedName(tableName.ToLowerInvariant(), quoted: false);
+
         var sql = @"
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables
-                WHERE table_schema = 'public'
-                AND table_name = {0}
+            SELECT (
+                to_regclass({0}) IS NOT NULL
+                OR to_regclass({1}) IS NOT NULL
             ) AS ""Value""";
 
-        var exists = await _db.Database
-            .SqlQueryRaw<bool>(sql, tableName.ToLower())
+        return await _db.Database
+            .SqlQueryRaw<bool>(sql, qualifiedExact, qualifiedLower)
             .FirstOrDefaultAsync();
-
-        return exists;
     }
 
     /// <summary>
@@ -196,6 +203,17 @@ public class DDLExecutionService
     /// </summary>
     public virtual async Task<List<TableColumnInfo>> GetTableColumnsAsync(string tableName)
     {
+        if (string.IsNullOrWhiteSpace(tableName))
+        {
+            return new List<TableColumnInfo>();
+        }
+
+        var effectiveTableName = await ResolveExistingTableNameAsync(tableName);
+        if (effectiveTableName == null)
+        {
+            return new List<TableColumnInfo>();
+        }
+
         var sql = @"
             SELECT
                 column_name as ColumnName,
@@ -209,8 +227,43 @@ public class DDLExecutionService
             ORDER BY ordinal_position";
 
         return await _db.Database
-            .SqlQueryRaw<TableColumnInfo>(sql, tableName.ToLower())
+            .SqlQueryRaw<TableColumnInfo>(sql, effectiveTableName)
             .ToListAsync();
+    }
+
+    private async Task<string?> ResolveExistingTableNameAsync(string tableName)
+    {
+        var qualifiedExact = ToPublicQualifiedName(tableName, quoted: true);
+        if (await QualifiedTableExistsAsync(qualifiedExact))
+        {
+            return tableName;
+        }
+
+        var lower = tableName.ToLowerInvariant();
+        var qualifiedLower = ToPublicQualifiedName(lower, quoted: false);
+        if (await QualifiedTableExistsAsync(qualifiedLower))
+        {
+            return lower;
+        }
+
+        return null;
+    }
+
+    private async Task<bool> QualifiedTableExistsAsync(string qualifiedName)
+    {
+        var sql = @"SELECT (to_regclass({0}) IS NOT NULL) AS ""Value""";
+        return await _db.Database.SqlQueryRaw<bool>(sql, qualifiedName).FirstOrDefaultAsync();
+    }
+
+    private static string ToPublicQualifiedName(string tableName, bool quoted)
+    {
+        if (!quoted)
+        {
+            return $"public.{tableName}";
+        }
+
+        var escaped = tableName.Replace("\"", "\"\"");
+        return $"public.\"{escaped}\"";
     }
 
     private async Task ExecuteSqlScriptAsync(string sqlScript)

@@ -161,7 +161,7 @@ public class EntityPublishingServicePhase8Tests
 
         var depStored = await db.EntityDefinitions.AsNoTracking().SingleAsync(e => e.Id == dependency.Id);
         depStored.Status.Should().Be(EntityStatus.Published);
-        depStored.Source.Should().Be(EntitySource.System);
+        depStored.Source.Should().Be(EntitySource.Custom);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using BobCrm.Api.Base.Aggregates;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Base.Models;
 using Microsoft.EntityFrameworkCore;
@@ -615,6 +616,8 @@ public class ReflectionPersistenceService
         Dictionary<string, object> data,
         CancellationToken ct = default)
     {
+        ValidateDynamicWrite(entity, data, isCreate: true);
+
         var columnTypeMap = BuildColumnTypeMap(entity);
         var tableName = QuoteIdentifier(entity.DefaultTableName);
 
@@ -675,6 +678,8 @@ public class ReflectionPersistenceService
         Dictionary<string, object> data,
         CancellationToken ct = default)
     {
+        ValidateDynamicWrite(entity, data, isCreate: false);
+
         var columnTypeMap = BuildColumnTypeMap(entity);
         if (!columnTypeMap.ContainsKey("Id"))
         {
@@ -804,6 +809,104 @@ public class ReflectionPersistenceService
         {
             await _db.Database.CloseConnectionAsync();
         }
+    }
+
+    private void ValidateDynamicWrite(EntityDefinition entity, Dictionary<string, object> data, bool isCreate)
+    {
+        var errors = new List<ValidationError>();
+
+        // 仅校验业务字段（Custom），避免对系统/接口字段（Id/审计字段等）造成误判
+        foreach (var field in entity.Fields.Where(f => !f.IsDeleted))
+        {
+            if (string.Equals(field.Source, FieldSource.System, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(field.Source, FieldSource.Interface, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var propertyName = field.PropertyName;
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                continue;
+            }
+
+            var hasValue = data.TryGetValue(propertyName, out var rawValue) && rawValue != null;
+
+            if (isCreate && field.IsRequired && string.IsNullOrWhiteSpace(field.DefaultValue))
+            {
+                if (!hasValue || IsNullOrEmptyValue(rawValue))
+                {
+                    errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                    continue;
+                }
+            }
+            else if (!isCreate)
+            {
+                // Update：如果显式传了字段且值为空，则按必填规则拒绝
+                if (field.IsRequired && hasValue && IsNullOrEmptyValue(rawValue) && string.IsNullOrWhiteSpace(field.DefaultValue))
+                {
+                    errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                    continue;
+                }
+            }
+
+            if (!hasValue || rawValue == null)
+            {
+                continue;
+            }
+
+            if ((string.Equals(field.DataType, FieldDataType.String, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(field.DataType, FieldDataType.Text, StringComparison.OrdinalIgnoreCase)) &&
+                field.Length.HasValue)
+            {
+                var str = ExtractStringValue(rawValue);
+                if (str != null && str.Length > field.Length.Value)
+                {
+                    errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                }
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new ValidationException(errors);
+        }
+    }
+
+    private static bool IsNullOrEmptyValue(object? value)
+    {
+        if (value == null)
+        {
+            return true;
+        }
+
+        if (value is JsonElement je)
+        {
+            return je.ValueKind switch
+            {
+                JsonValueKind.Null => true,
+                JsonValueKind.Undefined => true,
+                JsonValueKind.String => string.IsNullOrWhiteSpace(je.GetString()),
+                _ => false
+            };
+        }
+
+        if (value is string s)
+        {
+            return string.IsNullOrWhiteSpace(s);
+        }
+
+        return false;
+    }
+
+    private static string? ExtractStringValue(object value)
+    {
+        if (value is JsonElement je)
+        {
+            return je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString();
+        }
+
+        return value.ToString();
     }
 
     private static IQueryable ApplySoftDeleteFilter(IQueryable query, Type entityType)

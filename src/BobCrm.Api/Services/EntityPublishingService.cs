@@ -104,6 +104,15 @@ public class EntityPublishingService : IEntityPublishingService
                 return result;
             }
 
+            // 2.6 级联发布：确保 EntityRef 引用的 Draft 实体先发布
+            var cascadeRefs = await EnsureEntityRefDependenciesPublishedAsync(entity, publishedBy, context);
+            if (!cascadeRefs.Success)
+            {
+                result.Success = false;
+                result.ErrorMessage = cascadeRefs.ErrorMessage;
+                return result;
+            }
+
             // 3. 检查表是否已存在
             var tableName = entity.DefaultTableName;
             var tableExists = await _ddlExecutor.TableExistsAsync(tableName);
@@ -166,10 +175,6 @@ public class EntityPublishingService : IEntityPublishingService
             entity.Status = EntityStatus.Published;
             entity.UpdatedAt = DateTime.UtcNow;
             entity.UpdatedBy = publishedBy;
-            if (context.IsCascadeChild)
-            {
-                entity.Source = EntitySource.System;
-            }
             await _db.SaveChangesAsync();
 
             // 8. 锁定实体定义（防止发布后误修改关键属性）
@@ -192,6 +197,75 @@ public class EntityPublishingService : IEntityPublishingService
             result.Success = false;
             result.ErrorMessage = ex.Message;
             _logger.LogError(ex, "[Publish] ✗ Failed to publish entity: {Error}", ex.Message);
+        }
+
+        return result;
+    }
+
+    private async Task<PublishResult> EnsureEntityRefDependenciesPublishedAsync(
+        EntityDefinition entity,
+        string? publishedBy,
+        PublishContext context)
+    {
+        var result = new PublishResult { EntityDefinitionId = entity.Id, Success = true };
+
+        var referencedIds = entity.Fields
+            .Where(f =>
+                !f.IsDeleted &&
+                f.IsEntityRef &&
+                f.ReferencedEntityId.HasValue &&
+                f.ReferencedEntityId.Value != entity.Id)
+            .Select(f => f.ReferencedEntityId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (referencedIds.Count == 0)
+        {
+            return result;
+        }
+
+        foreach (var refId in referencedIds)
+        {
+            var referenced = await _db.EntityDefinitions
+                .Include(e => e.Fields)
+                .Include(e => e.Interfaces)
+                .FirstOrDefaultAsync(e => e.Id == refId);
+
+            if (referenced == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Referenced entity {refId} not found";
+                return result;
+            }
+
+            if (referenced.Status == EntityStatus.Published)
+            {
+                continue;
+            }
+
+            if (referenced.Status != EntityStatus.Draft)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Referenced entity {referenced.EntityName} status is {referenced.Status}, expected Draft/Published";
+                return result;
+            }
+
+            _logger.LogInformation(
+                "[Publish] Cascading publish for entity-ref dependency: {Parent} -> {Child}",
+                entity.EntityName,
+                referenced.EntityName);
+
+            var childResult = await PublishNewEntityInternalAsync(
+                referenced.Id,
+                publishedBy,
+                context.AsCascadeChild());
+
+            if (!childResult.Success)
+            {
+                result.Success = false;
+                result.ErrorMessage = childResult.ErrorMessage;
+                return result;
+            }
         }
 
         return result;

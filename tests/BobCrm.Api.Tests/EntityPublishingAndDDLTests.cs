@@ -1373,7 +1373,7 @@ public class EntityPublishingAndDDLTests : IDisposable
 
         var reloadedChild = await _db.EntityDefinitions.FirstAsync(e => e.Id == child.Id);
         reloadedChild.Status.Should().Be(BobCrm.Api.Base.Models.EntityStatus.Published);
-        reloadedChild.Source.Should().Be(BobCrm.Api.Base.Models.EntitySource.System);
+        reloadedChild.Source.Should().Be(BobCrm.Api.Base.Models.EntitySource.Custom);
 
         ensuredEntities.Should().Contain(parent.Id);
         ensuredEntities.Should().NotContain(child.Id);
