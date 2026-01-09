@@ -1,3 +1,0 @@
-
-[WidgetRegistry] Initialized with 25 widgets. Registered types: textbox, text, number, select, checkbox, radio, listbox, textarea, calendar, date, button, label, enumselector, section, panel, card, grid, frame, tabbox, tab, datagrid, subform, orgtree, permtree, userrole
-
