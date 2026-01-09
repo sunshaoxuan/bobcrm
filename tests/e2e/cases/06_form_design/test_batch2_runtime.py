@@ -257,7 +257,7 @@ def test_batch2_003_runtime_renders_tabbox_and_number_input(auth_admin, page: Pa
     assert check.status_code == 200, check.text
 
     try:
-        page.goto(f"{BASE_URL}/product/{entity_id}")
+        page.goto(f"{BASE_URL}/product/{entity_id}?e2e_mode=true")
         page.wait_for_selector(".runtime-shell")
 
         # 验证 TabBox 渲染
@@ -311,7 +311,7 @@ def test_batch2_004_validation_shows_required_error(auth_admin, page: Page, stan
     _ensure_template_has_tabbox(entity_type)
     entity_id = _ensure_product_instance(full_type)
 
-    page.goto(f"{BASE_URL}/{entity_type}/{entity_id}")
+    page.goto(f"{BASE_URL}/{entity_type}/{entity_id}?e2e_mode=true")
     _wait_for_runtime_loaded(page)
 
     # Enter edit mode

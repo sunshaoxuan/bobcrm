@@ -1353,3 +1353,44 @@
   flex-direction: column;
   gap: var(--space-3, 12px);
 }
+
+/* Tabbox Support */
+.runtime-tab-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100px;
+}
+
+.runtime-tab-headers {
+  display: flex;
+  gap: var(--space-2, 8px);
+  border-bottom: 1px solid var(--neutral-300, #cbd5e1);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.runtime-tab-header {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  color: var(--neutral-700, #4b5563);
+  transition: all 0.2s;
+}
+
+.runtime-tab-header:hover {
+  background: var(--surface-hover, rgba(0,0,0,0.02));
+}
+
+.runtime-tab-header.active {
+  color: var(--primary-color, #1890ff);
+  border-bottom-color: var(--primary-color, #1890ff);
+}
+
+.runtime-tab-body {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  width: 100%;
+}

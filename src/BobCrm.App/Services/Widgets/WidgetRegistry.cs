@@ -85,7 +85,8 @@ public static class WidgetRegistry
     {
         if (string.IsNullOrWhiteSpace(type)) throw new ArgumentException("Widget type cannot be null or empty", nameof(type));
 
-        if (!_definitions.TryGetValue(type, out var def))
+        // 强制使用小写查找以匹配注册信息
+        if (!_definitions.TryGetValue(type.ToLowerInvariant(), out var def))
         {
             var available = string.Join(", ", _definitions.Keys);
             throw new InvalidOperationException($"未知的 Widget 类型: '{type}'。当前已注册类型: [{available}]");
@@ -139,7 +140,8 @@ public static class WidgetRegistry
             if (type.GetConstructor(Type.EmptyTypes) == null) continue; // 需要无参构造
 
             Func<DraggableWidget> factory = () => (DraggableWidget)Activator.CreateInstance(type)!;
-            yield return new WidgetDefinition(meta.Type, meta.LabelKey, meta.Icon, meta.Category, factory);
+            // 统一转换为小写以防止大小写问题
+            yield return new WidgetDefinition(meta.Type.ToLowerInvariant(), meta.LabelKey, meta.Icon, meta.Category, factory);
         }
     }
 

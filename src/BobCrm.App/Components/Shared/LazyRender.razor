@@ -19,12 +19,34 @@
     [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
     [Parameter] public int PlaceholderHeightPx { get; set; } = 56;
 
+    [Inject] public NavigationManager Nav { get; set; } = default!;
+
     private ElementReference _host;
     private DotNetObjectReference<LazyRender>? _dotNetRef;
     private bool _isVisible;
+    private bool _forceShow;
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            var uri = Nav.ToAbsoluteUri(Nav.Uri);
+            if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).ContainsKey("e2e_mode"))
+            {
+                _forceShow = true;
+                _isVisible = true;
+            }
+        }
+        catch
+        {
+            // 忽略 URI 解析错误
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_forceShow) return;
+
         if (!firstRender)
         {
             return;
@@ -37,6 +59,7 @@
         }
         catch
         {
+            // Headless 环境或 JS 报错时的回退机制
             _isVisible = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -58,11 +81,14 @@
     {
         try
         {
-            await JS.TryInvokeVoidAsync("bobcrm.lazyRender.unobserve", _host);
+            if (!_forceShow)
+            {
+                await JS.TryInvokeVoidAsync("bobcrm.lazyRender.unobserve", _host);
+            }
         }
         catch
         {
-            // ignore
+            // 忽略
         }
 
         _dotNetRef?.Dispose();

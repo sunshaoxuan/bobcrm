@@ -28,6 +28,10 @@
     else if (ViewModel.EntityData != null)
     {
         <div class="runtime-shell">
+            <div id="e2e-debug-banner" style="display:none" class="e2e-only">
+                TemplateId: @ViewModel.RuntimeContext?.Template?.Id
+                WidgetCount: @ViewModel.LayoutWidgets.Count
+            </div>
             <RuntimeHeader ViewModel="ViewModel"
                            OnEdit="EnterEditModeAsync"
                            OnSave="SaveChanges"

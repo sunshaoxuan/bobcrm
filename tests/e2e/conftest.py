@@ -351,12 +351,26 @@ def standard_product(auth_admin):
     return _STANDARD_PRODUCT_CACHE
 
 def take_screenshot(page, name):
-    """Helper to take specific screenshots."""
+    """生成特定截图的辅助函数。"""
     path = f"{SCREENSHOT_DIR}/{name}.png"
-    page.screenshot(path=path)
+    try:
+        page.screenshot(path=path)
+    except Exception as e:
+        print(f"截图失败: {e}")
     return path
 
-# Hook to capture screenshot on failure
+def save_page_content(page, name):
+    """保存页面 HTML 的辅助函数。"""
+    path = f"{SCREENSHOT_DIR}/{name}.html"
+    try:
+        content = page.content()
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception as e:
+        print(f"保存页面内容失败: {e}")
+    return path
+
+# 失败时捕获截图的 Hook
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
@@ -366,3 +380,4 @@ def pytest_runtest_makereport(item, call):
         if page:
             name = item.name
             take_screenshot(page, f"FAILURE_{name}")
+            save_page_content(page, f"FAILURE_{name}")
