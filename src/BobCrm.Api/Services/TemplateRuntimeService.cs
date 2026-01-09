@@ -56,8 +56,29 @@ public class TemplateRuntimeService
         var binding = await _bindingService.GetBindingAsync(normalized, usage, ct)
                       ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
 
+        if (binding == null)
+        {
+             _logger.LogWarning("[TemplateRuntime] No binding found for {Normalized}/{Usage}", normalized, usage);
+        }
+        else
+        {
+             _logger.LogWarning("[TemplateRuntime] Found binding: Id={Id}, IsSystem={IsSystem}, TemplateId={TemplateId}", binding.Id, binding.IsSystem, binding.TemplateId);
+        }
+
         if (binding == null || !IsTemplateUsable(binding.Template))
         {
+            if (binding != null)
+            {
+                 _logger.LogWarning("[TemplateRuntime] Binding found but template unusable. TemplateId={TemplateId}, LayoutJsonLength={Length}", 
+                     binding.TemplateId, binding.Template?.LayoutJson?.Length ?? 0);
+                 
+                 // Log reasons
+                 if (binding.Template == null) _logger.LogWarning("[TemplateRuntime] Template is null");
+                 else if (string.IsNullOrWhiteSpace(binding.Template.LayoutJson)) _logger.LogWarning("[TemplateRuntime] LayoutJson is empty");
+                 else _logger.LogWarning("[TemplateRuntime] LayoutJson validation failed. Content start: {Content}", 
+                     binding.Template.LayoutJson.Length > 100 ? binding.Template.LayoutJson[..100] : binding.Template.LayoutJson);
+            }
+
             binding = await RegenerateAndReloadBindingAsync(normalized, altNormalized, usage, ct);
         }
 
@@ -83,6 +104,9 @@ public class TemplateRuntimeService
         var appliedScopes = DescribeScopes(scopeResult);
 
         _logger.LogDebug("Runtime context for {EntityType}/{Usage} built with template {TemplateId}", entityType, usage, binding.TemplateId);
+
+        _logger.LogWarning("Runtime context for {EntityType}/{Usage} built with template {TemplateId}. Final LayoutJson Length: {Length}", 
+            entityType, usage, bindingToUse.TemplateId, bindingToUse.Template?.LayoutJson?.Length ?? 0);
 
         return new TemplateRuntimeResponse(
             ToBindingDto(bindingToUse),

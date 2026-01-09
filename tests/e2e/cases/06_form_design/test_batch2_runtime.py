@@ -235,9 +235,14 @@ def test_batch2_003_runtime_renders_tabbox_and_number_input(auth_admin, page: Pa
     page = auth_admin
     entity_type = standard_product["entity_route"]
     full_type = standard_product["full_type_name"]
+    # Capture console logs
+    page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
+
 
     # Ensure no stale polymorphic bindings override our updates
     db_helper.execute_query(f"DELETE FROM \"TemplateStateBindings\" WHERE \"EntityType\" = '{entity_type}'")
+    # Ensure no stale user bindings exist (force fresh creation)
+    db_helper.execute_query(f"DELETE FROM \"TemplateBindings\" WHERE \"EntityType\" = '{entity_type}' AND \"IsSystem\" = false")
 
     _ensure_template_has_tabbox(entity_type)
     entity_id = _ensure_product_instance(full_type)
