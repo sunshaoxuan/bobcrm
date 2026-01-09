@@ -37,9 +37,19 @@ public class JsInteropService : IJsInteropService
         }
         catch (Exception ex)
         {
+            if (IsPrerenderingError(ex) || ex is JSDisconnectedException)
+            {
+                return (false, default);
+            }
+
             _logger.LogError(ex, "Unexpected Error calling JS {Identifier}", identifier);
             return (false, default);
         }
+    }
+
+    private bool IsPrerenderingError(Exception ex)
+    {
+        return ex is InvalidOperationException && (ex.Message.Contains("statically rendered") || ex.Message.Contains("prerendering")); 
     }
 
     public async Task<bool> TryInvokeVoidAsync(string identifier, params object?[]? args)
@@ -61,6 +71,11 @@ public class JsInteropService : IJsInteropService
         }
         catch (Exception ex)
         {
+            if (IsPrerenderingError(ex) || ex is JSDisconnectedException)
+            {
+                return false;
+            }
+
             _logger.LogError(ex, "Unexpected Error calling JS {Identifier}", identifier);
             return false;
         }

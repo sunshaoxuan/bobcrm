@@ -233,13 +233,7 @@ public class PostgreSQLDDLGenerator
     {
         var sb = new StringBuilder();
 
-        // 主键索引（假设Id字段）
-        var idField = entity.Fields.FirstOrDefault(f => f.PropertyName == "Id");
-        if (idField != null)
-        {
-            sb.AppendLine($"-- 主键");
-            sb.AppendLine($"ALTER TABLE \"{tableName}\" ADD PRIMARY KEY (\"Id\");");
-        }
+
 
         // 为实体引用字段创建索引
         var refFields = entity.Fields.Where(f => f.IsEntityRef && f.ReferencedEntityId.HasValue);

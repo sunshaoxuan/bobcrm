@@ -151,21 +151,21 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
         {
             Loading = true;
             Error = null;
+            EntityType = entityType;
+            Id = id;
 
             RuntimeContext = null;
             AppliedScopes = Array.Empty<string>();
             string? layoutJson = null;
 
+            _logger.LogInformation("[PageLoader] Fetching data for {EntityType}/{Id}", EntityType, Id);
             await _labelService.RefreshFieldLabelsAsync(ct);
-
-            EntityType = entityType;
-            Id = id;
-
-            var lang = _i18n.CurrentLang?.Trim();
-            var langQuery = string.IsNullOrWhiteSpace(lang) ? string.Empty : $"?lang={Uri.EscapeDataString(lang)}";
-            var dataResp = await _auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}{langQuery}");
+            var lang = _i18n.CurrentLang; // Trigger i18n access if needed 
+            var dataResp = await _auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
             if (!dataResp.IsSuccessStatusCode)
             {
+                var content = await dataResp.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("[PageLoader] Failed to load data for {EntityType}/{Id}. Status: {Status}, Content: {Content}", EntityType, Id, dataResp.StatusCode, content);
                 Error = string.Format(_i18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
                 Loading = false;
                 return;
@@ -175,6 +175,7 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             EntityData = dataDoc;
             BoundData = EntityData;
             FormContext.Data = BoundData;
+            _logger.LogInformation("[PageLoader] Data loaded for {EntityType}/{Id}. Length: {Length}", EntityType, Id, dataDoc.GetRawText().Length);
 
             var runtime = await _templateRuntime.GetRuntimeAsync(
                 EntityType,
@@ -185,6 +186,7 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
 
             if (runtime != null && !string.IsNullOrWhiteSpace(runtime.Template?.LayoutJson))
             {
+                _logger.LogInformation("[PageLoader] Using runtime template. LayoutJson length: {Length}", runtime.Template.LayoutJson.Length);
                 RuntimeContext = runtime;
                 AppliedScopes = runtime.AppliedScopes?
                     .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -192,11 +194,14 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                     .ToArray() ?? Array.Empty<string>();
                 layoutJson = runtime.Template.LayoutJson;
             }
+            else
+            {
+                _logger.LogInformation("[PageLoader] Runtime template not found or layout empty. Fallback to effective template.");
+            }
 
             if (string.IsNullOrWhiteSpace(layoutJson))
             {
                 var templateResp = await _auth.GetWithRefreshAsync($"/api/templates/effective/{EntityType}");
-
                 if (templateResp.IsSuccessStatusCode)
                 {
                     var templateContent = await templateResp.Content.ReadAsStringAsync(ct);
@@ -206,28 +211,41 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
 
                     if (template != null)
                     {
+                        _logger.LogInformation("[PageLoader] Effective template loaded. LayoutJson length: {Length}", template.LayoutJson?.Length ?? 0);
                         layoutJson = template.LayoutJson;
                     }
+                }
+                else 
+                {
+                    _logger.LogWarning("[PageLoader] Failed to load effective template. Status: {Status}", templateResp.StatusCode);
                 }
 
                 if (string.IsNullOrWhiteSpace(layoutJson))
                 {
+                    _logger.LogInformation("[PageLoader] Layout still empty. Trying fallback entity layout.");
                     var layoutResp = await _auth.GetWithRefreshAsync($"/api/layout/entity/{EntityType}?scope=effective");
                     if (layoutResp.IsSuccessStatusCode)
                     {
                         var layoutDoc = await layoutResp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
                         layoutJson = layoutDoc.GetRawText();
+                        _logger.LogInformation("[PageLoader] Entity layout loaded. Length: {Length}", layoutJson.Length);
+                    }
+                    else 
+                    {
+                        _logger.LogWarning("[PageLoader] Failed to load entity layout. Status: {Status}", layoutResp.StatusCode);
                     }
                 }
 
                 if (string.IsNullOrWhiteSpace(layoutJson))
                 {
+                    _logger.LogError("[PageLoader] CRITICAL: No layout found for {EntityType} after all fallfalls.", EntityType);
                     Error = _i18n.T("PL_LOAD_TEMPLATE_FAILED");
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(layoutJson))
             {
+                _logger.LogInformation("[PageLoader] Final LayoutJson length: {Length}. Starting deserialization.", layoutJson.Length);
                 try
                 {
                     using var doc = JsonDocument.Parse(layoutJson);
@@ -246,10 +264,31 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                     {
                         LayoutWidgets = _legacyLayoutParser.ParseLayoutFromJson(doc.RootElement);
                     }
+
+                    _logger.LogInformation("[PageLoader] Deserialized {Count} widgets.", LayoutWidgets.Count);
+                    foreach (var w in LayoutWidgets)
+                    {
+                        _logger.LogInformation("[PageLoader] Widget: Type={Type}, Id={Id}, Field={Field}, Visible={Visible}, NewLine={NewLine}", w.Type, w.Id, w.DataField, w.Visible, w.NewLine);
+                        if (w is ContainerWidget cw && cw.Children != null)
+                        {
+                            _logger.LogInformation("[PageLoader]   Container has {ChildCount} children.", cw.Children.Count);
+                            foreach(var child in cw.Children)
+                            {
+                                _logger.LogInformation("[PageLoader]     Child: Type={Type}, Id={Id}, Field={Field}", child.Type, child.Id, child.DataField);
+                            }
+                        }
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "[PageLoader] Failed to parse layout JSON for {EntityType}. Error: {Message}. Layout JSON: {LayoutJson}. Stack: {StackTrace}", EntityType, ex.Message, layoutJson, ex.StackTrace);
+                    Error = $"{_i18n.T("PL_LAYOUT_PARSE_FAILED")}: {ex.Message}";
+                    LayoutWidgets = new List<DraggableWidget>();
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "[PageLoader] Failed to parse layout JSON.");
+                    _logger.LogError(ex, "[PageLoader] Unexpected error parsing layout JSON for {EntityType}. Error: {Message}. Layout JSON: {LayoutJson}. Stack: {StackTrace}", EntityType, ex.Message, layoutJson, ex.StackTrace);
+                    Error = $"{_i18n.T("PL_LAYOUT_PARSE_ERROR")}: {ex.Message}";
                     LayoutWidgets = new List<DraggableWidget>();
                 }
             }
@@ -268,7 +307,20 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                         if (field.TryGetProperty("key", out var keyProp) &&
                             field.TryGetProperty("value", out var valueProp))
                         {
-                            EditValueManager.SetValue(keyProp.GetString(), valueProp.GetString());
+                            var key = keyProp.GetString();
+                            var val = valueProp.ValueKind switch
+                            {
+                                JsonValueKind.String => valueProp.GetString(),
+                                JsonValueKind.Number => valueProp.GetRawText(),
+                                JsonValueKind.True => "true",
+                                JsonValueKind.False => "false",
+                                JsonValueKind.Null => null,
+                                _ => valueProp.GetRawText()
+                            };
+                            if (key != null)
+                            {
+                                EditValueManager.SetValue(key, val);
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -344,7 +396,15 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                     string.Equals(keyProp.GetString(), key, StringComparison.OrdinalIgnoreCase) &&
                     field.TryGetProperty("value", out var valueProp))
                 {
-                    return valueProp.GetString() ?? string.Empty;
+                    return valueProp.ValueKind switch
+                    {
+                        JsonValueKind.String => valueProp.GetString(),
+                        JsonValueKind.Number => valueProp.GetRawText(),
+                        JsonValueKind.True => "true",
+                        JsonValueKind.False => "false",
+                        JsonValueKind.Null => null,
+                        _ => valueProp.GetRawText()
+                    } ?? string.Empty;
                 }
             }
         }
@@ -359,9 +419,10 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore
+            _logger.LogDebug(ex, "[PageLoader] Failed to enumerate entity data for key {Key}.", key);
+            // 降级处理：返回空字符串，不中断流程
         }
 
         return string.Empty;

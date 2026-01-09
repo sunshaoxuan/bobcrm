@@ -242,7 +242,7 @@ else
                         string.Equals(keyProp.GetString(), key, StringComparison.OrdinalIgnoreCase) &&
                         field.TryGetProperty("value", out var valueProp))
                     {
-                        return valueProp.GetString() ?? valueProp.ToString();
+                        return valueProp.ToString();
                     }
                 }
             }

@@ -22,54 +22,74 @@ public static class WidgetRegistry
 
     static WidgetRegistry()
     {
-        var builtIn = new[]
+        try
         {
-            new WidgetDefinition("textbox", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
-            // Alias for default template generator output ("text")
-            new WidgetDefinition("text", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
-            new WidgetDefinition("number", "LBL_NUMBER", IconType.Outline.FieldNumber, WidgetCategory.Basic, () => new NumberWidget()),
-            new WidgetDefinition("select", "LBL_SELECT", IconType.Outline.Select, WidgetCategory.Basic, () => new SelectWidget()),
-            new WidgetDefinition("checkbox", "LBL_CHECKBOX", IconType.Outline.CheckSquare, WidgetCategory.Basic, () => new CheckboxWidget()),
-            new WidgetDefinition("radio", "LBL_RADIO", IconType.Outline.DotChart, WidgetCategory.Basic, () => new RadioWidget()),
-            new WidgetDefinition("listbox", "LBL_LISTBOX", IconType.Outline.UnorderedList, WidgetCategory.Basic, () => new ListboxWidget()),
-            new WidgetDefinition("textarea", "LBL_TEXTAREA", IconType.Outline.FileText, WidgetCategory.Basic, () => new TextareaWidget()),
-            new WidgetDefinition("calendar", "LBL_CALENDAR", IconType.Outline.Calendar, WidgetCategory.Basic, () => new CalendarWidget()),
-            new WidgetDefinition("button", "LBL_BUTTON", IconType.Outline.Inbox, WidgetCategory.Basic, () => new ButtonWidget()),
-            new WidgetDefinition("label", "LBL_LABEL", IconType.Outline.FileText, WidgetCategory.Basic, () => new LabelWidget()),
+            var builtIn = new[]
+            {
+                new WidgetDefinition("textbox", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
+                new WidgetDefinition("text", "LBL_TEXTBOX", IconType.Outline.Edit, WidgetCategory.Basic, () => new TextboxWidget()),
+                new WidgetDefinition("number", "LBL_NUMBER", IconType.Outline.FieldNumber, WidgetCategory.Basic, () => new NumberWidget()),
+                new WidgetDefinition("select", "LBL_SELECT", IconType.Outline.Select, WidgetCategory.Basic, () => new SelectWidget()),
+                new WidgetDefinition("checkbox", "LBL_CHECKBOX", IconType.Outline.CheckSquare, WidgetCategory.Basic, () => new CheckboxWidget()),
+                new WidgetDefinition("radio", "LBL_RADIO", IconType.Outline.DotChart, WidgetCategory.Basic, () => new RadioWidget()),
+                new WidgetDefinition("listbox", "LBL_LISTBOX", IconType.Outline.UnorderedList, WidgetCategory.Basic, () => new ListboxWidget()),
+                new WidgetDefinition("textarea", "LBL_TEXTAREA", IconType.Outline.FileText, WidgetCategory.Basic, () => new TextareaWidget()),
+                new WidgetDefinition("calendar", "LBL_CALENDAR", IconType.Outline.Calendar, WidgetCategory.Basic, () => new CalendarWidget()),
+                new WidgetDefinition("date", "LBL_CALENDAR", IconType.Outline.Calendar, WidgetCategory.Basic, () => new CalendarWidget()),
+                new WidgetDefinition("button", "LBL_BUTTON", IconType.Outline.Inbox, WidgetCategory.Basic, () => new ButtonWidget()),
+                new WidgetDefinition("label", "LBL_LABEL", IconType.Outline.FileText, WidgetCategory.Basic, () => new LabelWidget()),
+                new WidgetDefinition("enumselector", "LBL_SELECT", IconType.Outline.Select, WidgetCategory.Basic, () => new SelectWidget()),
 
-            new WidgetDefinition("section", "LBL_SECTION", IconType.Outline.AppstoreAdd, WidgetCategory.Layout, () => new SectionWidget()),
-            new WidgetDefinition("panel", "LBL_PANEL", IconType.Outline.Appstore, WidgetCategory.Layout, () => new PanelWidget()),
-            new WidgetDefinition("card", "LBL_CARD", IconType.Outline.Container, WidgetCategory.Layout, () => new CardWidget()),
-            new WidgetDefinition("grid", "LBL_GRID", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new GridWidget()),
-            new WidgetDefinition("frame", "LBL_FRAME", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new FrameWidget()),
-            new WidgetDefinition("tabbox", "LBL_TABBOX", IconType.Outline.Appstore, WidgetCategory.Layout, () => new TabContainerWidget()),
-            new WidgetDefinition("tab", "LBL_TAB", IconType.Outline.Tag, WidgetCategory.Layout, () => new TabWidget()),
+                new WidgetDefinition("section", "LBL_SECTION", IconType.Outline.AppstoreAdd, WidgetCategory.Layout, () => new SectionWidget()),
+                new WidgetDefinition("panel", "LBL_PANEL", IconType.Outline.Appstore, WidgetCategory.Layout, () => new PanelWidget()),
+                new WidgetDefinition("card", "LBL_CARD", IconType.Outline.Container, WidgetCategory.Layout, () => new CardWidget()),
+                new WidgetDefinition("grid", "LBL_GRID", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new GridWidget()),
+                new WidgetDefinition("frame", "LBL_FRAME", IconType.Outline.BorderOuter, WidgetCategory.Layout, () => new FrameWidget()),
+                new WidgetDefinition("tabbox", "LBL_TABBOX", IconType.Outline.Appstore, WidgetCategory.Layout, () => new TabContainerWidget()),
+                new WidgetDefinition("tab", "LBL_TAB", IconType.Outline.Tag, WidgetCategory.Layout, () => new TabWidget()),
 
-            // 数据控件
-            new WidgetDefinition("datagrid", "LBL_DATAGRID", IconType.Outline.Table, WidgetCategory.Data, () => new DataGridWidget()),
-            new WidgetDefinition("subform", "LBL_SUBFORM", IconType.Outline.Subnode, WidgetCategory.Data, () => new SubFormWidget()),
-            new WidgetDefinition("orgtree", "LBL_ORGTREE", IconType.Outline.Apartment, WidgetCategory.Data, () => new OrganizationTreeWidget()),
-            new WidgetDefinition("permtree", "LBL_PERMTREE", IconType.Outline.SafetyCertificate, WidgetCategory.Data, () => new RolePermissionTreeWidget()),
-            new WidgetDefinition("userrole", "LBL_USERROLE", IconType.Outline.UserSwitch, WidgetCategory.Data, () => new UserRoleAssignmentWidget()),
-        };
+                // 数据控件
+                new WidgetDefinition("datagrid", "LBL_DATAGRID", IconType.Outline.Table, WidgetCategory.Data, () => new DataGridWidget()),
+                new WidgetDefinition("subform", "LBL_SUBFORM", IconType.Outline.Subnode, WidgetCategory.Data, () => new SubFormWidget()),
+                new WidgetDefinition("orgtree", "LBL_ORGTREE", IconType.Outline.Apartment, WidgetCategory.Data, () => new OrganizationTreeWidget()),
+                new WidgetDefinition("permtree", "LBL_PERMTREE", IconType.Outline.SafetyCertificate, WidgetCategory.Data, () => new RolePermissionTreeWidget()),
+                new WidgetDefinition("userrole", "LBL_USERROLE", IconType.Outline.UserSwitch, WidgetCategory.Data, () => new UserRoleAssignmentWidget()),
+            };
 
-        var dynamic = DiscoverWidgets();
-        var merged = builtIn
-            .Concat(dynamic)
-            .GroupBy(d => d.Type.ToLowerInvariant())
-            .Select(g => g.First()) // built-in 优先，动态补充
-            .ToList();
+            var dynamic = DiscoverWidgets().ToList();
+            var merged = builtIn
+                .Concat(dynamic)
+                .GroupBy(d => d.Type.ToLowerInvariant())
+                .Select(g => g.First())
+                .ToList();
 
-        _definitions = merged.ToDictionary(d => d.Type.ToLowerInvariant());
-        BasicWidgets = merged.Where(d => d.Category == WidgetCategory.Basic).ToList();
-        LayoutWidgets = merged.Where(d => d.Category == WidgetCategory.Layout && d.Type != "tab").ToList(); // tab 是内部使用
-        DataWidgets = merged.Where(d => d.Category == WidgetCategory.Data).ToList();
+            _definitions = merged.ToDictionary(d => d.Type.ToLowerInvariant(), StringComparer.OrdinalIgnoreCase);
+            BasicWidgets = merged.Where(d => d.Category == WidgetCategory.Basic).ToList();
+            LayoutWidgets = merged.Where(d => d.Category == WidgetCategory.Layout && d.Type != "tab").ToList();
+            DataWidgets = merged.Where(d => d.Category == WidgetCategory.Data).ToList();
+
+            Console.WriteLine($"[WidgetRegistry] Initialized with {merged.Count} widgets. Registered types: {string.Join(", ", _definitions.Keys)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WidgetRegistry] CRITICAL ERROR during initialization: {ex.Message}\n{ex.StackTrace}");
+            // Fallback to avoid complete crash
+            _definitions = new Dictionary<string, WidgetDefinition>(StringComparer.OrdinalIgnoreCase);
+            BasicWidgets = new List<WidgetDefinition>();
+            LayoutWidgets = new List<WidgetDefinition>();
+            DataWidgets = new List<WidgetDefinition>();
+        }
     }
 
     public static WidgetDefinition GetDefinition(string type)
     {
-        if (!_definitions.TryGetValue(type.ToLowerInvariant(), out var def))
-            throw new InvalidOperationException($"未知的 Widget 类型: {type}");
+        if (string.IsNullOrWhiteSpace(type)) throw new ArgumentException("Widget type cannot be null or empty", nameof(type));
+
+        if (!_definitions.TryGetValue(type, out var def))
+        {
+            var available = string.Join(", ", _definitions.Keys);
+            throw new InvalidOperationException($"未知的 Widget 类型: '{type}'。当前已注册类型: [{available}]");
+        }
         return def;
     }
 

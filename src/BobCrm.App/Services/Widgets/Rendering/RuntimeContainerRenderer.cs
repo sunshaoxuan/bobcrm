@@ -72,6 +72,10 @@ public static class RuntimeContainerRenderer
 
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "runtime-tab-container");
+        builder.AddAttribute(2, "data-debug-active-tab", activeTab?.TabId ?? "null");
+        builder.AddAttribute(3, "data-debug-tabs-count", tabs.Count);
+        builder.AddAttribute(4, "data-debug-total-children", tabContainer.Children?.Count ?? 0);
+        builder.AddAttribute(5, "data-debug-tabs-filtered", tabs.Count);
 
         // Tab headers
         builder.OpenElement(2, "div");

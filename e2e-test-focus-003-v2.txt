@@ -1,0 +1,24 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\sunsx\AppData\Local\Programs\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\workspace\bobcrm
+plugins: base-url-2.1.0, playwright-0.7.2
+collecting ... collected 1 item
+
+tests/e2e/cases/06_form_design/test_batch2_runtime.py::test_batch2_003_runtime_renders_tabbox_and_number_input[chromium] FAILED [100%]
+
+================================== FAILURES ===================================
+______ test_batch2_003_runtime_renders_tabbox_and_number_input[chromium] ______
+tests\e2e\cases\06_form_design\test_batch2_runtime.py:251: in test_batch2_003_runtime_renders_tabbox_and_number_input
+    _wait_for_runtime_loaded(page)
+tests\e2e\cases\06_form_design\test_batch2_runtime.py:229: in _wait_for_runtime_loaded
+    expect(page.locator(".runtime-shell")).to_be_visible(timeout=30000)
+E   AssertionError: Locator expected to be visible
+E   Actual value: None
+E   Error: element(s) not found 
+E   Call log:
+E     - Expect "to_be_visible" with timeout 30000ms
+E     - waiting for locator(".runtime-shell")
+=========================== short test summary info ===========================
+FAILED tests/e2e/cases/06_form_design/test_batch2_runtime.py::test_batch2_003_runtime_renders_tabbox_and_number_input[chromium]
+======================== 1 failed in 81.27s (0:01:21) =========================

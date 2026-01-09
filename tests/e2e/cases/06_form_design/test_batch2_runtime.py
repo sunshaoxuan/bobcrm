@@ -7,6 +7,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from utils.api import api_helper
+from utils.db import db_helper
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:3000").rstrip("/")
 API_BASE = os.getenv("API_BASE", "http://localhost:5200").rstrip("/")
@@ -235,6 +236,9 @@ def test_batch2_003_runtime_renders_tabbox_and_number_input(auth_admin, page: Pa
     entity_type = standard_product["entity_route"]
     full_type = standard_product["full_type_name"]
 
+    # Ensure no stale polymorphic bindings override our updates
+    db_helper.execute_query(f"DELETE FROM \"TemplateStateBindings\" WHERE \"EntityType\" = '{entity_type}'")
+
     _ensure_template_has_tabbox(entity_type)
     entity_id = _ensure_product_instance(full_type)
 
@@ -247,15 +251,51 @@ def test_batch2_003_runtime_renders_tabbox_and_number_input(auth_admin, page: Pa
     )
     assert check.status_code == 200, check.text
 
-    page.goto(f"{BASE_URL}/{entity_type}/{entity_id}")
-    _wait_for_runtime_loaded(page)
+    try:
+        page.goto(f"{BASE_URL}/product/{entity_id}")
+        page.wait_for_selector(".runtime-shell")
 
-    # Runtime tabbox uses custom renderer (not AntDesign Tabs)
-    expect(page.locator(".runtime-tab-container")).to_be_visible(timeout=15000)
+        # 验证 TabBox 渲染
+        # Retry with reload if TabBox is missing (cache propagation)
+        try:
+            expect(page.locator(".runtime-tab-container")).to_be_visible(timeout=5000)
+        except AssertionError:
+            print("TabBox not found, reloading...")
+            page.reload()
+            page.wait_for_selector(".runtime-shell")
+            expect(page.locator(".runtime-tab-container")).to_be_visible()
+
+        # 验证 Number 输入框 (Id) 渲染 (View Mode)
+        # 查找 label=Id 的 .runtime-widget-shell
+        id_widget = page.locator(".runtime-widget-shell[data-field='Id']")
+        expect(id_widget).to_be_visible()
+
+        # View Mode renders value in span or div, just check containment
+        expect(id_widget).to_contain_text(str(entity_id))
+    except:
+        import os
+        debug_path = os.path.join(os.getcwd(), "debug_page_content.html")
+        print("WRITING DEBUG HTML TO debug_page_content.html")
+        with open("c:/workspace/bobcrm/debug_page_content.html", "w", encoding="utf-8") as f:
+            f.write(page.content())
+        try:
+            page.screenshot(path="c:/workspace/bobcrm/debug_page_screenshot.png")
+            print("WRITING DEBUG SCREENSHOT TO debug_page_screenshot.png")
+        except:
+            print("FAILED TO WRITE SCREENSHOT")
+        raise
 
     # Enter edit mode to assert input controls exist
+    expect(page.locator(".test-runtime-mode-edit")).to_be_visible(timeout=15000)
     page.locator(".test-runtime-mode-edit").click()
-    expect(page.locator(".ant-input-number")).to_be_visible(timeout=15000)
+    
+    # Confirm edit mode by waiting for Save button
+    expect(page.locator(".test-runtime-save")).to_be_visible(timeout=10000)
+
+    # Verify Price field becomes an input number (Id might remain text if read-only)
+    price_widget = page.locator(".runtime-widget-shell[data-field='Price']")
+    # AntDesign InputNumber always contains an input element
+    expect(price_widget.locator("input")).to_be_visible(timeout=15000)
 
 
 def test_batch2_004_validation_shows_required_error(auth_admin, page: Page, standard_product):

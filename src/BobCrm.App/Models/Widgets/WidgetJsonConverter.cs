@@ -12,14 +12,17 @@ public class WidgetJsonConverter : JsonConverter<DraggableWidget>
 {
     public override DraggableWidget? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+        if (reader.TokenType == JsonTokenType.Null) return null;
+
+        // 避免在已经消耗 reader 的情况下再次解析
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        // 读取 Type 属性来确定 widget 类型
+        // 读取 Type 属性
         if (!root.TryGetProperty("Type", out var typeProperty) &&
             !root.TryGetProperty("type", out typeProperty))
         {
-            throw new JsonException("Widget JSON 必须包含 'Type' 属性");
+            throw new JsonException("Widget JSON 必须包含 'Type' 属性。源 JSON: " + root.GetRawText());
         }
 
         var widgetType = typeProperty.GetString();
@@ -28,31 +31,40 @@ public class WidgetJsonConverter : JsonConverter<DraggableWidget>
             throw new JsonException("Widget Type 不能为空");
         }
 
-        // 使用 Registry 创建实例
-        DraggableWidget widget;
+        // 获取具体子类类型
+        Type subType;
         try 
         {
             var def = WidgetRegistry.GetDefinition(widgetType);
-            widget = def.Factory();
+            var tempInstance = def.Factory();
+            subType = tempInstance.GetType();
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            throw new JsonException($"未知的 Widget 类型: '{widgetType}'。请确保该类型已在 WidgetRegistry 中注册。", ex);
+            throw new JsonException($"解析组件时出错。Type: '{widgetType}', JSON: {root.GetRawText()}", ex);
         }
 
-        // 反序列化到具体类型
+        // 反序列化为具体类型
+        // 由于 CanConvert 仅对 DraggableWidget 基类返回 true，
+        // 反序列化具体子类型（如 TabContainerWidget）时不会再次触发此 Converter 的 Read 方法，
+        // 从而避免了无限递归。同时，这允许子类中的 List<DraggableWidget> 属性正确使用此 Converter。
         var json = root.GetRawText();
-        // 注意：这里需要避免无限递归。
-        // 因为 WidgetRegistry.Create 出来的对象是具体类型（如 TextboxWidget），
-        // 且这些具体类型本身没有标记 [JsonConverter]，所以调用 Deserialize 不会再次触发这个 Converter（除非 options 里强制指定了）。
-        // 如果 options 里包含此 Converter，我们需要小心。
-        // 但通常 converter 是针对基类的。Deserialize<T> T 是具体子类时，通常不应用针对基类的 Converter（除非是多态反序列化场景）。
-        // 
-        // 为了安全起见，我们可以创建一个新的 Options 副本，去除 Converter，或者确信 System.Text.Json 的行为。
-        // 实际测试表明，如果 T 是具体子类，且没有直接在类上标记 Converter，JsonSerializer 不会使用基类的 Converter。
-        var deserializedWidget = JsonSerializer.Deserialize(json, widget.GetType(), options) as DraggableWidget;
+        var result = JsonSerializer.Deserialize(json, subType, options) as DraggableWidget;
+        
+        if (result != null)
+        {
+            // 确保 Type 属性与 Registry 一致
+            result.Type = widgetType;
+        }
 
-        return deserializedWidget;
+        return result;
+    }
+
+    public override bool CanConvert(Type typeToConvert)
+    {
+        // 关键：仅对基类 DraggableWidget 生效。
+        // 对于具体子类（如 TabContainerWidget），使用默认反序列化或其自身的转换器。
+        return typeToConvert == typeof(DraggableWidget);
     }
 
     public override void Write(Utf8JsonWriter writer, DraggableWidget value, JsonSerializerOptions options)

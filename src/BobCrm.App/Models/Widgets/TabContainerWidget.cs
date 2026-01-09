@@ -20,6 +20,8 @@ public class TabContainerWidget : ContainerWidget
         Children = new List<DraggableWidget>();
     }
 
+    public override Type? RuntimeComponentType => typeof(BobCrm.App.Components.Widgets.Layout.RuntimeTabContainer);
+
     /// <summary>默认激活的 TabId</summary>
     public string? ActiveTabId { get; set; }
 

@@ -1,0 +1,20 @@
+  BobCrm.Api -> C:\workspace\bobcrm\src\BobCrm.Api\bin\Debug\net8.0\BobCrm.Api.dll
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(129,25): error RZ10001: The type of component 'Column' cannot be inferred based on the values provided. Consider specifying the type arguments directly using the following attributes: 'TData'. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(129,41): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(157,45): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(163,45): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(166,49): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(171,49): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+
+銉撱儷銉夈伀澶辨晽銇椼伨銇椼仧銆?
+
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(129,25): error RZ10001: The type of component 'Column' cannot be inferred based on the values provided. Consider specifying the type arguments directly using the following attributes: 'TData'. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(129,41): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(157,45): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(163,45): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(166,49): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+C:\workspace\bobcrm\src\BobCrm.App\Components\Shared\FieldGrid.razor(171,49): error RZ1030: TagHelper attributes must be well-formed. [C:\workspace\bobcrm\src\BobCrm.App\BobCrm.App.csproj]
+    0 鍊嬨伄璀﹀憡
+    6 銈ㄣ儵銉?
+
+绲岄亷鏅傞枔 00:00:06.00

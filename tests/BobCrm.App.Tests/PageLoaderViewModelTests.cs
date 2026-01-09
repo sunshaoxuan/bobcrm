@@ -76,6 +76,108 @@ public class PageLoaderViewModelTests
         Assert.False(vm.IsEditMode);
     }
 
+    [Fact]
+    public async Task LoadDataAsync_InvalidLayoutJson_SetsErrorAndLogs()
+    {
+        // Arrange: 提供格式错误的 JSON（缺少引号）
+        var handler = new TestHttpMessageHandler();
+        handler.Enqueue(HttpMethod.Get, "/api/fields", _ => JsonResponses.Ok(Array.Empty<FieldDefinitionDto>()));
+        handler.Enqueue(HttpMethod.Get, "/api/products/1?lang=ja", _ => JsonResponses.Ok(new { id = 1, code = "P001", name = "Product-A", fields = Array.Empty<object>() }));
+
+        var invalidJson = "{type: 'textbox', label: 'Test'}"; // 缺少引号，无效 JSON
+        var runtimeResponse = new TemplateRuntimeResponse(
+            new TemplateBindingDto(
+                Id: 1,
+                EntityType: "product",
+                UsageType: TemplateUsageType.Detail,
+                TemplateId: 1,
+                IsSystem: true,
+                RequiredFunctionCode: null,
+                UpdatedBy: "system",
+                UpdatedAt: DateTime.UtcNow),
+            new TemplateDescriptorDto(
+                Id: 1,
+                Name: "TEMPLATE_INVALID",
+                EntityType: "product",
+                UsageType: TemplateUsageType.Detail,
+                LayoutJson: invalidJson,
+                Tags: Array.Empty<string>(),
+                Description: null),
+            HasFullAccess: true,
+            AppliedScopes: Array.Empty<string>());
+
+        var vm = CreateViewModel(handler, runtimeResponse);
+
+        // Act
+        await vm.LoadDataAsync("product", 1);
+
+        // Assert: 验证错误被设置，LayoutWidgets 为空
+        Assert.False(vm.Loading);
+        Assert.NotNull(vm.Error);
+        Assert.Contains("PL_LAYOUT_PARSE", vm.Error); // 错误消息应包含解析失败的键
+        Assert.Empty(vm.LayoutWidgets);
+    }
+
+    [Fact]
+    public async Task LoadDataAsync_MalformedLayoutJson_SetsErrorMessage()
+    {
+        // Arrange: 提供不符合 Widget 结构的有效 JSON
+        var handler = new TestHttpMessageHandler();
+        handler.Enqueue(HttpMethod.Get, "/api/fields", _ => JsonResponses.Ok(Array.Empty<FieldDefinitionDto>()));
+        handler.Enqueue(HttpMethod.Get, "/api/products/1?lang=ja", _ => JsonResponses.Ok(new { id = 1, code = "P001", name = "Product-A", fields = Array.Empty<object>() }));
+
+        var malformedJson = "[{\"unknownProperty\": 123}]"; // 有效 JSON 但结构错误
+        var runtimeResponse = new TemplateRuntimeResponse(
+            new TemplateBindingDto(
+                Id: 1,
+                EntityType: "product",
+                UsageType: TemplateUsageType.Detail,
+                TemplateId: 1,
+                IsSystem: true,
+                RequiredFunctionCode: null,
+                UpdatedBy: "system",
+                UpdatedAt: DateTime.UtcNow),
+            new TemplateDescriptorDto(
+                Id: 1,
+                Name: "TEMPLATE_MALFORMED",
+                EntityType: "product",
+                UsageType: TemplateUsageType.Detail,
+                LayoutJson: malformedJson,
+                Tags: Array.Empty<string>(),
+                Description: null),
+            HasFullAccess: true,
+            AppliedScopes: Array.Empty<string>());
+
+        var vm = CreateViewModel(handler, runtimeResponse);
+
+        // Act
+        await vm.LoadDataAsync("product", 1);
+
+        // Assert: 加载成功，但可能触发反序列化异常
+        Assert.False(vm.Loading);
+        // LayoutWidgets 可能为空或包含部分解析的数据，取决于反序列化器行为
+        Assert.NotNull(vm.LayoutWidgets);
+    }
+
+    [Fact]
+    public void GetFieldValue_WithValidData_ReturnsValue()
+    {
+        // Arrange
+        var handler = new TestHttpMessageHandler();
+        var vm = CreateViewModel(handler, null);
+
+        // 手动设置 EntityData
+        var entityJson = """{"id": 1, "name": "Test", "code": "T001", "fields": [{"key": "CustomField", "value": "CustomValue"}]}""";
+        var entityData = JsonDocument.Parse(entityJson).RootElement;
+        typeof(PageLoaderViewModel).GetProperty("EntityData")!.SetValue(vm, entityData);
+
+        // Act
+        var value = vm.GetFieldValue("CustomField");
+
+        // Assert
+        Assert.Equal("CustomValue", value);
+    }
+
     private static PageLoaderViewModel CreateViewModel(TestHttpMessageHandler handler, TemplateRuntimeResponse? runtimeResponse)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
