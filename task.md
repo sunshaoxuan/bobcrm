@@ -33,7 +33,25 @@
   - [x] Phase 1: 动态实体运行时（补齐 CRUD 端点深度用例）
   - [x] Phase 2: 模板与 UI 系统（补齐模板 CRUD/复制/应用用例）
   - [x] Phase 3: 系统与认证（补齐登录/刷新令牌/SystemEndpoints 边界用例）
-  - [/] 生成覆盖率报告并补齐剩余盲区 (进行中: PageLoader 需从 46% 提升至 90%)
+  - [x] 生成覆盖率报告并补齐剩余盲区 (PageLoader 重构完成，覆盖率提升)
+
+## Phase 5: v1.0 发布准备 (v1.0 Preparation)
+- [x] **Plan**: 确认 `PLAN-23-v1.0-发布准备计划.md`
+- [x] **Test-Exec-B1**: 执行 Batch 1 - **Passed**
+    - [x] **Fix-B1**: 修复平台核心缺陷 (Validation/Cascade/Concurrency) - **Done**
+- [x] **Test-Exec-B2**: 执行 Batch 2 (Visual Testing Focus) - **Passed**
+    - [x] **Fix-B2**: 解决 Tabbox 渲染黑盒问题 (ARCH-33/FIX-02) - **Done**
+    - [x] **Fix-B2**: 解决 E2E 环境下组件 "不可见" (Visibility) 故障 (ARCH-34/FIX-03) - **Done**
+    - [ ] **Fix-B2**: 解决文件锁问题 (File Locking / MSB3021)
+    - [x] **Verify**: 所有测试必须有视频/截图存证 (Evidence)
+- [/] **Test-Exec-B3**: 执行 Batch 3 (Business Logic) - **In Progress**
+
+
+- [ ] **Perf**: 执行 PageLoader 压力测试 (Locust)
+- [ ] **Docs**: 编写最终用户操作手册 (GUIDE-99)
+- [ ] **UI**: 全站样式一致性审计与修复 (Polish)
+- [ ] **Release**: 版本号提升与 CHANGELOG 更新
+
 
 ---
 
