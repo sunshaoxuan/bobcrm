@@ -263,7 +263,20 @@ def test_batch2_003_runtime_renders_tabbox_and_number_input(auth_admin, page: Pa
         # 验证 TabBox 渲染
         # Retry with reload if TabBox is missing (cache propagation)
         try:
-            expect(page.locator(".runtime-tab-container")).to_be_visible(timeout=5000)
+            # 物理坐标审计 (Phase 2 Audit)
+            locator = page.locator(".runtime-tab-container")
+            locator.wait_for(state="attached", timeout=10000)
+            
+            box = locator.bounding_box()
+            print(f"E2E-AUDIT: Tabbox Bounding Box: {box}")
+            
+            # 强制滚动以排除视口问题
+            locator.scroll_into_view_if_needed()
+            
+            opacity = locator.evaluate("el => getComputedStyle(el).opacity")
+            print(f"E2E-AUDIT: Tabbox Opacity: {opacity}")
+
+            expect(locator).to_be_visible(timeout=5000)
         except AssertionError:
             print("TabBox not found, reloading...")
             page.reload()

@@ -46,7 +46,9 @@
 @{
     var visibleWidgets = ViewModel.LayoutWidgets.Where(w => w.Visible).ToList();
 }
-<div class="runtime-layout @(ViewModel.IsEditMode ? "edit-mode" : "")" data-edit-mode="@ViewModel.IsEditMode.ToString().ToLowerInvariant()">
+<div class="runtime-layout @(ViewModel.IsEditMode ? "edit-mode" : "")" 
+     data-edit-mode="@ViewModel.IsEditMode.ToString().ToLowerInvariant()"
+     style="min-height:800px; display:flex; flex-wrap:wrap; align-content:flex-start;">
     @if (!visibleWidgets.Any())
     {
         <div class="runtime-empty">
