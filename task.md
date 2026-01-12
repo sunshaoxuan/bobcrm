@@ -44,7 +44,9 @@
     - [x] **Fix-B2**: 解决 E2E 环境下组件 "不可见" (Visibility) 故障 (ARCH-34/FIX-03) - **Done**
     - [ ] **Fix-B2**: 解决文件锁问题 (File Locking / MSB3021)
     - [x] **Verify**: 所有测试必须有视频/截图存证 (Evidence)
-- [/] **Test-Exec-B3**: 执行 Batch 3 (Business Logic) - **In Progress**
+- [x] **Test-Exec-B3**: 执行 Batch 3 (Business Logic) - **Passed**
+    - [x] **Fix-B3**: 修复高级校验逻辑 (Regex/Range) - **Done**
+    - [x] **Verify**: 级联发布与实体转换验证 - **Done**
 
 
 - [ ] **Perf**: 执行 PageLoader 压力测试 (Locust)
