@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Moq;
 
 namespace BobCrm.Api.Tests;
 
@@ -83,6 +84,10 @@ public class EntityPublishingServiceTemplateMenuTests
         var locks = new EntityLockService(db, NullLogger<EntityLockService>.Instance);
         var cfg = new ConfigurationBuilder().AddInMemoryCollection().Build();
 
+        var dynamicEntityService = new Mock<IDynamicEntityService>(MockBehavior.Loose);
+        dynamicEntityService.Setup(x => x.CompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+        dynamicEntityService.Setup(x => x.RecompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+
         return new EntityPublishingService(
             db,
             new PostgreSQLDDLGenerator(),
@@ -91,6 +96,7 @@ public class EntityPublishingServiceTemplateMenuTests
             templateBindingService,
             functionService,
             defaultTemplateService,
+            dynamicEntityService.Object,
             cfg,
             NullLogger<EntityPublishingService>.Instance);
     }

@@ -36,6 +36,7 @@ public class EntityPublishingAndDDLTests : IDisposable
     private readonly FunctionService _functionService;
     private readonly Mock<IDefaultTemplateService> _defaultTemplateService;
     private readonly EntityMenuRegistrar _menuRegistrar;
+    private readonly Mock<IDynamicEntityService> _mockDynamicEntityService;
     private readonly IConfiguration _configuration;
 
     public EntityPublishingAndDDLTests()
@@ -74,6 +75,14 @@ public class EntityPublishingAndDDLTests : IDisposable
                 It.IsAny<CancellationToken>()))
             .Returns<EntityDefinition, string?, bool, CancellationToken>((entity, _, force, ct) =>
                 _templateGenerator.EnsureTemplatesAsync(entity, force, ct));
+
+        _mockDynamicEntityService = new Mock<IDynamicEntityService>();
+        _mockDynamicEntityService
+            .Setup(s => s.CompileEntityAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new CompilationResult { Success = true });
+        _mockDynamicEntityService
+            .Setup(s => s.RecompileEntityAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new CompilationResult { Success = true });
 
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -905,6 +914,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             _bindingService,
             _functionService,
             _defaultTemplateService.Object,
+            _mockDynamicEntityService.Object,
             _configuration,
             _mockPublishLogger.Object);
 
@@ -1564,6 +1574,7 @@ public class EntityPublishingAndDDLTests : IDisposable
             _bindingService,
             _functionService,
             _defaultTemplateService.Object,
+            _mockDynamicEntityService.Object,
             config,
             _mockPublishLogger.Object);
 

@@ -380,6 +380,7 @@ public class EntityPublishingServiceTests
             templateBindingService,
             functionService,
             defaultTemplates,
+            CreateDynamicEntityServiceMock(),
             cfg,
             NullLogger<EntityPublishingService>.Instance);
     }
@@ -391,6 +392,14 @@ public class EntityPublishingServiceTests
             .ReturnsAsync(new DefaultTemplateGenerationResult());
         mock.Setup(x => x.GetDefaultTemplateAsync(It.IsAny<EntityDefinition>(), It.IsAny<FormTemplateUsageType>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new NotSupportedException("not needed by these tests"));
+        return mock.Object;
+    }
+
+    private static IDynamicEntityService CreateDynamicEntityServiceMock()
+    {
+        var mock = new Mock<IDynamicEntityService>(MockBehavior.Loose);
+        mock.Setup(x => x.CompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+        mock.Setup(x => x.RecompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
         return mock.Object;
     }
 

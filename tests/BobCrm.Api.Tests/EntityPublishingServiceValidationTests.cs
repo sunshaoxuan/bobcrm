@@ -166,6 +166,10 @@ public class EntityPublishingServiceValidationTests
         defaultTemplateService.Setup(x => x.GetDefaultTemplateAsync(It.IsAny<EntityDefinition>(), It.IsAny<FormTemplateUsageType>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new NotSupportedException());
 
+        var dynamicEntityService = new Mock<IDynamicEntityService>(MockBehavior.Loose);
+        dynamicEntityService.Setup(x => x.CompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+        dynamicEntityService.Setup(x => x.RecompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+
         return new EntityPublishingService(
             db,
             new PostgreSQLDDLGenerator(),
@@ -174,6 +178,7 @@ public class EntityPublishingServiceValidationTests
             templateBindingService,
             functionService,
             defaultTemplateService.Object,
+            dynamicEntityService.Object,
             cfg,
             NullLogger<EntityPublishingService>.Instance);
     }

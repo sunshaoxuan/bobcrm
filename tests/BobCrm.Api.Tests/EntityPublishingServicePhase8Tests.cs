@@ -211,6 +211,10 @@ public class EntityPublishingServicePhase8Tests
         var templates = defaultTemplateService ?? CreateDefaultTemplateServiceMock();
         var cfg = configuration ?? new ConfigurationBuilder().AddInMemoryCollection().Build();
 
+        var dynamicEntityService = new Mock<IDynamicEntityService>(MockBehavior.Loose);
+        dynamicEntityService.Setup(x => x.CompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+        dynamicEntityService.Setup(x => x.RecompileEntityAsync(It.IsAny<Guid>())).ReturnsAsync(new CompilationResult { Success = true });
+
         return new EntityPublishingService(
             db,
             new PostgreSQLDDLGenerator(),
@@ -219,6 +223,7 @@ public class EntityPublishingServicePhase8Tests
             templateBindingService,
             functionService,
             templates,
+            dynamicEntityService.Object,
             cfg,
             NullLogger<EntityPublishingService>.Instance);
     }
