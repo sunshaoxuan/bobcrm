@@ -7,6 +7,17 @@
 
 ---
 
+## [1.0.0-RC1] - 2026-01-12
+
+### Added
+- **Performance Benchmarking**: 引入 Locust 性能压测体系，验证 `PageLoader` 端点在高并发场景下的稳定性。
+- **User Documentation**: 发布 `GUIDE-99-最终用户操作手册`，涵盖实体建模、表单设计及高级校验规则。
+
+### Fixed
+- **Engineering Reliability (MSB3021)**: 彻底解决了编译期间 `BobCrm.Api.dll` 被 Roslyn 编译进程占用的文件锁问题，大幅提升 CI/CD 流程的稳定性。
+- **Assembly Management**: 优化了 `DynamicEntityService` 的程序集加载与卸载逻辑（基于 `AssemblyLoadContext`），确保热重装不产生内存泄露。
+- **Stability**: 针对 E2E 遗留的“脏数据”导致 404 的问题，优化了性能测试脚本的实体抓取策略。
+
 ## [未发布] - 进行中
 
 ### Security
