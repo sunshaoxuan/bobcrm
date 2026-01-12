@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.Loader;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +17,8 @@ public class DynamicEntityService : IDynamicEntityService
     private readonly RoslynCompiler _compiler;
     private readonly ILogger<DynamicEntityService> _logger;
 
-    // 缓存已加载的程序集
-    private static readonly Dictionary<string, Assembly> _loadedAssemblies = new();
+    // 缓存已加载的程序集上下文 (Context, Assembly)
+    private static readonly Dictionary<string, (AssemblyLoadContext Context, Assembly Assembly)> _loadedAssemblies = new();
     private static readonly object _lock = new();
 
     public DynamicEntityService(
@@ -79,10 +80,13 @@ public class DynamicEntityService : IDynamicEntityService
 
         if (result.Success && result.Assembly != null)
         {
-            // 缓存程序集
+            // 缓存程序集和上下文
             lock (_lock)
             {
-                _loadedAssemblies[entity.FullTypeName] = result.Assembly;
+                if (result.LoadContext != null)
+                {
+                    _loadedAssemblies[entity.FullTypeName] = (result.LoadContext, result.Assembly);
+                }
             }
 
             _logger.LogInformation("[DynamicEntity] ✓ Entity compiled and loaded: {FullTypeName}",
@@ -137,9 +141,12 @@ public class DynamicEntityService : IDynamicEntityService
             // 缓存所有实体类型
             lock (_lock)
             {
-                foreach (var entity in entities)
+                if (result.LoadContext != null)
                 {
-                    _loadedAssemblies[entity.FullTypeName] = result.Assembly;
+                    foreach (var entity in entities)
+                    {
+                        _loadedAssemblies[entity.FullTypeName] = (result.LoadContext, result.Assembly);
+                    }
                 }
             }
 
@@ -156,9 +163,9 @@ public class DynamicEntityService : IDynamicEntityService
     {
         lock (_lock)
         {
-            if (_loadedAssemblies.TryGetValue(fullTypeName, out var assembly))
+            if (_loadedAssemblies.TryGetValue(fullTypeName, out var entry))
             {
-                return assembly.GetType(fullTypeName);
+                return entry.Assembly.GetType(fullTypeName);
             }
         }
 
@@ -216,7 +223,18 @@ public class DynamicEntityService : IDynamicEntityService
     {
         lock (_lock)
         {
-            _loadedAssemblies.Remove(fullTypeName);
+            if (_loadedAssemblies.TryGetValue(fullTypeName, out var entry))
+            {
+                try
+                {
+                    entry.Context.Unload();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[DynamicEntity] Failed to unload context for {FullTypeName}", fullTypeName);
+                }
+                _loadedAssemblies.Remove(fullTypeName);
+            }
         }
 
         _logger.LogInformation("[DynamicEntity] Entity unloaded: {FullTypeName}", fullTypeName);
@@ -240,6 +258,14 @@ public class DynamicEntityService : IDynamicEntityService
     {
         lock (_lock)
         {
+            foreach (var entry in _loadedAssemblies.Values)
+            {
+                try
+                {
+                    entry.Context.Unload();
+                }
+                catch { /* Ignore unload errors during clear */ }
+            }
             _loadedAssemblies.Clear();
         }
 
