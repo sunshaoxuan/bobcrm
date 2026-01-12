@@ -55,6 +55,12 @@
 - [ ] **Release**: 版本号提升与 CHANGELOG 更新
 
 
+## Phase 6: v1.0 可靠性审计与全量回归 (Reliability & Regression)
+- [/] **Test-Exec-Full**: 执行全量 9 分类 E2E 回归测试 (FIX-06) - **In Progress**
+- [ ] **Fix-Teardown**: 完善 E2E 全量数据清理逻辑 (Global Teardown)
+- [ ] **Verify-Clean**: 确保在“干净环境”下 100% 通过
+- [ ] **Report**: 生成最终 v1.0 质量报告 (Quality Report)
+
 ---
 
 ## 历史归档 (v0.9.x Completed)
