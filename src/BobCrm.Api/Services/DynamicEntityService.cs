@@ -9,7 +9,7 @@ namespace BobCrm.Api.Services;
 /// 动态实体服务
 /// 负责动态生成、编译和加载自定义实体类
 /// </summary>
-public class DynamicEntityService
+public class DynamicEntityService : IDynamicEntityService
 {
     private readonly AppDbContext _db;
     private readonly CSharpCodeGenerator _codeGenerator;
@@ -35,7 +35,7 @@ public class DynamicEntityService
     /// <summary>
     /// 为实体生成代码
     /// </summary>
-    public async Task<string> GenerateCodeAsync(Guid entityDefinitionId)
+    public virtual async Task<string> GenerateCodeAsync(Guid entityDefinitionId)
     {
         var entity = await _db.EntityDefinitions
             .Include(e => e.Fields)
@@ -54,7 +54,7 @@ public class DynamicEntityService
     /// <summary>
     /// 编译实体代码
     /// </summary>
-    public async Task<CompilationResult> CompileEntityAsync(Guid entityDefinitionId)
+    public virtual async Task<CompilationResult> CompileEntityAsync(Guid entityDefinitionId)
     {
         var entity = await _db.EntityDefinitions
             .Include(e => e.Fields)
@@ -95,7 +95,7 @@ public class DynamicEntityService
     /// <summary>
     /// 批量编译多个实体
     /// </summary>
-    public async Task<CompilationResult> CompileMultipleEntitiesAsync(List<Guid> entityDefinitionIds)
+    public virtual async Task<CompilationResult> CompileMultipleEntitiesAsync(List<Guid> entityDefinitionIds)
     {
         var entities = await _db.EntityDefinitions
             .Include(e => e.Fields)
@@ -168,7 +168,7 @@ public class DynamicEntityService
     /// <summary>
     /// 创建实体实例
     /// </summary>
-    public object? CreateEntityInstance(string fullTypeName)
+    public virtual object? CreateEntityInstance(string fullTypeName)
     {
         var type = GetEntityType(fullTypeName);
         if (type == null)
@@ -183,7 +183,7 @@ public class DynamicEntityService
     /// <summary>
     /// 获取实体的所有属性
     /// </summary>
-    public List<PropertyInfo> GetEntityProperties(string fullTypeName)
+    public virtual List<PropertyInfo> GetEntityProperties(string fullTypeName)
     {
         var type = GetEntityType(fullTypeName);
         if (type == null)
@@ -195,7 +195,7 @@ public class DynamicEntityService
     /// <summary>
     /// 验证实体代码语法
     /// </summary>
-    public async Task<ValidationResult> ValidateEntityCodeAsync(Guid entityDefinitionId)
+    public virtual async Task<ValidationResult> ValidateEntityCodeAsync(Guid entityDefinitionId)
     {
         var entity = await _db.EntityDefinitions
             .Include(e => e.Fields)
@@ -212,7 +212,7 @@ public class DynamicEntityService
     /// <summary>
     /// 卸载实体（从缓存中移除）
     /// </summary>
-    public void UnloadEntity(string fullTypeName)
+    public virtual void UnloadEntity(string fullTypeName)
     {
         lock (_lock)
         {
@@ -225,7 +225,7 @@ public class DynamicEntityService
     /// <summary>
     /// 获取所有已加载的实体
     /// </summary>
-    public List<string> GetLoadedEntities()
+    public virtual List<string> GetLoadedEntities()
     {
         lock (_lock)
         {
@@ -236,7 +236,7 @@ public class DynamicEntityService
     /// <summary>
     /// 清空所有已加载的实体
     /// </summary>
-    public void ClearAllLoadedEntities()
+    public virtual void ClearAllLoadedEntities()
     {
         lock (_lock)
         {
@@ -249,7 +249,7 @@ public class DynamicEntityService
     /// <summary>
     /// 重新编译并加载实体（用于实体定义更新后）
     /// </summary>
-    public async Task<CompilationResult> RecompileEntityAsync(Guid entityDefinitionId)
+    public virtual async Task<CompilationResult> RecompileEntityAsync(Guid entityDefinitionId)
     {
         var entity = await _db.EntityDefinitions
             .Include(e => e.Fields)
@@ -271,7 +271,7 @@ public class DynamicEntityService
     /// <summary>
     /// 获取实体的元数据信息
     /// </summary>
-    public EntityTypeInfo? GetEntityTypeInfo(string fullTypeName)
+    public virtual EntityTypeInfo? GetEntityTypeInfo(string fullTypeName)
     {
         var type = GetEntityType(fullTypeName);
         if (type == null)

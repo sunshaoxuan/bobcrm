@@ -30,6 +30,7 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*" />
     <PackageReference Include="AWSSDK.S3" Version="3.*" />
+    <PackageReference Include="System.Text.Json" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,8 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\BobCrm.Application\Templates\**\*.cs"
-             Link="Application\Templates\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\BobCrm.Application\Templates\**\*.cs" Link="Application\Templates\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

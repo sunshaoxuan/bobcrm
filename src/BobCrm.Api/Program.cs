@@ -190,6 +190,7 @@ builder.Services.AddScoped<BobCrm.Api.Services.IDefaultTemplateService, BobCrm.A
 builder.Services.AddScoped<BobCrm.Api.Services.CSharpCodeGenerator>();
 builder.Services.AddScoped<BobCrm.Api.Services.RoslynCompiler>();
 builder.Services.AddScoped<BobCrm.Api.Services.DynamicEntityService>();
+builder.Services.AddScoped<BobCrm.Api.Services.IDynamicEntityService>(sp => sp.GetRequiredService<BobCrm.Api.Services.DynamicEntityService>());
 builder.Services.AddScoped<BobCrm.Api.Services.ReflectionPersistenceService>();
 builder.Services.AddScoped<IReflectionPersistenceService, ReflectionPersistenceService>();
 builder.Services.AddScoped<IFieldMetadataCache, FieldMetadataCache>();

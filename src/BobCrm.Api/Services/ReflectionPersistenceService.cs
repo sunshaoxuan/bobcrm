@@ -865,6 +865,53 @@ public class ReflectionPersistenceService
                     errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
                 }
             }
+            
+            // Advanced Validation Rules (Regex, Range)
+            if (!string.IsNullOrEmpty(field.ValidationRules))
+            {
+                try 
+                {
+                   var rules = JsonSerializer.Deserialize<Dictionary<string, object>>(field.ValidationRules!);
+                   if (rules != null)
+                   {
+                       // Regex Validation
+                       if (rules.TryGetValue("regex", out var regexObj) && regexObj is JsonElement regexElem && regexElem.ValueKind == JsonValueKind.String)
+                       {
+                           var strVal = ExtractStringValue(rawValue);
+                           if (strVal != null)
+                           {
+                               var regexPattern = regexElem.GetString();
+                               if (!string.IsNullOrEmpty(regexPattern) && !Regex.IsMatch(strVal, regexPattern))
+                               {
+                                   errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                               }
+                           }
+                       }
+
+                       // Range Validation
+                       if (rules.TryGetValue("min", out var minObj) && minObj is JsonElement minElem && minElem.ValueKind == JsonValueKind.Number)
+                       {
+                           var min = minElem.GetDouble();
+                           if (IsNumeric(rawValue, out var numVal) && numVal < min)
+                           {
+                               errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                           }
+                       }
+                       if (rules.TryGetValue("max", out var maxObj) && maxObj is JsonElement maxElem && maxElem.ValueKind == JsonValueKind.Number)
+                       {
+                           var max = maxElem.GetDouble();
+                           if (IsNumeric(rawValue, out var numVal) && numVal > max)
+                           {
+                               errors.Add(new ValidationError(propertyName, "ERR_VALIDATION_FAILED_DETAIL"));
+                           }
+                       }
+                   }
+                }
+                catch 
+                {
+                    // Ignore malformed rules
+                }
+            }
         }
 
         if (errors.Count > 0)
@@ -907,6 +954,18 @@ public class ReflectionPersistenceService
         }
 
         return value.ToString();
+    }
+
+    private static bool IsNumeric(object value, out double number)
+    {
+        number = 0;
+        if (value == null) return false;
+        if (value is JsonElement je && je.ValueKind == JsonValueKind.Number)
+        {
+            number = je.GetDouble();
+            return true;
+        }
+        return double.TryParse(value.ToString(), out number);
     }
 
     private static IQueryable ApplySoftDeleteFilter(IQueryable query, Type entityType)

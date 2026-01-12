@@ -23,6 +23,7 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly FunctionService _functionService;
     private readonly ILogger<EntityPublishingService> _logger;
     private readonly IDefaultTemplateService _defaultTemplateService;
+    private readonly IDynamicEntityService _dynamicEntityService;
     private readonly IConfiguration _configuration;
 
     public EntityPublishingService(
@@ -33,6 +34,7 @@ public class EntityPublishingService : IEntityPublishingService
         TemplateBindingService templateBindingService,
         FunctionService functionService,
         IDefaultTemplateService defaultTemplateService,
+        IDynamicEntityService dynamicEntityService,
         IConfiguration configuration,
         ILogger<EntityPublishingService> logger)
     {
@@ -43,6 +45,7 @@ public class EntityPublishingService : IEntityPublishingService
         _templateBindingService = templateBindingService;
         _functionService = functionService;
         _defaultTemplateService = defaultTemplateService;
+        _dynamicEntityService = dynamicEntityService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -179,6 +182,9 @@ public class EntityPublishingService : IEntityPublishingService
 
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
+
+            // 9. 编译实体代码
+            await _dynamicEntityService.CompileEntityAsync(entityDefinitionId);
 
             if (!context.IsCascadeChild)
             {
@@ -345,6 +351,9 @@ public class EntityPublishingService : IEntityPublishingService
             entity.UpdatedBy = withdrawnBy;
             await _db.SaveChangesAsync();
 
+            // 卸载实体代码
+            _dynamicEntityService.UnloadEntity(entity.FullTypeName);
+
             if (transaction != null)
             {
                 await transaction.CommitAsync();
@@ -494,6 +503,9 @@ public class EntityPublishingService : IEntityPublishingService
                 entity.Source = EntitySource.System;
             }
             await _db.SaveChangesAsync();
+
+            // 9. 重新编译实体
+            await _dynamicEntityService.RecompileEntityAsync(entityDefinitionId);
 
             if (!context.IsCascadeChild)
             {

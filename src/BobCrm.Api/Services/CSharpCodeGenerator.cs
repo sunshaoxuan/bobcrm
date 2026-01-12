@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using BobCrm.Api.Base.Models;
 
 namespace BobCrm.Api.Services;
@@ -131,6 +132,44 @@ public class CSharpCodeGenerator
         if (field.IsEntityRef && field.ReferencedEntityId.HasValue)
         {
             attributes.Add($"ForeignKey(nameof({field.PropertyName}))");
+        }
+
+        // Validation Rules
+        if (!string.IsNullOrEmpty(field.ValidationRules))
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var rules = JsonSerializer.Deserialize<ValidationRulesConfig>(field.ValidationRules, options);
+
+                if (rules != null)
+                {
+                    // Regex
+                    if (!string.IsNullOrEmpty(rules.regex))
+                    {
+                        var msg = !string.IsNullOrEmpty(rules.regexMessage) ? rules.regexMessage : "Format validation failed";
+                        // Escape quotes in message and pattern
+                        var pattern = rules.regex.Replace("\"", "\\\"");
+                        var errorMsg = msg.Replace("\"", "\\\"");
+                        attributes.Add($"RegularExpression(@\"{pattern}\", ErrorMessage = \"{errorMsg}\")");
+                    }
+
+                    // Range
+                    if (rules.min.HasValue && rules.max.HasValue)
+                    {
+                        var msg = !string.IsNullOrEmpty(rules.rangeMessage) ? rules.rangeMessage : "Range validation failed";
+                        var errorMsg = msg.Replace("\"", "\\\"");
+                        
+                        // Handle type specific range if needed, generally double works for Range attribute overloads
+                        // But for int/long fields, best to cast? Range attribute handles conversion.
+                        attributes.Add($"Range({rules.min}, {rules.max}, ErrorMessage = \"{errorMsg}\")");
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore parse errors safely
+            }
         }
 
         // Write attributes
@@ -346,5 +385,13 @@ public class CSharpCodeGenerator
         sb.AppendLine("}");
 
         return sb.ToString();
+    }
+    private class ValidationRulesConfig
+    {
+        public string? regex { get; set; }
+        public string? regexMessage { get; set; }
+        public double? min { get; set; }
+        public double? max { get; set; }
+        public string? rangeMessage { get; set; }
     }
 }
