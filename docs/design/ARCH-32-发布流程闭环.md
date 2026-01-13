@@ -70,6 +70,17 @@
 3.  **前端适配**:
     - 在实体定义详情页，为"已发布"实体增加"撤回"按钮（需二次确认）。
 
+### Phase D: 安全加固 (Security Hardening - SEC-06) [NEW from PLAN-26]
+
+**目标**: 确保动态实体 `PUT` 接口强制执行字段级权限过滤，防止越权写入。
+
+**实施细则**:
+1.  **API 拦截 (`DynamicEntityRouteEndpoints`)**:
+    - 在 `UpdateDynamicEntity` 中注入 `FieldFilterService.ValidateWriteFieldsAsync`。
+    - 若请求包含无权字段，立即返回 `403 Forbidden`。
+2.  **前端适配**:
+    - 撤回按钮需增加关联风险提示（检查引用链）。
+
 ---
 
 ## 3. 验收标准 (Acceptance Criteria)
@@ -87,6 +98,12 @@
     - 预期: 报错提示引用关系。
     - 场景: 撤回无引用实体。
     - 预期: 状态变为 Withdrawn，前端显示"重新发布"按钮。
+4.  **安全写入测试 (SEC-06)**:
+    - 场景: 销售员尝试修改"审批状态"字段 (ReadOnly)。
+    - 预期: API 返回 403 Forbidden，前端报错提示。
+5.  **数据驱动验证 (Polymorphism)**:
+    - 场景: 修改 `Status` 触发模板切换。
+    - 预期: 页面无刷新或自动刷新加载新布局。
 
 ---
 

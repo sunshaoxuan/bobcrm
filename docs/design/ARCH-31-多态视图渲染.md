@@ -101,8 +101,12 @@
     - 在 load 数据的同时（或之后），重新请求模板元数据。
     - **优化**: 后端 `/api/entities/{type}/{id}` 响应中直接带上 `RecommendedTemplateId`，避免二次请求。
 
-2.  **视图动态切换**:
-    - 当数据保存并导致状态变更时（Draft -> Submitted），前端需检测到模板变更信号，并重新渲染 UI。
+    - 当数据保存并导致状态变更时（Draft -> Submitted），前端需检测到模板变更信号（SignalR 或 Header），并重新渲染 UI。
+
+3. **设计器集成 (`StateBindingEditor`) [NEW from PLAN-25]**
+    - 在 `FormDesigner.razor` 增加“多态绑定”面板。
+    - **档案式选择器**: 针对 Lookup 字段，自动使用 `EntityRecordSelector` 挑选档案记录 ID (支持 Theme 1: VIP 档案定制)。
+    - **联动保存**: 模板保存时同步推送 `TemplateStateBinding` 配置。
 
 ---
 

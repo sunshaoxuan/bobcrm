@@ -75,7 +75,30 @@
 
 ---
 
-## 5. 准出标准 (Final Exit Criteria)
+76: ---
+
+## 6. 执行策略 (Execution Strategy) - [Merged from PLAN-24]
+
+我们采用 **"分批推进、严格清洗"** 的策略 (Compliance with STD-06)。
+
+### Batch 1: 平台地基 (Foundation)
+*   **Scope**: Entity (PC-*) & Publishing (PC-*)
+*   **Blocker**: 如果实体造不出来 (ENT-01)，后续全部暂停。
+*   **Key Cases**: `test_entity_types`, `test_publish_basic`, `test_publish_evolution`.
+
+### Batch 2: 应用组装 (Assembly)
+*   **Scope**: Templates (UE-*) & Design (UE-*)
+*   **Focus**: 验证 "所见即所得"，特别是设计器 (UE-003~006)。
+*   **Key Cases**: `test_template_codegen`, `test_form_designer`, `test_runtime_render`.
+
+### Batch 3: 业务闭环 (Business Loop)
+*   **Scope**: Security (IS-*) & Logic (NL-*)
+*   **Focus**: 验证 "最终用户体验" 和 "安全边界"。
+*   **Key Cases**: `test_security_menus`, `test_security_access`, `test_polymorphic_flow` (NL-002).
+
+---
+
+## 7. 准出标准 (Final Exit Criteria)
 1.  **Blocker Case**: 必须 100% 通过 (PC-001~009, IS-001~006)。
 2.  **存证要求**: 每一个 ID 必须对应一个 `docs/history/test-results/` 下的存证子目录。
 3.  **代码覆盖**: 后端核心服务单元测试覆盖率需 > 85%。
