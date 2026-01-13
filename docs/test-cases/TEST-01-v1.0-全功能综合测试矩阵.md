@@ -36,7 +36,13 @@
 | UE-007 | 运行时 | 高阶控件: `Lookup` (选择/回填/清空) | Runtime | 弹出模态框选择记录，ID/Name 正确回填。 |
 | UE-008 | 运行时 | 高阶控件: `DatePicker` (格式/范围) | Runtime | 日期选择器按字段 `Format` 渲染，支持范围限制。 |
 | UE-009 | 运行时 | 高阶控件: `Switch` (Boolean 交互) | Runtime | 切换开关状态，即时绑定并触发 `OnFieldChanged`。 |
-| UE-010 | 运行时 | 表单校验: 必填/正则/数值范围 (Real-time) | Runtime | 输入时实时校验，错误提示精准定位到控件下方。 |
+| UE-010 | 运行时 | 基础控件: `Input` (防注入) | Runtime | 验证 HTML/Script 标签的输入转义或拦截。 |
+| UE-011 | 运行时 | 基础控件: `TextArea` (多行) | Runtime | 验证多行输入的高度适配与回显换行符。 |
+| UE-012 | 运行时 | 数值控件: `InputNumber` (精度) | Runtime | 验证 Scale=2 时的四舍五入与非数字拦截。 |
+| UE-013 | 运行时 | 选项控件: `Select` (下拉) | Runtime | 验证下拉面板 Z-Index 层级与选项高亮。 |
+| UE-014 | 运行时 | 选项控件: `RadioGroup` (互斥) | Runtime | 验证单选互斥性及必填时的错误状态。 |
+| UE-015 | 运行时 | 选项控件: `Checkbox` (布尔) | Runtime | 验证勾选/取消的 bool 值变更与 Disabled 态。 |
+| UE-016 | 运行时 | 表单校验: 必填/正则/数值范围 (Real-time) | Runtime | 输入时实时校验，错误提示精准定位到控件下方。 |
 
 ## 3. 组织与权限 (Identity & Security - IS)
 验证系统的安全底座：谁在什么条件下能看到什么。
