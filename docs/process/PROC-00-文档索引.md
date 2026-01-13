@@ -45,6 +45,7 @@
 - [TEST-02-测试覆盖率报告](guides/TEST-02-测试覆盖率报告.md)
 - [TEST-03-实体发布与对齐测试覆盖报告](guides/TEST-03-实体发布与对齐测试覆盖报告.md)
 - [TEST-04-菜单工作流集成测试覆盖](guides/TEST-04-菜单工作流集成测试覆盖.md)
+- [TEST-05-实时质量大屏](test-cases/TEST-05-v1.0-实时质量大屏.md)
 
 ## 3. 参考（reference/）
 - [API-01-接口文档](reference/API-01-接口文档.md)
