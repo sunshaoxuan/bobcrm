@@ -85,7 +85,19 @@
 | NL-005 | 安全脱敏 | **SEC-06**: 后端基于当前模板权限剔除 Response 字段 | **SEC-06** | 即使使用 `mid` 攻击，API 返回的 `fields` 数组也不含无权字段。 |
 | NL-006 | 异常回退 | **[NEW] 无模板时的友好提示 (Fallback UI)** | UI | 当命中规则但模板 ID 为空时，显示友好的 Empty State。 |
 
-## 5. 系统核心服务 (System Services - SS) [NEW]
+## 5. 系统管理 (System Management - SM) [NEW]
+验证系统运维与配置功能。
+
+| ID | 特性 | 测试点 (Checkpoint) | 验证方法 | 预期结果 |
+|---|---|---|---|---|
+| SM-001 | 系统初始化 | **Setup**: 首次运行向导 | E2E | 从空库启动 -> 创建管理员 -> 初始化基础数据。 |
+| SM-002 | 多语管理 | **I18nEditor**: 资源键值在线编辑 | UI | 修改 Key 对应的值 -> 界面实时刷新(或缓存失效)。 |
+| SM-003 | 任务监控 | **JobMonitor**: 后台任务状态查看 | UI | 查看 Enqueue/Processing/Failed 任务队列。 |
+| SM-004 | 审计日志 | **AuditLog**: 全局操作记录查询 | UI | 按时间/用户/实体筛选日志 -> 详情展示变更前后 Diff。 |
+| SM-005 | 个人中心 | **Profile**: 修改密码与基本信息 | UI | 修改头像/密码 -> 重新登录验证生效。 |
+| SM-006 | 激活流程 | **Activate**: 邮件链接激活账户 | E2E | 访问激活 Token 链接 -> 账号状态变更为 Active。 |
+
+## 6. 系统核心服务 (System Services - SS)
 验证 ARCH-33 定义的系统级基础设施。
 
 | ID | 特性 | 测试点 (Checkpoint) | 验证方法 | 预期结果 |
@@ -96,8 +108,6 @@
 | SS-004 | 消息队列 | **IBackgroundQueue**: 异步任务投递 | Integration | Enqueue 任务后，立即返回上下文，后台线程正确执行逻辑。 |
 
 ---
-
-76: ---
 
 ## 6. 执行策略 (Execution Strategy) - [Merged from PLAN-24]
 
