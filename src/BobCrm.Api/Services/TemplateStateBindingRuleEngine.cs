@@ -79,6 +79,7 @@ public static class TemplateStateBindingRuleEngine
             return false;
         }
 
+        // 1) direct property match (for strongly-typed entities / flattened payloads)
         foreach (var property in entityData.EnumerateObject())
         {
             if (!string.Equals(property.Name, fieldName, StringComparison.OrdinalIgnoreCase))
@@ -95,6 +96,80 @@ public static class TemplateStateBindingRuleEngine
                 _ => element.GetRawText()
             };
             return true;
+        }
+
+        // 2) dynamic entity PageLoader shape: { code, name, fields: [{ key, value }, ...] }
+        // This enables polymorphic matching on dynamic fields (Theme 1/2/3).
+        if (TryGetDynamicFieldValueAsString(entityData, fieldName, out value))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetDynamicFieldValueAsString(JsonElement entityData, string fieldName, out string? value)
+    {
+        value = null;
+
+        if (!TryGetPropertyIgnoreCase(entityData, "fields", out var fieldsElement) ||
+            fieldsElement.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var row in fieldsElement.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!TryGetPropertyIgnoreCase(row, "key", out var keyEl))
+            {
+                continue;
+            }
+
+            var key = keyEl.ValueKind == JsonValueKind.String ? keyEl.GetString() : keyEl.GetRawText();
+            if (!string.Equals(key, fieldName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!TryGetPropertyIgnoreCase(row, "value", out var valueEl))
+            {
+                value = null;
+                return true;
+            }
+
+            value = valueEl.ValueKind switch
+            {
+                JsonValueKind.String => valueEl.GetString(),
+                JsonValueKind.Null => null,
+                JsonValueKind.Undefined => null,
+                _ => valueEl.GetRawText()
+            };
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement obj, string name, out JsonElement value)
+    {
+        value = default;
+        if (obj.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var p in obj.EnumerateObject())
+        {
+            if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                value = p.Value;
+                return true;
+            }
         }
 
         return false;

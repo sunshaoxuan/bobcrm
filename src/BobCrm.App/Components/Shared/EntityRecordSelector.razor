@@ -1,0 +1,232 @@
+@using AntDesign
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject I18nService I18n
+@inject EntityDefinitionService EntityDefinitionService
+@inject DynamicEntityService DynamicEntityService
+
+<div style="display:flex; gap:8px; align-items:center">
+    <Input Value="@_displayText"
+           Disabled="true"
+           Style="flex:1"
+           Placeholder="@Placeholder" />
+    <Button Size="@ButtonSize.Small" OnClick="OpenAsync" Disabled="@Disabled">
+        @I18n.T("BTN_SELECT")
+    </Button>
+    @if (!string.IsNullOrWhiteSpace(Value))
+    {
+        <Button Size="@ButtonSize.Small" Danger="true" OnClick="ClearAsync" Disabled="@Disabled">
+            @I18n.T("BTN_CLEAR")
+        </Button>
+    }
+</div>
+
+<Modal Visible="@_visible"
+       Title="@Title"
+       Width="860"
+       OnOk="HandleOk"
+       OnCancel="Close">
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px">
+        <Input @bind-Value="_keyword" Placeholder="@I18n.T("LBL_SEARCH")" Style="flex:1" />
+        <Button Type="@ButtonType.Primary" OnClick="SearchAsync" Loading="@_loading">@I18n.T("BTN_SEARCH")</Button>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <Alert Type="@AlertType.Error" Message="@_error" ShowIcon="true" />
+    }
+    else if (_loading)
+    {
+        <div style="padding:24px; text-align:center; color:#999">
+            <Spin />
+        </div>
+    }
+    else
+    {
+        <Table TItem="Dictionary<string, object>"
+               DataSource="@_rows"
+               Bordered="true"
+               Size="@TableSize.Small">
+            <Column Title="Id" TData="string">@GetId(context)</Column>
+            <Column Title="@DisplayFieldLabel" TData="string">@GetDisplay(context)</Column>
+            <Column Title="@I18n.T("LBL_ACTION")" TData="string">
+                <Button Size="@ButtonSize.Small" Type="@ButtonType.Primary" OnClick="@(() => SelectRow(context))">
+                    @I18n.T("BTN_SELECT")
+                </Button>
+            </Column>
+        </Table>
+    }
+</Modal>
+
+@code {
+    [Parameter] public string? LookupEntityName { get; set; }
+    [Parameter] public string? LookupDisplayField { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string Title { get; set; } = "Select Record";
+    [Parameter] public string Placeholder { get; set; } = "";
+
+    private bool _visible;
+    private bool _loading;
+    private string? _error;
+    private string _keyword = "";
+    private string _displayText = "";
+
+    private string? _fullTypeName;
+    private string _displayField = "Name";
+    private string _displayFieldLabel = "Name";
+
+    private List<Dictionary<string, object>> _rows = new();
+    private Dictionary<string, object>? _selected;
+
+    private string DisplayFieldLabel => _displayFieldLabel;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ResolveTargetEntityAsync();
+        _displayText = string.IsNullOrWhiteSpace(Value) ? "" : Value!;
+    }
+
+    private async Task ResolveTargetEntityAsync()
+    {
+        _fullTypeName = null;
+        _displayField = string.IsNullOrWhiteSpace(LookupDisplayField) ? "Name" : LookupDisplayField!.Trim();
+        _displayFieldLabel = _displayField;
+
+        if (string.IsNullOrWhiteSpace(LookupEntityName))
+        {
+            return;
+        }
+
+        var all = await EntityDefinitionService.GetAllAsync();
+        var target = all.FirstOrDefault(e =>
+            string.Equals(e.EntityRoute, LookupEntityName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(e.EntityName, LookupEntityName, StringComparison.OrdinalIgnoreCase));
+        if (target == null || string.IsNullOrWhiteSpace(target.FullTypeName))
+        {
+            return;
+        }
+
+        _fullTypeName = target.FullTypeName;
+    }
+
+    private async Task OpenAsync()
+    {
+        _visible = true;
+        _error = null;
+        _selected = null;
+        await SearchAsync();
+    }
+
+    private void Close()
+    {
+        _visible = false;
+        _error = null;
+        _selected = null;
+    }
+
+    private Task HandleOk()
+    {
+        Close();
+        return Task.CompletedTask;
+    }
+
+    private async Task ClearAsync()
+    {
+        Value = null;
+        _displayText = "";
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(null);
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        _error = null;
+        _loading = true;
+        _rows = new();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_fullTypeName))
+            {
+                _error = "Lookup entity not resolved.";
+                return;
+            }
+
+            var filters = new List<FilterConditionDto>();
+            if (!string.IsNullOrWhiteSpace(_keyword))
+            {
+                filters.Add(new FilterConditionDto
+                {
+                    Field = _displayField,
+                    Operator = FilterOperator.Contains,
+                    Value = _keyword.Trim()
+                });
+            }
+
+            var result = await DynamicEntityService.QueryAsync(_fullTypeName!, new DynamicEntityQueryRequest
+            {
+                Filters = filters,
+                Take = 10,
+                Skip = 0,
+                OrderBy = "Id",
+                OrderByDescending = true
+            });
+
+            var data = result?.Data ?? new List<Dictionary<string, object>>();
+            _rows = data;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SelectRow(Dictionary<string, object> row)
+    {
+        _selected = row;
+        var id = GetId(row);
+        Value = id;
+        _displayText = string.IsNullOrWhiteSpace(id) ? "" : id;
+        _visible = false;
+        _ = ValueChanged.InvokeAsync(Value);
+    }
+
+    private static string GetId(Dictionary<string, object> row)
+    {
+        if (row.TryGetValue("Id", out var id) && id != null)
+        {
+            return id.ToString() ?? "";
+        }
+        if (row.TryGetValue("id", out var id2) && id2 != null)
+        {
+            return id2.ToString() ?? "";
+        }
+        return "";
+    }
+
+    private string GetDisplay(Dictionary<string, object> row)
+    {
+        if (row.TryGetValue(_displayField, out var v) && v != null)
+        {
+            return v.ToString() ?? "";
+        }
+        if (row.TryGetValue("Name", out var n) && n != null)
+        {
+            return n.ToString() ?? "";
+        }
+        if (row.TryGetValue("Code", out var c) && c != null)
+        {
+            return c.ToString() ?? "";
+        }
+        return "";
+    }
+}
+

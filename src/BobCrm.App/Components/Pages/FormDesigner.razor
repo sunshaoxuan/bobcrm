@@ -163,30 +163,37 @@
                     <aside class="designer-panel designer-properties">
                         <div class="designer-section">
                             <h3 class="designer-section-title">@I18n.T("LBL_PROPERTIES")</h3>
-                            @if (_selectedWidget is null)
-                            {
-                                <div style="padding:12px; color:#999; font-size:12px">
-                                    @I18n.T("TXT_SELECT_WIDGET")
-                                </div>
-                            }
-                            else
-                            {
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-                                    <div style="display:flex; flex-direction:column; gap:2px">
-                                        <strong style="font-size:14px">@_selectedWidget.Label</strong>
-                                        <span style="font-size:12px; color:#999">@_selectedWidget.Type</span>
-                                    </div>
-                                    <Button Danger Icon="@IconType.Outline.Delete" Size="@ButtonSize.Small" OnClick="RemoveSelected">
-                                        @I18n.T("BTN_DELETE")
-                                    </Button>
-                                </div>
-                                <PropertyEditor Properties="@PropertyProvider.GetProperties(_selectedWidget)"
-                                                Widget="@_selectedWidget"
-                                                AllWidgets="@GetAllWidgets()"
-                                                EntityDefinition="@_entities.FirstOrDefault(e => e.EntityRoute == _templateEntity)"
-                                                AllEntities="@_entities"
-                                                OnPropertyChanged="OnPropertiesChanged" />
-                            }
+                            <Tabs @bind-ActiveKey="_propertiesTabKey">
+                                <TabPane Key="widget" Tab="@I18n.T("LBL_WIDGET")">
+                                    @if (_selectedWidget is null)
+                                    {
+                                        <div style="padding:12px; color:#999; font-size:12px">
+                                            @I18n.T("TXT_SELECT_WIDGET")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                                            <div style="display:flex; flex-direction:column; gap:2px">
+                                                <strong style="font-size:14px">@_selectedWidget.Label</strong>
+                                                <span style="font-size:12px; color:#999">@_selectedWidget.Type</span>
+                                            </div>
+                                            <Button Danger Icon="@IconType.Outline.Delete" Size="@ButtonSize.Small" OnClick="RemoveSelected">
+                                                @I18n.T("BTN_DELETE")
+                                            </Button>
+                                        </div>
+                                        <PropertyEditor Properties="@PropertyProvider.GetProperties(_selectedWidget)"
+                                                        Widget="@_selectedWidget"
+                                                        AllWidgets="@GetAllWidgets()"
+                                                        EntityDefinition="@_entities.FirstOrDefault(e => e.EntityRoute == _templateEntity)"
+                                                        AllEntities="@_entities"
+                                                        OnPropertyChanged="OnPropertiesChanged" />
+                                    }
+                                </TabPane>
+                                <TabPane Key="binding" Tab="@I18n.T("LBL_TEMPLATE_BINDING")">
+                                    <StateBindingEditor TemplateId="@TemplateId" EntityType="@_templateEntity" />
+                                </TabPane>
+                            </Tabs>
                         </div>
                     </aside>
                 </div>
@@ -235,6 +242,7 @@
     private bool _saving;
     private string? _error;
     private int? _loadedTemplateId;
+    private string _propertiesTabKey = "widget";
 
     protected override async Task OnInitializedAsync()
     {

@@ -295,6 +295,235 @@ public static class TemplateEndpoints
         .WithDescription("创建或更新实体与模板之间的绑定关系。")
         .Produces<SuccessResponse<TemplateBindingDto>>(StatusCodes.Status200OK);
 
+        // ===== PLAN-25: TemplateStateBinding 管理（规则绑定）=====
+        // 仅允许拥有 SYS.TEMPLATE.ASSIGN 权限的用户操作
+        group.MapGet("/state-bindings", async (
+            [AsParameters] Query query,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            AccessService access,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var lang = LangHelper.GetLang(http);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            await access.EnsureFunctionAccessAsync(uid, "SYS.TEMPLATE.ASSIGN", ct);
+
+            var entityType = (query.EntityType ?? string.Empty).Trim();
+            var viewState = (query.ViewState ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(entityType) || string.IsNullOrWhiteSpace(viewState))
+            {
+                return Results.BadRequest(new ErrorResponse(loc.T("MSG_INVALID_REQUEST", lang), "INVALID_REQUEST"));
+            }
+
+            var normalized = entityType.ToLowerInvariant();
+            var list = await db.TemplateStateBindings
+                .AsNoTracking()
+                .Where(b => (b.EntityType ?? string.Empty).ToLower() == normalized && b.ViewState == viewState)
+                .OrderByDescending(b => b.Priority)
+                .ThenByDescending(b => b.IsDefault)
+                .ThenByDescending(b => b.CreatedAt)
+                .ToListAsync(ct);
+
+            if (query.TemplateId.HasValue)
+            {
+                list = list.Where(b => b.TemplateId == query.TemplateId.Value).ToList();
+            }
+
+            var payload = list.Select(ToTemplateStateBindingDto).ToList();
+            return Results.Ok(new SuccessResponse<List<TemplateStateBindingDto>>(payload));
+        })
+        .WithName("GetTemplateStateBindings")
+        .WithSummary("获取模板状态绑定列表")
+        .Produces<SuccessResponse<List<TemplateStateBindingDto>>>(StatusCodes.Status200OK);
+
+        group.MapPost("/state-bindings", async (
+            UpsertTemplateStateBindingRequest request,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            AccessService access,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var lang = LangHelper.GetLang(http);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            await access.EnsureFunctionAccessAsync(uid, "SYS.TEMPLATE.ASSIGN", ct);
+
+            var entityType = (request.EntityType ?? string.Empty).Trim();
+            var viewState = (request.ViewState ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(entityType) || string.IsNullOrWhiteSpace(viewState))
+            {
+                return Results.BadRequest(new ErrorResponse(loc.T("MSG_INVALID_REQUEST", lang), "INVALID_REQUEST"));
+            }
+
+            var template = await db.FormTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Id == request.TemplateId, ct);
+            if (template == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(template.EntityType) &&
+                !string.Equals(template.EntityType, entityType, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new ErrorResponse(loc.T("MSG_INVALID_REQUEST", lang), "TEMPLATE_ENTITY_MISMATCH"));
+            }
+
+            var binding = new TemplateStateBinding
+            {
+                EntityType = entityType.ToLowerInvariant(),
+                ViewState = viewState,
+                TemplateId = request.TemplateId,
+                MatchFieldName = string.IsNullOrWhiteSpace(request.MatchFieldName) ? null : request.MatchFieldName!.Trim(),
+                MatchFieldValue = string.IsNullOrWhiteSpace(request.MatchFieldValue) ? null : request.MatchFieldValue!.Trim(),
+                Priority = request.Priority,
+                IsDefault = request.IsDefault,
+                RequiredPermission = string.IsNullOrWhiteSpace(request.RequiredPermission) ? null : request.RequiredPermission!.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            if (binding.IsDefault)
+            {
+                var existed = await db.TemplateStateBindings
+                    .Where(b => b.EntityType == binding.EntityType && b.ViewState == binding.ViewState && b.IsDefault)
+                    .ToListAsync(ct);
+                foreach (var b in existed)
+                {
+                    b.IsDefault = false;
+                }
+            }
+
+            db.TemplateStateBindings.Add(binding);
+            await db.SaveChangesAsync(ct);
+
+            return Results.Created($"/api/templates/state-bindings/{binding.Id}", new SuccessResponse<TemplateStateBindingDto>(ToTemplateStateBindingDto(binding)));
+        })
+        .WithName("CreateTemplateStateBinding")
+        .WithSummary("创建模板状态绑定")
+        .Produces<SuccessResponse<TemplateStateBindingDto>>(StatusCodes.Status201Created);
+
+        group.MapPut("/state-bindings/{id:int}", async (
+            int id,
+            UpsertTemplateStateBindingRequest request,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            AccessService access,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var lang = LangHelper.GetLang(http);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            await access.EnsureFunctionAccessAsync(uid, "SYS.TEMPLATE.ASSIGN", ct);
+
+            var entityType = (request.EntityType ?? string.Empty).Trim();
+            var viewState = (request.ViewState ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(entityType) || string.IsNullOrWhiteSpace(viewState))
+            {
+                return Results.BadRequest(new ErrorResponse(loc.T("MSG_INVALID_REQUEST", lang), "INVALID_REQUEST"));
+            }
+
+            var binding = await db.TemplateStateBindings.FirstOrDefaultAsync(b => b.Id == id, ct);
+            if (binding == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_NOT_FOUND", lang), "NOT_FOUND"));
+            }
+
+            var template = await db.FormTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Id == request.TemplateId, ct);
+            if (template == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(template.EntityType) &&
+                !string.Equals(template.EntityType, entityType, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new ErrorResponse(loc.T("MSG_INVALID_REQUEST", lang), "TEMPLATE_ENTITY_MISMATCH"));
+            }
+
+            var normalizedEntity = entityType.ToLowerInvariant();
+            binding.EntityType = normalizedEntity;
+            binding.ViewState = viewState;
+            binding.TemplateId = request.TemplateId;
+            binding.MatchFieldName = string.IsNullOrWhiteSpace(request.MatchFieldName) ? null : request.MatchFieldName!.Trim();
+            binding.MatchFieldValue = string.IsNullOrWhiteSpace(request.MatchFieldValue) ? null : request.MatchFieldValue!.Trim();
+            binding.Priority = request.Priority;
+            binding.IsDefault = request.IsDefault;
+            binding.RequiredPermission = string.IsNullOrWhiteSpace(request.RequiredPermission) ? null : request.RequiredPermission!.Trim();
+
+            if (binding.IsDefault)
+            {
+                var existed = await db.TemplateStateBindings
+                    .Where(b => b.EntityType == normalizedEntity && b.ViewState == viewState && b.IsDefault && b.Id != id)
+                    .ToListAsync(ct);
+                foreach (var b in existed)
+                {
+                    b.IsDefault = false;
+                }
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new SuccessResponse<TemplateStateBindingDto>(ToTemplateStateBindingDto(binding)));
+        })
+        .WithName("UpdateTemplateStateBinding")
+        .WithSummary("更新模板状态绑定")
+        .Produces<SuccessResponse<TemplateStateBindingDto>>(StatusCodes.Status200OK);
+
+        group.MapDelete("/state-bindings/{id:int}", async (
+            int id,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            AccessService access,
+            ILocalization loc,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var lang = LangHelper.GetLang(http);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                return Results.Unauthorized();
+            }
+
+            await access.EnsureFunctionAccessAsync(uid, "SYS.TEMPLATE.ASSIGN", ct);
+
+            var binding = await db.TemplateStateBindings.FirstOrDefaultAsync(b => b.Id == id, ct);
+            if (binding == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_NOT_FOUND", lang), "NOT_FOUND"));
+            }
+
+            // 解绑 FunctionNodes 上的引用，避免 FK/逻辑残留（主要用于菜单绑定）
+            var nodes = await db.FunctionNodes.Where(n => n.TemplateStateBindingId == id).ToListAsync(ct);
+            foreach (var n in nodes)
+            {
+                n.TemplateStateBindingId = null;
+            }
+
+            db.TemplateStateBindings.Remove(binding);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ApiResponseExtensions.SuccessResponse());
+        })
+        .WithName("DeleteTemplateStateBinding")
+        .WithSummary("删除模板状态绑定")
+        .Produces<SuccessResponse>(StatusCodes.Status200OK);
+
         group.MapPost("/runtime/{entityType}", async (
             string entityType,
             TemplateRuntimeRequest request,
@@ -345,6 +574,21 @@ public static class TemplateEndpoints
             binding.RequiredFunctionCode,
             binding.UpdatedBy,
             binding.UpdatedAt);
+
+    private static TemplateStateBindingDto ToTemplateStateBindingDto(TemplateStateBinding binding) =>
+        new(
+            binding.Id,
+            binding.EntityType,
+            binding.ViewState,
+            binding.TemplateId,
+            binding.MatchFieldName,
+            binding.MatchFieldValue,
+            binding.Priority,
+            binding.IsDefault,
+            binding.RequiredPermission,
+            binding.CreatedAt);
+
+    private sealed record Query(string? EntityType, string? ViewState, int? TemplateId);
 
 
 

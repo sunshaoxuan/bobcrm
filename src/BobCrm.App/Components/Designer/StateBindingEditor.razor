@@ -1,0 +1,369 @@
+@using AntDesign
+@using BobCrm.Api.Contracts.DTOs.Template
+@using BobCrm.Api.Contracts.Requests.Template
+@using BobCrm.App.Models
+@using BobCrm.App.Services
+@inject I18nService I18n
+@inject TemplateStateBindingService StateBindingService
+@inject EntityDefinitionService EntityDefinitionService
+@inject EnumDefinitionService EnumDefinitionService
+@inject IMessageService MessageService
+
+<div style="display:flex; flex-direction:column; gap:10px">
+    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between">
+        <div style="display:flex; flex-direction:column; gap:2px">
+            <strong>@I18n.T("LBL_TEMPLATE_BINDING")</strong>
+            <span style="font-size:12px; color:#999">PLAN-25：规则绑定（Enum/Lookup 档案式匹配）</span>
+        </div>
+        <Button Size="@ButtonSize.Small" Type="@ButtonType.Primary" Disabled="@(!CanEdit)" OnClick="NewBinding">
+            ➕ @I18n.T("BTN_NEW")
+        </Button>
+    </div>
+
+    @if (!CanEdit)
+    {
+        <Alert Type="@AlertType.Info" Message="@I18n.T("MSG_PLEASE_SAVE_TEMPLATE_FIRST")" ShowIcon="true" />
+    }
+    else
+    {
+        <div style="display:flex; gap:8px; align-items:center">
+            <Select TItemValue="string" TItem="string" Style="width: 180px" @bind-Value="_viewState" OnChange="OnViewStateChanged">
+                @foreach (var vs in ViewStates)
+                {
+                    <SelectOption Value="@vs">@vs</SelectOption>
+                }
+            </Select>
+            <Button Size="@ButtonSize.Small" OnClick="ReloadAsync" Loading="@_loading">@I18n.T("BTN_REFRESH")</Button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <Alert Type="@AlertType.Error" Message="@_error" ShowIcon="true" />
+        }
+
+        <Table TItem="TemplateStateBindingDto"
+               DataSource="@_bindings"
+               Bordered="true"
+               Size="@TableSize.Small"
+               RowKey="b => b.Id.ToString()">
+            <Column Title="Id" TData="int">@context.Id</Column>
+            <Column Title="@I18n.T("LBL_VIEW_STATE")" TData="string">@context.ViewState</Column>
+            <Column Title="@I18n.T("LBL_MATCH_FIELD")" TData="string">@context.MatchFieldName</Column>
+            <Column Title="@I18n.T("LBL_MATCH_VALUE")" TData="string">@context.MatchFieldValue</Column>
+            <Column Title="@I18n.T("LBL_PRIORITY")" TData="int">@context.Priority</Column>
+            <Column Title="@I18n.T("LBL_DEFAULT")" TData="bool">
+                @if (context.IsDefault)
+                {
+                    <Tag Color="@TagColor.Green">Default</Tag>
+                }
+            </Column>
+            <Column Title="@I18n.T("LBL_ACTION")" TData="string">
+                <div style="display:flex; gap:6px">
+                    <Button Size="@ButtonSize.Small" OnClick="@(() => EditBinding(context))">@I18n.T("BTN_EDIT")</Button>
+                    <Button Size="@ButtonSize.Small" Danger="true" OnClick="@(() => DeleteBindingAsync(context))">@I18n.T("BTN_DELETE")</Button>
+                </div>
+            </Column>
+        </Table>
+
+        @if (_editing)
+        {
+            <Divider />
+            <div style="display:flex; flex-direction:column; gap:10px">
+                <div style="display:flex; gap:8px; align-items:center">
+                    <Tag Color="@TagColor.Blue">TemplateId: @TemplateId</Tag>
+                    <Tag>Entity: @EntityType</Tag>
+                    <Tag>ViewState: @_viewState</Tag>
+                </div>
+
+                <div style="display:flex; gap:10px">
+                    <div style="flex:1">
+                        <div style="font-size:12px; color:#666; margin-bottom:6px">@I18n.T("LBL_MATCH_FIELD")</div>
+                        <Select TItemValue="string" TItem="string" @bind-Value="_matchField" AllowClear="true" Style="width:100%" Disabled="@_isDefault">
+                            @foreach (var f in _fields)
+                            {
+                                <SelectOption Value="@f.PropertyName">@($"{f.PropertyName} ({f.DataType})")</SelectOption>
+                            }
+                        </Select>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-size:12px; color:#666; margin-bottom:6px">@I18n.T("LBL_MATCH_VALUE")</div>
+                        @RenderMatchValueEditor()
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; align-items:center">
+                    <div style="display:flex; flex-direction:column; gap:4px">
+                        <div style="font-size:12px; color:#666">@I18n.T("LBL_PRIORITY")</div>
+                        <AntDesign.InputNumber TValue="int" @bind-Value="_priority" Style="width:160px" />
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px">
+                        <div style="font-size:12px; color:#666">@I18n.T("LBL_DEFAULT")</div>
+                        <Switch Checked="@_isDefault" OnChange="OnDefaultChanged" />
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; justify-content:flex-end">
+                    <Button OnClick="CancelEdit">@I18n.T("BTN_CANCEL")</Button>
+                    <Button Type="@ButtonType.Primary" Loading="@_saving" OnClick="SaveBindingAsync">@I18n.T("BTN_SAVE")</Button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int? TemplateId { get; set; }
+    [Parameter] public string? EntityType { get; set; }
+
+    private bool CanEdit => TemplateId.HasValue && !string.IsNullOrWhiteSpace(EntityType);
+
+    private bool _loading;
+    private bool _saving;
+    private string? _error;
+    private List<TemplateStateBindingDto> _bindings = new();
+
+    private string _viewState = "DetailView";
+    private static readonly string[] ViewStates = ["DetailView", "DetailEdit", "List", "Create"];
+
+    // editing model
+    private bool _editing;
+    private int? _editingId;
+    private string? _matchField;
+    private string? _matchValue;
+    private int _priority;
+    private bool _isDefault;
+
+    private List<FieldMetadataDto> _fields = new();
+    private List<string> _enumOptions = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!CanEdit)
+        {
+            _bindings = new();
+            _fields = new();
+            return;
+        }
+
+        await LoadFieldsAsync();
+        await ReloadAsync();
+    }
+
+    private async Task LoadFieldsAsync()
+    {
+        try
+        {
+            var all = await EntityDefinitionService.GetAllAsync();
+            var def = all.FirstOrDefault(e => string.Equals(e.EntityRoute, EntityType, StringComparison.OrdinalIgnoreCase));
+            _fields = def?.Fields ?? new List<FieldMetadataDto>();
+        }
+        catch
+        {
+            _fields = new();
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _bindings = await StateBindingService.GetAsync(EntityType!, _viewState, templateId: null);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Task OnViewStateChanged(string value)
+    {
+        _viewState = value;
+        _editing = false;
+        return ReloadAsync();
+    }
+
+    private void NewBinding()
+    {
+        _editing = true;
+        _editingId = null;
+        _matchField = null;
+        _matchValue = null;
+        _priority = 0;
+        _isDefault = false;
+        _enumOptions = new();
+    }
+
+    private void EditBinding(TemplateStateBindingDto b)
+    {
+        _editing = true;
+        _editingId = b.Id;
+        _matchField = b.MatchFieldName;
+        _matchValue = b.MatchFieldValue;
+        _priority = b.Priority;
+        _isDefault = b.IsDefault;
+        _enumOptions = new();
+        _ = LoadEnumOptionsAsync();
+    }
+
+    private void CancelEdit()
+    {
+        _editing = false;
+        _editingId = null;
+    }
+
+    private void OnDefaultChanged(bool value)
+    {
+        _isDefault = value;
+        if (_isDefault)
+        {
+            _matchField = null;
+            _matchValue = null;
+            _enumOptions = new();
+        }
+    }
+
+    private RenderFragment RenderMatchValueEditor() => builder =>
+    {
+        if (_isDefault)
+        {
+            builder.OpenComponent<Input<string>>(0);
+            builder.AddAttribute(1, "Value", "");
+            builder.AddAttribute(2, "Disabled", true);
+            builder.CloseComponent();
+            return;
+        }
+
+        var meta = _fields.FirstOrDefault(f => string.Equals(f.PropertyName, _matchField, StringComparison.OrdinalIgnoreCase));
+        var isEnum = meta != null && string.Equals(meta.DataType, "Enum", StringComparison.OrdinalIgnoreCase) && meta.EnumDefinitionId.HasValue;
+        var isLookup = meta != null && (!string.IsNullOrWhiteSpace(meta.LookupEntityName) || string.Equals(meta.DataType, "Lookup", StringComparison.OrdinalIgnoreCase) || meta.ReferencedEntityId.HasValue);
+
+        if (isEnum)
+        {
+            if (_enumOptions.Count == 0)
+            {
+                _ = LoadEnumOptionsAsync();
+            }
+
+            builder.OpenComponent<AntDesign.Select<string, string>>(0);
+            builder.AddAttribute(1, "Style", "width:100%");
+            builder.AddAttribute(2, "Value", _matchValue);
+            builder.AddAttribute(3, "OnSelectedItemChanged", EventCallback.Factory.Create<string>(this, v => _matchValue = v));
+            builder.AddAttribute(4, "AllowClear", true);
+            builder.AddAttribute(5, "ChildContent", (RenderFragment)(b =>
+            {
+                var seq = 0;
+                foreach (var opt in _enumOptions)
+                {
+                    b.OpenComponent<AntDesign.SelectOption<string, string>>(seq++);
+                    b.AddAttribute(seq++, "Value", opt);
+                    b.AddAttribute(seq++, "ChildContent", (RenderFragment)(bb => bb.AddContent(0, opt)));
+                    b.CloseComponent();
+                }
+            }));
+            builder.CloseComponent();
+            return;
+        }
+
+        if (isLookup)
+        {
+            builder.OpenComponent<BobCrm.App.Components.Shared.EntityRecordSelector>(0);
+            builder.AddAttribute(1, "LookupEntityName", meta?.LookupEntityName);
+            builder.AddAttribute(2, "LookupDisplayField", meta?.LookupDisplayField);
+            builder.AddAttribute(3, "Value", _matchValue);
+            builder.AddAttribute(4, "ValueChanged", EventCallback.Factory.Create<string?>(this, v => _matchValue = v));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<Input<string>>(0);
+        builder.AddAttribute(1, "Value", _matchValue);
+        builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string?>(this, v => _matchValue = v));
+        builder.AddAttribute(3, "Placeholder", "e.g. Draft / 1 / 94ad...");
+        builder.CloseComponent();
+    };
+
+    private async Task LoadEnumOptionsAsync()
+    {
+        try
+        {
+            var meta = _fields.FirstOrDefault(f => string.Equals(f.PropertyName, _matchField, StringComparison.OrdinalIgnoreCase));
+            if (meta?.EnumDefinitionId == null)
+            {
+                _enumOptions = new();
+                return;
+            }
+
+            var def = await EnumDefinitionService.GetByIdAsync(meta.EnumDefinitionId.Value);
+            _enumOptions = def?.Options?.Where(o => o.IsEnabled).OrderBy(o => o.SortOrder).Select(o => o.Value).ToList() ?? new();
+        }
+        catch
+        {
+            _enumOptions = new();
+        }
+    }
+
+    private async Task SaveBindingAsync()
+    {
+        if (!CanEdit)
+        {
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var req = new UpsertTemplateStateBindingRequest(
+                EntityType: EntityType!,
+                ViewState: _viewState,
+                TemplateId: TemplateId!.Value,
+                MatchFieldName: _matchField,
+                MatchFieldValue: _matchValue,
+                Priority: _priority,
+                IsDefault: _isDefault,
+                RequiredPermission: null);
+
+            TemplateStateBindingDto? saved;
+            if (_editingId.HasValue)
+            {
+                saved = await StateBindingService.UpdateAsync(_editingId.Value, req);
+            }
+            else
+            {
+                saved = await StateBindingService.CreateAsync(req);
+            }
+
+            if (saved == null)
+            {
+                MessageService.Error("Save failed (403 or invalid).");
+                return;
+            }
+
+            MessageService.Success(I18n.T("MSG_SAVED"));
+            _editing = false;
+            await ReloadAsync();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteBindingAsync(TemplateStateBindingDto b)
+    {
+        var ok = await StateBindingService.DeleteAsync(b.Id);
+        if (!ok)
+        {
+            MessageService.Error("Delete failed.");
+            return;
+        }
+        MessageService.Success(I18n.T("MSG_DELETED"));
+        await ReloadAsync();
+    }
+}
+

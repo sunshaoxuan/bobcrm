@@ -32,6 +32,7 @@ builder.Services.AddScoped<BobCrm.App.Services.MenuService>();
 builder.Services.AddScoped<BobCrm.App.Services.UserService>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateRuntimeClient>();
 builder.Services.AddScoped<BobCrm.App.Services.TemplateBindingService>();
+builder.Services.AddScoped<BobCrm.App.Services.TemplateStateBindingService>();
 builder.Services.AddScoped<I18nService>();
 builder.Services.AddScoped<BobCrm.Api.Abstractions.II18nService>(sp => sp.GetRequiredService<I18nService>());
 builder.Services.Configure<MultilingualOptions>(options =>
