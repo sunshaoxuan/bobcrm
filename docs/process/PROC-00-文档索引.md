@@ -20,7 +20,7 @@
 - [ARCH-24-紧凑型顶部菜单导航-实施计划](design/ARCH-24-紧凑型顶部菜单导航-实施计划.md)
 - [ARCH-25-通用主从模式设计](design/ARCH-25-通用主从模式设计.md)
 - [ARCH-26-动态枚举系统设计](design/ARCH-26-动态枚举系统设计.md)
-- [ARCH-33-动态实体查询端点与字段元数据缓存调研报告](design/ARCH-33-动态实体查询端点与字段元数据缓存调研报告.md)
+- [ARCH-26-动态枚举系统设计](design/ARCH-26-动态枚举系统设计.md)
 - [PROD-01-客户信息管理系统设计文档（含 docx）](design/PROD-01-客户信息管理系统设计文档.md)
 - [PROD-02-客户系统开发任务与接口文档](design/PROD-02-客户系统开发任务与接口文档.md)
 - [UI-01-UIUE设计说明书](design/UI-01-UIUE设计说明书.md)
@@ -92,21 +92,13 @@
 - 本页：`PROC-00-文档索引.md`
 - [PROC-01-PR检查清单](process/PROC-01-PR检查清单.md)
 - [PROC-02-文档同步规范](process/PROC-02-文档同步规范.md)
+- [STD-01-开发质量标准](process/STD-01-开发质量标准.md)
+- [STD-02-文档编写规范](process/STD-02-文档编写规范.md)
+- [STD-03-通用编程规范](process/STD-03-通用编程规范.md)
+- [STD-06-集成测试规范](process/STD-06-集成测试规范.md)
+- [STD-08-Git协作与提交规范](process/STD-08-Git协作与提交规范.md)
 
 ## 8. 示例（examples/）
-- [EX-01-订单管理示例](examples/EX-01-订单管理示例.md)
-
-## 9. 测试用例库（test-cases/）
-
-> 按领域组织的手工/端到端测试用例库（命名规则见 `docs/process/STD-02-文档编写规范.md` 2.4）。
-
-- 入口：`test-cases/README.md`
-
-## 10. AI 审查 Prompts（prompts/）
-
-> AI 驱动代码审查的 Prompt 和输出模板
-
-- 入口：`prompts/README.md`
 - [PROMPT-01-全面代码审查](prompts/PROMPT-01-全面代码审查.md) - 完整的代码审查执行指令
 - [TEMPLATE-01-代码审查报告模板](prompts/TEMPLATE-01-代码审查报告模板.md) - 审查报告输出格式
 - [TEMPLATE-02-改进计划模板](prompts/TEMPLATE-02-改进计划模板.md) - 改进计划输出格式

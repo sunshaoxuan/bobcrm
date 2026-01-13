@@ -1,6 +1,6 @@
 # TEST-02: Batch 1 基础平台验证
 
-> **关联计划**: [PLAN-24](file:///c:/workspace/bobcrm/docs/plans/PLAN-24-v1.0-全功能测试执行方案.md)
+> **关联计划**: [TEST-01](file:///c:/workspace/bobcrm/docs/test-cases/TEST-01-v1.0-全功能综合测试矩阵.md)
 > **测试范围**: ENT-001~008, PUB-001~007
 > **优先级**: **Blocker**
 > **执行人**: QA 团队

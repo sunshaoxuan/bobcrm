@@ -70,7 +70,7 @@
 3.  **前端适配**:
     - 在实体定义详情页，为"已发布"实体增加"撤回"按钮（需二次确认）。
 
-### Phase D: 安全加固 (Security Hardening - SEC-06) [NEW from PLAN-26]
+### Phase D: 安全加固 (Security Hardening - SEC-06)
 
 **目标**: 确保动态实体 `PUT` 接口强制执行字段级权限过滤，防止越权写入。
 

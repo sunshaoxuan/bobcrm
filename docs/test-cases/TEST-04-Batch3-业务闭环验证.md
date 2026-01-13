@@ -1,6 +1,6 @@
 # TEST-04: Batch 3 业务闭环验证
 
-> **关联计划**: [PLAN-24](file:///c:/workspace/bobcrm/docs/plans/PLAN-24-v1.0-全功能测试执行方案.md)
+> **关联计划**: [TEST-01](file:///c:/workspace/bobcrm/docs/test-cases/TEST-01-v1.0-全功能综合测试矩阵.md)
 > **测试范围**: SEC-001~006, UX-001~004
 > **前置依赖**: Batch 2 Passed
 

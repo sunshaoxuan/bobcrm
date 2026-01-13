@@ -103,7 +103,7 @@
 
     - 当数据保存并导致状态变更时（Draft -> Submitted），前端需检测到模板变更信号（SignalR 或 Header），并重新渲染 UI。
 
-3. **设计器集成 (`StateBindingEditor`) [NEW from PLAN-25]**
+3. **设计器集成 (`StateBindingEditor`)**
     - 在 `FormDesigner.razor` 增加“多态绑定”面板。
     - **档案式选择器**: 针对 Lookup 字段，自动使用 `EntityRecordSelector` 挑选档案记录 ID (支持 Theme 1: VIP 档案定制)。
     - **联动保存**: 模板保存时同步推送 `TemplateStateBinding` 配置。

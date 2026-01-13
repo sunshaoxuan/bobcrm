@@ -1,6 +1,6 @@
 # TEST-03: Batch 2 应用组装验证
 
-> **关联计划**: [PLAN-24](file:///c:/workspace/bobcrm/docs/plans/PLAN-24-v1.0-全功能测试执行方案.md)
+> **关联计划**: [TEST-01](file:///c:/workspace/bobcrm/docs/test-cases/TEST-01-v1.0-全功能综合测试矩阵.md)
 > **测试范围**: TPL-001~006
 > **前置依赖**: Batch 1 Passed
 
