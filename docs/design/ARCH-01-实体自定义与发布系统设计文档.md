@@ -58,6 +58,7 @@
 - **字段列表** - 属性定义的集合
 - **接口特性** - 基础信息、档案信息、审计信息等
 - **发布状态** - 草稿、已发布、已修改
+- **校验规则** - 字段级验证逻辑（正则、范围、唯一性等）
 
 ### 2. 实体结构类型
 
@@ -97,6 +98,29 @@ Project (主表)
         ├── PhaseId (外键)
         └── TaskName
 ```
+
+### 2.3 可扩展校验系统 (Extensible Validation System) [NEW]
+
+为了满足复杂的业务数据完整性要求，系统在元数据层引入校验器机制。
+
+#### 1. 架构设计
+- **后端核心**: `BobCrm.Api.Services.Validation`
+    - `IPropertyValidator`: 属性验证器接口 (Validate(value) -> Valid/Invalid)。
+    - `ValidatorRegistry`: 验证器注册中心 (Email, IP, Phone, Regex)。
+    - `EntityValidationService`: 编排服务，在 `DynamicEntityService` 保存前调用。
+- **元数据扩展**:
+    - 在 `FieldMetadata` 中增加 `ValidatorType` (string) 和 `ValidatorRules` (json)。
+- **前端适配**:
+    - 设计器属性面板增加 "Validation Rules" 配置块。
+    - 运行时 `PageLoader` 解析规则并注入 `AntDesign.Form` 的 Rules。
+
+#### 2. 预置验证器 (Built-in Validators)
+| 代号 | 名称 | 参数示例 |
+|---|---|---|
+| `Email` | 邮箱 | - |
+| `Regex` | 正则 | `{"Pattern": "^CN-.*"}` |
+| `Range` | 数值范围 | `{"Min": 18, "Max": 60}` |
+| `Unique`| 唯一性 | `{"Scope": "Global"}` (需 DB 查询) |
 
 ### 3. 字段元数据 (FieldMetadata)
 

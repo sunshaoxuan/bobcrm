@@ -44,6 +44,17 @@
 - `Collapsible`: 是否可折叠
 - `DefaultExpanded`: 默认展开状态
 
+4. #### 4.5 组件级验收标准 (Component Testing) [NEW]
+
+为了确保“所见即所得”的可靠性，每个组件必须通过以下维度测试：
+1. **渲染测试**: JSON -> DOM 结构是否正确，样式 Class 是否生效。
+2. **交互测试**: 拖拽、缩放、嵌套是否流畅，撤销/重做是否还原。
+3. **属性测试**: 修改 PropertyGrid 中的属性（如 Visible, Label），设计器画布应即时响应。
+4. **运行时测试**: 
+   - 值绑定 (Two-way Binding)
+   - 校验反馈 (Validation Message)
+   - 状态联动 (ReadOnly/Disabled)
+
 ### 控件注册
 更新 `WidgetRegistry.cs`:
 ```csharp

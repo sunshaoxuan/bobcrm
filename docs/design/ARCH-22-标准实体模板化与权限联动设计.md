@@ -151,6 +151,7 @@ BobCRM 旨在让 80% 以上的 CRUD 场景通过配置和模板实现，而目�
 
 ### 5.2 权限联动
 1. **功能权限**：导航 / API 根据 `FunctionCode` 控制可见性与访问。模板在绑定时记录 `RequiredFunctionCode`。  
+   - **状态感知 (State-Aware)**: 支持 `function_code:State` 格式（如 `order.edit:Draft,Rejected`），验证时若实体状态不在列表内，视为无权。
 2. **数据范围**：模板运行前调用 `AccessService.EvaluateDataScope(entity, action)`，得到组织/条件过滤，传给后端查询。  
 3. **组织维度注入**：对实现 `IOrganizational` 的实体，模板渲染上下文自动带入 `OrganizationId` 下拉或固定值。
 
