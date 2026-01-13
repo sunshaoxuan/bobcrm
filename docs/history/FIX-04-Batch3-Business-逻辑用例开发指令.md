@@ -1,9 +1,9 @@
 # FIX-04: Batch 3 业务逻辑用例开发指令
 
-**版本**: 1.0
-**引用**: [TEST-BATCH-03-BUSINESS.md](file:///C:/Users/X02851/.gemini/antigravity/brain/58e464e1-4f05-4336-b41c-add9cb95040a/TEST-BATCH-03-BUSINESS.md)
-**优先级**: 高
+**生效日期**: 2026-01-08
+**状态**: 已完成
 
+---
 ## 1. 任务目标
 Batch 2 视觉渲染问题已解决。现在进入 **Batch 3: 业务深度逻辑验证** 阶段。你需要实现并运行针对复杂业务场景的 E2E 用例。
 

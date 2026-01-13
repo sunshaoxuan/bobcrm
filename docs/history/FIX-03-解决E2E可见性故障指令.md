@@ -1,6 +1,9 @@
-# FIX-03: 解决 E2E 环境下组件可见性故障指令
+# FIX-03: 解决 E2E 环境下组件可见性失效方案
 
 **版本**: 1.0
+**生效日期**: 2026-01-07
+**状态**: 已完成
+
 **引用**: [ARCH-34](file:///c:/workspace/bobcrm/docs/design/ARCH-34-解决E2E环境下组件可见性失效方案.md), [FIX-02](file:///c:/workspace/bobcrm/docs/history/FIX-02-Batch2-Runtime-渲染问题修复指令.md)
 **优先级**: 紧急 (Blocker)
 
