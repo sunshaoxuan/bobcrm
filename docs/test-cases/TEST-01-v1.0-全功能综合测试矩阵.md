@@ -43,6 +43,16 @@
 | UE-014 | 运行时 | 选项控件: `RadioGroup` (互斥) | Runtime | 验证单选互斥性及必填时的错误状态。 |
 | UE-015 | 运行时 | 选项控件: `Checkbox` (布尔) | Runtime | 验证勾选/取消的 bool 值变更与 Disabled 态。 |
 | UE-016 | 运行时 | 表单校验: 必填/正则/数值范围 (Real-time) | Runtime | 输入时实时校验，错误提示精准定位到控件下方。 |
+| UE-020 | 运行时 | 选项控件: `Select` (枚举) | Runtime | 验证枚举值的下拉选择与 Label 动态回显。 |
+| UE-021 | 运行时 | 选项控件: `RadioGroup` (互斥) | Runtime | 验证单选项的互斥性与必填校验。 |
+| UE-022 | 运行时 | 选项控件: `ListBox` (多选) | Runtime | 验证多选列表的 Ctrl/Shift 选择逻辑与 Model 绑定。 |
+| UE-023 | 运行时 | 选项控件: `EnumSelector` (自动) | Runtime | 验证系统枚举值的自动加载无需手动配置。 |
+| UE-030 | 运行时 | 复合控件: `Calendar` (日期时间) | Runtime | 验证日期与时间选择器的联动及格式化展示。 |
+| UE-040 | 运行时 | 数据控件: `DataGrid` (子表) | Runtime | 验证 1:N 关系下的子记录 CRUD 弹窗操作。 |
+| UE-041 | 运行时 | 数据控件: `SubForm` (嵌套表单) | Runtime | 验证 1:1 关系下的内嵌表单直接编辑。 |
+| UE-042 | 运行时 | 数据控件: `OrgTree` (架构树) | Runtime | 验证部门树的懒加载与节点选择ID回填。 |
+| UE-043 | 运行时 | 数据控件: `PermTree` (权限树) | Runtime | 验证功能权限节点的级联勾选状态。 |
+| UE-044 | 运行时 | 数据控件: `UserRole` (穿梭框) | Runtime | 验证左右穿梭框的对象分配与移除逻辑。 |
 
 ## 3. 组织与权限 (Identity & Security - IS)
 验证系统的安全底座：谁在什么条件下能看到什么。

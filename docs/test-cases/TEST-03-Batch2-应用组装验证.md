@@ -40,23 +40,40 @@
 *   **验证**:
     *   必填字段标红。
 ### Case 2.5: 控件全集验证 (Component Gallery) - [UE-Gallery]
-**目标**: 验证系统涉及的所有 9 种基础与高阶控件的交互逻辑。
+**目标**: 验证 `WidgetRegistry` 中定义的所有 18 种基础与数据控件的交互逻辑。
 
-| ID | 控件类型 | 测试操作 (Input) | 验证点 (Assertion) |
-|---|---|---|---|
-| **UE-007** | **Lookup** | 点击放大镜 -> 弹窗搜索 "Hardware" -> 选中 -> 回填 | 1. 隐藏域存储 GUID <br> 2. 显示文本无闪烁 <br> 3. 再次打开回显选中态 |
-| **UE-008** | **DatePicker** | 选值 `2025-12-31` -> 清空 -> 再选 | 1. 格式严格符合 `yyyy-MM-dd` <br> 2. 清空后 Model 为 null |
-| **UE-009** | **Switch** | 快速切换 On/Off (防抖测试) | 1. 动画无卡顿 <br> 2. 最终值与后端 Payload 一致 |
-| **UE-010** | **Input** | 输入特殊字符 `<script>` | 1. 显示正常 <br> 2. 提交后后端未被转义(或按策略处理) |
-| **UE-011** | **TextArea** | 输入多行文本 (包含换行符 `\n`) | 1. 高度自适应或滚动条出现 <br> 2. 详情页回显保留换行格式 |
-| **UE-012** | **InputNumber** | 输入非数字字符 -> 输入超大数值 -> 精度测试 | 1. 非法字符被阻断 <br> 2. 精度 (`Scale=2`) 自动截断或四舍五入 |
-| **UE-013** | **Select** | 点击下拉 -> 键盘上下键选择 | 1. 下拉面板不被弹窗遮挡 (Z-Index) <br> 2. 选中值正确高亮 |
-| **UE-014** | **RadioGroup** | 切换选项 A -> B | 1. 互斥性验证 (A 自动取消) <br> 2. 必填校验时未选标红 |
-| **UE-015** | **Checkbox** | 点击勾选 -> 再次点击取消 | 1. `bool` 值正确反转 <br> 2. Disabled 态下无法点击 |
+#### A. 基础输入 (Basic Input) - [UE-010~016]
+| ID | 控件类型 (Registry) | C# Type | 验证操作 | 预期结果 |
+|---|---|---|---|---|
+| **UE-010** | `textbox` / `text` | `TextboxWidget` | 输入 "Hello" -> 失去焦点 | Model 更新，无 JS 报错 |
+| **UE-011** | `details_text` | `TextAreaWidget` | 输入多行文本 (含回车) | 高度自适应，详情页回显保留换行 |
+| **UE-012** | `number` | `NumberWidget` | 输入 `123.456` (Scale=2) | 自动截断为 `123.46`，且 Model 类型为 decimal/double |
+| **UE-013** | `checkbox` | `CheckboxWidget` | 勾选 -> 取消 | bool 值在 true/false 间切换 |
+| **UE-014** | `switch` (Alias) | `SwitchWidget`* | 切换开关状态 (需确认 Registry 是否支持 Switch) | 动画流畅，绑定 bool 值 |
+| **UE-015** | `label` | `LabelWidget` | 配置静态文本 | 仅显示文本，无 Input 元素，无 Model 绑定 |
+| **UE-016** | `button` | `ButtonWidget` | 点击按钮 | 触发配置的 Action (如 Save/Cancel/Flow) |
 
-**执行要求**:
-*   必须在 **Edit** (表单态) 和 **View** (只读态) 下分别运行以上所有测试。
-*   View 态下所有控件应渲染为纯文本或 Disabled 样式，不可交互。
+#### B. 选项与枚举 (Options & Enum) - [UE-020~024]
+| ID | 控件类型 (Registry) | C# Type | 验证操作 | 预期结果 |
+|---|---|---|---|---|
+| **UE-020** | `select` | `SelectWidget` | 下拉选择 "Option B" | 隐藏域值更新，Label 回显正确 |
+| **UE-021** | `radio` | `RadioWidget` | 切换 Radio B | 互斥（A 自动取消），必填校验生效 |
+| **UE-022** | `listbox` | `ListboxWidget` | 列表选择 (多选模式) | Model 绑定为 `List<string>` 或逗号分隔字符串 |
+| **UE-023** | `enumselector` | `SelectWidget` | 绑定到 System Enum | 自动加载枚举定义，无需手动配置 Options |
+
+#### C. 日期与时间 (Date & Time) - [UE-030]
+| ID | 控件类型 (Registry) | C# Type | 验证操作 | 预期结果 |
+|---|---|---|---|---|
+| **UE-030** | `date` / `calendar` | `CalendarWidget` | 选日期 -> 选时间 | 依据 Format (`yyyy-MM-dd HH:mm`) 决定是否显示时分秒 |
+
+#### D. 高级数据控件 (Advanced Data) - [UE-040~044]
+| ID | 控件类型 (Registry) | C# Type | 验证操作 | 预期结果 |
+|---|---|---|---|---|
+| **UE-040** | `datagrid` | `DataGridWidget` | 1:N 子表添加行 | 弹出子表单模态框，保存后主表增加一行 |
+| **UE-041** | `subform` | `SubFormWidget` | 1:1 级联编辑 | 直接在当前页面渲染子实体字段 (无弹窗) |
+| **UE-042** | `orgtree` | `OrganizationTreeWidget` | 展开部门树 -> 勾选 | 选中部门 ID 列表回填 |
+| **UE-043** | `permtree` | `RolePermissionTreeWidget` | 勾选功能节点 | 级联勾选（选子自动选父） |
+| **UE-044** | `userrole` | `UserRoleAssignmentWidget` | 穿梭框 (Transfer) 分配 | 左侧选人 -> 移入右侧 -> Model 更新 |
 
 ## 3. 准出标准
 *   模板可自定义并持久化。
