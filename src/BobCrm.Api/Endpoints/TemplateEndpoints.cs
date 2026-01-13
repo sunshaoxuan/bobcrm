@@ -312,8 +312,18 @@ public static class TemplateEndpoints
             }
 
                 request ??= new TemplateRuntimeRequest();
-            var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
-            return Results.Ok(new SuccessResponse<TemplateRuntimeResponse>(context));
+            try
+            {
+                var context = await runtimeService.BuildRuntimeContextAsync(uid, entityType, request, ct);
+                return Results.Ok(new SuccessResponse<TemplateRuntimeResponse>(context));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // FIX-09: tid/vs 明确指定的视图无权访问时，必须返回 403（而不是 401/静默降级）
+                return Results.Json(
+                    new ErrorResponse(loc.T("ERR_FORBIDDEN", lang), "FORBIDDEN"),
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
         })
         .WithName("BuildTemplateRuntime")
         .WithSummary("获取模板运行时上下文")

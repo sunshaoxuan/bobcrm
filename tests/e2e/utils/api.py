@@ -11,17 +11,21 @@ class ApiHelper:
         self.token = None
         self.refresh_token = None
 
-    def login_as_admin(self):
-        """Logs in as admin to get a token for subsequent API calls."""
+    def login(self, username: str, password: str):
+        """Logs in with provided credentials to get a token for subsequent API calls."""
         url = f"{self.api_base}/api/auth/login"
-        payload = {"username": "admin", "password": "Admin@12345"}
+        payload = {"username": username, "password": password}
         resp = requests.post(url, json=payload)
         if resp.status_code == 200:
             data = resp.json()
-            self.token = data['data']['accessToken']
-            self.refresh_token = data['data'].get('refreshToken')
+            self.token = data["data"]["accessToken"]
+            self.refresh_token = data["data"].get("refreshToken")
             return True
         return False
+
+    def login_as_admin(self):
+        """Logs in as admin to get a token for subsequent API calls."""
+        return self.login("admin", "Admin@12345")
 
     def get_headers(self):
         headers = {"Content-Type": "application/json"}

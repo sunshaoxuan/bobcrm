@@ -9,6 +9,7 @@
 
 @inject BobCrm.App.Services.I18nService I18n
 @inject PageLoaderViewModel ViewModel
+@inject NavigationManager Nav
 
 <AuthChecker>
     @if (ViewModel.Loading)
@@ -56,14 +57,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        await ViewModel.LoadDataAsync(EntityType, Id);
+        var (tid, vs) = ReadViewContextFromUrl();
+        await ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
     }
 
     protected override async Task OnParametersSetAsync()
     {
         if (!ViewModel.Loading)
         {
-            await ViewModel.LoadDataAsync(EntityType, Id);
+            var (tid, vs) = ReadViewContextFromUrl();
+            await ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
         }
     }
 
@@ -91,7 +94,11 @@
         return Task.CompletedTask;
     }
 
-    private Task ReloadPage() => ViewModel.LoadDataAsync(EntityType, Id);
+    private Task ReloadPage()
+    {
+        var (tid, vs) = ReadViewContextFromUrl();
+        return ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
+    }
 
     private Task SaveChanges() => ViewModel.SaveChangesAsync();
 
@@ -99,6 +106,45 @@
     {
         I18n.OnChanged -= HandleI18nChanged;
         ViewModel.PropertyChanged -= HandleViewModelChanged;
+    }
+
+    private (int? templateId, string? viewState) ReadViewContextFromUrl()
+    {
+        try
+        {
+            var uri = new Uri(Nav.Uri);
+            var query = uri.Query?.TrimStart('?') ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return (null, null);
+            }
+
+            int? templateId = null;
+            string? viewState = null;
+            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var kv = part.Split('=', 2);
+                if (kv.Length == 0) continue;
+                var key = Uri.UnescapeDataString(kv[0] ?? string.Empty).Trim();
+                var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1] ?? string.Empty) : string.Empty;
+
+                if (string.Equals(key, "tid", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(value, out var tid))
+                {
+                    templateId = tid;
+                }
+                else if (string.Equals(key, "vs", StringComparison.OrdinalIgnoreCase))
+                {
+                    viewState = string.IsNullOrWhiteSpace(value) ? null : value;
+                }
+            }
+
+            return (templateId, viewState);
+        }
+        catch
+        {
+            return (null, null);
+        }
     }
 }
 

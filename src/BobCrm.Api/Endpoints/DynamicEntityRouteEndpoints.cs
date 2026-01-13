@@ -1,9 +1,13 @@
 using System.Security.Claims;
+using System.Text.Json;
 using BobCrm.Api.Abstractions;
+using BobCrm.Api.Base;
 using BobCrm.Api.Base.Models;
 using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Infrastructure;
 using BobCrm.Api.Services;
+using BobCrm.Api.Contracts;
+using BobCrm.Api.Contracts.Requests.Template;
 using Microsoft.EntityFrameworkCore;
 
 namespace BobCrm.Api.Endpoints;
@@ -24,9 +28,14 @@ public static class DynamicEntityRouteEndpoints
         group.MapGet("/{entityPlural}/{id:int}", async (
             string entityPlural,
             int id,
+            int? tid,
+            string? vs,
+            ClaimsPrincipal user,
             AppDbContext db,
             DynamicEntityService dynamicEntityService,
             IReflectionPersistenceService persistenceService,
+            TemplateRuntimeService templateRuntimeService,
+            ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
         {
@@ -46,6 +55,60 @@ public static class DynamicEntityRouteEndpoints
             }
 
             var dict = ToDictionary(entity);
+
+            // FIX-09: If view context (tid/vs) is provided, enforce access AND filter fields based on the resolved template.
+            if (tid.HasValue || !string.IsNullOrWhiteSpace(vs))
+            {
+                var lang = LangHelper.GetLang(http);
+                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrWhiteSpace(uid))
+                {
+                    return Results.Unauthorized();
+                }
+
+                JsonElement? entityData = null;
+                try
+                {
+                    entityData = JsonSerializer.SerializeToElement(dict, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                }
+                catch
+                {
+                    entityData = null;
+                }
+
+                try
+                {
+                    var ctx = await templateRuntimeService.BuildRuntimeContextAsync(
+                        uid,
+                        entityType,
+                        new TemplateRuntimeRequest(
+                            UsageType: FormTemplateUsageType.Detail,
+                            TemplateId: tid,
+                            ViewState: vs,
+                            FunctionCodeOverride: null,
+                            EntityId: id,
+                            EntityData: entityData),
+                        ct);
+
+                    var allowedFields = ExtractTemplateFields(ctx.Template.LayoutJson);
+                    if (allowedFields.Count > 0)
+                    {
+                        dict = dict
+                            .Where(kvp =>
+                                string.Equals(kvp.Key, "Code", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(kvp.Key, "Name", StringComparison.OrdinalIgnoreCase) ||
+                                allowedFields.Contains(kvp.Key))
+                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return Results.Json(
+                        new ErrorResponse(loc.T("ERR_FORBIDDEN", lang), "FORBIDDEN"),
+                        statusCode: StatusCodes.Status403Forbidden);
+                }
+            }
+
             return Results.Ok(ToPageLoaderResponse(dict));
         })
         .WithName("GetDynamicEntityByShortRoute")
@@ -184,4 +247,53 @@ public static class DynamicEntityRouteEndpoints
 
     private sealed record DynamicEntityUpdateRequest(string? code, string? name, List<FieldPayload>? fields);
     private sealed record FieldPayload(string key, object? value);
+
+    private static HashSet<string> ExtractTemplateFields(string? layoutJson)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(layoutJson))
+        {
+            return set;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(layoutJson);
+            Walk(doc.RootElement, set);
+        }
+        catch
+        {
+            // ignore parse errors: safest fallback is "no filter" handled by caller (empty set)
+        }
+
+        return set;
+
+        static void Walk(JsonElement el, HashSet<string> acc)
+        {
+            switch (el.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var prop in el.EnumerateObject())
+                    {
+                        if (string.Equals(prop.Name, "dataField", StringComparison.OrdinalIgnoreCase) &&
+                            prop.Value.ValueKind == JsonValueKind.String)
+                        {
+                            var v = prop.Value.GetString();
+                            if (!string.IsNullOrWhiteSpace(v))
+                            {
+                                acc.Add(v!);
+                            }
+                        }
+                        Walk(prop.Value, acc);
+                    }
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in el.EnumerateArray())
+                    {
+                        Walk(item, acc);
+                    }
+                    break;
+            }
+        }
+    }
 }

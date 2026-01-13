@@ -47,11 +47,12 @@
                                         var isActive = IsFunctionActive(function);
                                     var route = NormalizeRoute(function.Route);
                                     var isDisabled = string.IsNullOrWhiteSpace(route);
+                                    var finalRoute = AttachTemplateContext(function, route);
 
                                         <button type="button"
                                                 class="function-card @(isActive ? "active" : string.Empty)"
                                                 disabled="@isDisabled"
-                                                @onclick="() => HandleFunctionClick(route)">
+                                                @onclick="() => HandleFunctionClick(finalRoute)">
                                             <div class="function-card-icon">
                                                 <Icon Type="@ResolveIcon(function.Icon)" />
                                             </div>
@@ -191,6 +192,19 @@
             return route;
         }
         return route.StartsWith("/") ? route : "/" + route.Trim();
+    }
+
+    private string AttachTemplateContext(FunctionMenuNode node, string route)
+    {
+        if (node == null) return route;
+        if (string.IsNullOrWhiteSpace(route)) return route;
+        if (route.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return route;
+        if (!node.TemplateId.HasValue) return route;
+
+        // FIX-09: propagate template context to PageLoader via query string
+        // tid = TemplateId, vs = Function Code (menu context)
+        var join = route.Contains('?') ? "&" : "?";
+        return $"{route}{join}tid={node.TemplateId.Value}&vs={Uri.EscapeDataString(node.Code ?? string.Empty)}";
     }
 
     private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;

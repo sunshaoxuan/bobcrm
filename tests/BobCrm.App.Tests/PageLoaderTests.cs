@@ -80,6 +80,8 @@ public class PageLoaderTests : TestContext
                     It.IsAny<TemplateUsageType>(),
                     It.IsAny<string?>(),
                     It.IsAny<int?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<int?>(),
                     It.IsAny<JsonElement?>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(_runtimeResponse);

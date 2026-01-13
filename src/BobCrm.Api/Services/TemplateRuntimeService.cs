@@ -44,7 +44,7 @@ public class TemplateRuntimeService
     {
         request ??= new TemplateRuntimeRequest();
         var usage = request.UsageType;
-        var viewState = MapUsageToViewState(usage);
+        var usageViewState = MapUsageToViewState(usage);
 
         var normalized = entityType?.Trim() ?? string.Empty;
         var altNormalized = normalized.EndsWith("s", StringComparison.OrdinalIgnoreCase)
@@ -52,6 +52,132 @@ public class TemplateRuntimeService
             : $"{normalized}s";
 
         var entityData = await ResolveEntityDataAsync(normalized, altNormalized, request, ct);
+
+        // ===== FIX-09: 强指定模板（tid）或菜单上下文（vs） =====
+        // - tid: 直接返回该模板（并校验用户是否拥有该模板对应的 RequiredPermission）
+        // - vs: 视为“菜单/功能编码”上下文，通过 TemplateStateBinding.RequiredPermission 选择对应模板
+        if (request.TemplateId.HasValue)
+        {
+            var forcedTemplateId = request.TemplateId.Value;
+            var forcedTemplate = await _db.FormTemplates
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == forcedTemplateId, ct);
+            if (forcedTemplate == null)
+            {
+                throw new KeyNotFoundException("Template not found.");
+            }
+
+            // Find candidate state bindings for access enforcement (prefer those matching current usage view state)
+            var candidates = await _db.TemplateStateBindings
+                .AsNoTracking()
+                .Where(b =>
+                    (b.EntityType == normalized || b.EntityType == altNormalized) &&
+                    b.TemplateId == forcedTemplateId &&
+                    b.ViewState == usageViewState)
+                .OrderByDescending(b => b.IsDefault)
+                .ThenByDescending(b => b.Priority)
+                .ThenByDescending(b => b.CreatedAt)
+                .ToListAsync(ct);
+
+            // Allow if user can access at least one binding required permission (or binding has none)
+            TemplateStateBinding? bindingForAuth = null;
+            foreach (var b in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(b.RequiredPermission))
+                {
+                    bindingForAuth = b;
+                    break;
+                }
+
+                if (await _accessService.HasFunctionAccessAsync(userId, b.RequiredPermission, ct))
+                {
+                    bindingForAuth = b;
+                    break;
+                }
+            }
+
+            if (bindingForAuth == null)
+            {
+                // No binding grants access to this template for this user.
+                throw new UnauthorizedAccessException("Forbidden.");
+            }
+
+            await _accessService.EnsureFunctionAccessAsync(userId, bindingForAuth.RequiredPermission, ct);
+            var scopeResultForced = await _accessService.EvaluateDataScopeAsync(userId, entityType ?? "", ct);
+            var appliedScopesForced = DescribeScopes(scopeResultForced);
+
+            // Return a DTO binding with the TemplateStateBinding id (not TemplateBinding)
+            var bindingDto = new TemplateBindingDto(
+                bindingForAuth.Id,
+                normalized,
+                usage,
+                forcedTemplateId,
+                true,
+                bindingForAuth.RequiredPermission,
+                "runtime",
+                DateTime.UtcNow);
+
+            return new TemplateRuntimeResponse(
+                bindingDto,
+                forcedTemplate.ToDescriptor(),
+                scopeResultForced.HasFullAccess,
+                appliedScopesForced);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ViewState))
+        {
+            var menuCode = request.ViewState!.Trim();
+
+            // Select template for this menu code via TemplateStateBinding.RequiredPermission.
+            var stateBindings = await _db.TemplateStateBindings
+                .AsNoTracking()
+                .Include(b => b.Template)
+                .Where(b =>
+                    (b.EntityType == normalized || b.EntityType == altNormalized) &&
+                    b.ViewState == usageViewState &&
+                    b.RequiredPermission == menuCode)
+                .OrderByDescending(b => b.Priority)
+                .ThenByDescending(b => b.CreatedAt)
+                .ToListAsync(ct);
+
+            if (stateBindings.Count == 0)
+            {
+                throw new UnauthorizedAccessException("Forbidden.");
+            }
+
+            // Core security: user must have access to the menu/function code
+            await _accessService.EnsureFunctionAccessAsync(userId, menuCode, ct);
+
+            var chosen = stateBindings.First();
+            var template = chosen.Template;
+            if (!IsTemplateUsable(template))
+            {
+                template = await _db.FormTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Id == chosen.TemplateId, ct);
+            }
+            if (!IsTemplateUsable(template))
+            {
+                throw new InvalidOperationException("Template unusable.");
+            }
+
+            var scopeResultVs = await _accessService.EvaluateDataScopeAsync(userId, entityType ?? "", ct);
+            var appliedScopesVs = DescribeScopes(scopeResultVs);
+
+            var bindingDto = new TemplateBindingDto(
+                chosen.Id,
+                normalized,
+                usage,
+                chosen.TemplateId,
+                true,
+                chosen.RequiredPermission,
+                "runtime",
+                DateTime.UtcNow);
+
+            return new TemplateRuntimeResponse(
+                bindingDto,
+                template!.ToDescriptor(),
+                scopeResultVs.HasFullAccess,
+                appliedScopesVs);
+        }
 
         var binding = await _bindingService.GetBindingAsync(normalized, usage, ct)
                       ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
@@ -92,7 +218,7 @@ public class TemplateRuntimeService
             throw new InvalidOperationException("Binding does not include template data.");
         }
 
-        var bindingToUse = await ApplyPolymorphicViewBindingAsync(binding, normalized, altNormalized, viewState, usage, entityData, ct);
+        var bindingToUse = await ApplyPolymorphicViewBindingAsync(binding, normalized, altNormalized, usageViewState, usage, entityData, ct);
 
         var requiredFunction = request.FunctionCodeOverride
             ?? bindingToUse.RequiredFunctionCode

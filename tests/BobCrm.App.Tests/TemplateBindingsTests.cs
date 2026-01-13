@@ -156,17 +156,19 @@ public class TemplateBindingsTests : TestContext
 
     private sealed class StubTemplateRuntimeClient : TemplateRuntimeClient
     {
-        public List<(string EntityType, TemplateUsageType UsageType, int? EntityId)> Requests { get; } = new();
+        public List<(string EntityType, TemplateUsageType UsageType, int? TemplateId, string? ViewState, int? EntityId)> Requests { get; } = new();
 
         public override Task<TemplateRuntimeResponse?> GetRuntimeAsync(
             string entityType,
             TemplateUsageType usageType,
             string? functionOverride = null,
+            int? templateId = null,
+            string? viewState = null,
             int? entityId = null,
             System.Text.Json.JsonElement? entityData = null,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add((entityType, usageType, entityId));
+            Requests.Add((entityType, usageType, templateId, viewState, entityId));
             var binding = new TemplateBindingDto(1, entityType, usageType, 1, true, "SYS.TEMPLATE.ASSIGN", "tester", DateTime.UtcNow);
             var template = new TemplateDescriptorDto(1, "系统详情", entityType, usageType, "{}", Array.Empty<string>(), null);
             return Task.FromResult<TemplateRuntimeResponse?>(new TemplateRuntimeResponse(binding, template, true, new[] { "scope" }));

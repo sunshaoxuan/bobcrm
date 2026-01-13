@@ -69,7 +69,7 @@
 ## Phase 8: v1.0 平台功能闭环验收 (Functional Closure)
 - [x] **Gap-Analysis**: 深度审计核心链路偏差 (AUDIT-GAP-01) - **Done**
 - [x] **Instruction-Set**: 生成高强度闭环纠偏指令 (FIX-09) - **Done**
-- [/] **Functional-Alignment**: 实现权限/菜单/多态渲染全链路对齐 (FIX-08/09) - **In Progress**
+- [x] **Functional-Alignment**: 实现权限/菜单/多态渲染全链路对齐 (FIX-09) - **Passed**
 
 ## Phase 9: v1.0 最终质量验收与审计 (Final Acceptance)
 - [ ] **Acceptance-Verify**: 按照 STD-08 标准执行最后验收

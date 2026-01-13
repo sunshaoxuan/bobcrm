@@ -199,6 +199,8 @@ public class PageLoaderViewModelTests
                 It.IsAny<TemplateUsageType>(),
                 It.IsAny<string?>(),
                 It.IsAny<int?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
                 It.IsAny<JsonElement?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(runtimeResponse);

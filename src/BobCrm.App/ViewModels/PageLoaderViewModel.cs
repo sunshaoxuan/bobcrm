@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Net.Http.Json;
@@ -36,6 +37,8 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
     private string _editName = string.Empty;
     private string _entityType = string.Empty;
     private int _id;
+    private int? _lastTemplateId;
+    private string? _lastViewState;
 
     public PageLoaderViewModel(
         AuthService auth,
@@ -145,7 +148,7 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
     public FormRuntimeContext FormContext { get; } = new();
     public RuntimeLabelService LabelService => _labelService;
 
-    public async Task LoadDataAsync(string entityType, int id, CancellationToken ct = default)
+    public async Task LoadDataAsync(string entityType, int id, int? templateId = null, string? viewState = null, CancellationToken ct = default)
     {
         try
         {
@@ -153,6 +156,8 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             Error = null;
             EntityType = entityType;
             Id = id;
+            _lastTemplateId = templateId;
+            _lastViewState = viewState;
 
             RuntimeContext = null;
             AppliedScopes = Array.Empty<string>();
@@ -161,12 +166,31 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             _logger.LogInformation("[PageLoader] Fetching data for {EntityType}/{Id}", EntityType, Id);
             await _labelService.RefreshFieldLabelsAsync(ct);
             var lang = _i18n.CurrentLang; // Trigger i18n access if needed 
-            var dataResp = await _auth.GetWithRefreshAsync($"/api/{EntityType}s/{Id}");
+
+            var queryParts = new List<string>();
+            if (templateId.HasValue)
+            {
+                queryParts.Add($"tid={templateId.Value}");
+            }
+            if (!string.IsNullOrWhiteSpace(viewState))
+            {
+                queryParts.Add($"vs={Uri.EscapeDataString(viewState)}");
+            }
+            var dataUrl = $"/api/{EntityType}s/{Id}" + (queryParts.Count > 0 ? "?" + string.Join("&", queryParts) : "");
+            var dataResp = await _auth.GetWithRefreshAsync(dataUrl);
             if (!dataResp.IsSuccessStatusCode)
             {
                 var content = await dataResp.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning("[PageLoader] Failed to load data for {EntityType}/{Id}. Status: {Status}, Content: {Content}", EntityType, Id, dataResp.StatusCode, content);
-                Error = string.Format(_i18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
+                // If view context is explicitly provided, do not silently fallback (security closure).
+                if (templateId.HasValue || !string.IsNullOrWhiteSpace(viewState))
+                {
+                    Error = _i18n.T("ERR_FORBIDDEN");
+                }
+                else
+                {
+                    Error = string.Format(_i18n.T("PL_LOAD_DATA_FAILED"), dataResp.StatusCode);
+                }
                 Loading = false;
                 return;
             }
@@ -182,6 +206,8 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                 TemplateUsageType.Detail,
                 entityId: Id,
                 entityData: EntityData,
+                templateId: templateId,
+                viewState: viewState,
                 cancellationToken: ct);
 
             if (runtime != null && !string.IsNullOrWhiteSpace(runtime.Template?.LayoutJson))
@@ -196,6 +222,15 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             }
             else
             {
+                if (templateId.HasValue || !string.IsNullOrWhiteSpace(viewState))
+                {
+                    // Explicit view context: do not fallback to avoid bypassing security loop.
+                    _logger.LogWarning("[PageLoader] Runtime template denied or not found for explicit context. tid={TemplateId}, vs={ViewState}", templateId, viewState);
+                    Error = _i18n.T("ERR_FORBIDDEN");
+                    Loading = false;
+                    return;
+                }
+
                 _logger.LogInformation("[PageLoader] Runtime template not found or layout empty. Fallback to effective template.");
             }
 
@@ -533,7 +568,7 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             if (resp.IsSuccessStatusCode)
             {
                 IsEditMode = false;
-                await LoadDataAsync(EntityType, Id, ct);
+                await LoadDataAsync(EntityType, Id, _lastTemplateId, _lastViewState, ct: ct);
             }
             else
             {
