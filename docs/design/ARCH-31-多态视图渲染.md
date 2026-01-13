@@ -32,10 +32,30 @@
 | MatchFieldValue | String? | 匹配值 (如 "Draft"，空表示默认)        |
 | TemplateId      | Guid    | 关联的模板 ID                        |
 | Priority        | Int     | 优先级 (值越大越优先)                 |
-| IsDefault       | Bool    | 是否为该 ViewState 的默认兜底模板      |
-```
+| IsDefault       | Bool    | 是否为该 ViewState 的默认兜底模板      |### 2.2 共享模板与状态覆盖 (Shared Templates & State Overrides) [NEW]
 
-### 2.2 运行时逻辑 (Runtime Logic)
+为了支持“一套模板，多种表现”，抽象出以下增强设计：
+
+#### 1. 状态感知的渲染上下文 (State-Aware Context)
+在 `FormRuntimeContext` 中增加 `ViewState` 属性。系统根据 URL 参数 (`usage`) 或 `TemplateStateBinding` 的匹配结果，将当前视图的状态（如 `Create`, `DetailEdit`）注入上下文。
+
+#### 2. 控件级属性覆盖 (Widget-Level Overrides)
+在 `DraggableWidget` 基类中增加 `StateOverrides` 模型：
+```json
+{
+  "Code": "CustomerBalance",
+  "Visible": true,
+  "ReadOnly": false,
+  "StateOverrides": {
+    "Create": { "Visible": false },
+    "DetailView": { "ReadOnly": true }
+  }
+}
+```
+渲染引擎在解析控件属性时，优先检查 `StateOverrides[currentViewState]`，实现同一份 Layout JSON 在不同状态下的差异化表现。
+
+#### 3. 绑定模型扩展 (Binding Multi-selection)
+`TemplateStateBinding` 的 `ViewState` 字段支持存储逗号分隔的状态列表（或通过 UI 勾选多个状态映射到同一模板 ID），从而减少冗余配置。
 
 `TemplateRuntimeService.BuildRuntimeContextAsync` 执行以下优先级过滤：
 
