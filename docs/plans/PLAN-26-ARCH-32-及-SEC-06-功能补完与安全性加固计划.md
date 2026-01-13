@@ -40,7 +40,8 @@
 
 ### 3.1 自动化测试 (Automated Tests)
 - **SEC-06 越权写入拦截测试**: 修改 `tests/e2e/cases/08_polymorphic/test_role_view_segregation.py`，模拟 SalesUser 篡改请求尝试更新 `Balance` 字段，预期结果为 `403`。
-- **Withdrawal 逻辑覆盖**: 创建 `tests/e2e/cases/ARCH-32/test_entity_withdrawal.py`，验证从 `Published` 回退到 `Withdrawn` 的全链路，包括数据库 Table 状态检查。
+- **Withdrawal 逻辑覆盖**: 创建 `tests/e2e/cases/ARCH-32/test_entity_withdrawal.py`，验证从 `Published` 回退到 `Withdrawn` 的全链路。
+- **PLAN-25 数据驱动多态验证 (ADD)**: 创建 `tests/e2e/cases/08_polymorphic/test_polymorphic_data_driven.py`，验证修改 `Status` 字段后 UI 是否自动重载为对应的模板。
 
 ### 3.2 手动验证流程 (Manual Verification)
 1.  **配置验证**: 修改 `appsettings.json` 中的 `AllowPhysicalDeletion` 为 `true`，验证撤回时 Table 物理删除。
