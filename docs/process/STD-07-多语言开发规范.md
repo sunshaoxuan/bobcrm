@@ -13,25 +13,25 @@
 > **强制规则**: 任何用户可见的文本**必须**使用多语言资源，严禁硬编码。
 
 **违规示例** ❌:
-```csharp
+```text
 // 后端
-logger.LogWarning("[Auth] 激活失败: user not found");
-return Results.BadRequest(new ErrorResponse("用户未找到", "USER_NOT_FOUND"));
+LOG_WARNING("[Auth] Activation failed: user not found")
+RETURN_ERROR("User not found", "USER_NOT_FOUND")
 
 // 前端
-<span>保存成功</span>
-await MessageService.Info("操作完成");
+<TEXT>Save Success</TEXT>
+SHOW_MESSAGE("Operation Completed")
 ```
 
 **正确示例** ✅:
-```csharp
+```text
 // 后端
-logger.LogWarning("[Auth] Activation failed: user not found, userId={UserId}", userId);
-return Results.BadRequest(new ErrorResponse(I18n.T("ERR_USER_NOT_FOUND"), "USER_NOT_FOUND"));
+LOG_WARNING("[Auth] Activation failed: user not found, userId={UserId}", userId)
+RETURN_ERROR(I18N_GET("ERR_USER_NOT_FOUND"), "USER_NOT_FOUND")
 
 // 前端
-<span>@I18n.T("BTN_SAVE_SUCCESS")</span>
-await MessageService.Info(I18n.T("MSG_OPERATION_COMPLETED"));
+<TEXT>@I18N_GET("BTN_SAVE_SUCCESS")</TEXT>
+SHOW_MESSAGE(I18N_GET("MSG_OPERATION_COMPLETED"))
 ```
 
 ---
@@ -99,43 +99,39 @@ await MessageService.Info(I18n.T("MSG_OPERATION_COMPLETED"));
 ```
 
 #### 步骤 2: 在代码中使用
-```csharp
+```text
 // ✅ 正确
-return Results.BadRequest(new ErrorResponse(I18n.T("ERR_LOGIN_FAILED"), "LOGIN_FAILED"));
+RETURN_ERROR(I18N_GET("ERR_LOGIN_FAILED"), "LOGIN_FAILED")
 ```
 
 ### 3.2 日志和调试消息
 
 **规则**: 日志消息使用**英文**，但不允许硬编码用户可见消息。
 
-```csharp
+```text
 // ✅ 日志使用英文（开发者可见）
-logger.LogInformation("User {Username} logged in successfully", username);
+LOG_INFO("User {Username} logged in successfully", username)
 
 // ✅ 用户消息使用多语言（用户可见）
-await MessageService.Success(I18n.T("MSG_LOGIN_SUCCESS"));
+SHOW_UI_MESSAGE(I18N_GET("MSG_LOGIN_SUCCESS"))
 
 // ❌ 错误：日志中的用户可见消息硬编码
-logger.LogWarning("激活失败：{Reason}", reason);  // 如果日志会展示给用户，必须多语化
+LOG_WARNING("Activation Failed: {Reason}", reason)  // 如果日志会展示给用户，必须多语化
 ```
 
 ### 3.3 异常消息
 
 自定义异常消息使用资源键：
 
-```csharp
+```text
 // ✅ 正确
-public class BusinessException : Exception
-{
-    public string I18nKey { get; }
+CLASS BusinessException EXTENDS Exception:
+    PROPERTY I18nKey
     
-    public BusinessException(string i18nKey) : base(i18nKey)
-    {
-        I18nKey = i18nKey;
-    }
-}
+    CONSTRUCTOR(key):
+        I18nKey = key
 
-throw new BusinessException("ERR_INSUFFICIENT_PERMISSIONS");
+THROW NEW BusinessException("ERR_INSUFFICIENT_PERMISSIONS")
 ```
 
 ---
@@ -177,9 +173,9 @@ Resources/
 在 CI 流程中添加多语言检查：
 
 ```yaml
-# .github/workflows/ci.yml
+# CI Workflow Example
 - name: Check I18n Compliance
-  run: pwsh ./scripts/check-i18n.ps1
+  run: RUN "i18n-check-script"
   
 # 如果发现硬编码字符串，构建失败
 ```
@@ -189,20 +185,16 @@ Resources/
 在提交前自动检查：
 
 ```bash
-# .git/hooks/pre-commit
-#!/bin/sh
-pwsh ./scripts/check-i18n.ps1 --staged
-if [ $? -ne 0 ]; then
-    echo "❌ I18n check failed. Please use I18n resources instead of hardcoded strings."
-    exit 1
-fi
+# pre-commit hook example
+RUN "i18n-check-script" --staged
+IF FAILED:
+    PRINT "❌ I18n check failed. Please use I18n resources instead of hardcoded strings."
+    EXIT 1
 ```
 
 ### 5.3 IDE 集成
 
-**推荐**: 使用 IDE 插件高亮硬编码字符串
-- Visual Studio: ReSharper I18n 插件
-- VS Code: i18n Ally 扩展
+**推荐**: 使用 IDE 插件高亮硬编码字符串。
 
 ---
 
@@ -211,29 +203,26 @@ fi
 以下场景**允许**硬编码：
 
 ### 6.1 技术常量
-```csharp
-const string DateFormat = "yyyy-MM-dd";  // ✅ 技术格式
-const string ApiVersion = "v1";          // ✅ API 版本号
+```text
+CONST DateFormat = "yyyy-MM-dd"  // ✅ 技术格式
+CONST ApiVersion = "v1"          // ✅ API 版本号
 ```
 
 ### 6.2 单元测试
-```csharp
-[Fact]
-public void Should_Validate_Username()
-{
-    var result = Validator.Validate("测试用户");  // ✅ 测试数据
-    Assert.True(result.IsValid);
-}
+```text
+TEST_CASE Should_Validate_Username():
+    var result = Validator.Validate("Testing User")  // ✅ 测试数据
+    ASSERT(result.IsValid)
 ```
 
 ### 6.3 数据库种子数据
-```csharp
-new Entity { Name = "Default User" }  // ✅ 默认数据
+```text
+NEW Entity { Name = "Default User" }  // ✅ 默认数据
 ```
 
 ### 6.4 开发者日志（不展示给用户）
-```csharp
-logger.LogDebug("Processing request with ID {RequestId}", requestId);  // ✅ 内部日志
+```text
+LOG_DEBUG("Processing request with ID {RequestId}", requestId)  // ✅ 内部日志
 ```
 
 ---
@@ -262,7 +251,7 @@ logger.LogDebug("Processing request with ID {RequestId}", requestId);  // ✅ �
 
 ```bash
 # 生成清单
-pwsh ./scripts/check-i18n.ps1 --export violations.csv
+RUN "i18n-check-script" --export "violations.csv"
 
 # 按优先级修复
 # P0: 先修复 API 层
@@ -302,8 +291,8 @@ PR 必须通过 I18n 检查才能合并。
 }
 ```
 
-```csharp
-I18n.T("MSG_USER_CREATED", username)
+```text
+I18N_GET("MSG_USER_CREATED", username)
 ```
 
 ### 9.2 复数处理
@@ -335,11 +324,11 @@ I18n.T("MSG_USER_CREATED", username)
 
 在提交代码前，确认：
 
-- [ ] 所有用户可见文本使用 `I18n.T("KEY")`
+- [ ] 所有用户可见文本使用 I18n 获取方法
 - [ ] 资源键已在 zh/en/ja 三个语言文件中定义
 - [ ] 资源键命名符合规范（前缀 + 描述）
-- [ ] 运行 `pwsh ./scripts/check-i18n.ps1` 通过
-- [ ] 单元测试中的硬编码已标记为 `// Test data`
+- [ ] 运行检查脚本通过
+- [ ] 单元测试中的硬编码已标记
 
 ---
 
@@ -347,23 +336,23 @@ I18n.T("MSG_USER_CREATED", username)
 
 ### 常用模式
 
-```csharp
+```text
 // 按钮
-<Button>@I18n.T("BTN_SAVE")</Button>
+<Button>@I18N_GET("BTN_SAVE")</Button>
 
 // 消息
-await MessageService.Success(I18n.T("MSG_SAVE_SUCCESS"));
+SHOW_SUCCESS(I18N_GET("MSG_SAVE_SUCCESS"))
 
 // 错误
-return Results.BadRequest(new ErrorResponse(I18n.T("ERR_INVALID_INPUT"), "INVALID_INPUT"));
+RETURN_ERROR(I18N_GET("ERR_INVALID_INPUT"), "INVALID_INPUT")
 
 // 标签
-<label>@I18n.T("LBL_USERNAME")</label>
+<Label>@I18N_GET("LBL_USERNAME")</Label>
 
 // 占位符
-<Input Placeholder="@I18n.T("PLACEHOLDER_ENTER_EMAIL")" />
+<Input Placeholder="@I18N_GET("PLACEHOLDER_ENTER_EMAIL")" />
 ```
 
 ### 资源文件示例
 
-参见: [`Resources/common.json`](file:///c:/workspace/bobcrm/src/BobCrm.App/Resources/common.json)
+参见: Standard Resource File Structure

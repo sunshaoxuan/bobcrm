@@ -8,7 +8,7 @@
 
 ## 1. 概述
 
-本文档定义了 BobCRM 项目集成测试的标准操作流程（SOP）。为确保测试结果的准确性和环境的稳定性，所有开发人员和 AI 助手在进行集成测试时**必须**严格遵守本规范。
+本文档定义了系统集成测试的标准操作流程（SOP）。为确保测试结果的准确性和环境的稳定性，所有开发人员和 AI 助手在进行集成测试时**必须**严格遵守本规范。
 
 ## 2. 核心原则（铁律）
 
@@ -26,16 +26,17 @@
 **目的**: 消除“幽灵进程”和文件锁定，确保测试环境纯净。
 
 **操作**:
-- 检查端口占用 (3000, 5200, 5432)。
+- 检查相关服务端口占用。
 - 杀掉占用端口的进程。
-- 尤其是 `dotnet.exe` 和 `node` 进程。
+- 尤其是运行时进程和应用进程。
 
-**命令**:
-```powershell
-# 强制终止所有相关进程
-taskkill /F /IM "BobCrm.Api.exe" /T
-taskkill /F /IM "BobCrm.App.exe" /T
-taskkill /F /IM "dotnet.exe" /T
+**伪代码示例**:
+```text
+FUNCTION CleanupEnvironment():
+    TERMINATE_PROCESS("ApiProcess")
+    TERMINATE_PROCESS("AppProcess")
+    TERMINATE_PROCESS("RuntimeProcess")
+    ENSURE_PORTS_AVAILABLE(ApiPort, AppPort, DbPort)
 ```
 
 ### 3.2 第二步：静态验证 (Verify Setup)
@@ -46,9 +47,12 @@ taskkill /F /IM "dotnet.exe" /T
 - **必须**等待脚本执行完毕且结果为 **PASS**。
 - 如果失败，**禁止**进入下一步。
 
-**命令**:
-```powershell
-./scripts/verify-setup.ps1
+**伪代码示例**:
+```text
+FUNCTION VerifySetup():
+    RUN "verification-script"
+    IF RESULT IS FAIL:
+        EXIT "Verification failed"
 ```
 
 ### 3.3 第三步：启动测试环境 (Start)
@@ -57,16 +61,15 @@ taskkill /F /IM "dotnet.exe" /T
 **操作**:
 - 使用标准启动脚本。
 - 建议使用 Detached 模式（后台运行），通过日志监控状态。
-- 等待健康检查通过 (API: 5200, App: 3000)。
+- 等待健康检查通过。
 
-**命令**:
-```powershell
-# 启动环境
-./scripts/dev.ps1 -Action start -Detached
-
-# 检查健康状态 (建议等待 10-15秒)
-Start-Sleep -Seconds 15
-./scripts/verify-auth.ps1  # 验证全链路连通性
+**伪代码示例**:
+```text
+FUNCTION StartEnvironment():
+    RUN "startup-script" WITH MODE="detached"
+    WAIT_FOR_HEALTH_CHECK(ApiEndpoint)
+    WAIT_FOR_HEALTH_CHECK(AppEndpoint)
+    VERIFY_SYSTEM_CONNECTIVITY()
 ```
 
 ### 3.4 第四步：执行测试 (Test)
@@ -77,10 +80,12 @@ Start-Sleep -Seconds 15
 - 执行手动功能验证。
 - 记录测试结果。
 
-**命令**:
-```powershell
-# 示例：运行 E2E 测试脚本
-./scripts/e2e-tests.ps1
+**伪代码示例**:
+```text
+FUNCTION RunTests():
+    EXECUTE "e2e-test-suite"
+    // OR
+    PERFORM_MANUAL_VERIFICATION()
 ```
 
 ### 3.5 第五步：结束清理 (Shutdown)
@@ -90,9 +95,12 @@ Start-Sleep -Seconds 15
 - 停止所有服务。
 - 确认进程已退出。
 
-**命令**:
-```powershell
-./scripts/dev.ps1 -Action stop
+**伪代码示例**:
+```text
+FUNCTION Shutdown():
+    RUN "stop-script"
+    ENSURE_PROCESS_EXITED("ApiProcess")
+    ENSURE_PROCESS_EXITED("AppProcess")
 ```
 
 ## 4. 检查清单
@@ -100,7 +108,7 @@ Start-Sleep -Seconds 15
 在提交代码或通知用户完成任务前，请确认：
 
 - [ ] 是否已先杀掉旧进程？
-- [ ] `verify-setup.ps1` 是否全绿通过？
+- [ ] 验证脚本是否全绿通过？
 - [ ] 测试后是否已关闭环境？
 - [ ] 测试日志是否已保存？
 
