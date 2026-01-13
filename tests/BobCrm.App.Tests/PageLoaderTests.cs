@@ -81,6 +81,7 @@ public class PageLoaderTests : TestContext
                     It.IsAny<string?>(),
                     It.IsAny<int?>(),
                     It.IsAny<string?>(),
+                    It.IsAny<Guid?>(),
                     It.IsAny<int?>(),
                     It.IsAny<JsonElement?>(),
                     It.IsAny<CancellationToken>()))

@@ -100,6 +100,30 @@ public class PostgreSQLDDLGenerator
     }
 
     /// <summary>
+    /// 生成ALTER TABLE语句（删除字段）
+    /// </summary>
+    public string GenerateAlterTableDropColumns(EntityDefinition entity, List<string> removedFields)
+    {
+        var tableName = entity.DefaultTableName;
+        var sb = new StringBuilder();
+
+        var displayName = MultilingualTextHelper.Resolve(entity.DisplayName, entity.EntityName);
+        sb.AppendLine($"-- 修改表：{displayName} - 删除字段");
+
+        foreach (var columnName in removedFields
+                     .Where(x => !string.IsNullOrWhiteSpace(x))
+                     .Select(x => x.Trim())
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            var escaped = columnName.Replace("\"", "\"\"");
+            sb.AppendLine($"ALTER TABLE \"{tableName}\" DROP COLUMN IF EXISTS \"{escaped}\" CASCADE;");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// 生成单个字段定义
     /// </summary>
     private string GenerateColumnDefinition(FieldMetadata field)

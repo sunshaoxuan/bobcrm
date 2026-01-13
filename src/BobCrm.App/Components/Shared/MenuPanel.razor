@@ -199,12 +199,17 @@
         if (node == null) return route;
         if (string.IsNullOrWhiteSpace(route)) return route;
         if (route.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return route;
-        if (!node.TemplateId.HasValue) return route;
+        if (node.Id == Guid.Empty) return route;
 
-        // FIX-09: propagate template context to PageLoader via query string
-        // tid = TemplateId, vs = Function Code (menu context)
+        // FIX-10: propagate menu context to PageLoader via query string
+        // mid = MenuNodeId (stable), tid = TemplateId (optional)
         var join = route.Contains('?') ? "&" : "?";
-        return $"{route}{join}tid={node.TemplateId.Value}&vs={Uri.EscapeDataString(node.Code ?? string.Empty)}";
+        var withMid = $"{route}{join}mid={node.Id}";
+        if (node.TemplateId.HasValue)
+        {
+            return $"{withMid}&tid={node.TemplateId.Value}";
+        }
+        return withMid;
     }
 
     private string ResolveIcon(string? icon) => string.IsNullOrWhiteSpace(icon) ? IconType.Outline.Appstore : icon!;

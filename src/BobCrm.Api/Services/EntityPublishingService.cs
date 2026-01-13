@@ -26,6 +26,9 @@ public class EntityPublishingService : IEntityPublishingService
     private readonly IDynamicEntityService _dynamicEntityService;
     private readonly IConfiguration _configuration;
 
+    private bool AllowPhysicalDeletion =>
+        _configuration.GetValue("EntityPublishing:AllowPhysicalDeletion", true);
+
     public EntityPublishingService(
         AppDbContext db,
         PostgreSQLDDLGenerator ddlGenerator,
@@ -773,6 +776,23 @@ public class EntityPublishingService : IEntityPublishingService
         {
             var modifyScript = _ddlGenerator.GenerateAlterTableModifyColumns(entity, analysis.LengthIncreases);
             scripts.Add(modifyScript);
+        }
+
+        // 删除字段（ENT-02）
+        if (analysis.RemovedFields.Any())
+        {
+            if (AllowPhysicalDeletion)
+            {
+                var dropScript = _ddlGenerator.GenerateAlterTableDropColumns(entity, analysis.RemovedFields);
+                scripts.Add(dropScript);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[Publish] Detected removed fields for {Entity} but physical deletion is disabled. Removed={Removed}",
+                    entity.EntityRoute ?? entity.EntityName,
+                    string.Join(", ", analysis.RemovedFields));
+            }
         }
 
         return string.Join("\n", scripts);

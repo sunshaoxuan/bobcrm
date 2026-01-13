@@ -57,16 +57,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        var (tid, vs) = ReadViewContextFromUrl();
-        await ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
+        var (tid, mid) = ReadViewContextFromUrl();
+        await ViewModel.LoadDataAsync(EntityType, Id, tid, mid);
     }
 
     protected override async Task OnParametersSetAsync()
     {
         if (!ViewModel.Loading)
         {
-            var (tid, vs) = ReadViewContextFromUrl();
-            await ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
+            var (tid, mid) = ReadViewContextFromUrl();
+            await ViewModel.LoadDataAsync(EntityType, Id, tid, mid);
         }
     }
 
@@ -96,8 +96,8 @@
 
     private Task ReloadPage()
     {
-        var (tid, vs) = ReadViewContextFromUrl();
-        return ViewModel.LoadDataAsync(EntityType, Id, tid, vs);
+        var (tid, mid) = ReadViewContextFromUrl();
+        return ViewModel.LoadDataAsync(EntityType, Id, tid, mid);
     }
 
     private Task SaveChanges() => ViewModel.SaveChangesAsync();
@@ -108,7 +108,7 @@
         ViewModel.PropertyChanged -= HandleViewModelChanged;
     }
 
-    private (int? templateId, string? viewState) ReadViewContextFromUrl()
+    private (int? templateId, Guid? menuNodeId) ReadViewContextFromUrl()
     {
         try
         {
@@ -120,7 +120,7 @@
             }
 
             int? templateId = null;
-            string? viewState = null;
+            Guid? menuNodeId = null;
             foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 var kv = part.Split('=', 2);
@@ -133,13 +133,14 @@
                 {
                     templateId = tid;
                 }
-                else if (string.Equals(key, "vs", StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(key, "mid", StringComparison.OrdinalIgnoreCase) &&
+                         Guid.TryParse(value, out var mid))
                 {
-                    viewState = string.IsNullOrWhiteSpace(value) ? null : value;
+                    menuNodeId = mid;
                 }
             }
 
-            return (templateId, viewState);
+            return (templateId, menuNodeId);
         }
         catch
         {

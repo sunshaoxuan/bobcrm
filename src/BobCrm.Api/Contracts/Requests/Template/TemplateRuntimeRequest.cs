@@ -10,6 +10,7 @@ public record TemplateRuntimeRequest(
     FormTemplateUsageType UsageType = FormTemplateUsageType.Detail,
     int? TemplateId = null,
     string? ViewState = null,
+    Guid? MenuNodeId = null,
     string? FunctionCodeOverride = null,
     int? EntityId = null,
     JsonElement? EntityData = null);

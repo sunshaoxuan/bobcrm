@@ -200,6 +200,7 @@ public class PageLoaderViewModelTests
                 It.IsAny<string?>(),
                 It.IsAny<int?>(),
                 It.IsAny<string?>(),
+                It.IsAny<Guid?>(),
                 It.IsAny<int?>(),
                 It.IsAny<JsonElement?>(),
                 It.IsAny<CancellationToken>()))

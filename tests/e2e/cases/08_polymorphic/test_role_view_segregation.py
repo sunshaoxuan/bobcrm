@@ -77,6 +77,17 @@ def _ensure_function(code: str, name: str, route: str | None = None) -> str:
     return str(create.json()["data"]["id"])
 
 
+def _set_function_template_state_binding(function_id: str, binding_id: int) -> None:
+    headers = _admin_headers()
+    resp = requests.put(
+        f"{API_BASE}/api/access/functions/{function_id}",
+        json={"templateStateBindingId": int(binding_id)},
+        headers=headers,
+        timeout=30,
+    )
+    assert resp.status_code == 200, resp.text
+
+
 def _ensure_role(code: str, name: str, function_ids: list[str]) -> str:
     """
     Ensure a RoleProfile exists, return roleId (guid string).
@@ -381,19 +392,28 @@ def test_role_view_segregation(page: Page, cleanup_polymorphic_account):
     assert name_widget is not None, "Name widget not found in base template"
     _update_template_layout(sales_tpl_id, "Sales(Account)", entity_type, [name_widget])
 
-    # 4) Bind templates to menu codes via TemplateStateBindings (ViewState = DetailView)
+    # 4) Bind templates to menu nodes via TemplateStateBindings + FunctionNode.TemplateStateBindingId (FIX-10)
     db_helper.execute_query(
         f"""
         INSERT INTO "TemplateStateBindings" ("EntityType","ViewState","TemplateId","MatchFieldName","MatchFieldValue","Priority","IsDefault","RequiredPermission","CreatedAt")
-        VALUES ('{entity_type}','DetailView',{admin_tpl_id},NULL,NULL,10,false,'M_ADMIN',NOW());
+        VALUES ('{entity_type}','DetailView',{admin_tpl_id},NULL,NULL,10,false,NULL,NOW());
         """.strip()
     )
+    admin_binding_id = int(db_helper.execute_scalar(
+        f"SELECT \"Id\" FROM \"TemplateStateBindings\" WHERE \"EntityType\"='{entity_type}' AND \"ViewState\"='DetailView' AND \"TemplateId\"={admin_tpl_id} ORDER BY \"Id\" DESC LIMIT 1;"
+    ))
+    _set_function_template_state_binding(fn_admin_id, admin_binding_id)
+
     db_helper.execute_query(
         f"""
         INSERT INTO "TemplateStateBindings" ("EntityType","ViewState","TemplateId","MatchFieldName","MatchFieldValue","Priority","IsDefault","RequiredPermission","CreatedAt")
-        VALUES ('{entity_type}','DetailView',{sales_tpl_id},NULL,NULL,10,false,'M_SALES',NOW());
+        VALUES ('{entity_type}','DetailView',{sales_tpl_id},NULL,NULL,10,false,NULL,NOW());
         """.strip()
     )
+    sales_binding_id = int(db_helper.execute_scalar(
+        f"SELECT \"Id\" FROM \"TemplateStateBindings\" WHERE \"EntityType\"='{entity_type}' AND \"ViewState\"='DetailView' AND \"TemplateId\"={sales_tpl_id} ORDER BY \"Id\" DESC LIMIT 1;"
+    ))
+    _set_function_template_state_binding(fn_sales_id, sales_binding_id)
 
     # 5) SalesUser: UI should not show Balance; API must not return Balance
     # Login as SalesUser and inject token
@@ -419,7 +439,7 @@ def test_role_view_segregation(page: Page, cleanup_polymorphic_account):
         {"token": sales_token, "lang": E2E_LANG.lower(), "apiBase": API_BASE},
     )
 
-    target = f"{BASE_URL}/{entity_type}/{record_id}?vs=M_SALES&e2e_mode=true"
+    target = f"{BASE_URL}/{entity_type}/{record_id}?mid={fn_sales_id}&e2e_mode=true"
     page.goto(target)
     expect(page).to_have_url(target, timeout=15000)
     page.wait_for_selector(".runtime-shell, .runtime-state.error", timeout=30000)
@@ -431,7 +451,7 @@ def test_role_view_segregation(page: Page, cleanup_polymorphic_account):
     # API must not return Balance in raw response
     api_resp = requests.get(
         f"{API_BASE}/api/{entity_type}s/{record_id}",
-        params={"vs": "M_SALES"},
+        params={"mid": fn_sales_id},
         headers={"Authorization": f"Bearer {sales_token}", "X-Lang": E2E_LANG.lower()},
         timeout=30,
     )
@@ -441,16 +461,27 @@ def test_role_view_segregation(page: Page, cleanup_polymorphic_account):
     keys = {str(f.get("key")) for f in fields if isinstance(f, dict)}
     assert "Balance" not in keys, f"Balance leaked in API response: {keys}"
 
-    # 6) Tamper: tid=AdminTemplateId must be forbidden
+    # 6) SEC-05 bypass test: even without any query params, API must NOT leak Balance
+    bypass = requests.get(
+        f"{API_BASE}/api/{entity_type}s/{record_id}",
+        headers={"Authorization": f"Bearer {sales_token}", "X-Lang": E2E_LANG.lower()},
+        timeout=30,
+    )
+    assert bypass.status_code == 200, bypass.text
+    bypass_fields = bypass.json().get("fields") or []
+    bypass_keys = {str(f.get("key")) for f in bypass_fields if isinstance(f, dict)}
+    assert "Balance" not in bypass_keys, f"Balance leaked without query params: {bypass_keys}"
+
+    # 7) Tamper: tid=AdminTemplateId must be forbidden
     api_forbidden = requests.get(
         f"{API_BASE}/api/{entity_type}s/{record_id}",
-        params={"tid": admin_tpl_id},
+        params={"mid": fn_sales_id, "tid": admin_tpl_id},
         headers={"Authorization": f"Bearer {sales_token}", "X-Lang": E2E_LANG.lower()},
         timeout=30,
     )
     assert api_forbidden.status_code == 403, api_forbidden.text
 
-    forbidden_url = f"{BASE_URL}/{entity_type}/{record_id}?tid={admin_tpl_id}&e2e_mode=true"
+    forbidden_url = f"{BASE_URL}/{entity_type}/{record_id}?mid={fn_sales_id}&tid={admin_tpl_id}&e2e_mode=true"
     page.goto(forbidden_url)
     # Error page should be visible (no silent fallback)
     expect(page.locator(".runtime-state.error")).to_be_visible(timeout=15000)

@@ -29,6 +29,7 @@ public class TemplateRuntimeClient
         string? functionOverride = null,
         int? templateId = null,
         string? viewState = null,
+        Guid? menuNodeId = null,
         int? entityId = null,
         System.Text.Json.JsonElement? entityData = null,
         CancellationToken cancellationToken = default)
@@ -48,6 +49,7 @@ public class TemplateRuntimeClient
                     UsageType = usageType,
                     TemplateId = templateId,
                     ViewState = viewState,
+                    MenuNodeId = menuNodeId,
                     FunctionCodeOverride = functionOverride,
                     EntityId = entityId,
                     EntityData = entityData
@@ -80,6 +82,7 @@ public class TemplateRuntimeClient
         string? functionOverride = null,
         int? templateId = null,
         string? viewState = null,
+        Guid? menuNodeId = null,
         int? entityId = null,
         System.Text.Json.JsonElement? entityData = null,
         CancellationToken cancellationToken = default)
@@ -99,6 +102,7 @@ public class TemplateRuntimeClient
                     UsageType = usageType,
                     TemplateId = templateId,
                     ViewState = viewState,
+                    MenuNodeId = menuNodeId,
                     FunctionCodeOverride = functionOverride,
                     EntityId = entityId,
                     EntityData = entityData

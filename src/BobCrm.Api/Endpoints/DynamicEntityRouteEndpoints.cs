@@ -29,12 +29,14 @@ public static class DynamicEntityRouteEndpoints
             string entityPlural,
             int id,
             int? tid,
+            Guid? mid,
             string? vs,
             ClaimsPrincipal user,
             AppDbContext db,
             DynamicEntityService dynamicEntityService,
             IReflectionPersistenceService persistenceService,
             TemplateRuntimeService templateRuntimeService,
+            AccessService accessService,
             ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
@@ -56,27 +58,31 @@ public static class DynamicEntityRouteEndpoints
 
             var dict = ToDictionary(entity);
 
-            // FIX-09: If view context (tid/vs) is provided, enforce access AND filter fields based on the resolved template.
-            if (tid.HasValue || !string.IsNullOrWhiteSpace(vs))
+            // FIX-10 (SEC-05): 强制字段剪裁 - 任何情况下都不可被 querystring 绕过。
+            // 规则：
+            // - 如果给定 mid/tid：按指定上下文解析模板并剪裁（并执行权限校验）
+            // - 否则：根据“用户可访问的菜单节点”聚合允许字段；若无法解析则降级为最小返回（Code/Name/Id）
+            var lang = LangHelper.GetLang(http);
+            var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(uid))
             {
-                var lang = LangHelper.GetLang(http);
-                var uid = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrWhiteSpace(uid))
-                {
-                    return Results.Unauthorized();
-                }
+                return Results.Unauthorized();
+            }
 
-                JsonElement? entityData = null;
-                try
-                {
-                    entityData = JsonSerializer.SerializeToElement(dict, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-                }
-                catch
-                {
-                    entityData = null;
-                }
+            JsonElement? entityData = null;
+            try
+            {
+                entityData = JsonSerializer.SerializeToElement(dict, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            }
+            catch
+            {
+                entityData = null;
+            }
 
-                try
+            HashSet<string> allowedFields = new(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (tid.HasValue || mid.HasValue)
                 {
                     var ctx = await templateRuntimeService.BuildRuntimeContextAsync(
                         uid,
@@ -84,30 +90,92 @@ public static class DynamicEntityRouteEndpoints
                         new TemplateRuntimeRequest(
                             UsageType: FormTemplateUsageType.Detail,
                             TemplateId: tid,
-                            ViewState: vs,
+                            ViewState: null,
+                            MenuNodeId: mid,
                             FunctionCodeOverride: null,
                             EntityId: id,
                             EntityData: entityData),
                         ct);
+                    allowedFields = ExtractTemplateFields(ctx.Template.LayoutJson);
+                }
+                else
+                {
+                    // No explicit context: infer allowed fields from all accessible menu nodes for this entity/view state.
+                    var viewState = "DetailView";
+                    var candidates = await (
+                        from n in db.FunctionNodes.AsNoTracking()
+                        join b in db.TemplateStateBindings.AsNoTracking()
+                            on n.TemplateStateBindingId equals b.Id
+                        where n.TemplateStateBindingId.HasValue
+                              && (b.EntityType == entityType || b.EntityType == entityType + "s")
+                              && b.ViewState == viewState
+                        select new { n.Code, b.TemplateId }
+                    ).ToListAsync(ct);
 
-                    var allowedFields = ExtractTemplateFields(ctx.Template.LayoutJson);
-                    if (allowedFields.Count > 0)
+                    var templateIds = candidates.Select(c => c.TemplateId).Distinct().ToList();
+                    var templates = await db.FormTemplates
+                        .AsNoTracking()
+                        .Where(t => templateIds.Contains(t.Id))
+                        .Select(t => new { t.Id, t.LayoutJson })
+                        .ToListAsync(ct);
+                    var templateLayoutMap = templates.ToDictionary(t => t.Id, t => t.LayoutJson);
+
+                    foreach (var c in candidates)
                     {
-                        dict = dict
-                            .Where(kvp =>
-                                string.Equals(kvp.Key, "Code", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(kvp.Key, "Name", StringComparison.OrdinalIgnoreCase) ||
-                                allowedFields.Contains(kvp.Key))
-                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+                        if (!await accessService.HasFunctionAccessAsync(uid, c.Code, ct))
+                        {
+                            continue;
+                        }
+
+                        templateLayoutMap.TryGetValue(c.TemplateId, out var layoutJson);
+                        var fields = ExtractTemplateFields(layoutJson);
+                        foreach (var f in fields)
+                        {
+                            allowedFields.Add(f);
+                        }
+                    }
+
+                    // Fallback: if we still don't have any allowed fields, use effective runtime template (if available)
+                    if (allowedFields.Count == 0)
+                    {
+                        try
+                        {
+                            var ctx = await templateRuntimeService.BuildRuntimeContextAsync(
+                                uid,
+                                entityType,
+                                new TemplateRuntimeRequest(
+                                    UsageType: FormTemplateUsageType.Detail,
+                                    TemplateId: null,
+                                    ViewState: null,
+                                    MenuNodeId: null,
+                                    FunctionCodeOverride: null,
+                                    EntityId: id,
+                                    EntityData: entityData),
+                                ct);
+                            allowedFields = ExtractTemplateFields(ctx.Template.LayoutJson);
+                        }
+                        catch
+                        {
+                            allowedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        }
                     }
                 }
-                catch (UnauthorizedAccessException)
-                {
-                    return Results.Json(
-                        new ErrorResponse(loc.T("ERR_FORBIDDEN", lang), "FORBIDDEN"),
-                        statusCode: StatusCodes.Status403Forbidden);
-                }
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Results.Json(
+                    new ErrorResponse(loc.T("ERR_FORBIDDEN", lang), "FORBIDDEN"),
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            // Always filter: minimum fields are safe and required by runtime.
+            dict = dict
+                .Where(kvp =>
+                    string.Equals(kvp.Key, "Code", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kvp.Key, "Name", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(kvp.Key, "Id", StringComparison.OrdinalIgnoreCase) ||
+                    allowedFields.Contains(kvp.Key))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
 
             return Results.Ok(ToPageLoaderResponse(dict));
         })
