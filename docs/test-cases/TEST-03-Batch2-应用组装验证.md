@@ -32,10 +32,7 @@
 *   **验证**:
     *   Tab 组件可见。
     *   'List Price'标签显示 (而非 'Price')。
-    *   **控件类型**:
-        *   `Price` 渲染为 `<InputNumber />`。
-        *   `Name` 渲染为 `<Input />`。
-        *   `IsActive` 渲染为 `<Switch />`。
+    *   'List Price'标签显示 (而非 'Price')。
 
 ### Case 2.4: 表单校验反馈 (Form Validation UI)
 **目标**: 验证视觉反馈。
@@ -44,6 +41,30 @@
     *   必填字段标红。
     *   输入框下方显示 "Field is required"。
     *   Save 未触发 API 调用。
+
+### Case 2.5: 高阶控件专项 (High-Order Controls) - [UE-007/008/009]
+**目标**: 验证复杂控件的交互逻辑。
+
+#### 2.5.1 Lookup (UE-007)
+*   **操作**: 点击 `CategoryId` 放大镜图标。
+*   **验证**:
+    1.  弹出模态框 (Modal)。
+    2.  列表加载 Category 数据。
+    3.  点击一行 -> 模态框关闭 -> 输入框显示 "Hardware" (Name) -> 隐藏域存储 GUID。
+
+#### 2.5.2 DatePicker (UE-008)
+*   **操作**: 点击 `ValidFrom` 日期控件。
+*   **验证**:
+    1.  弹出日历面板。
+    2.  选值 `2025-01-01` -> 输入框显示格式正确 (如 `yyyy-MM-dd`)。
+    3.  (可选) 验证无法选择小于 `MinDate` 的日期（若配置）。
+
+#### 2.5.3 Switch (UE-009)
+*   **操作**: 切换 `IsActive` 开关 3 次 (On -> Off -> On)。
+*   **验证**:
+    1.  UI 动画流畅切换。
+    2.  Model 值实时变更为 `true/false` (通过 Console 或 Vue DevTools 观测)。
+    3.  提交时 Payload 正确。
 
 ## 3. 准出标准
 *   模板可自定义并持久化。
