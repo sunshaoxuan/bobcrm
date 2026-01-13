@@ -27,38 +27,39 @@
 
 | ID | 特性 | 测试点 (Checkpoint) | 验证方法 | 预期结果 |
 |---|---|---|---|---|
-| UE-001 | 自动生成 | 实体发布后默认列表 (`List`) 模板生成 | UI (List) | 无需任何配置，列表页正常显示所有可见字段。 |
-| UE-002 | 自动生成 | 实体发布后默认详情 (`Detail`) 模板生成 | UI (Detail) | 详情页自动平铺所有字段，布局合理。 |
-| UE-003 | 基础布局 | 拖拽 `Row/Col` 组件与列宽调整 (Percent/Px) | Designer | 拖拽至画布，调整宽度，DOM 实时响应且 JSON 正确。 |
-| UE-004 | 容器嵌套 | `TabContainer` 内嵌 `Row` 再嵌 `Card` (递归测试) | Designer | 多层嵌套结构清晰，拖拽子组件不丢失父级上下文。 |
-| UE-005 | 流式排版 | 连续添加多个 `Input` 控件触发强制换行 (Wrap) | Designer | 当宽度总和 > 100% 时，自动换行而不溢出容器。 |
-| UE-006 | 属性编辑 | 修改控件 Visible, ReadOnly, Label, Style | Designer | 属性面板修改后，画布立即重绘反映变更。 |
-| UE-007 | 运行时 | 高阶控件: `Lookup` (选择/回填/清空) | Runtime | 弹出模态框选择记录，ID/Name 正确回填。 |
-| UE-008 | 运行时 | 高阶控件: `DatePicker` (格式/范围) | Runtime | 日期选择器按字段 `Format` 渲染，支持范围限制。 |
-| UE-009 | 运行时 | 高阶控件: `Switch` (Boolean 交互) | Runtime | 切换开关状态，即时绑定并触发 `OnFieldChanged`。 |
-| UE-010 | 运行时 | 基础控件: `Input` (防注入) | Runtime | 验证 HTML/Script 标签的输入转义或拦截。 |
-| UE-011 | 运行时 | 基础控件: `TextArea` (多行) | Runtime | 验证多行输入的高度适配与回显换行符。 |
-| UE-012 | 运行时 | 数值控件: `InputNumber` (精度) | Runtime | 验证 Scale=2 时的四舍五入与非数字拦截。 |
-| UE-013 | 运行时 | 选项控件: `Select` (下拉) | Runtime | 验证下拉面板 Z-Index 层级与选项高亮。 |
-| UE-014 | 运行时 | 选项控件: `RadioGroup` (互斥) | Runtime | 验证单选互斥性及必填时的错误状态。 |
-| UE-015 | 运行时 | 选项控件: `Checkbox` (布尔) | Runtime | 验证勾选/取消的 bool 值变更与 Disabled 态。 |
-| UE-016 | 运行时 | 表单校验: 必填/正则/数值范围 (Real-time) | Runtime | 输入时实时校验，错误提示精准定位到控件下方。 |
-| UE-020 | 运行时 | 选项控件: `Select` (枚举) | Runtime | 验证枚举值的下拉选择与 Label 动态回显。 |
-| UE-021 | 运行时 | 选项控件: `RadioGroup` (互斥) | Runtime | 验证单选项的互斥性与必填校验。 |
-| UE-022 | 运行时 | 选项控件: `ListBox` (多选) | Runtime | 验证多选列表的 Ctrl/Shift 选择逻辑与 Model 绑定。 |
-| UE-023 | 运行时 | 选项控件: `EnumSelector` (自动) | Runtime | 验证系统枚举值的自动加载无需手动配置。 |
-| UE-030 | 运行时 | 复合控件: `Calendar` (日期时间) | Runtime | 验证日期与时间选择器的联动及格式化展示。 |
-| UE-040 | 运行时 | 数据控件: `DataGrid` (子表) | Runtime | 验证 1:N 关系下的子记录 CRUD 弹窗操作。 |
-| UE-041 | 运行时 | 数据控件: `SubForm` (嵌套表单) | Runtime | 验证 1:1 关系下的内嵌表单直接编辑。 |
-| UE-042 | 运行时 | 数据控件: `OrgTree` (架构树) | Runtime | 验证部门树的懒加载与节点选择ID回填。 |
-| UE-043 | 运行时 | 数据控件: `PermTree` (权限树) | Runtime | 验证功能权限节点的级联勾选状态。 |
-| UE-044 | 运行时 | 数据控件: `UserRole` (穿梭框) | Runtime | 验证左右穿梭框的对象分配与移除逻辑。 |
-| UE-050 | 运行时 | 布局容器: `Grid` (栅格) | Runtime | 验证 Grid/Row/Col 的嵌套结构与间距渲染。 |
-| UE-051 | 运行时 | 布局容器: `Card` (卡片) | Runtime | 验证 Title/Body 结构与 Shadow 样式。 |
-| UE-052 | 运行时 | 布局容器: `TabBox` (标签页) | Runtime | 验证多 Tab 切换时的内容区显隐状态。 |
-| UE-053 | 运行时 | 布局容器: `Section` (折叠面板) | Runtime | 验证 Header 点击时的内容区折叠动画。 |
-| UE-054 | 运行时 | 布局容器: `Panel` (面板) | Runtime | 验证无边框/有背景色的轻量级容器渲染。 |
-| UE-055 | 运行时 | 布局容器: `Frame` (框架) | Runtime | 验证带边框与圆角的独立容器渲染。 |
+| ID | 特性 | 测试点 (Checkpoint) | 验证方法 | 预期结果 |
+|---|---|---|---|---|
+| **UE-001** | 自动生成 | DefaultList 模板生成 | UI (List) | 无需配置，列表显示所有字段。 |
+| **UE-002** | 自动生成 | DefaultDetail 模板生成 | UI (Detail) | 详情页自动平铺所有字段。 |
+| **UE-003** | 布局调整 | 拖拽 Row/Col 及调整宽度 | Designer | 实时响应拖拽，JSON 数据更新。 |
+| **UE-004** | 容器嵌套 | Recursion: Tab->Row->Card | Designer | 多层嵌套结构清晰。 |
+| **UE-005** | 流式排版 | 宽度溢出自动换行 (Wrap) | Designer | 总宽度 > 100% 时换行。 |
+| **UE-006** | 属性编辑 | 通用属性 (Label/Visible/Style) | Designer | 修改属性实时重绘。 |
+| **UE-010** | 基础控件 | `Input` (文本) | Runtime | 验证防注入 (XSS) 与基础读写。 |
+| **UE-011** | 基础控件 | `TextArea` (多行) | Runtime | 验证高度适配与换行回显。 |
+| **UE-012** | 基础控件 | `InputNumber` (数值) | Runtime | 验证精度截断与非法字符拦截。 |
+| **UE-013** | 基础控件 | `Switch` (布尔) | Runtime | 验证 Switch 状态切换与 Label。 |
+| **UE-014** | 基础控件 | `Checkbox` (布尔) | Runtime | 验证 Checkbox 勾选与 Disabled 态。 |
+| **UE-015** | 基础控件 | `Date/Calendar` (日期) | Runtime | 验证格式化 (Format) 与范围限制。 |
+| **UE-016** | 基础控件 | `Button` (动作) | Runtime | 验证点击事件与 Action 触发。 |
+| **UE-017** | 基础控件 | `Label` (静态文本) | Runtime | 验证纯文本渲染无 Input。 |
+| **UE-020** | 选项控件 | `Select` (下拉) | Runtime | 验证枚举下拉与 Z-Index。 |
+| **UE-021** | 选项控件 | `RadioGroup` (互斥) | Runtime | 验证单选互斥与必填校验。 |
+| **UE-022** | 选项控件 | `ListBox` (多选) | Runtime | 验证多选逻辑与 Model 绑定。 |
+| **UE-023** | 选项控件 | `EnumSelector` (自动) | Runtime | 验证系统枚举自动加载。 |
+| **UE-024** | 引用控件 | `Lookup` (弹窗) | Runtime | 验证 1:1 关联选择与回填。 |
+| **UE-030** | 数据控件 | `DataGrid` (子表) | Runtime | 验证 1:N 弹窗 CRUD 交互。 |
+| **UE-031** | 数据控件 | `SubForm` (嵌套) | Runtime | 验证 1:1 内嵌表单编辑。 |
+| **UE-032** | 数据控件 | `OrgTree` (部门树) | Runtime | 验证树形展开与 ID 选择。 |
+| **UE-033** | 数据控件 | `PermTree` (权限树) | Runtime | 验证级联勾选逻辑。 |
+| **UE-034** | 数据控件 | `UserRole` (穿梭框) | Runtime | 验证左右分配逻辑。 |
+| **UE-040** | 布局容器 | `Grid` (栅格) | Runtime | 验证 Gutter/Span 渲染。 |
+| **UE-041** | 布局容器 | `Card` (卡片) | Runtime | 验证 Title/Body 结构。 |
+| **UE-042** | 布局容器 | `TabBox` (标签页) | Runtime | 验证 Tab 切换内容隔离。 |
+| **UE-043** | 布局容器 | `Section` (折叠) | Runtime | 验证折叠/展开交互。 |
+| **UE-044** | 布局容器 | `Panel` (面板) | Runtime | 验证背景色与边距。 |
+| **UE-045** | 布局容器 | `Frame` (框架) | Runtime | 验证边框样式。 |
+| **UE-050** | 交互行为 | Real-time Validation | Runtime | 验证输入时的即时校验反馈。 |
 
 ## 3. 组织与权限 (Identity & Security - IS)
 验证系统的安全底座：谁在什么条件下能看到什么。
@@ -109,7 +110,7 @@
 
 ---
 
-## 6. 执行策略 (Execution Strategy) - [Merged from PLAN-24]
+## 7. 执行策略 (Execution Strategy) - [Merged from PLAN-24]
 
 我们采用 **"分批推进、严格清洗"** 的策略 (Compliance with STD-06)。
 
@@ -130,7 +131,7 @@
 
 ---
 
-## 7. 准出标准 (Final Exit Criteria)
+## 8. 准出标准 (Final Exit Criteria)
 1.  **Blocker Case**: 必须 100% 通过 (PC-001~009, IS-001~006)。
 2.  **存证要求**: 每一个 ID 必须对应一个 `docs/history/test-results/` 下的存证子目录。
 3.  **代码覆盖**: 后端核心服务单元测试覆盖率需 > 85%。
