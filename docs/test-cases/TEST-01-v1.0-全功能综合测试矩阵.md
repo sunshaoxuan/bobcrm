@@ -53,6 +53,12 @@
 | UE-042 | 运行时 | 数据控件: `OrgTree` (架构树) | Runtime | 验证部门树的懒加载与节点选择ID回填。 |
 | UE-043 | 运行时 | 数据控件: `PermTree` (权限树) | Runtime | 验证功能权限节点的级联勾选状态。 |
 | UE-044 | 运行时 | 数据控件: `UserRole` (穿梭框) | Runtime | 验证左右穿梭框的对象分配与移除逻辑。 |
+| UE-050 | 运行时 | 布局容器: `Grid` (栅格) | Runtime | 验证 Grid/Row/Col 的嵌套结构与间距渲染。 |
+| UE-051 | 运行时 | 布局容器: `Card` (卡片) | Runtime | 验证 Title/Body 结构与 Shadow 样式。 |
+| UE-052 | 运行时 | 布局容器: `TabBox` (标签页) | Runtime | 验证多 Tab 切换时的内容区显隐状态。 |
+| UE-053 | 运行时 | 布局容器: `Section` (折叠面板) | Runtime | 验证 Header 点击时的内容区折叠动画。 |
+| UE-054 | 运行时 | 布局容器: `Panel` (面板) | Runtime | 验证无边框/有背景色的轻量级容器渲染。 |
+| UE-055 | 运行时 | 布局容器: `Frame` (框架) | Runtime | 验证带边框与圆角的独立容器渲染。 |
 
 ## 3. 组织与权限 (Identity & Security - IS)
 验证系统的安全底座：谁在什么条件下能看到什么。

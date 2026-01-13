@@ -75,6 +75,16 @@
 | **UE-043** | `permtree` | `RolePermissionTreeWidget` | 勾选功能节点 | 级联勾选（选子自动选父） |
 | **UE-044** | `userrole` | `UserRoleAssignmentWidget` | 穿梭框 (Transfer) 分配 | 左侧选人 -> 移入右侧 -> Model 更新 |
 
+#### E. 布局容器 (Layout Containers) - [UE-050~055]
+| ID | 控件类型 (Registry) | C# Type | 验证操作 | 预期结果 |
+|---|---|---|---|---|
+| **UE-050** | `grid` | `GridWidget` | 配置 3 列 (Span 8) | 内部子组件横向排列，间距 (Gap) 正确渲染 |
+| **UE-051** | `card` | `CardWidget` | 拖入组件至 Body | 卡片标题可见，子组件渲染在内容区内 |
+| **UE-052** | `tabbox` / `tab` | `TabContainerWidget` | 切换 Tab 2 | Tab 2 内容可见，Tab 1 内容隐藏 |
+| **UE-053** | `section` | `SectionWidget` | 折叠/展开 (若支持) | 标题栏点击可切换内容区的可见性 |
+| **UE-054** | `panel` | `PanelWidget` | 设置背景色/边框 | CSS 样式正确应用，作为逻辑分组容器生效 |
+| **UE-055** | `frame` | `FrameWidget` | 嵌入外部内容或边框 | 渲染为带边框的独立区块 (类似 GroupBox) |
+
 ## 3. 准出标准
 *   模板可自定义并持久化。
 *   运行时表单精确反映设计器状态。
