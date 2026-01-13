@@ -13,6 +13,8 @@
 **核心场景**：
 - **场景A (草稿态)**: 当 `Order` 状态为 `Draft` 时，显示"包含大量编辑控件"的草稿模板。
 - **场景B (审批态)**: 当 `Order` 状态为 `InReview` 时，自动切换为"只读+审批按钮"的审批模板。
+- **场景C (菜单驱动)**: 通过"财务菜单"进入看到财务视图，通过"销售菜单"看到详情视图。
+- **场景D (档案式匹配-Theme 1)**: 当客户属于特定"重要档案"（如 VIP 记录）时，自动切换为高级黑金模板。
 
 ## 2. 架构设计
 
@@ -35,21 +37,18 @@
 
 ### 2.2 运行时逻辑 (Runtime Logic)
 
-`TemplateRuntimeService.GetTemplateAsync` 将被改造为规则引擎：
+`TemplateRuntimeService.BuildRuntimeContextAsync` 执行以下优先级过滤：
 
-**输入**: `EntityType`, `ViewState` (如 "Detail"), `EntityData` (JObject, 可选)
-**输出**: `FormTemplate`
+**输入**: `EntityType`, `ViewState`, `EntityData`, `MenuNodeId?`, `TemplateId?`
 
-**流程**:
-1.  **加载规则**: 查询该 `EntityType` + `ViewState` 下的所有绑定。
-2.  **规则匹配 (如果有 EntityData)**:
-    - 按 `Priority` 降序遍历。
-    - 检查 `EntityData[MatchFieldName] == MatchFieldValue`。
-    - 命中第一个匹配项，返回对应模板。
-3.  **默认回退**:
-    - 若无 EntityData 或未命中任何规则。
-    - 返回 `IsDefault=true` 的模板。
-    - 若无 Default，返回系统内置模板。
+**优先级算法 (Priority Chain)**:
+1.  **显式上下文 (mid)**: 优先级最高。直接从菜单节点加载。
+2.  **规则引擎 (Rule Engine)**: 
+    - 加载该实体 + 视图状态下的所有 `TemplateStateBinding`。
+    - **档案式匹配 (Entity Record)**: 若规则涉及 Lookup 字段，则比对记录 ID。
+    - 按 `Priority` 降序遍历并执行 `EntityData` 条件匹配。
+3.  **默认回退**: 兜底 `IsDefault=true` 绑定。
+4.  **安全聚合 (Inference)**: API 级别字段并集过滤。
 
 ---
 

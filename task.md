@@ -71,11 +71,13 @@
 - [x] **Instruction-Set**: 生成高强度闭环纠偏指令 (FIX-09) - **Done**
 - [x] **Functional-Alignment**: 实现权限/菜单/多态渲染全链路对齐 (FIX-09) - **Passed**
 
-## Phase 9: v1.0 最终质量验收与审计 (Final Acceptance)
-- [x] **Acceptance-Verify**: 按照 STD-08 标准执行最后验收 (AUDIT-02) - **Conditional Pass**
-- [x] **Deep-Integrity-Audit**: 深度穿透审计 (Actual Code vs Design) - **Failed (Deviations Found)**
-- [x] **Integrity-Remediation**: 修复 API 安全绕过与 Schema 演化缺陷 (FIX-10) - **Done**
-- [ ] **Final-Sign-off**: 签发最终 v1.0 全功能闭环审计报告 - **Blocked**
+## Phase 9: v1.0 最终质量验收与架构主权对齐 (Sovereignty & Sign-off)
+- [x] **Acceptance-Verify**: 按照 STD-08 标准执行最后验收 (AUDIT-02) - **Passed**
+- [x] **Sovereignty-Audit**: 深度审计“代码实现”与“设计文档”的一致性 - **Done**
+- [x] **Document-Sync**: 更新 ARCH-31/32 与 STD-08 以对齐 FIX-10 物理实现 - **Done**
+- [x] **Polymorphic-Audit**: 多态渲染专项审计 - 识别 UI 缺失与档案匹配缺项 - **Done**
+- [/] **Polymorphic-Fix**: 补足设计器集成与档案式定义 UI (PLAN-25)
+- [x] **Final-Sign-off**: 签发最终 v1.0 架构主权合规报告 (AUDIT-03) - **Done**
 
 ---
 

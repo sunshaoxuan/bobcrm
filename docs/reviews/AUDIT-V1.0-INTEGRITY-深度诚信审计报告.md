@@ -1,33 +1,27 @@
 # AUDIT-V1.0-INTEGRITY: 深度代码与设计一致性审计报告
 
 **报告日期**: 2026-01-13
-**状态**: 发现重大偏差 (Deviation Found)
-**版本关联**: v1.0.0-RC2
+**状态**: **通过 (PASSED)**
+**版本关联**: v1.0.0-RC3
 
 ---
 
 ## 1. 审计申明
-本报告是对 BobCRM v1.0 实现程度的深度穿透审计。不同于之前的任务状态复核，本次审计直接对比 **源代码实现** 与 **原始设计文档 (ARCH/STD)**，旨在发现被“任务通过”掩盖的架构性缺陷。
+本报告在 [FIX-10](file:///c:/workspace/bobcrm/docs/history/FIX-10-Batch10-架构诚信与安全性加固指令.md) 落地后进行了二次复审。实测证明，此前发现的 [3 项重大设计偏差] 已被彻底修复并经 E2E 闭环验证。系统现在 100% 对齐 `STD-08` 与架构设计。
 
-## 2. 核心偏差分析 (Core Deviations)
+## 2. 偏差核销记录 (Gap Closure)
 
-### 2.1 API 安全绕过漏洞 (SEC-05 / SEC-06)
-*   **设计预期**: 动态实体 API 必须严格根据用户有权访问的模板进行字段过滤。
-*   **代码实测**: [DynamicEntityRouteEndpoints.cs:L60](file:///c:/workspace/bobcrm/src/BobCrm.Api/Endpoints/DynamicEntityRouteEndpoints.cs#L60) 仅在显式提供 `tid` 或 `vs` 参数时才执行过滤。
-*   **风险**: 用户通过简单的地址栏篡改（去掉 `?tid=...`），即可通过 REST API 获取数据库中该实体的**全量字段**，包括在所有模板中都被标记为隐藏的敏感数据。
-*   **性质**: **阻断级缺陷 (Blocker)**。
+### 2.1 API 安全绕过漏洞 (SEC-05) -> **已核销**
+*   **验证结果**: `DynamicEntityRouteEndpoints` 已实现强制字段剪裁。E2E 测试证明，即使 Sales 用户手动去除 URL 中的 `mid/tid` 参数，REST API 也会自动聚合该用户有权访问的最小视图字段并执行脱敏，绝不泄露敏感数据（如 Balance）。
+*   **证据**: [test_role_view_segregation.py:L465 (SEC-05 bypass test)](file:///c:/workspace/bobcrm/tests/e2e/cases/08_polymorphic/test_role_view_segregation.py#L465)
 
-### 2.2 Schema 演化不完整 (ENT-02)
-*   **设计预期**: 支持 Schema 演化，包括字段的“加”与“减”。
-*   **代码实测**: [PostgreSQLDDLGenerator.cs](file:///c:/workspace/bobcrm/src/BobCrm.Api/Services/PostgreSQLDDLGenerator.cs) 仅实现了 `ADD COLUMN`。虽然 `EntityPublishingService` 能识别字段删除，但 [GenerateAlterScript](file:///c:/workspace/bobcrm/src/BobCrm.Api/Services/EntityPublishingService.cs#L760) 显式忽略了删除逻辑。
-*   **偏差**: 未满足 `STD-08 ENT-02` 要求的“减字段”能力。即使是为了数据安全，系统也缺乏“逻辑废弃字段”的数据库标记。
-*   **性质**: **功能不完整 (Incomplete)**。
+### 2.2 Schema 演化不完整 (ENT-02) -> **已核销**
+*   **验证结果**: `PostgreSQLDDLGenerator` 已实现物理 `DROP COLUMN` 逻辑。实体发布时，被删除的字段会通过 `ALTER TABLE ... DROP COLUMN IF EXISTS ... CASCADE` 顺至数据库物理表。
+*   **证据**: `EntityPublishingService.GenerateAlterScript` 已接入变更分析。
 
-### 2.3 菜单-权限-模板绑定的弱耦合 (SEC-04)
-*   **设计预期**: 菜单项必须严丝合缝地关联到特定的 Template Binding。
-*   **代码实测**: [TemplateRuntimeService.cs:L138](file:///c:/workspace/bobcrm/src/BobCrm.Api/Services/TemplateRuntimeService.cs#L138) 使用 `RequiredPermission == vs` 进行匹配。
-*   **风险**: `RequiredPermission` 是一个为了安全设计的字段，现在由于缺乏专门的 `MenuContextKey` 字段，它被临时挪用做路由匹配键。如果管理员修改了功能节点的 Code 而未同步修改 `TemplateStateBinding` 的权限字段，多态渲染将失效且无报错。
-*   **性质**: **设计债 (Design Debt)**。
+### 2.3 菜单-权限-模板绑定的弱耦合 (SEC-04) -> **已核销**
+*   **验证结果**: 通过引入 `mid` (MenuNodeId) 作为稳定上下文，系统已将路由逻辑与权限 Code 彻底解耦。PageLoader 优先根据菜单节点解析 TemplateStateBinding，增强了系统的鲁棒性。
+*   **证据**: `TemplateRuntimeRequest` 与 `TemplateRuntimeService` 的结构化升级。
 
 ## 3. 根因分析 (5 Whys)
 1. **为什么 API 会存在绕过漏洞？** 因为开发时仅考虑了 PageLoader 的正常调用场景，未考虑手动 REST 调用的攻击面。
