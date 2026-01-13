@@ -3,9 +3,10 @@ import os
 from playwright.sync_api import sync_playwright, expect
 import time
 import json
-from utils.db import db_helper
+from utils.db import db_helper, drop_all_dynamic_content
 from utils.api import api_helper
 import requests
+from datetime import datetime, timezone
 
 # Config
 BASE_URL = os.getenv("BASE_URL", "http://localhost:3000").rstrip("/")
@@ -14,6 +15,7 @@ E2E_LANG = os.getenv("E2E_LANG", "en").strip() or "en"
 VIDEO_DIR = "tests/e2e/videos"
 SCREENSHOT_DIR = "tests/e2e/screenshots"
 _STANDARD_PRODUCT_CACHE = None
+_E2E_DURATIONS = []  # list[dict]
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_admin_exists():
@@ -22,6 +24,12 @@ def ensure_admin_exists():
 
     Many UI flows rely on setup being done and persisted (DB), but tests run in isolated browser contexts.
     """
+    # Batch6: Hard reset test/perf dynamic content before starting a full E2E run.
+    try:
+        drop_all_dynamic_content(strict=True)
+    except Exception as ex:
+        pytest.fail(f"Global cleanup failed before E2E session: {ex}")
+
     last_error = None
     for attempt in range(1, 8):
         try:
@@ -40,12 +48,24 @@ def ensure_admin_exists():
                 timeout=60,
             )
             regen.raise_for_status()
-            return
+            break
         except Exception as ex:
             last_error = ex
             time.sleep(0.8)
 
-    pytest.fail(f"Failed to initialize E2E admin/templates after retries: {last_error}")
+    if last_error is not None:
+        pytest.fail(f"Failed to initialize E2E admin/templates after retries: {last_error}")
+
+    yield
+
+    # Batch6: Ensure zero residual test/perf tables after E2E run.
+    try:
+        after = drop_all_dynamic_content(strict=True)
+        leaked = after.get("dropped_tables") or []
+        if leaked:
+            print(f"[E2E] Global cleanup removed leaked tables at session end: {leaked}")
+    except Exception as ex:
+        pytest.fail(f"Global cleanup failed after E2E session: {ex}")
 
 @pytest.fixture
 def clean_platform():
@@ -381,3 +401,82 @@ def pytest_runtest_makereport(item, call):
             name = item.name
             take_screenshot(page, f"FAILURE_{name}")
             save_page_content(page, f"FAILURE_{name}")
+
+
+def pytest_runtest_logreport(report):
+    """
+    Batch6: record per-test durations for regression matrix reporting.
+    """
+    if report.when != "call":
+        return
+
+    nodeid = getattr(report, "nodeid", "")
+    duration = float(getattr(report, "duration", 0.0) or 0.0)
+
+    # Categorize by tests/e2e/cases/<NN_xxx>/...
+    category = "unknown"
+    try:
+        parts = nodeid.replace("\\", "/").split("tests/e2e/cases/")
+        if len(parts) > 1:
+            rest = parts[1]
+            category = rest.split("/", 1)[0] if "/" in rest else rest
+    except Exception:
+        category = "unknown"
+
+    _E2E_DURATIONS.append(
+        {
+            "nodeid": nodeid,
+            "category": category,
+            "outcome": getattr(report, "outcome", "unknown"),
+            "duration_s": duration,
+        }
+    )
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """
+    Batch6: print and persist a simple duration distribution summary.
+    """
+    if not _E2E_DURATIONS:
+        return
+
+    durations = sorted(d["duration_s"] for d in _E2E_DURATIONS)
+    total = sum(durations)
+
+    def _pct(p: float) -> float:
+        if not durations:
+            return 0.0
+        idx = int(round((len(durations) - 1) * p))
+        idx = max(0, min(idx, len(durations) - 1))
+        return durations[idx]
+
+    summary = {
+        "count": len(durations),
+        "total_s": total,
+        "min_s": durations[0],
+        "p50_s": _pct(0.50),
+        "p90_s": _pct(0.90),
+        "p95_s": _pct(0.95),
+        "max_s": durations[-1],
+    }
+
+    terminalreporter.write_sep("-", "E2E durations (Batch6)")
+    terminalreporter.write_line(json.dumps(summary, ensure_ascii=False))
+
+    # Write detailed report to disk (not intended to be committed)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_dir = os.path.join("tests", "e2e", "reports")
+    os.makedirs(out_dir, exist_ok=True)
+    # Keep a stable filename to avoid accumulating junk files across repeated local runs.
+    out_path = os.path.join(out_dir, "batch6_durations_latest.json")
+    payload = {
+        "generated_at_utc": ts,
+        "summary": summary,
+        "items": _E2E_DURATIONS,
+    }
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        terminalreporter.write_line(f"[E2E] Duration report written: {out_path}")
+    except Exception as ex:
+        terminalreporter.write_line(f"[E2E] Failed to write duration report: {ex}")

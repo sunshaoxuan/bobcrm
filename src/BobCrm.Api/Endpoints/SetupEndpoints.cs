@@ -79,8 +79,13 @@ public static class SetupEndpoints
                 logger.LogInformation("[Setup] Admin role created");
             }
 
-            // 检查是否已存在管理员用户（使用默认凭据）
+            // 检查是否已存在管理员用户（优先 username=admin，其次取 admin 角色中的任意用户，避免重复创建导致 UNIQUE 冲突）
             var existingAdmin = await um.FindByNameAsync("admin");
+            if (existingAdmin == null)
+            {
+                var adminsInRole = await um.GetUsersInRoleAsync("admin");
+                existingAdmin = adminsInRole.FirstOrDefault();
+            }
             IdentityUser? adminUser = null;
 
             if (existingAdmin != null)
@@ -184,6 +189,10 @@ public static class SetupEndpoints
                         "SETUP_UPDATE_FAILED"));
                 }
                 await um.UpdateSecurityStampAsync(adminUser);
+                if (!await um.IsInRoleAsync(adminUser, "admin"))
+                {
+                    await um.AddToRoleAsync(adminUser, "admin");
+                }
                 logger.LogInformation("[Setup] Admin updated successfully: {Username}", dto.Username);
                 return Results.Ok(ApiResponseExtensions.SuccessResponse(loc.T("MSG_SETUP_ADMIN_UPDATED", lang)));
             }

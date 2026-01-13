@@ -340,4 +340,4 @@ def test_batch2_004_validation_shows_required_error(auth_admin, page: Page, stan
     page.locator(".test-runtime-save").click()
 
     # Local validators (preferred) OR i18n key fallback
-    expect(page.locator("text=/Required\\.|MSG_VALIDATION_REQUIRED|必須/")).to_be_visible(timeout=15000)
+    expect(page.locator("text=/Required\\.|MSG_VALIDATION_REQUIRED|必須|必填/")).to_be_visible(timeout=15000)

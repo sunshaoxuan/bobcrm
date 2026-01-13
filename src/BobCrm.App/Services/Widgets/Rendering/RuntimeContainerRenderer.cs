@@ -45,9 +45,14 @@ public static class RuntimeContainerRenderer
                 }
 
                 builder.OpenElement(9, "div");
-                builder.AddAttribute(10, "data-widget-id", child.Id);
-                builder.AddAttribute(11, "style", styleGetter(child, mode));
-                builder.AddContent(12, renderChild(child, mode));
+                builder.AddAttribute(10, "class", "runtime-widget-shell");
+                if (!string.IsNullOrWhiteSpace(child.DataField))
+                {
+                    builder.AddAttribute(11, "data-field", child.DataField);
+                }
+                builder.AddAttribute(12, "data-widget-id", child.Id);
+                builder.AddAttribute(13, "style", styleGetter(child, mode));
+                builder.AddContent(14, renderChild(child, mode));
                 builder.CloseElement();
             }
         }
@@ -108,9 +113,14 @@ public static class RuntimeContainerRenderer
                 }
 
                 builder.OpenElement(11, "div");
-                builder.AddAttribute(12, "data-widget-id", child.Id);
-                builder.AddAttribute(13, "style", styleGetter(child, mode));
-                builder.AddContent(14, renderChild(child, mode));
+                builder.AddAttribute(12, "class", "runtime-widget-shell");
+                if (!string.IsNullOrWhiteSpace(child.DataField))
+                {
+                    builder.AddAttribute(13, "data-field", child.DataField);
+                }
+                builder.AddAttribute(14, "data-widget-id", child.Id);
+                builder.AddAttribute(15, "style", styleGetter(child, mode));
+                builder.AddContent(16, renderChild(child, mode));
                 builder.CloseElement();
             }
 
