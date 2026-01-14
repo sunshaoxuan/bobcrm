@@ -12,6 +12,7 @@ using BobCrm.Api.Core.Persistence;
 using BobCrm.Api.Base;
 using Microsoft.EntityFrameworkCore;
 using BobCrm.Api.Services;
+using BobCrm.Api.Abstractions;
 
 // 测试数据库策略：
 // 1. 使用固定的测试数据库名称（bobcrm_test），与开发环境（bobcrm）完全隔离
@@ -30,7 +31,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment("Testing");
         builder.UseTestServer();
 
         builder.ConfigureAppConfiguration((context, config) =>
@@ -54,6 +55,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IAuditService>();
             services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
             services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(SqliteConnectionString));
             services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
