@@ -290,10 +290,7 @@ public class CSharpCodeGenerator
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public interface IEntity");
         sb.AppendLine("    {");
-        sb.AppendLine("        int Id { get; set; }");
-        sb.AppendLine("        bool IsDeleted { get; set; }");
-        sb.AppendLine("        DateTime? DeletedAt { get; set; }");
-        sb.AppendLine("        string? DeletedBy { get; set; }");
+
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    /// <summary>");

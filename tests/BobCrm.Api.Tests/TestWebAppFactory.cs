@@ -47,7 +47,8 @@ public class TestWebAppFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"] = "BobCrm",
                 ["Jwt:Audience"] = "BobCrmUsers",
                 ["Jwt:AccessMinutes"] = "60",
-                ["Jwt:RefreshDays"] = "7"
+                ["Jwt:RefreshDays"] = "7",
+                ["Cors:AllowedOrigins"] = "http://localhost"
             };
 
             config.AddInMemoryCollection(testConfig!);

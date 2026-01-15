@@ -435,6 +435,7 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
             foreach (var field in fieldsElement.EnumerateArray())
             {
                 if (field.TryGetProperty("key", out var keyProp) &&
+                    keyProp.ValueKind == JsonValueKind.String &&
                     string.Equals(keyProp.GetString(), key, StringComparison.OrdinalIgnoreCase) &&
                     field.TryGetProperty("value", out var valueProp))
                 {
@@ -459,6 +460,10 @@ public sealed class PageLoaderViewModel : INotifyPropertyChanged
                 {
                     return prop.Value.ToString();
                 }
+            }
+            if (string.Equals(key, "Id", StringComparison.OrdinalIgnoreCase))
+            {
+                // Removed debug logging
             }
         }
         catch (Exception ex)

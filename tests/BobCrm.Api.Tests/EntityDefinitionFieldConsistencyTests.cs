@@ -267,21 +267,34 @@ public class EntityDefinitionFieldConsistencyTests : IClassFixture<TestWebAppFac
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var fieldId = await db.FieldMetadatas
-                .Where(f => f.EntityDefinitionId == entityId && f.PropertyName == "Status")
-                .Select(f => f.Id)
-                .FirstAsync();
+            var existingFields = await db.FieldMetadatas
+                .Where(f => f.EntityDefinitionId == entityId)
+                .ToListAsync();
+
+            var updateFields = existingFields.Select(f => new UpdateFieldMetadataDto
+            {
+                Id = f.Id,
+                PropertyName = f.PropertyName,
+                DisplayName = f.DisplayName != null ? new MultilingualText(f.DisplayName) : null,
+                DataType = f.DataType,
+                Length = f.Length,
+                Precision = f.Precision,
+                Scale = f.Scale,
+                IsRequired = f.IsRequired,
+                SortOrder = f.SortOrder,
+                DefaultValue = f.DefaultValue,
+                ValidationRules = f.ValidationRules,
+                EnumDefinitionId = f.EnumDefinitionId,
+                IsMultiSelect = f.IsMultiSelect
+            }).ToList();
+
+            // Find Status field and modify
+            var statusIndex = updateFields.FindIndex(f => f.PropertyName == "Status");
+            updateFields[statusIndex] = updateFields[statusIndex] with { DataType = FieldDataType.String };
 
             var update = new UpdateEntityDefinitionDto
             {
-                Fields = new List<UpdateFieldMetadataDto>
-                {
-                    new()
-                    {
-                        Id = fieldId,
-                        DataType = FieldDataType.String
-                    }
-                }
+                Fields = updateFields
             };
 
             var updateResp = await client.PutAsJsonAsync($"/api/entity-definitions/{entityId}", update);

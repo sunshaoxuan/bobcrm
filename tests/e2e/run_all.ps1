@@ -31,8 +31,8 @@ $runDir = Join-Path $targetDir $timestamp
 New-Item -ItemType Directory -Path $runDir -Force | Out-Null
 
 $artifactSources = @(
-    Join-Path $e2eRoot "screenshots",
-    Join-Path $e2eRoot "videos",
+    Join-Path $e2eRoot "screenshots"
+    Join-Path $e2eRoot "videos"
     Join-Path $e2eRoot "reports"
 )
 
