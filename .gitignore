@@ -194,6 +194,9 @@ tests/e2e/videos/
 tests/e2e/reports/
 tests/e2e/*.html
 
+# Test evidence (screenshots/videos from E2E runs)
+docs/history/test-results/
+
 # Debug scripts (temporary debugging files)
 tests/e2e/debug_*.py
 
