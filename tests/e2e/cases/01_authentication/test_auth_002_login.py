@@ -7,6 +7,9 @@ BASE_URL = "http://localhost:3000"
 def test_auth_002_login_success(page: Page):
     page.goto(f"{BASE_URL}/login")
     
+    # Wait for Blazor interactive state (hide splash)
+    page.wait_for_selector(".app-stage.ready", timeout=10000)
+    
     # A3-A5
     page.fill("#login-username", "admin")
     page.fill("#login-password", "Admin@12345")
@@ -35,6 +38,9 @@ def test_auth_002_login_success(page: Page):
 
 def test_auth_002_login_failure(page: Page):
     page.goto(f"{BASE_URL}/login")
+    
+    # Wait for Blazor interactive state
+    page.wait_for_selector(".app-stage.ready", timeout=10000)
     
     page.fill("#login-username", "admin")
     page.fill("#login-password", "WrongPass123")

@@ -159,21 +159,13 @@ public class I18nService : II18nService
             using var resp = await http.GetAsync($"/api/i18n/{lang}", ct);
 
             if (!resp.IsSuccessStatusCode)
-
             {
-
                 if (scheduleRetry)
-
                 {
-
                     ScheduleRetry(lang);
-
                 }
-
                 await HandleLoadFailureAsync();
-
                 return;
-
             }
 
             using var stream = await resp.Content.ReadAsStreamAsync(ct);
