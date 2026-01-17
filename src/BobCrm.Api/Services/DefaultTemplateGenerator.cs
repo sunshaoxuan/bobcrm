@@ -117,6 +117,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
     public async Task<DefaultTemplateGenerationResult> EnsureTemplatesAsync(
         EntityDefinition entity,
         bool force = false,
+        bool saveChanges = true,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -143,6 +144,7 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
 
         foreach (var viewState in viewStates)
         {
+            _logger?.LogInformation("[TemplateGenerator] Ensuring template for {ViewState}", viewState);
             var fieldsForUsage = force
                 ? (entity.Fields?.ToList() ?? new List<FieldMetadata>())
                 : PrepareFields(entity);
@@ -189,14 +191,17 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                     };
 
                     _db!.FormTemplates.Add(template);
-                    await _db!.SaveChangesAsync(ct); // 保存以获取 TemplateId
+                    if (saveChanges)
+                    {
+                        await _db!.SaveChangesAsync(ct); // 保存以获取 TemplateId
+                    }
 
                     // 创建默认绑定
                     var newBinding = new TemplateStateBinding
                     {
                         EntityType = entityType,
                         ViewState = viewState,
-                        TemplateId = template.Id,
+                        Template = template, // 使用引用而不是 ID，以便在延迟保存时自动处理
                         IsDefault = true,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -237,8 +242,9 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
             result.Templates[viewState] = template;
         }
 
-        if (result.Created.Count > 0 || result.Updated.Count > 0)
+        if ((result.Created.Count > 0 || result.Updated.Count > 0) && saveChanges)
         {
+            _logger?.LogInformation("[TemplateGenerator] Saving {Created} new and {Updated} updated templates", result.Created.Count, result.Updated.Count);
             await _db!.SaveChangesAsync(ct);
         }
 
@@ -262,14 +268,12 @@ public class DefaultTemplateGenerator : IDefaultTemplateGenerator
                 };
                 _db!.TemplateBindings.Add(binding);
             }
-            else
-            {
-                binding.TemplateId = kvp.Value.Id;
-                binding.UpdatedAt = DateTime.UtcNow;
-                _db!.TemplateBindings.Update(binding);
-            }
         }
-        await _db!.SaveChangesAsync(ct);
+        if (saveChanges)
+        {
+            _logger?.LogInformation("[TemplateGenerator] Saving legacy template bindings");
+            await _db!.SaveChangesAsync(ct);
+        }
 
         return result;
     }

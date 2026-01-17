@@ -451,7 +451,7 @@ public class TemplateRuntimeService
                        ?? await _bindingService.GetBindingAsync(altNormalized, usage, ct);
             }
 
-            var result = await _defaultTemplateService.EnsureTemplatesAsync(entity, "runtime", force: true, ct);
+            var result = await _defaultTemplateService.EnsureTemplatesAsync(entity, "runtime", force: true, ct: ct);
             _logger.LogInformation(
                 "[TemplateRuntime] Regenerated templates for {EntityType}, created={Created}, updated={Updated}",
                 normalized, result.Created.Count, result.Updated.Count);

@@ -189,7 +189,7 @@ public class EntityDefinitionSynchronizer
         try
         {
             // Ensure default templates (List, Detail, Edit)
-            var result = await _templateService.EnsureTemplatesAsync(entityDef, "system");
+            var result = await _templateService.EnsureTemplatesAsync(entityDef, "synchronizer", force: false);
             if (result.Templates.Count == 0)
             {
                 _logger.LogWarning("[EntitySync] No templates generated for {Entity}", entityDef.EntityRoute);

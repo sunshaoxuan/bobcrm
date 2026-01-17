@@ -16,6 +16,7 @@ public interface IDefaultTemplateService
         EntityDefinition entityDefinition,
         string? updatedBy,
         bool force = false,
+        bool saveChanges = true,
         CancellationToken ct = default);
 
     /// <summary>

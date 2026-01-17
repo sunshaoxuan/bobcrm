@@ -68,19 +68,17 @@ public class TemplateBindingService
         // Last resort: return the first binding even if unusable (preserve previous behavior)
         return bindings.FirstOrDefault();
     }
-
     public async Task<TemplateBinding> UpsertBindingAsync(
         string entityType,
         FormTemplateUsageType usageType,
-        int templateId,
+        FormTemplate template,
         bool isSystem,
         string updatedBy,
         string? requiredFunctionCode,
+        bool saveChanges = true,
         CancellationToken ct = default)
     {
         entityType = entityType.Trim();
-        var template = await _db.FormTemplates.FirstOrDefaultAsync(t => t.Id == templateId, ct)
-            ?? throw new InvalidOperationException("Template not found.");
 
         if (!string.IsNullOrWhiteSpace(template.EntityType) &&
             !string.Equals(template.EntityType, entityType, StringComparison.OrdinalIgnoreCase))
@@ -88,7 +86,10 @@ public class TemplateBindingService
             throw new InvalidOperationException("Template entity type mismatch.");
         }
 
-        var binding = await _db.TemplateBindings
+        // 优先从本地缓存查找，由其是在延迟保存的情况下
+        var binding = _db.TemplateBindings.Local
+            .FirstOrDefault(b => b.EntityType == entityType && b.UsageType == usageType && b.IsSystem == isSystem)
+            ?? await _db.TemplateBindings
             .FirstOrDefaultAsync(b => b.EntityType == entityType && b.UsageType == usageType && b.IsSystem == isSystem, ct);
 
         if (binding == null)
@@ -102,13 +103,16 @@ public class TemplateBindingService
             _db.TemplateBindings.Add(binding);
         }
 
-        binding.TemplateId = templateId;
+        binding.Template = template;
         binding.RequiredFunctionCode = requiredFunctionCode ?? template.RequiredFunctionCode;
         binding.UpdatedBy = updatedBy;
         binding.UpdatedAt = DateTime.UtcNow;
 
-        await _db.SaveChangesAsync(ct);
-        await _db.Entry(binding).Reference(b => b.Template).LoadAsync(ct);
+        if (saveChanges)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+
         return binding;
     }
 

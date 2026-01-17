@@ -82,17 +82,17 @@ public class RoleService
             throw new InvalidOperationException("UserId is required.");
         }
 
-        var exists = await _db.RoleAssignments.AnyAsync(a =>
+        var assignment = await _db.RoleAssignments.FirstOrDefaultAsync(a =>
             a.UserId == request.UserId &&
             a.RoleId == request.RoleId &&
             a.OrganizationId == request.OrganizationId, ct);
 
-        if (exists)
+        if (assignment != null)
         {
-            throw new InvalidOperationException("Assignment already exists.");
+            return assignment;
         }
 
-        var assignment = new RoleAssignment
+        assignment = new RoleAssignment
         {
             UserId = request.UserId,
             RoleId = request.RoleId,

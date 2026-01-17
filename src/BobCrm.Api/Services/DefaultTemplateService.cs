@@ -31,11 +31,12 @@ public class DefaultTemplateService : IDefaultTemplateService
         EntityDefinition entityDefinition,
         string? updatedBy,
         bool force = false,
+        bool saveChanges = true,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entityDefinition);
 
-        var result = await _generator.EnsureTemplatesAsync(entityDefinition, force: force, ct);
+        var result = await _generator.EnsureTemplatesAsync(entityDefinition, force: force, saveChanges: saveChanges, ct);
 
         var entityType = entityDefinition.EntityRoute ?? entityDefinition.EntityName ?? string.Empty;
         var now = DateTime.UtcNow;
@@ -69,7 +70,7 @@ public class DefaultTemplateService : IDefaultTemplateService
             }
         }
 
-        if (result.Templates.Count > 0)
+        if (result.Templates.Count > 0 && saveChanges)
         {
             await _db.SaveChangesAsync(ct);
         }

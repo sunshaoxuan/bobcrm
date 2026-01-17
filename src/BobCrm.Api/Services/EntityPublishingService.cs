@@ -186,14 +186,17 @@ public class EntityPublishingService : IEntityPublishingService
             // 8. 锁定实体定义（防止发布后误修改关键属性）
             await _lockService.LockEntityAsync(entityDefinitionId, "Entity published");
 
+            _logger.LogInformation("[Publish] Entity state saved to DB and locked. Compiling...");
             // 9. 编译实体代码
             await _dynamicEntityService.CompileEntityAsync(entityDefinitionId);
 
+            _logger.LogInformation("[Publish] Entity compiled. Generating templates...");
             if (!context.IsCascadeChild)
             {
                 await GenerateTemplatesAndMenusAsync(entity, publishedBy, result);
             }
 
+            _logger.LogInformation("[Publish] Templates generated. Committing transaction...");
             if (transaction != null)
             {
                 await transaction.CommitAsync();
@@ -723,10 +726,13 @@ public class EntityPublishingService : IEntityPublishingService
             }
         }
 
-        // 分析字段长度变更（简化实现）
+        // 分析字段长度变更
         foreach (var field in entity.Fields)
         {
+            // 优先匹配完全一致的列名（考虑到 PostgreSQL 区分大小写引用）
             var currentColumn = currentColumns.FirstOrDefault(c =>
+                c.ColumnName.Equals(field.PropertyName, StringComparison.Ordinal))
+                ?? currentColumns.FirstOrDefault(c =>
                 c.ColumnName.Equals(field.PropertyName, StringComparison.OrdinalIgnoreCase));
 
             if (currentColumn != null && field.Length.HasValue && currentColumn.MaxLength.HasValue)
@@ -747,9 +753,29 @@ public class EntityPublishingService : IEntityPublishingService
         var definedFieldNames = entity.Fields.Select(f => f.PropertyName.ToLower()).ToHashSet();
         foreach (var column in currentColumns)
         {
-            if (!definedFieldNames.Contains(column.ColumnName.ToLower()))
+            var colName = column.ColumnName;
+            if (colName.Equals("Id", StringComparison.OrdinalIgnoreCase)) continue;
+            
+            // 忽略审计和软删除系统列
+            if (colName.Equals("IsDeleted", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("DeletedBy", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("DeletedAt", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("CreatedBy", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("UpdatedAt", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("UpdatedBy", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("Version", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("VersionNo", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("ValidFrom", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("ValidTo", StringComparison.OrdinalIgnoreCase) ||
+                colName.Equals("OrganizationId", StringComparison.OrdinalIgnoreCase)) 
             {
-                analysis.RemovedFields.Add(column.ColumnName);
+                continue;
+            }
+
+            if (!definedFieldNames.Contains(colName.ToLower()))
+            {
+                analysis.RemovedFields.Add(colName);
                 analysis.HasDestructiveChanges = true;
             }
         }
@@ -798,9 +824,9 @@ public class EntityPublishingService : IEntityPublishingService
         return string.Join("\n", scripts);
     }
 
-    private async Task GenerateTemplatesAndMenusAsync(EntityDefinition entity, string? publishedBy, PublishResult result)
+    private async Task GenerateTemplatesAndMenusAsync(EntityDefinition entity, string? publishedBy, PublishResult result, CancellationToken ct = default)
     {
-        var generatorResult = await _defaultTemplateService.EnsureTemplatesAsync(entity, publishedBy);
+        var generatorResult = await _defaultTemplateService.EnsureTemplatesAsync(entity, publishedBy, saveChanges: false, ct: ct);
 
         foreach (var template in generatorResult.Templates)
         {
@@ -822,13 +848,15 @@ public class EntityPublishingService : IEntityPublishingService
                 _ => codes.DetailCode
             };
 
-            await _templateBindingService.UpsertBindingAsync(
+            var binding = await _templateBindingService.UpsertBindingAsync(
                 entity.EntityRoute,
                 usage,
-                template.Value.Id,
-                true,
-                updatedBy,
-                requiredCode);
+                template.Value,
+                isSystem: true,
+                updatedBy: "__system__",
+                requiredFunctionCode: null,
+                saveChanges: false,
+                ct: ct);
         }
 
         // List 视图
@@ -928,11 +956,22 @@ public class EntityPublishingService : IEntityPublishingService
         int templateId,
         string? requiredPermission)
     {
-        var binding = await _db.TemplateStateBindings
-            .FirstOrDefaultAsync(b =>
+        // 优先从本地缓存查找
+        var binding = _db.TemplateStateBindings.Local
+            .FirstOrDefault(b =>
                 b.EntityType == entityType &&
                 b.ViewState == viewState &&
                 b.IsDefault);
+
+        if (binding == null)
+        {
+            // 如果本地缓存没有，则从数据库查找
+            binding = await _db.TemplateStateBindings
+                .FirstOrDefaultAsync(b =>
+                    b.EntityType == entityType &&
+                    b.ViewState == viewState &&
+                    b.IsDefault);
+        }
 
         if (binding == null)
         {
@@ -953,7 +992,7 @@ public class EntityPublishingService : IEntityPublishingService
             binding.RequiredPermission = requiredPermission;
         }
 
-        await _db.SaveChangesAsync();
+        // 注意：不在这里调用 SaveChangesAsync，由上层统一保存
         return binding;
     }
 

@@ -268,6 +268,7 @@ public static class TemplateEndpoints
             UpsertTemplateBindingRequest request,
             ClaimsPrincipal user,
             TemplateBindingService bindingService,
+            AppDbContext db,
             ILocalization loc,
             HttpContext http,
             CancellationToken ct) =>
@@ -279,14 +280,21 @@ public static class TemplateEndpoints
                 return Results.Unauthorized();
             }
 
+            var template = await db.FormTemplates.FirstOrDefaultAsync(t => t.Id == request.TemplateId, ct);
+            if (template == null)
+            {
+                return Results.NotFound(new ErrorResponse(loc.T("MSG_TEMPLATE_NOT_FOUND", lang), "TEMPLATE_NOT_FOUND"));
+            }
+
             var binding = await bindingService.UpsertBindingAsync(
                 request.EntityType,
                 request.UsageType,
-                request.TemplateId,
+                template,
                 request.IsSystem,
                 uid,
                 request.RequiredFunctionCode,
-                ct);
+                saveChanges: true,
+                ct: ct);
 
             return Results.Ok(new SuccessResponse<TemplateBindingDto>(ToTemplateBindingDto(binding)));
         })

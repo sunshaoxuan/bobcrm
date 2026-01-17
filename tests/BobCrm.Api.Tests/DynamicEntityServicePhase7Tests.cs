@@ -66,11 +66,12 @@ public class DynamicEntityServicePhase7Tests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        _compiler.Setup(x => x.Compile(It.IsAny<string>(), It.IsAny<string>()))
+        _compiler.Setup(x => x.CompileMultiple(It.IsAny<Dictionary<string, string>>(), It.IsAny<string>()))
             .Returns(new CompilationResult
             {
                 Success = true,
-                Assembly = typeof(DummyDynamicEntity).Assembly
+                Assembly = typeof(DummyDynamicEntity).Assembly,
+                LoadContext = new System.Runtime.Loader.AssemblyLoadContext(null, true)
             });
 
         (await _svc.CompileEntityAsync(entityId)).Success.Should().BeTrue();
